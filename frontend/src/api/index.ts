@@ -1,16 +1,32 @@
 import axios from 'axios';
 import type { BatchOperationResponse, Candidate, CandidateDetail, CandidateFilterOptions, ChatMessage, DailySummary, DashboardStats, FollowUpAlert, InterviewSummaryRequest, InterviewSummaryResponse, Job, PaginatedResponse, RecentLog, ScreeningResult, ScreeningResultsResponse, ScreeningRunResponse, StageChangeLog } from '../types';
 
-const api = axios.create({ baseURL: '/api' });
+export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+
+const api = axios.create({ baseURL: `${API_BASE_URL}/api` });
+
+const withBackendAssetUrl = (url?: string) => {
+  if (!url || /^https?:\/\//i.test(url)) return url || '';
+  if (!url.startsWith('/')) return url;
+  return `${API_BASE_URL}${url}`;
+};
+
+const normalizeCandidateAssets = <T extends { resume_url?: string }>(candidate: T): T => ({
+  ...candidate,
+  resume_url: withBackendAssetUrl(candidate.resume_url),
+});
 
 export const createCandidate = (data: Partial<Candidate>) =>
-  api.post<Candidate>('/candidates/', data).then(r => r.data);
+  api.post<Candidate>('/candidates/', data).then(r => normalizeCandidateAssets(r.data));
 
 export const createHRCandidate = (formData: FormData) =>
-  api.post<Candidate>('/candidates/hr-create', formData).then(r => r.data);
+  api.post<Candidate>('/candidates/hr-create', formData).then(r => normalizeCandidateAssets(r.data));
 
 export const getCandidates = (params: Record<string, string | number>) =>
-  api.get<PaginatedResponse<Candidate>>('/candidates/', { params }).then(r => r.data);
+  api.get<PaginatedResponse<Candidate>>('/candidates/', { params }).then(r => ({
+    ...r.data,
+    items: r.data.items.map(normalizeCandidateAssets),
+  }));
 
 export const getCandidateFilterOptions = () =>
   api.get<CandidateFilterOptions>('/candidates/filter-options').then(r => r.data);
@@ -34,13 +50,13 @@ export const deleteJob = (id: number) =>
   api.delete<{ message: string; action: string }>(`/jobs/${id}`).then(r => r.data);
 
 export const getCandidate = (id: number) =>
-  api.get<CandidateDetail>(`/candidates/${id}`).then(r => r.data);
+  api.get<CandidateDetail>(`/candidates/${id}`).then(r => normalizeCandidateAssets(r.data));
 
 export const updateCandidate = (id: number, data: Partial<Candidate>) =>
-  api.patch<Candidate>(`/candidates/${id}`, data).then(r => r.data);
+  api.patch<Candidate>(`/candidates/${id}`, data).then(r => normalizeCandidateAssets(r.data));
 
 export const updateStage = (id: number, stage: string) =>
-  api.patch<Candidate>(`/candidates/${id}/stage`, { stage }).then(r => r.data);
+  api.patch<Candidate>(`/candidates/${id}/stage`, { stage }).then(r => normalizeCandidateAssets(r.data));
 
 export const deleteCandidate = (id: number) =>
   api.delete(`/candidates/${id}`).then(r => r.data);
@@ -79,16 +95,16 @@ export const executeHRAction = (id: number, action: string, data?: {
   reject_note?: string;
   reason?: string;
 }) =>
-  api.post<Candidate>(`/candidates/${id}/hr-action/${action}`, data || {}).then(r => r.data);
+  api.post<Candidate>(`/candidates/${id}/hr-action/${action}`, data || {}).then(r => normalizeCandidateAssets(r.data));
 
 export const passCandidateScreening = (id: number) =>
-  api.post<Candidate>(`/candidates/${id}/screening/pass`).then(r => r.data);
+  api.post<Candidate>(`/candidates/${id}/screening/pass`).then(r => normalizeCandidateAssets(r.data));
 
 export const markCandidateBackup = (id: number) =>
-  api.post<Candidate>(`/candidates/${id}/screening/backup`).then(r => r.data);
+  api.post<Candidate>(`/candidates/${id}/screening/backup`).then(r => normalizeCandidateAssets(r.data));
 
 export const rejectCandidateScreening = (id: number, data: { reject_reason: string; reject_note?: string }) =>
-  api.post<Candidate>(`/candidates/${id}/screening/reject`, data).then(r => r.data);
+  api.post<Candidate>(`/candidates/${id}/screening/reject`, data).then(r => normalizeCandidateAssets(r.data));
 
 export const getStageLogs = (id: number) =>
   api.get<StageChangeLog[]>(`/candidates/${id}/stage-logs`).then(r => r.data);

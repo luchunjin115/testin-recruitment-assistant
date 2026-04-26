@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 import re
-from typing import List
+from typing import List, Optional
 
 from pydantic_settings import BaseSettings
 from pydantic import field_validator
@@ -47,7 +47,10 @@ class Settings(BaseSettings):
 
     BACKEND_HOST: str = "0.0.0.0"
     BACKEND_PORT: int = 8000
+    PORT: Optional[int] = None
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
+    FRONTEND_ORIGIN: str = ""
+    VITE_API_BASE_URL: str = ""
 
     UPLOAD_DIR: str = str((BACKEND_DIR / "uploads").resolve())
     MAX_FILE_SIZE_MB: int = 10
@@ -64,7 +67,17 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins_list(self) -> List[str]:
-        return [o.strip() for o in self.CORS_ORIGINS.split(",")]
+        origins = [
+            "http://localhost:5173",
+            "http://localhost:3000",
+        ]
+        for value in [self.CORS_ORIGINS, self.FRONTEND_ORIGIN]:
+            origins.extend(o.strip() for o in value.split(",") if o.strip())
+        return list(dict.fromkeys(origins))
+
+    @property
+    def backend_port(self) -> int:
+        return self.PORT or self.BACKEND_PORT
 
     model_config = {"env_file": str(PROJECT_ROOT / ".env"), "env_file_encoding": "utf-8"}
 

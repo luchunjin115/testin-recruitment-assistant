@@ -2,6 +2,8 @@
 
 基于 AI 技术的智能招聘管理系统，解决 HR 手动录入、数据失真、跟进遗漏等痛点，实现招聘数据的自动化记录与智能化跟踪。
 
+详细使用方式请查看《使用说明.md》
+
 ## 核心功能
 
 - **智能简历解析**：上传 PDF/DOCX/TXT 简历，AI 自动提取 11 个标准化字段
@@ -148,6 +150,93 @@ python scripts/reset_demo_data.py
 
 该脚本会清空当前候选人测试数据、候选人日志和旧上传简历附件，但会保留岗位管理数据；如果岗位库缺少示例岗位，会初始化或补齐 active 岗位及岗位要求配置。脚本会重新生成约 30 条候选人数据，所有候选人的 `job_id` 和 `target_role` 都来自岗位管理范围。新投递/待初筛候选人会进入 AI 初筛中心，通过初筛候选人才会进入候选人列表；备选候选人只从已通过初筛的正式流程候选人中生成，适合 Demo 前恢复招聘漏斗数据。
 
+## 线上部署说明
+
+当前项目支持前后端分开部署：前端部署到 Vercel，后端部署到 Render。前端请求地址通过 `VITE_API_BASE_URL` 控制，本地开发时可以留空，线上部署时填写 Render 后端地址。
+
+### 前端部署到 Vercel
+
+1. 将项目推送到 GitHub。
+2. 登录 Vercel，选择 `New Project`，导入该 GitHub 仓库。
+3. Vercel 项目配置建议如下：
+   - Framework Preset：`Vite`
+   - Root Directory：`frontend`
+   - Build Command：`npm run build`
+   - Output Directory：`dist`
+4. 在 Vercel 环境变量中添加：
+
+```bash
+VITE_API_BASE_URL=https://your-backend.onrender.com
+```
+
+这里填写后端 Render 服务的公开地址，不要在末尾添加 `/api`。前端代码会自动请求：
+
+```bash
+https://your-backend.onrender.com/api/...
+```
+
+如果本地开发不配置 `VITE_API_BASE_URL`，前端会使用空字符串作为默认值，请求 `/api/...`，再由 Vite 本地代理转发到 `http://localhost:8000`。
+
+### 后端部署到 Render
+
+1. 登录 Render，选择 `New Web Service`。
+2. 连接同一个 GitHub 仓库。
+3. 如果使用普通 Web Service，建议配置：
+   - Root Directory：`backend`
+   - Build Command：`pip install -r requirements.txt`
+   - Start Command：`uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+4. 如果使用 Docker 部署，`backend/Dockerfile` 已支持读取云平台注入的 `PORT`，默认本地端口为 `8000`。
+5. 在 Render 环境变量中配置前端允许来源，二选一或同时配置均可：
+
+```bash
+FRONTEND_ORIGIN=https://your-frontend.vercel.app
+```
+
+或：
+
+```bash
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000,https://your-frontend.vercel.app
+```
+
+后端默认始终允许本地开发地址 `http://localhost:5173` 和 `http://localhost:3000`。线上部署后，把 Vercel 前端地址填入 `FRONTEND_ORIGIN` 或追加到 `CORS_ORIGINS`，浏览器才能正常跨域访问后端 API。
+
+### 线上环境变量汇总
+
+前端 Vercel：
+
+```bash
+VITE_API_BASE_URL=https://your-backend.onrender.com
+```
+
+后端 Render：
+
+```bash
+FRONTEND_ORIGIN=https://your-frontend.vercel.app
+CORS_ORIGINS=http://localhost:5173,http://localhost:3000,https://your-frontend.vercel.app
+LLM_PROVIDER=mock
+DATABASE_URL=sqlite:///./recruit.db
+UPLOAD_DIR=./uploads
+```
+
+`FRONTEND_ORIGIN` 和 `CORS_ORIGINS` 可以只配置一个。演示环境默认使用 `LLM_PROVIDER=mock`，不需要真实 API Key。如需接入真实模型，再配置 `OPENAI_API_KEY`、`OPENAI_BASE_URL` 和 `OPENAI_MODEL`。
+
+### 演示数据与数据库说明
+
+后端启动时会自动执行按需初始化：
+
+- 如果数据库或表不存在，会自动创建。
+- 如果岗位库为空，会自动初始化默认岗位。
+- 如果候选人表为空，会自动生成演示候选人。
+- 如果候选人表已有数据，不会在每次重启时清空或重复生成。
+
+手动重置演示数据仍然使用：
+
+```bash
+python scripts/reset_demo_data.py
+```
+
+默认 SQLite 数据库路径为 `backend/recruit.db`；部署到 Render 时，如果需要长期保存数据，建议后续接入 Render Disk 或迁移到 PostgreSQL。当前 Demo 的路径解析已统一由 `DATABASE_URL` 控制，相对路径会解析到后端目录。
+
 ## 主要页面
 
 - `http://localhost:5173/` 或 `/dashboard`：Dashboard 数据看板，含今日新增、最近 3 天新增和今日新增候选人列表
@@ -215,7 +304,10 @@ testin云测面试题/
 | OPENAI_BASE_URL | https://api.openai.com/v1 | API 地址 |
 | OPENAI_MODEL | gpt-4o-mini | 模型名称 |
 | DATABASE_URL | sqlite:///./recruit.db | 数据库连接；相对路径会解析到 `backend/`，默认实际文件为 `backend/recruit.db` |
+| PORT | - | 云平台注入端口；存在时优先于 `BACKEND_PORT` |
 | CORS_ORIGINS | http://localhost:5173,http://localhost:3000 | 跨域白名单 |
+| FRONTEND_ORIGIN | - | 单个线上前端地址，例如 Vercel 域名；会与 `CORS_ORIGINS` 合并 |
+| VITE_API_BASE_URL | - | 前端构建变量；线上填写后端域名，本地可留空使用 Vite 代理 |
 | UPLOAD_DIR | ./uploads | 上传目录；相对路径会解析到 `backend/`，默认实际目录为 `backend/uploads` |
 
 ## 工具脚本
