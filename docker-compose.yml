@@ -1,0 +1,30 @@
+version: "3.8"
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - recruit-data:/app/data
+    environment:
+      - LLM_PROVIDER=mock
+      - DATABASE_URL=sqlite:////app/data/recruit.db
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=8000
+      - CORS_ORIGINS=http://localhost:3000
+      - UPLOAD_DIR=./uploads
+      - MAX_FILE_SIZE_MB=10
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  recruit-data:

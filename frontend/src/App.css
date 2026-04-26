@@ -1,0 +1,39 @@
+.ant-layout-sider {
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+}
+
+.ant-card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.ant-card:hover {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 3px 10px -2px rgba(0, 0, 0, 0.05), 0 4px 8px rgba(0, 0, 0, 0.04);
+}
+
+.ant-table-row:hover {
+  cursor: pointer;
+}
+
+.screening-high-priority-row > td {
+  background: #fff1f0 !important;
+}
+
+.screening-high-priority-row:hover > td {
+  background: #ffe1df !important;
+}
+
+.candidate-row-today-new > td {
+  background: #f6ffed !important;
+}
+
+.candidate-row-today-new:hover > td {
+  background: #eaffd7 !important;
+}
+
+.candidate-row-recent-new > td {
+  background: #fffbe6 !important;
+}
+
+.candidate-row-recent-new:hover > td {
+  background: #fff3bf !important;
+}

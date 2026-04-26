@@ -1,0 +1,67 @@
+[
+  {
+    "name": "张明远",
+    "phone": "13812345001",
+    "email": "zhangmingyuan@example.com",
+    "school": "武汉大学",
+    "degree": "硕士",
+    "major": "软件工程",
+    "target_role": "高级测试工程师",
+    "experience_years": 4,
+    "skills": ["Python", "Selenium", "Appium", "Jenkins", "Docker"],
+    "source_channel": "Boss直聘",
+    "stage": "面试中"
+  },
+  {
+    "name": "李思颖",
+    "phone": "13812345002",
+    "email": "lisyy@example.com",
+    "school": "北京大学",
+    "degree": "本科",
+    "major": "计算机科学与技术",
+    "target_role": "前端开发工程师",
+    "experience_years": 2,
+    "skills": ["React", "Vue", "TypeScript", "Node.js"],
+    "source_channel": "拉勾",
+    "stage": "复试"
+  },
+  {
+    "name": "王浩然",
+    "phone": "13812345003",
+    "email": "wanghr@example.com",
+    "school": "华中科技大学",
+    "degree": "硕士",
+    "major": "人工智能",
+    "target_role": "AI算法工程师",
+    "experience_years": 1,
+    "skills": ["Python", "PyTorch", "机器学习", "自然语言处理"],
+    "source_channel": "内推",
+    "stage": "offer"
+  },
+  {
+    "name": "陈静怡",
+    "phone": "13812345004",
+    "email": "chenjy@example.com",
+    "school": "浙江大学",
+    "degree": "本科",
+    "major": "软件工程",
+    "target_role": "测试工程师",
+    "experience_years": 0,
+    "skills": ["Python", "Java", "Postman", "MySQL"],
+    "source_channel": "表单录入",
+    "stage": "初筛"
+  },
+  {
+    "name": "刘伟",
+    "phone": "13812345005",
+    "email": "liuwei@example.com",
+    "school": "中山大学",
+    "degree": "本科",
+    "major": "数据科学",
+    "target_role": "数据分析师",
+    "experience_years": 3,
+    "skills": ["Python", "SQL", "Tableau", "数据分析"],
+    "source_channel": "猎聘",
+    "stage": "待约面"
+  }
+]

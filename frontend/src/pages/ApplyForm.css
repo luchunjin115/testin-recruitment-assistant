@@ -1,0 +1,62 @@
+.apply-page {
+  min-height: 100vh;
+  background: #f0f2f5;
+  display: flex;
+  flex-direction: column;
+}
+
+.apply-header {
+  background: linear-gradient(135deg, #1677ff 0%, #4096ff 50%, #69b1ff 100%);
+  padding: 48px 24px 40px;
+  text-align: center;
+  color: #fff;
+}
+
+.apply-header h1 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.apply-header p {
+  margin: 0;
+  font-size: 16px;
+  opacity: 0.9;
+}
+
+.apply-container {
+  max-width: 720px;
+  width: 100%;
+  margin: -32px auto 0;
+  padding: 0 16px 40px;
+  flex: 1;
+}
+
+.apply-footer {
+  text-align: center;
+  padding: 24px;
+  color: #999;
+  font-size: 13px;
+}
+
+.apply-success {
+  max-width: 560px;
+  margin: 80px auto;
+  padding: 0 16px;
+}
+
+@media (max-width: 768px) {
+  .apply-header {
+    padding: 32px 16px 28px;
+  }
+
+  .apply-header h1 {
+    font-size: 24px;
+  }
+
+  .apply-container {
+    margin-top: -24px;
+    padding: 0 8px 24px;
+  }
+}
