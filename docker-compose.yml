@@ -1,6 +1,42 @@
 version: "3.8"
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=recruitment_assistant
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d recruitment_assistant"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  chroma:
+    image: chromadb/chroma:0.5.11
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+    restart: unless-stopped
+
   backend:
     build: ./backend
     ports:
@@ -11,11 +47,26 @@ services:
     environment:
       - LLM_PROVIDER=mock
       - DATABASE_URL=sqlite:////app/data/recruit.db
+      - POSTGRES_DB=recruitment_assistant
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
       - BACKEND_HOST=0.0.0.0
       - BACKEND_PORT=8000
       - CORS_ORIGINS=http://localhost:3000
       - UPLOAD_DIR=./uploads
       - MAX_FILE_SIZE_MB=10
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      chroma:
+        condition: service_started
     restart: unless-stopped
 
   frontend:
@@ -28,3 +79,6 @@ services:
 
 volumes:
   recruit-data:
+  postgres-data:
+  redis-data:
+  chroma-data:
