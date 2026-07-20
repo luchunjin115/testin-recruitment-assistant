@@ -1,5 +1,145 @@
 # 项目进度状态
 
+> 最新更新：2026-07-20（架构重建阶段 2：Alembic 建表、回滚和重建往返测试通过）
+
+## 当前总状态：🚧 新架构重建已启动，旧版演示系统作为迁移资产保留
+
+### 权威依据
+
+- 项目指令：`CLAUDE.md`
+- 权威设计文档：`docs/specs/2026-07-15-hr-agent-platform-design.md`
+- 实施计划：`docs/implementation-plan.md`
+- 迁移清单：`docs/migration-inventory.md`
+
+### 阶段 0 已完成事项
+
+- 已确认 `CLAUDE.md` 指向的权威设计文档存在。
+- 已扫描当前项目结构，确认仓库内存在旧版 React + FastAPI + SQLite/Mock LLM 演示系统。
+- 已识别可迁移资产：Prompt 模板、`file_parser.py`、`dedup_service.py`、候选人投递页、Mock 评分规则。
+- 已识别需重写模块：`ai_service.py`、`mock_llm.py`、旧前端页面、旧 SQLite 模型、旧 API 分层。
+- 已新增完整实施计划文档，后续按阶段推进。
+- 已新增迁移清单文档，避免后续误删或盲目搬迁旧代码。
+
+### 阶段 1 已完成事项
+
+- 已更新后端依赖清单，加入新架构需要的 `asyncpg`、`alembic`、`redis`、`chromadb`、`langgraph`、`langchain-openai`。
+- 已扩展 `.env.example`，补充 PostgreSQL、Redis、Chroma 配置项。
+- 已新增后端新架构目录骨架：
+  - `backend/app/api/`
+  - `backend/app/core/`
+  - `backend/app/agents/graphs/`
+  - `backend/app/agents/nodes/`
+  - `backend/app/agents/states/`
+  - `backend/app/agents/prompts/`
+  - `backend/app/rag/`
+- 已新增基础设施模块：
+  - `backend/app/core/config.py`
+  - `backend/app/core/database.py`
+  - `backend/app/core/redis.py`
+  - `backend/app/core/llm.py`
+  - `backend/app/rag/vector_store.py`
+- 已新增 Alembic 骨架：`backend/alembic.ini`、`backend/migrations/`。
+- 已更新 `docker-compose.yml`，加入 PostgreSQL 16、Redis 7、Chroma 服务。当前后端容器仍默认使用旧 SQLite 演示库，避免旧启动脚本被 PostgreSQL 迁移打断；新 `core/database.py` 已按 PostgreSQL 准备。
+- 已新增前端基础目录入口：
+  - `frontend/src/services/http.ts`
+  - `frontend/src/theme/index.ts`
+  - `frontend/src/stores/index.ts`
+  - `frontend/src/hooks/index.ts`
+- 已将 Ant Design 主题抽到 `frontend/src/theme/index.ts`。
+- 已将前端 API 底层 axios 实例抽到 `frontend/src/services/http.ts`。
+
+### 阶段 1 验证结果
+
+- 前端构建通过：`npm.cmd run build`
+- 新增后端骨架 Python 语法检查通过：`python -m compileall backend\app\core backend\app\api backend\app\agents backend\app\rag backend\migrations`
+
+### 阶段 1 仍需完成
+
+阶段 1 的第一批地基已经完成，但还没有把旧业务入口正式切到新架构。
+
+剩余任务：
+
+1. 根据阶段 2 的数据模型设计，补齐新 SQLAlchemy models。
+2. 生成第一版 Alembic migration。
+3. 在安全时机把 FastAPI 入口从旧 `routers/` 逐步迁移到新 `api/`。
+4. 根据新页面规划继续整理前端页面目录。
+5. 等新模型和迁移稳定后，再决定是否让 Docker 后端直接使用 PostgreSQL。
+
+### 下一步：阶段 2 数据库模型和核心业务对象
+
+阶段 2 的目标是把候选人、岗位、简历、筛选结果、报告等核心业务对象落成 PostgreSQL 模型。
+
+### 阶段 2 当前进度
+
+- 已开始第一批新版模型，暂放在 `backend/app/models/rebuilt/`，避免破坏旧 SQLite 演示系统。
+- 已新增：
+  - `backend/app/models/rebuilt/job.py`
+  - `backend/app/models/rebuilt/candidate.py`
+  - `backend/app/models/rebuilt/resume.py`
+- 已新增第二批候选人画像模型：
+  - `backend/app/models/rebuilt/education.py`
+  - `backend/app/models/rebuilt/work_experience.py`
+  - `backend/app/models/rebuilt/project_experience.py`
+- 已在新版 `Candidate` 模型中建立教育经历、工作经历、项目经历关系。
+- 已新增 AI 初筛结果模型：
+  - `backend/app/models/rebuilt/screening_result.py`
+- 已建立 `Candidate`、`Job` 与 `ScreeningResult` 的关系。
+- 已新增初筛报告模型：
+  - `backend/app/models/rebuilt/report.py`
+- 已建立 `Candidate`、`Job`、`ScreeningResult` 与 `Report` 的关系。
+- 已新增通用操作日志模型：
+  - `backend/app/models/rebuilt/activity_log.py`
+- 新版 `ActivityLog` 使用 `target_type + target_id` 标识候选人、岗位、报告等不同业务对象，并使用 JSONB 保存操作详情，不再只绑定候选人表。
+- 阶段 2 规划的 9 类核心表模型已全部建立。
+- 已安装 Python 3.11.9，并在项目根目录创建 `.venv` 作为后端开发虚拟环境。
+- 已将后端依赖安装到 `.venv`，包括 `asyncpg`、`alembic`、`langgraph`、`chromadb` 等新架构依赖。
+- 已将 `backend/app/core/database.py` 改为懒加载数据库 engine，避免仅导入模型时就要求数据库驱动或连接可用。
+- 第一批模型语法检查通过：`python -m compileall backend\app\models\rebuilt`
+- 第二批模型语法检查通过：`python -m compileall backend\app\models\rebuilt`
+- 初筛结果模型语法检查通过：`python -m compileall backend\app\models\rebuilt`
+- 初筛报告模型和全部 rebuilt 模型导入检查通过：`from app.models.rebuilt import ...`
+- 操作日志模型语法、导入、SQLAlchemy mapper 和表元数据检查通过。
+- Alembic 环境已显式加载 `app.models.rebuilt`，`Base.metadata` 能够识别阶段 2 的 9 张新版数据表。
+- 已开始编写新版 Pydantic v2 schemas，并暂放在 `backend/app/schemas/rebuilt/`，避免影响旧版 API 使用的 schemas。
+- 已完成第一组岗位 schemas：`JobCreate`、`JobUpdate`、`JobRead`；创建校验、局部更新和 SQLAlchemy ORM 对象转换检查通过。
+- 已完成候选人及三类经历 schemas：Candidate、Education、WorkExperience、ProjectExperience 均提供 Create、Update、Read 类型。
+- `CandidateCreate` 支持嵌套教育、工作和项目经历；`CandidateRead` 的 SQLAlchemy ORM 嵌套转换检查通过。
+- 已完成 Resume、ScreeningResult、Report 的 Create、Update、Read schemas。
+- 已完成追加式 ActivityLog 的 Create、Read schemas；操作日志不提供 Update，避免审计历史被普通更新接口改写。
+- 9 类核心模型对应的新版 Pydantic schemas 已全部建立；请求校验、非法值拦截、局部更新、ORM 转换和统一导出检查通过。
+- Alembic、应用配置与 Docker Compose 的数据库目标已核对一致，均指向本机 `localhost:5432/recruitment_assistant` PostgreSQL 数据库。
+- 已安装并启动 Docker Desktop 4.82.0、Docker Engine 29.6.1 和 WSL 2.7.10；本地 PostgreSQL 16 容器运行健康。
+- 后端依赖已改为 `sqlalchemy[asyncio]==2.0.35`，并在 `.venv` 中安装 greenlet 3.5.3，解决 Alembic 异步连接缺少 greenlet 的问题。
+- 已为岗位、候选人、教育经历、简历和报告等非空业务字段补充 PostgreSQL `server_default`，同时保留 ORM `default`。
+- Alembic revision `bbd627449743_create_rebuilt_core_tables.py` 已生成，包含 9 张业务表、34 组索引、11 个 JSONB 字段、11 个外键和 1 个唯一约束。
+- migration 建表/回滚顺序、PostgreSQL dialect 导入、业务默认值、Python 语法和离线 SQL 编译检查通过。
+- 已完成 `alembic upgrade head -> downgrade base -> upgrade head` 往返测试：第一次建表后 9 张业务表及 34 个索引、11 个外键、11 个 JSONB 字段、1 个唯一约束均存在；回滚后 9 张业务表全部删除；再次升级后结构完整恢复。
+- PostgreSQL 当前停留在 Alembic revision `bbd627449743`，9 张业务表已经真实创建，数据库端默认值检查通过。
+- 当前策略：旧 `backend/app/models/*.py` 暂时保留，等新主链路跑通后再进入旧系统清理阶段。
+- 已新增新版异步岗位 CRUD Service：`backend/app/services/rebuilt/job_service.py`，与旧版同步 `backend/app/services/job_service.py` 隔离，未修改旧业务代码。
+- 新版 `JobService` 已提供创建、按 ID 查询、列表查询、局部更新和删除 5 个基础方法；写操作失败时会回滚数据库事务。
+- 已新增 8 个 `unittest` 单元测试，覆盖 Job 基础 CRUD、记录不存在和写入失败回滚；测试结果为 8 项全部通过。
+- 已使用当前 PostgreSQL 完成 Job Service 真实往返验证：创建 -> 按 ID 查询 -> 列表查询 -> 更新 -> 删除 -> 确认不存在，输出 `POSTGRES_JOB_CRUD_OK`，临时验证数据已清理。
+- 已新增隔离的新版 Job API 文件：`backend/app/api/jobs.py`，当前只实现 `POST /jobs` 创建岗位端点，调用新版异步 `JobService`，并使用 `JobCreate` 校验请求、`JobRead` 约束响应。
+- 新版创建岗位端点的语法、导入和路由结构检查通过：请求方法为 `POST`、路径为 `/jobs`、成功状态码为 `201`、响应模型为 `JobRead`。
+- 新版 Job API 尚未挂载到当前 `main.py`；旧版 `/api/jobs` 仍保持运行，避免新旧同路径路由发生冲突。
+- 已为新版 `POST /jobs` 增加隔离的 API 自动化测试：使用临时 FastAPI 应用、依赖覆盖和 Mock Service，不连接真实数据库。
+- 创建岗位 API 测试覆盖合法请求返回 `201` 并调用 Service，以及空标题返回 `422` 且不调用 Service；新增 2 项测试全部通过。
+- 当前新版后端测试共 10 项全部通过：Job Service 8 项、Job 创建 API 2 项。
+
+优先任务：
+
+1. 下一小步只实现新版 `GET /jobs` 岗位列表查询端点，并添加对应的隔离 API 测试。
+2. 列表端点测试通过后，再逐个实现岗位详情、更新和删除端点，不一次性完成。
+
+### 重要说明
+
+下面的历史内容记录的是旧版演示系统完成度，不能等同于新架构完成度。后续开发以 `docs/specs/2026-07-15-hr-agent-platform-design.md` 和 `docs/implementation-plan.md` 为准。
+
+---
+
+## 历史状态：旧版演示系统
+
 > 最后更新：2026-04-26（第二十七轮，新电脑交付启动与演示数据自动兜底）
 
 ## 项目状态：✅ 全部完成 + 新电脑解压后可按脚本/Vite 启动看到演示数据 + AI 初筛中心移除备选逻辑 + 候选人列表正式流程备选 + 岗位一致 Demo 数据重置脚本 + 招聘漏斗初筛流转改造 + Dashboard 初筛状态统计 + TypeScript 构建通过，可运行、可演示、可答辩
