@@ -39,9 +39,15 @@ def _resolve_path(value: str) -> str:
 
 class Settings(BaseSettings):
     LLM_PROVIDER: str = "mock"
+    LLM_ENABLE_MOCK_FALLBACK: bool = True
+
     OPENAI_API_KEY: str = ""
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-4o-mini"
+
+    DEEPSEEK_API_KEY: str = ""
+    DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
+    DEEPSEEK_MODEL: str = "deepseek-chat"
 
     DATABASE_URL: str = _sqlite_url(BACKEND_DIR / "recruit.db")
 
@@ -78,6 +84,28 @@ class Settings(BaseSettings):
     @property
     def backend_port(self) -> int:
         return self.PORT or self.BACKEND_PORT
+
+    @property
+    def llm_provider(self) -> str:
+        return self.LLM_PROVIDER.strip().lower()
+
+    @property
+    def llm_api_key(self) -> str:
+        if self.llm_provider == "deepseek":
+            return self.DEEPSEEK_API_KEY or self.OPENAI_API_KEY
+        return self.OPENAI_API_KEY
+
+    @property
+    def llm_base_url(self) -> str:
+        if self.llm_provider == "deepseek":
+            return self.DEEPSEEK_BASE_URL
+        return self.OPENAI_BASE_URL
+
+    @property
+    def llm_model(self) -> str:
+        if self.llm_provider == "deepseek":
+            return self.DEEPSEEK_MODEL
+        return self.OPENAI_MODEL
 
     model_config = {"env_file": str(PROJECT_ROOT / ".env"), "env_file_encoding": "utf-8"}
 

@@ -218,7 +218,17 @@ DATABASE_URL=sqlite:///./recruit.db
 UPLOAD_DIR=./uploads
 ```
 
-`FRONTEND_ORIGIN` 和 `CORS_ORIGINS` 可以只配置一个。演示环境默认使用 `LLM_PROVIDER=mock`，不需要真实 API Key。如需接入真实模型，再配置 `OPENAI_API_KEY`、`OPENAI_BASE_URL` 和 `OPENAI_MODEL`。
+`FRONTEND_ORIGIN` 和 `CORS_ORIGINS` 可以只配置一个。演示环境默认使用 `LLM_PROVIDER=mock`，不需要真实 API Key。如需接入 DeepSeek，可改为：
+
+```bash
+LLM_PROVIDER=deepseek
+LLM_ENABLE_MOCK_FALLBACK=false
+DEEPSEEK_API_KEY=你的DeepSeek API Key
+DEEPSEEK_BASE_URL=https://api.deepseek.com
+DEEPSEEK_MODEL=deepseek-chat
+```
+
+`LLM_ENABLE_MOCK_FALLBACK=false` 适合 Prompt 实战训练：真实模型调用失败时会直接暴露错误，避免误把 Mock 输出当成 DeepSeek 输出。
 
 ### 演示数据与数据库说明
 
@@ -300,9 +310,13 @@ testin云测面试题/
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | LLM_PROVIDER | mock | LLM 模式：mock / openai / deepseek / zhipu |
-| OPENAI_API_KEY | - | LLM API Key（mock 模式不需要） |
-| OPENAI_BASE_URL | https://api.openai.com/v1 | API 地址 |
-| OPENAI_MODEL | gpt-4o-mini | 模型名称 |
+| LLM_ENABLE_MOCK_FALLBACK | true | 真实 LLM 失败时是否回退到 Mock；Prompt 实战建议设为 false |
+| OPENAI_API_KEY | - | OpenAI API Key（mock 模式不需要） |
+| OPENAI_BASE_URL | https://api.openai.com/v1 | OpenAI 兼容 API 地址 |
+| OPENAI_MODEL | gpt-4o-mini | OpenAI 模型名称 |
+| DEEPSEEK_API_KEY | - | DeepSeek API Key |
+| DEEPSEEK_BASE_URL | https://api.deepseek.com | DeepSeek OpenAI 兼容 API 地址 |
+| DEEPSEEK_MODEL | deepseek-chat | DeepSeek 模型名称，可按官方控制台/文档调整 |
 | DATABASE_URL | sqlite:///./recruit.db | 数据库连接；相对路径会解析到 `backend/`，默认实际文件为 `backend/recruit.db` |
 | PORT | - | 云平台注入端口；存在时优先于 `BACKEND_PORT` |
 | CORS_ORIGINS | http://localhost:5173,http://localhost:3000 | 跨域白名单 |
