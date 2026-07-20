@@ -1,15 +1,5 @@
-import axios from 'axios';
 import type { BatchOperationResponse, Candidate, CandidateDetail, CandidateFilterOptions, ChatMessage, DailySummary, DashboardStats, FollowUpAlert, InterviewSummaryRequest, InterviewSummaryResponse, Job, PaginatedResponse, RecentLog, ScreeningResult, ScreeningResultsResponse, ScreeningRunResponse, StageChangeLog } from '../types';
-
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
-
-const api = axios.create({ baseURL: `${API_BASE_URL}/api` });
-
-const withBackendAssetUrl = (url?: string) => {
-  if (!url || /^https?:\/\//i.test(url)) return url || '';
-  if (!url.startsWith('/')) return url;
-  return `${API_BASE_URL}${url}`;
-};
+import { API_BASE_URL, http as api, withBackendAssetUrl } from '../services/http';
 
 const normalizeCandidateAssets = <T extends { resume_url?: string }>(candidate: T): T => ({
   ...candidate,

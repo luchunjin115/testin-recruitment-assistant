@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import AppLayout from './components/AppLayout';
+import { appTheme } from './theme';
 import Dashboard from './pages/Dashboard';
 import CandidateForm from './pages/CandidateForm';
 import CandidateList from './pages/CandidateList';
@@ -16,12 +17,7 @@ const App: React.FC = () => {
   return (
     <ConfigProvider
       locale={zhCN}
-      theme={{
-        token: {
-          colorPrimary: '#1677ff',
-          borderRadius: 6,
-        },
-      }}
+      theme={appTheme}
     >
       <Routes>
         <Route path="/apply" element={<ApplyForm />} />
