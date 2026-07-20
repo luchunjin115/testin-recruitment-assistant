@@ -1,6 +1,6 @@
 # 项目进度状态
 
-> 最新更新：2026-07-20（架构重建阶段 2：Alembic 建表、回滚和重建往返测试通过）
+> 最新更新：2026-07-21（架构重建阶段 2：新版 Job CRUD API 和隔离测试完成）
 
 ## 当前总状态：🚧 新架构重建已启动，旧版演示系统作为迁移资产保留
 
@@ -120,17 +120,18 @@
 - 新版 `JobService` 已提供创建、按 ID 查询、列表查询、局部更新和删除 5 个基础方法；写操作失败时会回滚数据库事务。
 - 已新增 8 个 `unittest` 单元测试，覆盖 Job 基础 CRUD、记录不存在和写入失败回滚；测试结果为 8 项全部通过。
 - 已使用当前 PostgreSQL 完成 Job Service 真实往返验证：创建 -> 按 ID 查询 -> 列表查询 -> 更新 -> 删除 -> 确认不存在，输出 `POSTGRES_JOB_CRUD_OK`，临时验证数据已清理。
-- 已新增隔离的新版 Job API 文件：`backend/app/api/jobs.py`，当前只实现 `POST /jobs` 创建岗位端点，调用新版异步 `JobService`，并使用 `JobCreate` 校验请求、`JobRead` 约束响应。
-- 新版创建岗位端点的语法、导入和路由结构检查通过：请求方法为 `POST`、路径为 `/jobs`、成功状态码为 `201`、响应模型为 `JobRead`。
+- 已新增隔离的新版 Job API 文件：`backend/app/api/jobs.py`，实现 `POST /jobs`、`GET /jobs`、`GET /jobs/{job_id}`、`PUT /jobs/{job_id}` 和 `DELETE /jobs/{job_id}` 完整基础 CRUD。
+- 新版 Job API 使用 `JobCreate`、`JobUpdate` 校验请求，使用 `JobRead` 约束响应；岗位不存在时统一返回 `404`，删除成功返回无正文的 `204`。
+- 新版 Job CRUD API 的语法、导入和路由结构检查通过，5 个请求方法与路径均已正确登记。
 - 新版 Job API 尚未挂载到当前 `main.py`；旧版 `/api/jobs` 仍保持运行，避免新旧同路径路由发生冲突。
-- 已为新版 `POST /jobs` 增加隔离的 API 自动化测试：使用临时 FastAPI 应用、依赖覆盖和 Mock Service，不连接真实数据库。
-- 创建岗位 API 测试覆盖合法请求返回 `201` 并调用 Service，以及空标题返回 `422` 且不调用 Service；新增 2 项测试全部通过。
-- 当前新版后端测试共 10 项全部通过：Job Service 8 项、Job 创建 API 2 项。
+- 已为新版 Job CRUD 增加隔离的 API 自动化测试：使用临时 FastAPI 应用、依赖覆盖和 Mock Service，不连接真实数据库。
+- Job API 测试覆盖创建成功与非法标题、列表与空列表、详情成功与 `404`、更新成功/非法标题/`404`、删除成功与 `404`；11 项测试全部通过。
+- 当前新版后端测试共 19 项全部通过：Job Service 8 项、Job CRUD API 11 项。
 
 优先任务：
 
-1. 下一小步只实现新版 `GET /jobs` 岗位列表查询端点，并添加对应的隔离 API 测试。
-2. 列表端点测试通过后，再逐个实现岗位详情、更新和删除端点，不一次性完成。
+1. 下一小步使用临时 FastAPI 应用连接真实 PostgreSQL，完成 Job CRUD API 全链路集成验证，并清理临时测试数据。
+2. 集成验证通过后，设计新版 Job API 与旧版 `/api/jobs` 的安全切换方案，再决定挂载方式。
 
 ### 重要说明
 
