@@ -11,6 +11,7 @@ import CandidateDetail from './pages/CandidateDetail';
 import AIScreeningCenter from './pages/AIScreeningCenter';
 import ApplyForm from './pages/ApplyForm';
 import JobManagement from './pages/JobManagement';
+import Stage3Preview from './pages/Stage3Preview';
 import './App.css';
 
 const App: React.FC = () => {
@@ -21,6 +22,7 @@ const App: React.FC = () => {
     >
       <Routes>
         <Route path="/apply" element={<ApplyForm />} />
+        <Route path="/stage3-preview" element={<Stage3Preview />} />
         <Route path="/" element={<AppLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />
