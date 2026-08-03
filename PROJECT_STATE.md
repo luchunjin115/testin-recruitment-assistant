@@ -1,6 +1,6 @@
 # 项目进度状态
 
-> 最新更新：2026-07-21（架构重建阶段 2：新版 Job CRUD API 和隔离测试完成）
+> 最新更新：2026-08-03（架构重建阶段 2：9 类核心对象的新版 Service/API 已全部完成并通过 PostgreSQL 验证）
 
 ## 当前总状态：🚧 新架构重建已启动，旧版演示系统作为迁移资产保留
 
@@ -123,15 +123,63 @@
 - 已新增隔离的新版 Job API 文件：`backend/app/api/jobs.py`，实现 `POST /jobs`、`GET /jobs`、`GET /jobs/{job_id}`、`PUT /jobs/{job_id}` 和 `DELETE /jobs/{job_id}` 完整基础 CRUD。
 - 新版 Job API 使用 `JobCreate`、`JobUpdate` 校验请求，使用 `JobRead` 约束响应；岗位不存在时统一返回 `404`，删除成功返回无正文的 `204`。
 - 新版 Job CRUD API 的语法、导入和路由结构检查通过，5 个请求方法与路径均已正确登记。
-- 新版 Job API 尚未挂载到当前 `main.py`；旧版 `/api/jobs` 仍保持运行，避免新旧同路径路由发生冲突。
+- 新版 Job API 最初保持隔离，完成兼容性核对后已按 `/api/v2/jobs` 正式挂载；旧版 `/api/jobs` 继续保留，避免影响旧前端。
 - 已为新版 Job CRUD 增加隔离的 API 自动化测试：使用临时 FastAPI 应用、依赖覆盖和 Mock Service，不连接真实数据库。
 - Job API 测试覆盖创建成功与非法标题、列表与空列表、详情成功与 `404`、更新成功/非法标题/`404`、删除成功与 `404`；11 项测试全部通过。
 - 当前新版后端测试共 19 项全部通过：Job Service 8 项、Job CRUD API 11 项。
+- 已使用临时 FastAPI 应用连接真实 PostgreSQL，完成 Job API 创建、列表、详情、更新、删除和删除后 `404` 的全链路往返验证，输出 `POSTGRES_JOB_API_CRUD_OK`，临时数据已清理。
+- 首次集成验证因 Docker Engine 和 PostgreSQL 容器未运行而连接失败；启动项目 PostgreSQL 容器后重试通过。中间一次中文值断言失败定位为 PowerShell 管道编码问题，并非业务或数据库错误，改用无编码歧义的测试值后严格断言通过。
+- 已核对旧前端仍依赖旧版 `GET /api/jobs/active`、`PATCH /api/jobs/{id}/status` 和旧删除响应，直接替换 `/api/jobs` 会破坏旧演示系统。
+- 已采用版本化 API 安全迁移方案：旧版岗位 API 继续保留在 `/api/jobs`，新版 Job CRUD API 已在当前 `backend/app/main.py` 正式挂载为 `/api/v2/jobs`。
+- 正式入口的 5 个新版 Job 路由均只登记一次，旧版岗位路由仍存在，OpenAPI 生成、Python 编译和全部 19 项回归测试通过。
+- 已直接请求正式 `app.main:app` 的 `/api/v2/jobs` 并连接真实 PostgreSQL，再次完成完整 CRUD 往返，输出 `MOUNTED_POSTGRES_JOB_API_CRUD_OK`，临时数据已清理。
+- 已新增新版异步 Candidate CRUD Service：`backend/app/services/rebuilt/candidate_service.py`，并通过 `backend/app/services/rebuilt/__init__.py` 统一导出；旧版候选人 Service 和 API 未修改。
+- 新版 `CandidateService` 已提供创建、按 ID 查询、列表查询、局部更新和删除 5 个基础方法；创建时可在同一事务内保存教育、工作和项目经历，写操作失败时会回滚。
+- Candidate 详情和列表查询使用 `selectinload` 预加载三类经历，返回 Candidate 时不依赖后续隐式数据库查询。
+- Candidate 与教育、工作、项目经历的 ORM 关系已加入 `all, delete-orphan` 级联；删除 Candidate 时会同步删除三类直属经历，避免孤立记录。
+- 已新增 11 个 Candidate Service 隔离测试，覆盖嵌套创建、空经历创建、详情、列表、局部更新、删除、不存在分支、失败回滚和直属经历级联配置；11 项全部通过。
+- 当前新版后端回归测试共 30 项全部通过：Job Service 8 项、Job CRUD API 11 项、Candidate Service 11 项。
+- 已使用当前 PostgreSQL 完成 Candidate Service 真实往返验证：创建 Candidate 及三类经历 -> 按 ID 查询 -> 列表查询 -> 更新 -> 删除 -> 确认主记录和三类经历均不存在，输出 `POSTGRES_CANDIDATE_SERVICE_CRUD_OK`，临时验证数据已清理。
+- 已新增隔离的新版 Candidate API：`backend/app/api/candidates.py`，实现创建、列表、详情、局部更新和删除 5 个基础 CRUD 路由；请求和响应分别使用 `CandidateCreate`、`CandidateUpdate`、`CandidateRead`。
+- 新版 Candidate API 创建和读取时支持教育、工作、项目三类嵌套经历；候选人不存在时统一返回 `404`，删除成功返回无正文的 `204`。
+- 已新增 12 个 Candidate API 隔离测试，覆盖嵌套创建、空姓名和负年龄校验、列表和空列表、详情、局部更新、删除及各类不存在分支；12 项全部通过。
+- 已核对旧前端仍依赖 `/api/candidates` 的招聘阶段、AI 初筛、面试、Offer 和批量操作等旧字段与专用接口，新版基础 CRUD 不能直接替换旧接口。
+- 已采用版本化 API 安全迁移方案：旧版 Candidate API 继续保留在 `/api/candidates`，新版 Candidate CRUD API 已在 `backend/app/main.py` 正式挂载为 `/api/v2/candidates`。
+- 正式入口的 5 个新版 Candidate 路由均只登记一次，旧版 Candidate 路由仍存在；OpenAPI 生成、Python 编译和当前全部 42 项回归测试通过。
+- 已直接请求正式 `app.main:app` 的 `/api/v2/candidates` 并连接真实 PostgreSQL，完成 Candidate 及三类经历的创建、列表、详情、更新、删除和删除后 `404` 全链路往返，输出 `MOUNTED_POSTGRES_CANDIDATE_API_CRUD_OK`；主记录和三类经历临时数据均已清理。
+- 正式 API 首次集成验证在中文 `404` 文本断言处受到 PowerShell 管道编码影响，CRUD 请求本身已经执行成功；确认临时记录为 0 后，改用 Unicode 转义进行相同严格断言，完整验证通过。
+- 已新增新版异步 Resume CRUD Service：`backend/app/services/rebuilt/resume_service.py`，并通过 `backend/app/services/rebuilt/__init__.py` 统一导出；旧版简历上传与解析业务未修改。
+- 新版 `ResumeService` 已提供创建、按 ID 查询、按上传时间倒序列表、局部更新和删除 5 个基础方法；写操作失败时会回滚数据库事务。
+- 已新增 8 个 Resume Service 隔离测试，覆盖基础 CRUD、局部更新、不存在分支和失败回滚；8 项全部通过。
+- 已新增隔离的新版 Resume API：`backend/app/api/resumes.py`，实现创建、列表、详情、局部更新和删除 5 个基础 CRUD 路由。
+- Resume API 使用 `ResumeCreate`、`ResumeUpdate` 校验文件信息、解析状态和 JSONB 解析快照，使用 `ResumeRead` 约束响应；简历不存在时返回 `404`，删除成功返回无正文的 `204`。
+- 已新增 14 个 Resume API 隔离测试，覆盖完整 CRUD、空文件名、空文件路径、负文件大小、非法解析状态和不存在分支；14 项全部通过。
+- 已核对旧前端继续使用 `/api/resume/upload` 和 `/api/resume/parse-preview`；新版 CRUD 使用复数路径 `/api/v2/resumes`，两者职责和路径均不冲突。
+- 新版 Resume CRUD API 已在 `backend/app/main.py` 正式挂载为 `/api/v2/resumes`；5 个新版路由均只登记一次，旧上传和解析预览路由仍存在，OpenAPI、Python 编译和当前全部 64 项回归测试通过。
+- 已通过正式 Job、Candidate、Resume API 创建外键完整的临时数据，并连接真实 PostgreSQL 完成 Resume 创建、列表、详情、解析状态与 JSONB 快照更新、删除和删除后 `404` 全链路往返，输出 `MOUNTED_POSTGRES_RESUME_API_CRUD_OK`；临时 Resume、Candidate、Job 均已清理。
+- 已新增 Education 独立异步 CRUD Service/API，正式挂载为 `/api/v2/education`；创建时校验 Candidate 存在，列表支持按 `candidate_id` 筛选，单条记录支持查询、局部更新和删除。
+- Education 的 18 项隔离测试全部通过；当时全部 82 项回归通过。正式 PostgreSQL 创建、筛选、详情、更新、删除和删除后 `404` 验证输出 `MOUNTED_POSTGRES_EDUCATION_API_CRUD_OK`，临时数据已清理。
+- 已新增 WorkExperience 独立异步 CRUD Service/API，正式挂载为 `/api/v2/work-experiences`；支持按候选人筛选，并验证 `tech_stack` JSONB 数组的创建、更新和读取。
+- WorkExperience 的 15 项隔离测试全部通过；当时全部 97 项回归通过。正式 PostgreSQL 验证输出 `MOUNTED_POSTGRES_WORK_EXPERIENCE_API_CRUD_OK`，临时数据已清理。
+- 已新增 ProjectExperience 独立异步 CRUD Service/API，正式挂载为 `/api/v2/project-experiences`；支持按候选人筛选，并覆盖 `tech_stack` 与 `achievements` 的独立维护。
+- ProjectExperience 的 15 项隔离测试全部通过；当时全部 112 项回归通过。正式 PostgreSQL 验证输出 `MOUNTED_POSTGRES_PROJECT_EXPERIENCE_API_CRUD_OK`，临时数据已清理。
+- 已新增 ScreeningResult 独立异步 CRUD Service/API，正式挂载为 `/api/v2/screening-results`；创建时校验 Candidate、Job，应用层预检候选人-岗位重复结果，并由 PostgreSQL 唯一约束兜底并发重复，重复创建统一返回 `409`。
+- ScreeningResult 的 15 项隔离测试全部通过；当时全部 127 项回归通过。正式 PostgreSQL CRUD、JSONB 更新和重复创建 `409` 验证输出 `MOUNTED_POSTGRES_SCREENING_RESULT_API_CRUD_OK`，临时数据已清理。
+- 已新增 Report 独立异步 CRUD Service/API，正式挂载为 `/api/v2/reports`；创建和更换 `screening_id` 时校验 ScreeningResult 与报告的 Candidate、Job 一致，不一致返回 `409`。
+- Report 的 16 项隔离测试全部通过；当时全部 143 项回归通过。正式 PostgreSQL CRUD、JSONB 元数据和跨候选人错误关联 `409` 验证输出 `MOUNTED_POSTGRES_REPORT_API_CRUD_OK`，临时数据已清理。
+- 已新增追加式 ActivityLog Service/API，正式挂载为 `/api/v2/activity-logs`；仅提供创建、列表和详情，不提供普通更新、删除，列表支持目标类型、目标 ID、动作、用户筛选及 1-500 条限制。
+- ActivityLog 的 11 项隔离测试全部通过，包含路由层“不暴露 PUT/DELETE”的结构检查；正式 PostgreSQL 新增、组合筛选、详情和 PUT/DELETE `405` 验证输出 `MOUNTED_POSTGRES_ACTIVITY_LOG_APPEND_READ_OK`，临时验证日志已通过内部数据库会话精确清理。
+- 当前新版后端回归测试共 154 项全部通过；正式应用中 43 个 `/api/v2`“HTTP 方法 + 路径”组合均唯一，检查输出 `MOUNTED_V2_METHOD_PATHS_UNIQUE_OK`。
+- PostgreSQL 曾因 Docker Desktop 未运行而拒绝连接；后台恢复 Docker Desktop 和项目 PostgreSQL 容器后，同一真实数据库验证通过。Alembic 当前仍为 `bbd627449743 (head)`，本轮只新增 Service/API，不需要新 migration。
+- 阶段 2 最低验收标准已经满足：岗位和候选人可创建、查询、更新，数据真实写入 PostgreSQL，Alembic 可正常建表和回滚。
+- 阶段 2 完整任务清单已经收口：Job、Candidate、Resume、Education、WorkExperience、ProjectExperience、ScreeningResult、Report 均有独立基础 CRUD Service/API；ActivityLog 按审计设计提供只新增/查询 Service/API。
+- 三类经历既支持随 Candidate 嵌套创建、查询和级联删除，也支持单条独立新增、筛选、修改和删除。
 
 优先任务：
 
-1. 下一小步使用临时 FastAPI 应用连接真实 PostgreSQL，完成 Job CRUD API 全链路集成验证，并清理临时测试数据。
-2. 集成验证通过后，设计新版 Job API 与旧版 `/api/jobs` 的安全切换方案，再决定挂载方式。
+1. 下一步进入阶段 3，先建立新版前端核心页面的可点击骨架、空状态和 loading 状态。
+2. 新版前端逐步接入 `/api/v2` 的 9 类核心对象；当前旧版 `/api` 与新版 `/api/v2` 继续并行，避免破坏旧演示系统。
+3. 阶段 3 页面骨架稳定后，再按实施计划进入简历上传和 LangGraph 简历解析主链路。
 
 ### 重要说明
 

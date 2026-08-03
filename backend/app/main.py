@@ -6,6 +6,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from .api import activity_logs as rebuilt_activity_logs
+from .api import candidates as rebuilt_candidates
+from .api import education as rebuilt_education
+from .api import jobs as rebuilt_jobs
+from .api import project_experiences as rebuilt_project_experiences
+from .api import reports as rebuilt_reports
+from .api import resumes as rebuilt_resumes
+from .api import screening_results as rebuilt_screening_results
+from .api import work_experiences as rebuilt_work_experiences
 from .config import get_settings
 from .routers import ai, apply, candidates, dashboard, jobs, resume, screening, sync
 
@@ -48,6 +57,15 @@ app.include_router(screening.router, prefix="/api")
 app.include_router(sync.router, prefix="/api")
 app.include_router(apply.router, prefix="/api")
 app.include_router(jobs.router, prefix="/api")
+app.include_router(rebuilt_activity_logs.router, prefix="/api/v2")
+app.include_router(rebuilt_candidates.router, prefix="/api/v2")
+app.include_router(rebuilt_education.router, prefix="/api/v2")
+app.include_router(rebuilt_jobs.router, prefix="/api/v2")
+app.include_router(rebuilt_project_experiences.router, prefix="/api/v2")
+app.include_router(rebuilt_reports.router, prefix="/api/v2")
+app.include_router(rebuilt_resumes.router, prefix="/api/v2")
+app.include_router(rebuilt_screening_results.router, prefix="/api/v2")
+app.include_router(rebuilt_work_experiences.router, prefix="/api/v2")
 
 upload_dir = settings.UPLOAD_DIR
 Path(upload_dir).mkdir(parents=True, exist_ok=True)

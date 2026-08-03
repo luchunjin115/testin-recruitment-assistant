@@ -55,8 +55,17 @@ class Candidate(Base):
 
     applied_job: Mapped["Job | None"] = relationship(back_populates="candidates")
     resumes: Mapped[list["Resume"]] = relationship(back_populates="candidate")
-    education_records: Mapped[list["Education"]] = relationship(back_populates="candidate")
-    work_experiences: Mapped[list["WorkExperience"]] = relationship(back_populates="candidate")
-    project_experiences: Mapped[list["ProjectExperience"]] = relationship(back_populates="candidate")
+    education_records: Mapped[list["Education"]] = relationship(
+        back_populates="candidate",
+        cascade="all, delete-orphan",
+    )
+    work_experiences: Mapped[list["WorkExperience"]] = relationship(
+        back_populates="candidate",
+        cascade="all, delete-orphan",
+    )
+    project_experiences: Mapped[list["ProjectExperience"]] = relationship(
+        back_populates="candidate",
+        cascade="all, delete-orphan",
+    )
     screening_results: Mapped[list["ScreeningResult"]] = relationship(back_populates="candidate")
     reports: Mapped[list["Report"]] = relationship(back_populates="candidate")
