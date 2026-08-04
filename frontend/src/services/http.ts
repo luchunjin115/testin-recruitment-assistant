@@ -7,7 +7,18 @@ export const http = axios.create({
   timeout: 30000,
 });
 
+// 新架构接口必须通过独立客户端访问，避免把 /api 与 /api/v2 混在一起。
+export const v2Http = axios.create({
+  baseURL: `${API_BASE_URL}/api/v2`,
+  timeout: 30000,
+});
+
 http.interceptors.response.use(
+  response => response,
+  error => Promise.reject(error),
+);
+
+v2Http.interceptors.response.use(
   response => response,
   error => Promise.reject(error),
 );

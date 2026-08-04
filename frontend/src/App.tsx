@@ -12,6 +12,15 @@ import AIScreeningCenter from './pages/AIScreeningCenter';
 import ApplyForm from './pages/ApplyForm';
 import JobManagement from './pages/JobManagement';
 import Stage3Preview from './pages/Stage3Preview';
+import Stage3Dashboard from './stage3/Stage3Dashboard';
+import Stage3Layout from './stage3/Stage3Layout';
+import Stage3ResumeList from './stage3/Stage3ResumeList';
+import Stage3CandidateList from './stage3/Stage3CandidateList';
+import Stage3CandidateDetail from './stage3/Stage3CandidateDetail';
+import Stage3JobList from './stage3/Stage3JobList';
+import Stage3ScreeningCenter from './stage3/Stage3ScreeningCenter';
+import Stage3ReportCenter from './stage3/Stage3ReportCenter';
+import Stage3ApplicationForm from './stage3/Stage3ApplicationForm';
 import './App.css';
 
 const App: React.FC = () => {
@@ -22,7 +31,18 @@ const App: React.FC = () => {
     >
       <Routes>
         <Route path="/apply" element={<ApplyForm />} />
+        <Route path="/stage3/apply" element={<Stage3ApplicationForm />} />
         <Route path="/stage3-preview" element={<Stage3Preview />} />
+        <Route path="/stage3" element={<Stage3Layout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<Stage3Dashboard />} />
+          <Route path="resumes" element={<Stage3ResumeList />} />
+          <Route path="candidates" element={<Stage3CandidateList />} />
+          <Route path="candidates/:id" element={<Stage3CandidateDetail />} />
+          <Route path="jobs" element={<Stage3JobList />} />
+          <Route path="screening" element={<Stage3ScreeningCenter />} />
+          <Route path="reports" element={<Stage3ReportCenter />} />
+        </Route>
         <Route path="/" element={<AppLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="dashboard" element={<Dashboard />} />

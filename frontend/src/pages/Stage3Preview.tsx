@@ -17,7 +17,7 @@ import {
   UserAddOutlined,
 } from '@ant-design/icons';
 import { Avatar, Badge, Button, Input, Progress, Tag } from 'antd';
-import './Stage3Preview.css';
+import '../stage3/styles/index.css';
 
 
 const navItems = [
