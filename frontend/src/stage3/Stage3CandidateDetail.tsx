@@ -3,6 +3,8 @@ import {
   ArrowLeftOutlined,
   BankOutlined,
   BookOutlined,
+  DownloadOutlined,
+  EyeOutlined,
   FileTextOutlined,
   MailOutlined,
   ProjectOutlined,
@@ -19,6 +21,7 @@ import {
   CandidateDetailData,
   getStage3CandidateDetail,
 } from './services/candidateDetail';
+import { getStage3ResumeFileUrl } from './services/resumes';
 
 type LoadState =
   | { status: 'loading' }
@@ -34,6 +37,24 @@ const formatPeriod = (start: string | null, end: string | null) => {
   if (!start && !end) return '时间未填写';
   return `${start || '开始时间未填写'} — ${end || '至今'}`;
 };
+
+const formatFileSize = (value: number | null) => {
+  if (value === null) return '大小未知';
+  if (value < 1024) return `${value} B`;
+  if (value < 1024 * 1024) return `${(value / 1024).toFixed(1)} KB`;
+  return `${(value / 1024 / 1024).toFixed(2)} MB`;
+};
+
+const getFileTypeLabel = (fileType: string | null) => {
+  if (fileType === 'application/pdf') return 'PDF';
+  if (fileType === 'text/plain') return 'TXT';
+  if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') return 'DOCX';
+  return '未知格式';
+};
+
+const getParseStatusLabel = (status: string) => ({
+  uploaded: '待提取', parsing: '提取中', parsed: '已提取', failed: '提取失败',
+}[status] || status);
 
 const InfoItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
   <div className="s3-detail-info-item"><span>{label}</span><strong>{value || '未填写'}</strong></div>
@@ -212,6 +233,48 @@ const Stage3CandidateDetail: React.FC = () => {
               <span className={data.hasResumeText ? 'is-ready' : ''}>简历文本 {data.hasResumeText ? '已保存' : '未保存'}</span>
               <span className={data.hasParsedData ? 'is-ready' : ''}>解析快照 {data.hasParsedData ? '已保存' : '未生成'}</span>
             </div>
+            {data.resumeFiles.length > 0 ? (
+              <div className="s3-resume-file-list">
+                {data.resumeFiles.map(resume => (
+                  <div className="s3-resume-file-item" key={resume.id}>
+                    <div className="s3-resume-file-meta">
+                      <strong title={resume.filename}>{resume.filename}</strong>
+                      <span>
+                        {getFileTypeLabel(resume.fileType)} · {formatFileSize(resume.fileSize)} · {getParseStatusLabel(resume.parseStatus)}
+                      </span>
+                    </div>
+                    <div className="s3-resume-file-actions">
+                      {resume.supportsPreview && (
+                        <Button
+                          href={getStage3ResumeFileUrl(resume.id)}
+                          icon={<EyeOutlined />}
+                          rel="noopener noreferrer"
+                          size="small"
+                          target="_blank"
+                        >
+                          查看
+                        </Button>
+                      )}
+                      <Button
+                        href={getStage3ResumeFileUrl(resume.id, true)}
+                        icon={<DownloadOutlined />}
+                        rel="noopener noreferrer"
+                        size="small"
+                        target="_blank"
+                      >
+                        下载
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="s3-resume-file-empty">
+                {data.hasResume
+                  ? '候选人记录中有历史文件路径，但没有可安全读取的新版 Resume 记录。'
+                  : '该候选人尚未绑定简历文件。'}
+              </p>
+            )}
           </article>
           <article className="s3-detail-card">
             <div className="s3-detail-card-header"><div><RobotOutlined /><h3>AI 摘要</h3></div></div>

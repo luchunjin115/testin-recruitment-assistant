@@ -12,7 +12,7 @@ class ResumeCreate(BaseModel):
     job_id: int | None = None
     filename: str = Field(min_length=1, max_length=255)
     file_path: str = Field(min_length=1, max_length=500)
-    file_type: str | None = Field(default=None, max_length=30)
+    file_type: str | None = Field(default=None, max_length=100)
     file_size: int | None = Field(default=None, ge=0)
     raw_text: str | None = None
     parse_status: ParseStatus = "uploaded"
@@ -25,7 +25,7 @@ class ResumeUpdate(BaseModel):
     job_id: int | None = None
     filename: str | None = Field(default=None, min_length=1, max_length=255)
     file_path: str | None = Field(default=None, min_length=1, max_length=500)
-    file_type: str | None = Field(default=None, max_length=30)
+    file_type: str | None = Field(default=None, max_length=100)
     file_size: int | None = Field(default=None, ge=0)
     raw_text: str | None = None
     parse_status: ParseStatus | None = None
@@ -36,7 +36,7 @@ class ResumeUpdate(BaseModel):
 
 class ResumeRead(BaseModel):
     id: int
-    candidate_id: int
+    candidate_id: int | None
     job_id: int | None
     filename: str
     file_path: str

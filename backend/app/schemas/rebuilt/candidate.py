@@ -32,6 +32,11 @@ class CandidateCreate(BaseModel):
     project_experiences: list[ProjectExperienceCreate] = Field(default_factory=list)
 
 
+class CandidateFromResumeCreate(BaseModel):
+    resume_id: int = Field(ge=1)
+    candidate: CandidateCreate
+
+
 class CandidateUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     phone: str | None = Field(default=None, max_length=20)

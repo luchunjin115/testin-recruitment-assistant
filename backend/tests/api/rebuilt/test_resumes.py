@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest import TestCase
 from unittest.mock import AsyncMock, Mock, patch
 
@@ -10,6 +12,29 @@ from app.core.database import get_db
 from app.models.rebuilt.resume import Resume
 from app.schemas.rebuilt.resume import ResumeCreate, ResumeUpdate
 from app.services.rebuilt.resume_service import resume_service
+from app.services.rebuilt.resume_service import (
+    ResumeAlreadyBoundError,
+    ResumeFileDescriptor,
+    ResumeFileUnavailableError,
+    ResumeCandidateNotFoundError,
+    ResumeJobNotFoundError,
+    ResumeTextExtractionConflictError,
+    ResumeTextExtractionFailedError,
+    UnsupportedResumeFileError,
+    UnsupportedResumeTextExtractionError,
+)
+from app.services.rebuilt.resume_file_cleanup import (
+    ResumeCleanupStorageError,
+    ResumeCleanupValidationError,
+    UnsupportedResumeCleanupError,
+)
+from app.services.rebuilt.resume_storage import (
+    EmptyResumeFileError,
+    InvalidResumeContentError,
+    ResumeFileTooLargeError,
+    ResumeStorageError,
+    UnsupportedResumeTypeError,
+)
 
 
 TEST_TIME = datetime(2026, 7, 22, 12, 0, tzinfo=timezone.utc)
@@ -19,7 +44,7 @@ def make_resume(
     resume_id: int,
     filename: str,
     *,
-    candidate_id: int = 10,
+    candidate_id: int | None = 10,
     job_id: int | None = 3,
     parse_status: str = "uploaded",
 ) -> Resume:
@@ -83,6 +108,151 @@ class ResumeApiTest(TestCase):
         self.assertIs(passed_db, self.db)
         self.assertIsInstance(passed_data, ResumeCreate)
         self.assertEqual(passed_data.file_size, 1024)
+
+    def test_upload_resume_returns_201_and_calls_safe_upload_service(self) -> None:
+        created = make_resume(8, "candidate.pdf", candidate_id=10, job_id=3)
+        created.file_type = "application/pdf"
+        upload_mock = AsyncMock(return_value=created)
+
+        with patch.object(resume_service, "upload_resume", upload_mock):
+            response = self.client.post(
+                "/resumes/upload",
+                data={"candidate_id": "10", "job_id": "3"},
+                files={"file": ("candidate.pdf", b"%PDF-1.4\nresume", "application/pdf")},
+            )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["id"], 8)
+        self.assertEqual(response.json()["file_type"], "application/pdf")
+        passed = upload_mock.await_args.kwargs
+        self.assertIs(passed["db"], self.db)
+        self.assertEqual(passed["candidate_id"], 10)
+        self.assertEqual(passed["job_id"], 3)
+        self.assertGreater(passed["max_size_bytes"], 0)
+
+    def test_upload_resume_allows_candidate_to_be_omitted(self) -> None:
+        created = make_resume(9, "candidate.txt", candidate_id=None, job_id=None)
+        created.file_type = "text/plain"
+        upload_mock = AsyncMock(return_value=created)
+
+        with patch.object(resume_service, "upload_resume", upload_mock):
+            response = self.client.post(
+                "/resumes/upload",
+                files={"file": ("candidate.txt", b"resume", "text/plain")},
+            )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIsNone(response.json()["candidate_id"])
+        passed = upload_mock.await_args.kwargs
+        self.assertIsNone(passed["candidate_id"])
+        self.assertIsNone(passed["job_id"])
+
+    def test_upload_resume_maps_missing_candidate_to_404(self) -> None:
+        upload_mock = AsyncMock(side_effect=ResumeCandidateNotFoundError("候选人不存在"))
+        with patch.object(resume_service, "upload_resume", upload_mock):
+            response = self.client.post(
+                "/resumes/upload",
+                data={"candidate_id": "999"},
+                files={"file": ("candidate.txt", b"resume", "text/plain")},
+            )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"detail": "候选人不存在"})
+
+    def test_upload_resume_maps_missing_job_to_404(self) -> None:
+        upload_mock = AsyncMock(side_effect=ResumeJobNotFoundError("岗位不存在"))
+        with patch.object(resume_service, "upload_resume", upload_mock):
+            response = self.client.post(
+                "/resumes/upload",
+                data={"candidate_id": "10", "job_id": "999"},
+                files={"file": ("candidate.txt", b"resume", "text/plain")},
+            )
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"detail": "岗位不存在"})
+
+    def test_upload_resume_maps_unsupported_type_to_415(self) -> None:
+        upload_mock = AsyncMock(side_effect=UnsupportedResumeTypeError("unsupported"))
+        with patch.object(resume_service, "upload_resume", upload_mock):
+            response = self.client.post(
+                "/resumes/upload",
+                data={"candidate_id": "10"},
+                files={"file": ("candidate.exe", b"binary", "application/octet-stream")},
+            )
+        self.assertEqual(response.status_code, 415)
+
+    def test_upload_resume_maps_too_large_to_413(self) -> None:
+        upload_mock = AsyncMock(side_effect=ResumeFileTooLargeError("too large"))
+        with patch.object(resume_service, "upload_resume", upload_mock):
+            response = self.client.post(
+                "/resumes/upload",
+                data={"candidate_id": "10"},
+                files={"file": ("candidate.txt", b"resume", "text/plain")},
+            )
+        self.assertEqual(response.status_code, 413)
+
+    def test_upload_resume_maps_invalid_file_to_400(self) -> None:
+        for error in (EmptyResumeFileError("empty"), InvalidResumeContentError("invalid")):
+            with self.subTest(error=type(error).__name__):
+                upload_mock = AsyncMock(side_effect=error)
+                with patch.object(resume_service, "upload_resume", upload_mock):
+                    response = self.client.post(
+                        "/resumes/upload",
+                        data={"candidate_id": "10"},
+                        files={"file": ("candidate.txt", b"resume", "text/plain")},
+                    )
+                self.assertEqual(response.status_code, 400)
+
+    def test_upload_resume_hides_storage_details_behind_500(self) -> None:
+        upload_mock = AsyncMock(side_effect=ResumeStorageError("C:/private/path failed"))
+        with patch.object(resume_service, "upload_resume", upload_mock):
+            response = self.client.post(
+                "/resumes/upload",
+                data={"candidate_id": "10"},
+                files={"file": ("candidate.txt", b"resume", "text/plain")},
+            )
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json(), {"detail": "文件保存失败"})
+
+    def test_extract_text_returns_200_and_parsed_resume(self) -> None:
+        parsed = make_resume(9, "candidate.txt", job_id=None, parse_status="parsed")
+        parsed.file_type = "text/plain"
+        parsed.raw_text = "完整 TXT 简历"
+        parsed.parsed_at = TEST_TIME
+        extract_mock = AsyncMock(return_value=parsed)
+
+        with patch.object(resume_service, "extract_text", extract_mock):
+            response = self.client.post("/resumes/9/extract-text")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["parse_status"], "parsed")
+        self.assertEqual(response.json()["raw_text"], "完整 TXT 简历")
+        passed = extract_mock.await_args.kwargs
+        self.assertIs(passed["db"], self.db)
+        self.assertEqual(passed["resume_id"], 9)
+
+    def test_extract_text_returns_404_when_resume_does_not_exist(self) -> None:
+        with patch.object(resume_service, "extract_text", AsyncMock(return_value=None)):
+            response = self.client.post("/resumes/999/extract-text")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json(), {"detail": "简历不存在"})
+
+    def test_extract_text_maps_parsing_conflict_to_409(self) -> None:
+        error = ResumeTextExtractionConflictError("简历正在解析中")
+        with patch.object(resume_service, "extract_text", AsyncMock(side_effect=error)):
+            response = self.client.post("/resumes/9/extract-text")
+        self.assertEqual(response.status_code, 409)
+
+    def test_extract_text_maps_unsupported_file_to_415(self) -> None:
+        error = UnsupportedResumeTextExtractionError("当前步骤只支持 TXT 文本提取")
+        with patch.object(resume_service, "extract_text", AsyncMock(side_effect=error)):
+            response = self.client.post("/resumes/9/extract-text")
+        self.assertEqual(response.status_code, 415)
+
+    def test_extract_text_maps_extraction_failure_to_422(self) -> None:
+        error = ResumeTextExtractionFailedError("原始简历文件不存在")
+        with patch.object(resume_service, "extract_text", AsyncMock(side_effect=error)):
+            response = self.client.post("/resumes/9/extract-text")
+        self.assertEqual(response.status_code, 422)
+        self.assertEqual(response.json(), {"detail": "原始简历文件不存在"})
 
     def test_create_resume_rejects_empty_filename_before_service_call(self) -> None:
         create_mock = AsyncMock()
@@ -152,7 +322,7 @@ class ResumeApiTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual([item["id"] for item in response.json()], [2, 1])
-        list_mock.assert_awaited_once_with(self.db)
+        list_mock.assert_awaited_once_with(self.db, candidate_id=None)
 
     def test_list_resumes_returns_empty_list(self) -> None:
         list_mock = AsyncMock(return_value=[])
@@ -162,6 +332,98 @@ class ResumeApiTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), [])
+
+    def test_list_resumes_passes_candidate_filter(self) -> None:
+        list_mock = AsyncMock(return_value=[make_resume(32, "candidate.pdf", candidate_id=64)])
+
+        with patch.object(resume_service, "list_resumes", list_mock):
+            response = self.client.get("/resumes?candidate_id=64")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()[0]["candidate_id"], 64)
+        list_mock.assert_awaited_once_with(self.db, candidate_id=64)
+
+    def test_get_resume_file_returns_inline_pdf_with_private_headers(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "server.pdf"
+            content = b"%PDF-1.4\nprivate resume"
+            path.write_bytes(content)
+            descriptor = ResumeFileDescriptor(
+                path=path,
+                filename="卢椿锦简历.pdf",
+                media_type="application/pdf",
+                supports_inline_preview=True,
+            )
+            get_file_mock = AsyncMock(return_value=descriptor)
+
+            with patch.object(resume_service, "get_resume_file", get_file_mock):
+                response = self.client.get("/resumes/32/file")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, content)
+        self.assertEqual(response.headers["content-type"], "application/pdf")
+        self.assertTrue(response.headers["content-disposition"].startswith("inline;"))
+        self.assertIn("filename*=utf-8''", response.headers["content-disposition"])
+        self.assertEqual(response.headers["cache-control"], "private, no-store")
+        self.assertEqual(response.headers["x-content-type-options"], "nosniff")
+
+    def test_get_resume_file_download_query_forces_attachment(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "server.txt"
+            path.write_text("candidate resume", encoding="utf-8")
+            descriptor = ResumeFileDescriptor(
+                path=path,
+                filename="candidate.txt",
+                media_type="text/plain",
+                supports_inline_preview=True,
+            )
+            with patch.object(
+                resume_service,
+                "get_resume_file",
+                AsyncMock(return_value=descriptor),
+            ):
+                response = self.client.get("/resumes/9/file?download=true")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.headers["content-disposition"].startswith("attachment;"))
+
+    def test_get_resume_file_docx_defaults_to_attachment(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "server.docx"
+            path.write_bytes(b"docx")
+            descriptor = ResumeFileDescriptor(
+                path=path,
+                filename="candidate.docx",
+                media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                supports_inline_preview=False,
+            )
+            with patch.object(
+                resume_service,
+                "get_resume_file",
+                AsyncMock(return_value=descriptor),
+            ):
+                response = self.client.get("/resumes/9/file")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.headers["content-disposition"].startswith("attachment;"))
+
+    def test_get_resume_file_maps_not_found_unsupported_and_unavailable(self) -> None:
+        scenarios = [
+            (None, 404, "简历不存在"),
+            (UnsupportedResumeFileError("不支持"), 415, "不支持"),
+            (ResumeFileUnavailableError("原始简历文件不存在"), 422, "文件不存在"),
+        ]
+        for result, expected_status, expected_detail in scenarios:
+            with self.subTest(status=expected_status):
+                mock = (
+                    AsyncMock(return_value=None)
+                    if result is None
+                    else AsyncMock(side_effect=result)
+                )
+                with patch.object(resume_service, "get_resume_file", mock):
+                    response = self.client.get("/resumes/999/file")
+                self.assertEqual(response.status_code, expected_status)
+                self.assertIn(expected_detail, response.json()["detail"])
 
     def test_get_resume_returns_200_and_resume(self) -> None:
         get_mock = AsyncMock(return_value=make_resume(7, "resume.pdf"))
@@ -238,7 +500,10 @@ class ResumeApiTest(TestCase):
 
         self.assertEqual(response.status_code, 204)
         self.assertEqual(response.content, b"")
-        delete_mock.assert_awaited_once_with(self.db, 4)
+        passed_db, passed_id = delete_mock.await_args.args
+        self.assertIs(passed_db, self.db)
+        self.assertEqual(passed_id, 4)
+        self.assertIsInstance(delete_mock.await_args.kwargs["storage_root"], Path)
 
     def test_delete_resume_returns_404_when_not_found(self) -> None:
         delete_mock = AsyncMock(return_value=False)
@@ -248,3 +513,46 @@ class ResumeApiTest(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json(), {"detail": "简历不存在"})
+
+    def test_delete_resume_rejects_bound_resume(self) -> None:
+        delete_mock = AsyncMock(
+            side_effect=ResumeAlreadyBoundError("已绑定候选人的简历不能通过放弃接口删除")
+        )
+
+        with patch.object(resume_service, "delete_resume", delete_mock):
+            response = self.client.delete("/resumes/4")
+
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("已绑定", response.json()["detail"])
+
+    def test_delete_resume_rejects_unsupported_stored_type(self) -> None:
+        delete_mock = AsyncMock(
+            side_effect=UnsupportedResumeCleanupError("当前文件类型不支持安全清理")
+        )
+
+        with patch.object(resume_service, "delete_resume", delete_mock):
+            response = self.client.delete("/resumes/4")
+
+        self.assertEqual(response.status_code, 415)
+
+    def test_delete_resume_rejects_invalid_file_metadata(self) -> None:
+        delete_mock = AsyncMock(
+            side_effect=ResumeCleanupValidationError("简历文件大小与上传记录不一致")
+        )
+
+        with patch.object(resume_service, "delete_resume", delete_mock):
+            response = self.client.delete("/resumes/4")
+
+        self.assertEqual(response.status_code, 422)
+
+    def test_delete_resume_hides_filesystem_failure_details(self) -> None:
+        delete_mock = AsyncMock(
+            side_effect=ResumeCleanupStorageError("C:/private/secret/file.pdf")
+        )
+
+        with patch.object(resume_service, "delete_resume", delete_mock):
+            response = self.client.delete("/resumes/4")
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(response.json(), {"detail": "简历文件清理失败"})
+        self.assertNotIn("private", response.text)

@@ -89,7 +89,9 @@ const SidebarFooter: React.FC = () => (
 const Stage3Layout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const isCandidateDetail = /^\/stage3\/candidates\/[^/]+$/.test(location.pathname);
+  const isCandidateCreate = location.pathname === '/stage3/candidates/new';
+  const isCandidateDetail = !isCandidateCreate
+    && /^\/stage3\/candidates\/[^/]+$/.test(location.pathname);
   const pageTitle = location.pathname.startsWith('/stage3/resumes')
     ? '简历管理'
     : location.pathname.startsWith('/stage3/reports')
@@ -98,6 +100,8 @@ const Stage3Layout: React.FC = () => {
       ? 'AI 初筛'
     : location.pathname.startsWith('/stage3/jobs')
       ? '岗位管理'
+    : isCandidateCreate
+      ? '新增候选人'
     : isCandidateDetail
       ? '候选人详情'
       : location.pathname.startsWith('/stage3/candidates')

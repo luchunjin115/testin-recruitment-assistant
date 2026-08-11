@@ -1,4 +1,8 @@
 import { v2Http } from '../../services/http';
+import {
+  CandidateResumeFile,
+  getStage3CandidateResumeFiles,
+} from './resumes';
 
 export type EducationRecord = {
   id: number;
@@ -104,6 +108,7 @@ export type CandidateDetailData = {
   hasResume: boolean;
   hasResumeText: boolean;
   hasParsedData: boolean;
+  resumeFiles: CandidateResumeFile[];
   aiSummary: string | null;
   tags: string[];
   createdAt: string;
@@ -114,9 +119,10 @@ export type CandidateDetailData = {
 };
 
 export const getStage3CandidateDetail = async (candidateId: number): Promise<CandidateDetailData> => {
-  const [candidateResponse, jobsResponse] = await Promise.all([
+  const [candidateResponse, jobsResponse, resumeFiles] = await Promise.all([
     v2Http.get<CandidateResponse>(`/candidates/${candidateId}`),
     v2Http.get<JobResponse[]>('/jobs'),
+    getStage3CandidateResumeFiles(candidateId),
   ]);
 
   const candidate = candidateResponse.data;
@@ -137,9 +143,10 @@ export const getStage3CandidateDetail = async (candidateId: number): Promise<Can
     source: candidate.source,
     status: candidate.status,
     appliedJobTitle: jobTitle || '未关联岗位',
-    hasResume: Boolean(candidate.resume_file_path),
+    hasResume: Boolean(candidate.resume_file_path) || resumeFiles.length > 0,
     hasResumeText: Boolean(candidate.resume_text),
     hasParsedData: Boolean(candidate.parsed_data),
+    resumeFiles,
     aiSummary: candidate.ai_summary,
     tags: candidate.tags || [],
     createdAt: candidate.created_at,

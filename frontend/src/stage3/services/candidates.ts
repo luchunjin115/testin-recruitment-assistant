@@ -22,6 +22,58 @@ export type CandidateJobOption = {
   title: string;
 };
 
+export type Stage3CandidateCreateInput = {
+  name: string;
+  phone?: string;
+  email?: string;
+  gender?: string;
+  age?: number;
+  location?: string;
+  currentCompany?: string;
+  currentTitle?: string;
+  workYears?: number;
+  educationLevel?: string;
+  source?: string;
+  appliedJobId?: number;
+  educationRecords?: Stage3EducationInput[];
+  workExperiences?: Stage3WorkExperienceInput[];
+  projectExperiences?: Stage3ProjectExperienceInput[];
+};
+
+export type Stage3EducationInput = {
+  school?: string;
+  degree?: string;
+  major?: string;
+  startDate?: string;
+  endDate?: string;
+  is985?: boolean;
+  is211?: boolean;
+};
+
+export type Stage3WorkExperienceInput = {
+  company?: string;
+  title?: string;
+  startDate?: string;
+  endDate?: string;
+  description?: string;
+  techStack?: string;
+};
+
+export type Stage3ProjectExperienceInput = {
+  projectName?: string;
+  role?: string;
+  startDate?: string;
+  endDate?: string;
+  description?: string;
+  techStack?: string;
+  achievements?: string;
+};
+
+export type Stage3CandidateCreated = {
+  id: number;
+  name: string;
+};
+
 type CandidateResponse = {
   id: number;
   name: string;
@@ -90,4 +142,125 @@ export const getStage3Candidates = async (): Promise<CandidateListSnapshot> => {
     linkedJobCount: items.filter(item => item.appliedJobId !== null).length,
     withResumeCount: items.filter(item => item.hasResume).length,
   };
+};
+
+const cleanText = (value?: string) => value?.trim() || null;
+
+const splitKeywords = (value?: string) => {
+  const items = value
+    ?.split(/[,，、;；\n]+/)
+    .map(item => item.trim())
+    .filter(Boolean);
+  return items?.length ? Array.from(new Set(items)) : null;
+};
+
+const buildCandidatePayload = (input: Stage3CandidateCreateInput) => {
+  const educationRecords = (input.educationRecords || []).filter(record => (
+    Boolean(
+      record.school?.trim()
+      || record.degree?.trim()
+      || record.major?.trim()
+      || record.startDate?.trim()
+      || record.endDate?.trim()
+      || record.is985
+      || record.is211,
+    )
+  ));
+  const workExperiences = (input.workExperiences || []).filter(record => (
+    Boolean(
+      record.company?.trim()
+      || record.title?.trim()
+      || record.startDate?.trim()
+      || record.endDate?.trim()
+      || record.description?.trim()
+      || record.techStack?.trim(),
+    )
+  ));
+  const projectExperiences = (input.projectExperiences || []).filter(record => (
+    Boolean(
+      record.projectName?.trim()
+      || record.role?.trim()
+      || record.startDate?.trim()
+      || record.endDate?.trim()
+      || record.description?.trim()
+      || record.techStack?.trim()
+      || record.achievements?.trim(),
+    )
+  ));
+
+  return {
+    name: input.name.trim(),
+    phone: cleanText(input.phone),
+    email: cleanText(input.email),
+    gender: cleanText(input.gender),
+    age: input.age ?? null,
+    location: cleanText(input.location),
+    current_company: cleanText(input.currentCompany),
+    current_title: cleanText(input.currentTitle),
+    work_years: input.workYears ?? null,
+    education_level: cleanText(input.educationLevel),
+    source: cleanText(input.source) || 'HR手动录入',
+    status: 'new',
+    applied_job_id: input.appliedJobId ?? null,
+    education_records: educationRecords.map(record => ({
+      school: cleanText(record.school),
+      degree: cleanText(record.degree),
+      major: cleanText(record.major),
+      start_date: cleanText(record.startDate),
+      end_date: cleanText(record.endDate),
+      is_985: Boolean(record.is985),
+      is_211: Boolean(record.is211),
+    })),
+    work_experiences: workExperiences.map(record => ({
+      company: cleanText(record.company),
+      title: cleanText(record.title),
+      start_date: cleanText(record.startDate),
+      end_date: cleanText(record.endDate),
+      description: cleanText(record.description),
+      tech_stack: splitKeywords(record.techStack),
+    })),
+    project_experiences: projectExperiences.map(record => ({
+      project_name: cleanText(record.projectName),
+      role: cleanText(record.role),
+      start_date: cleanText(record.startDate),
+      end_date: cleanText(record.endDate),
+      description: cleanText(record.description),
+      tech_stack: splitKeywords(record.techStack),
+      achievements: cleanText(record.achievements),
+    })),
+  };
+};
+
+export const createStage3Candidate = async (
+  input: Stage3CandidateCreateInput,
+): Promise<Stage3CandidateCreated> => {
+  const response = await v2Http.post<CandidateResponse>(
+    '/candidates',
+    buildCandidatePayload(input),
+  );
+
+  return {
+    id: response.data.id,
+    name: response.data.name,
+  };
+};
+
+export const createStage3CandidateFromResume = async (
+  resumeId: number,
+  input: Stage3CandidateCreateInput,
+): Promise<Stage3CandidateCreated> => {
+  const response = await v2Http.post<CandidateResponse>('/candidates/from-resume', {
+    resume_id: resumeId,
+    candidate: buildCandidatePayload(input),
+  });
+
+  return {
+    id: response.data.id,
+    name: response.data.name,
+  };
+};
+
+export const getStage3CandidateJobs = async (): Promise<CandidateJobOption[]> => {
+  const response = await v2Http.get<JobResponse[]>('/jobs');
+  return response.data.map(job => ({ id: job.id, title: job.title }));
 };

@@ -43,6 +43,7 @@ services:
       - "8000:8000"
     volumes:
       - ./backend/uploads:/app/uploads
+      - resume-data:/app/storage
       - recruit-data:/app/data
     environment:
       - LLM_PROVIDER=mock
@@ -59,7 +60,12 @@ services:
       - BACKEND_PORT=8000
       - CORS_ORIGINS=http://localhost:3000
       - UPLOAD_DIR=./uploads
+      - V2_STORAGE_DIR=/app/storage
       - MAX_FILE_SIZE_MB=10
+      - RESUME_CLEANUP_ENABLED=${RESUME_CLEANUP_ENABLED:-true}
+      - RESUME_UNBOUND_RETENTION_HOURS=${RESUME_UNBOUND_RETENTION_HOURS:-24}
+      - RESUME_CLEANUP_INTERVAL_MINUTES=${RESUME_CLEANUP_INTERVAL_MINUTES:-60}
+      - RESUME_CLEANUP_BATCH_SIZE=${RESUME_CLEANUP_BATCH_SIZE:-50}
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,6 +85,7 @@ services:
 
 volumes:
   recruit-data:
+  resume-data:
   postgres-data:
   redis-data:
   chroma-data:

@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.parse import quote_plus
 from typing import List, Optional
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -54,11 +54,16 @@ class Settings(BaseSettings):
     DEEPSEEK_MODEL: str = "deepseek-chat"
 
     UPLOAD_DIR: str = str((BACKEND_DIR / "uploads").resolve())
+    V2_STORAGE_DIR: str = str((BACKEND_DIR / "storage").resolve())
     MAX_FILE_SIZE_MB: int = 10
+    RESUME_CLEANUP_ENABLED: bool = True
+    RESUME_UNBOUND_RETENTION_HOURS: int = Field(default=24, ge=1, le=24 * 365)
+    RESUME_CLEANUP_INTERVAL_MINUTES: int = Field(default=60, ge=1, le=24 * 60)
+    RESUME_CLEANUP_BATCH_SIZE: int = Field(default=50, ge=1, le=1000)
 
-    @field_validator("UPLOAD_DIR")
+    @field_validator("UPLOAD_DIR", "V2_STORAGE_DIR")
     @classmethod
-    def normalize_upload_dir(cls, value: str) -> str:
+    def normalize_storage_dir(cls, value: str) -> str:
         return _resolve_path(value)
 
     @property

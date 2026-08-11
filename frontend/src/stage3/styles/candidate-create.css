@@ -1,0 +1,449 @@
+/* Unified stage 4 candidate creation and resume intake. */
+
+.s3-candidate-create-page {
+  max-width: 1320px;
+}
+
+.s3-candidate-create-heading-copy {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+}
+
+.s3-candidate-create-back.ant-btn {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid #e2e6ed;
+  border-radius: 9px;
+  color: #667085;
+}
+
+.s3-candidate-create-heading > .ant-tag {
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+}
+
+.s3-candidate-create-boundary {
+  margin-top: 16px;
+  border-color: #dce6fa;
+  background: #f7f9ff;
+}
+
+.s3-candidate-create-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  align-items: start;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.s3-candidate-create-main,
+.s3-candidate-create-aside {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.s3-candidate-create-aside {
+  position: sticky;
+  top: 94px;
+}
+
+.s3-candidate-form-card,
+.s3-candidate-resume-card,
+.s3-candidate-confirm-card {
+  overflow: hidden;
+  border: 1px solid var(--s3-border);
+  border-radius: 12px;
+  background: var(--s3-surface);
+}
+
+.s3-candidate-form-card-header,
+.s3-candidate-resume-heading {
+  display: flex;
+  min-height: 68px;
+  align-items: center;
+  gap: 12px;
+  padding: 15px 20px;
+  border-bottom: 1px solid #edf0f3;
+}
+
+.s3-candidate-form-card-header > span,
+.s3-candidate-resume-heading > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--s3-primary);
+  background: #eef3ff;
+}
+
+.s3-candidate-form-card-header > div,
+.s3-candidate-resume-heading > div {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.s3-candidate-form-card-header h3,
+.s3-candidate-resume-heading h3,
+.s3-candidate-confirm-card h3 {
+  margin: 0;
+  color: #303a4b;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.s3-candidate-form-card-header p,
+.s3-candidate-resume-heading p,
+.s3-candidate-confirm-card p {
+  margin: 4px 0 0;
+  color: #8b94a4;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.s3-candidate-form-card-header > .ant-btn {
+  flex: 0 0 auto;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.s3-candidate-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+  padding: 20px 20px 2px;
+}
+
+.s3-candidate-form-grid.is-three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.s3-candidate-form-grid .ant-form-item {
+  min-width: 0;
+  margin-bottom: 18px;
+}
+
+.s3-candidate-form-grid .ant-form-item.is-full {
+  grid-column: 1 / -1;
+}
+
+.s3-candidate-form-grid .ant-form-item-label > label {
+  color: #556174;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.s3-candidate-form-grid .ant-input,
+.s3-candidate-form-grid .ant-input-number,
+.s3-candidate-form-grid .ant-select-selector {
+  width: 100%;
+  border-color: #dfe3ea !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+.s3-candidate-form-grid .ant-input:not(textarea),
+.s3-candidate-form-grid .ant-input-number,
+.s3-candidate-form-grid .ant-select-selector {
+  min-height: 38px;
+}
+
+.s3-candidate-form-grid .ant-input-number-input {
+  height: 36px;
+}
+
+.s3-candidate-record-empty {
+  margin: 0;
+  padding: 30px 20px;
+  color: #969eac;
+  font-size: 11px;
+  text-align: center;
+}
+
+.s3-candidate-record-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px 20px;
+}
+
+.s3-candidate-record {
+  overflow: hidden;
+  border: 1px solid #e6e9ef;
+  border-radius: 10px;
+  background: #fbfcfd;
+}
+
+.s3-candidate-record-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  padding: 7px 14px;
+  border-bottom: 1px solid #eceff3;
+  background: #f6f8fa;
+}
+
+.s3-candidate-record-title strong {
+  color: #566174;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.s3-candidate-record .s3-candidate-form-grid {
+  padding: 16px 14px 0;
+}
+
+.s3-candidate-school-flags {
+  display: flex;
+  min-height: 62px;
+  align-items: center;
+  gap: 18px;
+  padding-top: 20px;
+}
+
+.s3-candidate-school-flags .ant-form-item {
+  margin: 0;
+}
+
+.s3-candidate-resume-card,
+.s3-candidate-confirm-card {
+  padding-bottom: 18px;
+}
+
+.s3-candidate-uploader {
+  display: block;
+  margin: 18px;
+}
+
+.s3-candidate-uploader .ant-upload-drag {
+  border-color: #d9e0eb;
+  border-radius: 10px;
+  background: #fafbfc;
+}
+
+.s3-candidate-uploader .ant-upload {
+  padding: 25px 12px !important;
+}
+
+.s3-candidate-uploader .ant-upload-drag-icon {
+  margin-bottom: 8px !important;
+}
+
+.s3-candidate-uploader .ant-upload-drag-icon .anticon {
+  color: var(--s3-primary) !important;
+  font-size: 28px !important;
+}
+
+.s3-candidate-uploader .ant-upload-text {
+  color: #404b5d !important;
+  font-size: 12px !important;
+  font-weight: 600;
+}
+
+.s3-candidate-uploader .ant-upload-hint {
+  color: #929aaa !important;
+  font-size: 10px !important;
+}
+
+.s3-candidate-resume-progress {
+  display: flex;
+  min-height: 160px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 9px;
+  margin: 18px;
+  border: 1px solid #dfe6f5;
+  border-radius: 10px;
+  background: #f8faff;
+}
+
+.s3-candidate-resume-progress strong {
+  color: #44536d;
+  font-size: 12px;
+}
+
+.s3-candidate-resume-progress span {
+  max-width: 90%;
+  overflow: hidden;
+  color: #8c96a7;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.s3-candidate-resume-result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+}
+
+.s3-candidate-resume-result .ant-alert {
+  font-size: 11px;
+}
+
+.s3-candidate-resume-result > .ant-btn {
+  align-self: flex-start;
+  border-radius: 8px;
+}
+
+.s3-candidate-resume-meta {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 12px;
+  border: 1px solid #e5e9ef;
+  border-radius: 9px;
+  background: #fafbfc;
+}
+
+.s3-candidate-resume-meta strong {
+  overflow: hidden;
+  color: #3e4859;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.s3-candidate-resume-meta span {
+  margin-top: 4px;
+  color: #929aaa;
+  font-size: 9px;
+}
+
+.s3-candidate-resume-meta .ant-tag {
+  width: fit-content;
+  margin: 9px 0 0;
+  color: #34705f;
+  background: #eef8f4;
+  font-size: 9px;
+}
+
+.s3-candidate-raw-text > span {
+  color: #6f7b8f;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.s3-candidate-raw-text pre {
+  max-height: 260px;
+  margin: 7px 0 0;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #e5e9ef;
+  border-radius: 9px;
+  color: #526075;
+  background: #fbfcfd;
+  font-family: inherit;
+  font-size: 10px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.s3-candidate-resume-retention {
+  margin: 0 18px;
+  padding: 10px 12px;
+  border: 1px solid #eee5d5;
+  border-radius: 8px;
+  color: #806f51;
+  background: #fffaf2;
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.s3-candidate-confirm-card {
+  padding: 20px;
+}
+
+.s3-candidate-confirm-card p {
+  margin: 7px 0 16px;
+}
+
+.s3-candidate-confirm-card .ant-btn {
+  margin-top: 8px;
+  border-radius: 8px;
+}
+
+@media (max-width: 980px) {
+  .s3-candidate-create-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .s3-candidate-create-aside {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 280px;
+    align-items: start;
+  }
+}
+
+@media (max-width: 720px) {
+  .s3-candidate-create-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .s3-candidate-create-aside,
+  .s3-candidate-form-grid,
+  .s3-candidate-form-grid.is-three {
+    grid-template-columns: 1fr;
+  }
+
+  .s3-candidate-form-card-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .s3-candidate-form-card-header > .ant-btn {
+    width: 100%;
+    margin-left: 46px;
+  }
+
+  .s3-candidate-form-grid .ant-form-item.is-full {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .s3-candidate-create-page {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+
+  .s3-candidate-create-heading-copy {
+    align-items: flex-start;
+  }
+
+  .s3-candidate-form-card-header,
+  .s3-candidate-resume-heading {
+    padding: 14px;
+  }
+
+  .s3-candidate-form-card-header > .ant-btn {
+    margin-left: 0;
+  }
+
+  .s3-candidate-form-grid {
+    padding-right: 14px;
+    padding-left: 14px;
+  }
+
+  .s3-candidate-record-list {
+    padding: 12px 14px 16px;
+  }
+}

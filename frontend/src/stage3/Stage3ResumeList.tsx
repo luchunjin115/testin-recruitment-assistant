@@ -204,7 +204,10 @@ const Stage3ResumeList: React.FC = () => {
                   <span className="s3-file-icon"><FileTextOutlined /></span>
                   <div><strong title={item.filename}>{item.filename}</strong><span>简历 #{item.id}</span></div>
                 </div>
-                <div className="s3-resume-secondary"><strong>{item.candidateName}</strong><span>候选人 #{item.candidateId}</span></div>
+                <div className="s3-resume-secondary">
+                  <strong>{item.candidateName}</strong>
+                  <span>{item.candidateId === null ? '尚未创建候选人' : `候选人 #${item.candidateId}`}</span>
+                </div>
                 <span className="s3-role-cell">{item.jobTitle}</span>
                 <div className="s3-resume-secondary"><strong>{item.fileType?.toUpperCase() || '类型未记录'}</strong><span>{formatFileSize(item.fileSize)}</span></div>
                 <div>

@@ -1,4 +1,5 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 import sys
 from pathlib import Path
 
@@ -27,9 +28,33 @@ if str(PROJECT_ROOT) not in sys.path:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from scripts.ensure_demo_data import ensure_demo_data
+    from .core.config import get_settings as get_rebuilt_settings
+    from .core.database import get_sessionmaker
+    from .services.rebuilt.resume_retention_service import run_resume_retention_loop
 
     ensure_demo_data()
-    yield
+    rebuilt_settings = get_rebuilt_settings()
+    cleanup_task = None
+    if rebuilt_settings.RESUME_CLEANUP_ENABLED:
+        cleanup_task = asyncio.create_task(
+            run_resume_retention_loop(
+                session_factory=get_sessionmaker(),
+                storage_root=Path(rebuilt_settings.V2_STORAGE_DIR),
+                retention_hours=rebuilt_settings.RESUME_UNBOUND_RETENTION_HOURS,
+                interval_seconds=(
+                    rebuilt_settings.RESUME_CLEANUP_INTERVAL_MINUTES * 60
+                ),
+                batch_size=rebuilt_settings.RESUME_CLEANUP_BATCH_SIZE,
+            ),
+            name="resume-retention-cleanup",
+        )
+    try:
+        yield
+    finally:
+        if cleanup_task is not None:
+            cleanup_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await cleanup_task
 
 
 settings = get_settings()

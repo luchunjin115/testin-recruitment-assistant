@@ -1,6 +1,6 @@
 # 项目进度状态
 
-> 最新更新：2026-08-04（架构重建阶段 3：已完成投递页岗位要求修复与样式模块化；下一步为阶段 4 新版简历上传边界与文件安全设计）
+> 最新更新：2026-08-11（架构重建阶段 4 已完成并完成人工验收；阶段 5 仅完成方案讨论，尚未确定最终实现方案、尚未开始编码）
 
 ## 当前总状态：🚧 新架构重建已启动，旧版演示系统作为迁移资产保留
 
@@ -326,11 +326,219 @@
 - CSS 原样搬迁后的中间生产构建和最终模块化后的生产构建均通过，共转换 3916 个模块；`git diff --check` 通过，仅保留原有换行符提示。
 - 本步只调整前端岗位要求适配、样式归属、模块拆分和导入路径，没有修改后端 API、Schema、Service、Model、PostgreSQL、旧 SQLite、`backend/uploads/`、旧页面路由或旧 `/api`，因此没有重复运行后端 unittest。
 
+### 阶段 3 第十四小步进度：新旧页面路由级懒加载与前端拆包收尾
+
+- 已把 `frontend/src/App.tsx` 中旧版布局/页面、阶段 3 布局/页面和视觉样板共 18 个同步导入改为 `React.lazy` 动态导入；路由路径、嵌套关系、旧版入口与 `/stage3/*` 入口均保持不变。
+- 已为每个懒加载路由增加统一 `Suspense` 加载状态；加载提示包含 `role="status"` 与 `aria-live="polite"`，并在用户启用减少动态效果时停止旋转动画。
+- 前端生产构建通过，共转换 3917 个模块；原单一入口 JavaScript 为 1955.98 kB（gzip 594.91 kB），拆包后入口为 263.65 kB（gzip 89.66 kB），最大页面块为 422.01 kB（gzip 116.49 kB），Vite 的 500 kB 大块警告已消失。
+- 已确认构建产物包含独立的阶段 3 Dashboard、简历、候选人列表/详情、岗位、AI 初筛、初筛报告、候选人投递和布局代码块；后端全量 162 项 `unittest` 通过；`git diff --check` 通过，仅保留工作区既有换行符提示。
+- 本步只调整前端模块加载方式与加载状态样式，没有修改页面业务逻辑、API、Schema、Service、Model、PostgreSQL、旧 SQLite、文件目录或路由地址。
+
+### 阶段 4 第一小步进度：新版简历安全接收、元数据与 uploaded 状态
+
+- 已完成旧 `/api/resume/upload` 审计：旧接口只按扩展名判断格式，把文件完整读入内存并先写入 `backend/uploads/`，随后同步解析和创建旧候选人；解析失败或数据库失败时可能遗留文件，且没有按文件内容校验实际类型。本步没有修改该旧路由或旧 `file_parser.py`。
+- 已完成新版 Resume Model、Schema、Service、`/api/v2/resumes` 与文件目录审计：当前 `Resume.candidate_id` 必填，因此第一小步要求上传时关联已存在的新版候选人；不创建候选人，不把旧候选人的 `resume_file_path` 伪装为新版 Resume。
+- 已新增 `POST /api/v2/resumes/upload`，使用 `multipart/form-data` 接收 `file`、必填 `candidate_id` 和可选 `job_id`；候选人或岗位不存在返回 `404`，不支持的扩展名返回 `415`，空文件/内容类型不符返回 `400`，超过 10 MB 返回 `413`。
+- 旧 `UPLOAD_DIR` 当前被 `/uploads` 静态公开，因此新版不复用其子目录；已新增私有 `V2_STORAGE_DIR`，本地默认 `backend/storage`、Docker 使用独立 `resume-data` volume，且不挂载静态路由。新版文件写入 `<V2_STORAGE_DIR>/v2/resumes/YYYY/MM/<UUID>.<ext>`；数据库 `filename` 只保存剥离目录成分后的原始展示名，磁盘路径只由服务端 UUID、UTC 年月和已验证扩展名生成。同名或相同内容允许形成独立 Resume 版本，不覆盖旧文件，也不在本步执行候选人或内容去重。
+- 上传不信任客户端声明的 MIME：服务端按 `%PDF-` 文件头识别 PDF，按 ZIP 结构中的 `[Content_Types].xml` 与 `word/document.xml` 识别 DOCX，并对 TXT 做严格解码和控制字符比例检查；扩展名必须与实际内容一致。数据库保存服务端识别的标准 MIME。
+- 由于 DOCX 标准 MIME 长 71 字符，已新增 Alembic revision `8a9c4d2e1f01`，只把 `resumes.file_type` 从 `VARCHAR(30)` 扩为 `VARCHAR(100)`；真实 PostgreSQL 已升级到该 head，字段长度查询返回 100。
+- 事务顺序为：先确认 Candidate/Job 外键 -> 分块写入 `v2/resumes/.staging` 并限制大小 -> 校验真实内容 -> PostgreSQL `flush`（未提交）-> 原子移动到最终路径 -> PostgreSQL `commit`。文件落盘失败会回滚未提交记录；数据库 `flush/commit` 失败会回滚并删除临时文件与最终文件。
+- PostgreSQL 与本地文件系统不能组成真正的跨系统原子事务，进程在“文件移动成功、数据库提交之前”被强制终止仍存在极小崩溃窗口。后续孤立文件对账只能扫描 `v2/resumes`，必须用数据库 `file_path` 反查并设置宽限期；不得扫描删除 `backend/uploads/` 根层旧文件。本小步先覆盖所有可捕获异常的即时清理，不提前实现定时清理任务。
+- 新增 20 项上传隔离测试；Resume 相关 42 项测试全部通过，后端全量回归共 182 项全部通过。测试使用 `TemporaryDirectory`，覆盖 PDF/DOCX/TXT、安全文件名、同名不覆盖、非法扩展名、空文件、超限、内容伪装、关联对象不存在、文件失败、数据库 flush/commit 失败和清理回滚。
+- 真实 PostgreSQL + 真实私有临时目录验证通过：正式新版路由最终生成 Resume ID 7，写入候选人 46、岗位 11、原始名 `final.pdf`、MIME `application/pdf`、14 字节、`uploaded` 状态，`raw_text` 保持 `null`；实际文件位于系统临时目录的 `v2/resumes/2026/08/<UUID>.pdf`，未经过旧 `/uploads` 静态挂载。非法文件、文件落盘失败、数据库 commit 失败均验证数据库计数不变且孤立文件为 0；临时 Resume、Candidate、Job 和临时目录均已清理。
+- 本轮启动 Docker 前各服务均不可用；恢复 Docker Desktop 后 PostgreSQL 16 容器健康，Redis、Chroma、后端和前端未启动。当前真实 PostgreSQL 在验证前的 `candidates/jobs/resumes` 计数均为 0，与阶段 3 曾记录的 30/8/0 不一致；本轮没有清空、重建或覆盖数据库，只如实记录当前所连接 volume 的状态。
+- `backend/uploads/` 仍为原有 21 个 TXT 文件、共 9,128 字节，根层文件未移动、覆盖或删除；所有新增自动化和真实验证文件都位于临时目录。
+
+### 阶段 4 第二小步进度：TXT 原文提取与解析状态流转
+
+- 已新增 `POST /api/v2/resumes/{resume_id}/extract-text`，只处理第一小步安全上传生成的 `text/plain` Resume；Resume 不存在返回 `404`，正在解析返回 `409`，PDF/DOCX 等本步未支持类型返回 `415`，文件读取或完整性校验失败返回 `422`。
+- 已新增独立 `ResumeTextExtractor`：只允许解析 `V2_STORAGE_DIR/v2/resumes/` 内的 `.txt` 最终文件，拒绝绝对路径、`..` 越界、`.staging` 临时文件、非 TXT 后缀、缺失文件和缺少文件大小元数据的记录。
+- 提取前会对比磁盘实际字节数与 Resume `file_size`；上传后被替换或追加内容的文件不会进入 `raw_text`。TXT 解码复用上传阶段同一套 `chardet + utf-8 + gb18030` 严格规则，并拒绝二进制控制字符过多或只有空白的文本。
+- 同步接口在单个数据库事务内执行 `uploaded/failed -> parsing（flush，未提交）-> parsed/failed（commit）`。`parsing` 是本次同步事务中的中间态：成功时保存完整 `raw_text`、清空 `parse_error` 并写入 `parsed_at`；提取失败时保存 `failed + parse_error`，但保留原文件供人工检查和重试。
+- 采用“中间态只 flush、不提前 commit”的原因是避免数据库最终提交失败后永久遗留 `parsing`。真实 commit 失败验证中，PostgreSQL 回滚到原 `uploaded` 状态，`raw_text/parse_error/parsed_at` 仍为空，原始 TXT 文件继续存在。
+- 已支持幂等和重试：已经 `parsed` 且有 `raw_text` 的 Resume 再次调用直接返回现有结果，不重复读文件；`failed` Resume 修复文件后可以重新进入提取流程。
+- 本步新增 26 项隔离测试；Extractor、Service 与 Resume API 相关隔离测试共 47 项全部通过，后端全量回归从 182 增至 208 项全部通过。覆盖 UTF-8、GB18030、完整原文保留、路径穿越、绝对路径、临时目录、文件缺失、大小篡改、空白/二进制文本、状态冲突、幂等、失败重试和数据库 flush/commit 回滚。
+- 真实 PostgreSQL + 真实私有临时目录验证通过：Resume ID 10 从 `uploaded` 变为 `parsed`，完整写入 24 个字符的中文原文，`parsed_at` 非空且原 TXT 文件保持原字节；Resume ID 11 为 PDF，调用提取接口返回 `415` 并保持 `uploaded`；篡改 TXT Resume ID 13 返回 `422`，数据库保存 `failed + 简历文件大小与上传记录不一致` 且篡改文件仍保留；强制数据库 commit 失败的 Resume ID 14 回滚为 `uploaded` 且文件保留。所有临时 Candidate、Job、Resume 和系统临时目录均已清理。
+- 本步没有修改 Model、Schema、Alembic、旧 `file_parser.py`、旧 `/api/resume/*`、前端、旧 SQLite、`backend/uploads/` 或 Docker volume，也没有调用 LLM、LangGraph、AI 初筛或报告生成。
+
+### 阶段 4 第三小步进度：PDF 文字层提取与质量边界
+
+- 统一接口 `POST /api/v2/resumes/{resume_id}/extract-text` 已扩展支持服务端识别 MIME `application/pdf`；ResumeService 根据 MIME 分派 TXT 或 PDF 提取器，DOCX 仍明确返回 `415`，前端后续无需为不同文件类型维护不同提取接口。
+- 已新增通用 `ResumeFileAccess`，集中处理 TXT/PDF 共用的私有命名空间、路径穿越、绝对路径、`.staging`、文件存在、扩展名和数据库 `file_size` 一致性校验；TXT 提取器已改为复用该组件，原有 TXT 行为和测试保持通过。
+- 已新增独立 `ResumePdfExtractor`，使用项目现有 PyPDF2 3.0.1 的 `PdfReader(strict=False)` 按原页码逐页读取文字层，跳过空白页，并用两个换行连接非空页面；不调用 AI 改写、总结或补全原文。
+- PDF 专有失败边界已明确：无页面、损坏/无法读取、密码加密、页级提取异常、全部页面无文字、有效文字过少和字体编码异常均保存稳定 `parse_error`；无文字层统一提示“可能是扫描件，需要 OCR”，但本步不接 OCR。
+- 已增加资源安全上限：单份 PDF 最多 100 页，提取文本最多 1,000,000 字符；超过限制进入 `failed`，避免小体积恶意 PDF 长时间占用 CPU 或异常展开内存。
+- PDF 继续复用 TXT 已验证的单事务状态流：`uploaded/failed -> parsing（flush，未提交）-> parsed/failed（commit）`。数据库最终 commit 失败会回滚到原 `uploaded`，不会永久卡在 `parsing`；无论提取成功还是失败，原始 PDF 均保留。
+- 本步新增 16 项隔离测试；PDF、TXT、Service 与 Resume API 相关隔离测试共 63 项全部通过，后端全量回归从 208 增至 224 项全部通过。覆盖单页、多页顺序、空白页、无页面、扫描件边界、低质量、损坏、加密、100 页限制、输出长度限制、路径穿越、临时目录、文件缺失、大小篡改、MIME 分派和失败状态持久化。
+- 真实 PostgreSQL + 真实私有临时目录验证通过：Resume ID 15 的三页 PDF（含空白页）按页序提取并保存 111 个字符，状态为 `parsed`、`parsed_at` 非空且原文件字节不变；Resume ID 16 的无文字层 PDF 保存 `failed + 需要 OCR` 且文件保留；Resume ID 18 的损坏 PDF 返回 `422` 并保存 `failed + PDF 文件损坏或无法读取`；强制数据库 commit 失败的 Resume ID 19 回滚为 `uploaded`，原 PDF 保留且 `raw_text/parse_error/parsed_at` 均为空。所有临时 Candidate、Job、Resume 和系统临时目录均已清理。
+- 本步没有修改 API 路径、Model、Schema、Alembic、旧 `file_parser.py`、旧 `/api/resume/*`、前端、旧 SQLite、`backend/uploads/` 或 Docker volume，也没有调用 OCR、LLM、LangGraph、AI 初筛或报告生成。
+
+### 阶段 4 第四小步进度：DOCX 正文与表格文本提取
+
+- 统一接口 `POST /api/v2/resumes/{resume_id}/extract-text` 已扩展支持服务端识别的 DOCX 标准 MIME；ResumeService 现在按 MIME 分派 TXT、PDF 或 DOCX 提取器，前端不需要维护不同格式的提取接口，未知 MIME 仍返回 `415`。
+- 已新增独立 `ResumeDocxExtractor`，使用项目既有 `python-docx 1.1.2`，通过 `Document.iter_inner_content()` 按正文中的真实出现顺序读取普通段落和表格；表格按行输出、单元格以制表符分隔，并避免合并单元格文字重复。页眉、页脚、图片、文本框和批注不在本小步范围内。
+- DOCX 继续复用 `ResumeFileAccess`，提取前校验私有 `v2/resumes` 命名空间、`.docx` 后缀、文件存在性和数据库 `file_size`；解析过程只读取 ZIP 包，不把任何成员解压到文件系统，因此不会由压缩包内部路径产生目录穿越写入。
+- 已增加压缩包资源边界：最多 2,000 个 ZIP 成员、解压后总大小最多 50 MiB、提取文本最多 1,000,000 字符，并拒绝 ZIP 加密标志；损坏包、空文档、结构过于复杂、解压规模超限和文本超限均返回稳定 `422`，数据库保存 `failed + parse_error`。
+- DOCX 完全复用既有单事务状态流：`uploaded/failed -> parsing（flush，未提交）-> parsed/failed（commit）`。成功保存完整 `raw_text` 和 `parsed_at`；文件读取失败不创建其他文件，数据库最终提交失败由统一服务回滚，不会遗留永久 `parsing` 状态。
+- 本步新增 11 项隔离测试；DOCX 提取器与统一状态服务的定向测试共 23 项全部通过，后端全量回归从 224 增至 235 项全部通过。覆盖正文/表格顺序、合并单元格、空文档、损坏包、ZIP 成员数、解压大小、文本长度、路径越界、大小不一致、MIME 分派、失败状态和数据库回滚。
+- 真实 FastAPI + PostgreSQL + 私有临时目录验证通过：DOCX 上传返回 `201`，原始中文文件名和标准 MIME 正确保存，文件实际写入系统临时目录的 `v2/resumes/2026/08/<UUID>.docx`；提取返回 `200`，中文段落、表格与后续段落共 43 个字符逐字写入 `raw_text`，状态为 `parsed` 且 `parsed_at` 非空。伪造 DOCX 上传返回 `400` 且无文件/数据库残留；删除临时原文件后提取返回 `422`，PostgreSQL 保存 `failed + 原始简历文件不存在` 且 `raw_text` 为空。所有临时 Candidate、Resume 和临时目录均已清理。
+- 本步没有新增 API 路径，没有修改 Model、Schema、Alembic、旧 `file_parser.py`、旧 `/api/resume/*`、前端、旧 SQLite、`backend/uploads/` 或 Docker volume，也没有调用 OCR、LLM、LangGraph、AI 初筛或报告生成。
+
+### 阶段 4 第五小步进度：新版候选人创建入口与上传流程校正
+
+- 前端联调审计发现，当前新版 `Resume.candidate_id` 和 `POST /api/v2/resumes/upload` 都要求简历必须关联已存在候选人；在 PostgreSQL 为空时直接从简历列表选择候选人的方案无法成立，也不能在未调用 AI 的情况下根据客户端文件名伪造候选人身份。根据实际接口和产品操作习惯，流程已明确为“新增候选人 -> 进入候选人详情 -> 上传简历 -> 提取原文”。
+- 已启用阶段 3 候选人列表的“新增候选人”入口，使用现有 `POST /api/v2/candidates` 创建基础记录；姓名必填，电话、邮箱、应聘岗位和来源可选，默认状态为 `new`、默认来源为 `HR手动录入`。创建成功后直接跳转 `/stage3/candidates/{id}`，不在本步上传文件或写入简历原文。
+- 已在 `frontend/src/stage3/services/candidates.ts` 增加独立创建方法，继续使用 `v2Http`，未混用旧 `/api` 客户端；前端弹窗显示本步边界并在提交期间禁止重复关闭或重复提交，空姓名和邮箱格式先由表单拦截，后端 Pydantic 继续作为最终校验。
+- 前端生产构建通过，共转换 3917 个模块；入口 JavaScript 为 263.68 kB（gzip 89.69 kB），最大块仍为 422.01 kB（gzip 116.50 kB），没有重新出现 Vite 500 kB 大块警告。后端全量 235 项 `unittest` 全部通过。
+- 真实 FastAPI + PostgreSQL 验证通过：临时候选人 ID 57 返回 `201`，姓名、电话、邮箱、来源和 `new` 状态真实写入 PostgreSQL，`resume_file_path`、`resume_text` 均为空且没有结构化解析数据；详情接口返回 `200`，空姓名创建返回 `422`。随后通过 `DELETE /api/v2/candidates/57` 精确删除，详情再次查询为 `404`，没有清空或重建数据库。
+- 本地 Uvicorn 使用 `--lifespan off` 启动，因此没有执行旧版 Demo 种子逻辑；Vite 与后端测试进程及临时日志已停止并清理。当前环境没有可用的内置浏览器实例，未声称完成点击或截图视觉验收；页面代码已通过 TypeScript 和生产构建，真实接口与数据库链路已单独验证。
+- 本步没有修改 Candidate/Resume Model、Schema、Alembic、后端业务代码、旧页面、旧 API、`backend/uploads/` 或文件存储，也没有调用 OCR、LLM、LangGraph、AI 初筛或报告生成。
+
+### 阶段 4 第六小步进度：候选人确认前的待绑定简历边界
+
+- 根据最终确认的产品流程，阶段 4 的目标流程调整为“在统一新增候选人页面手动填写字段或上传简历 -> 提取原文 -> 识别字段并只补充空字段 -> HR 检查并确认创建候选人 -> 绑定简历”。第五小步曾采用的“先创建候选人再进入详情上传”保留为可用的手动创建能力，但不再作为目标主流程。
+- 已新增 Alembic revision `d3f6a8c1b204`，把新版 `resumes.candidate_id` 从 `NOT NULL` 改为可空，同时继续保留到 `candidates.id` 的外键约束；已有已绑定 Resume 不变，有候选人 ID 时仍必须引用真实候选人，不创建占位候选人，也不把旧候选人的文件路径伪装为新版 Resume。
+- 现有 `POST /api/v2/resumes/upload` 的 `candidate_id` 已改为可选：省略时创建 `candidate_id = NULL` 的待绑定 Resume，传入时继续执行原有候选人存在性校验；接口路径、文件校验、私有命名空间、UUID 文件名、原始文件名保存、大小限制及事务顺序均未改变。
+- 上传事务继续为“可选 Candidate/Job 校验 -> 临时分块写入并校验 -> PostgreSQL flush -> 原子移动文件 -> PostgreSQL commit”。待绑定分支已直接覆盖文件移动失败、数据库 flush 失败和数据库 commit 失败，失败后均回滚数据库并清除临时/最终文件；非法文件和不存在的显式候选人仍在落库前失败。
+- Resume 响应 Schema 与前端阶段 3 简历列表已兼容 `candidate_id = null`；待绑定记录显示“待确认候选人 / 尚未创建候选人”，不会显示“候选人 #null”。本步没有提前增加绑定接口、结构化字段识别或自动填表逻辑。
+- 本步新增 2 项隔离测试；新版上传 Service/API 定向 41 项全部通过，后端全量回归从 235 增至 237 项全部通过。新增分支及既有测试共同覆盖成功上传、非法文件、显式候选人不存在、文件移动失败、数据库 flush/commit 失败、回滚和孤立文件清理。
+- 真实 FastAPI + PostgreSQL + 私有临时目录验证通过：未传 `candidate_id` 上传 TXT 返回 `201` 并生成 Resume ID 24，PostgreSQL 读取确认 `candidate_id = NULL`、状态从 `uploaded` 成功流转为 `parsed`、`raw_text` 保存 33 个字符；文件实际写入系统临时目录的 `v2/resumes/2026/08/<UUID>.txt`，原始展示名中的目录成分已移除。非法 EXE 返回 `415`、显式不存在候选人返回 `404`，两种失败后数据库和文件计数均未增加。
+- 临时 Resume 已精确删除，临时目录已清理；最终 PostgreSQL `candidates/jobs/resumes` 计数均为 0。迁移已完成 `d3f6a8c1b204 -> 8a9c4d2e1f01 -> d3f6a8c1b204` 真实降级/升级往返，当前 head 为 `d3f6a8c1b204`，`information_schema` 确认 `candidate_id` 可空。
+- 前端生产构建通过，共转换 3917 个模块；入口 JavaScript 为 263.68 kB（gzip 89.68 kB），最大块为 422.01 kB（gzip 116.50 kB），无 Vite 500 kB 大块警告。旧 `/api/resume/upload` 和新版 `/api/v2/resumes/upload` 继续并存；`backend/uploads/` 未移动、覆盖或删除。
+
+### 阶段 4 第七小步进度：确认候选人与待绑定简历的单事务保存
+
+- 已新增 `POST /api/v2/candidates/from-resume`，请求体为 `{ resume_id, candidate }`；`candidate` 复用现有 `CandidateCreate`，支持候选人主字段及教育、工作、项目三类嵌套经历。现有 `POST /api/v2/candidates` 继续用于无简历的普通手动创建，旧版候选人和简历接口均未修改。
+- CandidateService 使用 PostgreSQL `SELECT ... FOR UPDATE` 锁定目标 Resume；Resume 不存在返回 `404`，已绑定 Candidate 返回 `409`。同一 Resume 在并发或重复请求中只能成功绑定一次，但本步不按电话、邮箱或姓名自动判定重复候选人。
+- 岗位一致性边界已明确：Candidate 与 Resume 都有岗位且不一致时返回 `409`；只有一侧有岗位时同步到另一侧；最终岗位不存在返回 `404`。Resume 可处于 `uploaded`、`parsed` 或 `failed`，解析失败不会阻止 HR 使用手填字段确认候选人。
+- 客户端提交的 `resume_file_path`、`resume_text` 和 `parsed_data` 不作为可信来源；确认时统一从被锁定的 Resume 复制服务端 `file_path`、`raw_text` 和 `parsed_snapshot`，防止客户端伪造路径、原文或解析快照。
+- 事务顺序为“锁定并校验 Resume/Job -> 构造 Candidate 与三类嵌套经历 -> flush 获得 Candidate ID -> 写入 Resume.candidate_id/job_id -> 再次 flush -> 事务内刷新响应数据 -> 最后 commit”。任何数据库写入、刷新或 commit 失败都会 rollback，Candidate 与 Resume 绑定不会只成功一半。
+- 本步新增 12 项隔离测试；Candidate Service/API 定向 35 项全部通过，后端全量回归从 237 增至 249 项全部通过。覆盖成功确认、三类嵌套经历、服务端字段覆盖、Resume 岗位继承、Resume 不存在、重复绑定、岗位冲突、岗位不存在、请求校验和 commit 回滚。
+- 真实 FastAPI + PostgreSQL + 私有临时目录验证通过：Resume ID 29 提取 19 个字符后，通过新接口创建 Candidate ID 61 并绑定岗位 ID 17；PostgreSQL 读取确认 Resume 的 `candidate_id=61`、`job_id=17`，Candidate 保存服务端文件路径和原文，并创建教育/工作/项目记录各 1 条。相同请求再次提交返回 `409`，Candidate 数量不增加；真实岗位冲突请求也返回 `409` 且 Resume 保持未绑定。
+- 使用真实 PostgreSQL 事务并强制模拟 commit 失败验证 Resume ID 30：Candidate 数量保持 `0 -> 0`，Resume `candidate_id` 仍为 `NULL`。所有临时 Resume、Candidate、Job、三类经历和临时文件目录均已精确清理，最终 `jobs/candidates/resumes` 计数恢复为 0。
+- 本步没有新增迁移，没有修改文件上传、TXT/PDF/DOCX 提取器、前端、旧 SQLite 或 `backend/uploads/`，也没有调用 OCR、LLM、LangGraph、AI 初筛或报告生成。
+
+### 阶段 4 第八小步进度：统一新增候选人页面与真实链路接入
+
+- 已新增正式路由 `/stage3/candidates/new`，候选人列表的“新增候选人”按钮和空状态入口都进入该页面；原有小型弹窗已移除，候选人详情和其他新旧路由保持不变。`App.tsx` 继续使用路由级懒加载，新页面形成独立构建块。
+- 页面把手动录入和简历处理放在同一个确认流程中：姓名、联系方式、性别、年龄、所在地、应聘岗位、来源、当前公司/职位、工作年限、学历层次及教育/工作/项目经历均可手填，三类经历支持增删多条记录。
+- 无简历时继续调用 `POST /api/v2/candidates` 普通创建候选人；有简历时依次调用 `POST /api/v2/resumes/upload` 创建待绑定 Resume、`POST /api/v2/resumes/{resume_id}/extract-text` 提取原文，最终调用 `POST /api/v2/candidates/from-resume` 在单个数据库事务内创建 Candidate 并绑定 Resume。
+- 上传控件只接受 PDF、DOCX、TXT，前端先执行 10 MiB 大小和扩展名提示性校验，后端继续执行权威的文件内容、MIME、大小、路径和事务校验。页面展示上传中、提取中、成功或失败状态及服务端失败原因；提取失败可重试，也允许 HR 保留手填内容并确认绑定原文件。
+- 页面提供只读原文预览，但没有把原文假装成结构化识别结果。当前不会自动改写姓名、联系方式或经历字段；后续结构化识别必须单独定义草稿契约，并遵守“只填空字段、不覆盖 HR 已填内容”。
+- Resume 一旦安全接收成功，页面不提供只删本地状态的“移除文件”操作，避免数据库中已经存在待绑定 Resume 却让用户误以为文件被删除；离开页面时该记录仍如实保留为“待确认候选人”，后续孤立文件/待确认记录处置需作为独立模块实现。
+- 已新增独立响应式样式：桌面端为主表单加粘性简历侧栏，中窄屏自动改为单列；阶段 3 顶部标题会把该路由显示为“新增候选人”。未修改旧版页面样式和路由。
+- 前端生产构建通过，共转换 3918 个模块；入口 JavaScript 为 264.15 kB（gzip 89.81 kB），新页面独立块为 16.19 kB（gzip 5.38 kB），最大页面块为 422.01 kB（gzip 116.50 kB），没有 Vite 500 kB 大块警告。后端全量 249 项 `unittest` 继续全部通过；`git diff --check` 通过，仅有既有换行符提示。
+- 真实 Vite 代理 + FastAPI + PostgreSQL + 私有临时目录验证通过：`/stage3/candidates/new` 返回 HTTP 200；岗位 ID 18 下上传生成待绑定 Resume ID 31，TXT 原文提取并保存 76 个字符，最终确认生成 Candidate ID 63，教育/工作/项目经历各 1 条且 Resume 成功绑定；重复确认返回 `409`，没有新增第二名候选人。文件实际写入临时目录的 `v2/resumes/2026/08/<UUID>.txt`。
+- 上述临时 Job、Candidate、Resume、三类经历、输入文件、私有存储目录及日志均已精确清理，验证进程均已停止。当前没有可用的内置浏览器实例，因此本步不声称完成点击或截图视觉验收；页面已通过 TypeScript/生产构建和真实 HTTP 代理数据流验证。
+- 本步没有修改后端 Model、Schema、Service、API、Alembic、TXT/PDF/DOCX 提取器、旧 SQLite、旧 `/api/resume/upload` 或 `backend/uploads/`，也没有调用 OCR、LLM、LangGraph、AI 初筛或报告生成。
+
+### 阶段 4 第九小步进度：PDF 视觉阅读顺序修复
+
+- 真实页面验收发现 Resume ID 32 的文字虽然完整，但当前 PyPDF2 直接沿用 PDF 内容流顺序，导致“综合评价”正文出现在“教育背景/技能证书/项目经历/综合评价”标题之前；这类 PDF 的内部文字对象保存顺序不等于页面视觉顺序，不能继续把内容流顺序当作阅读顺序。
+- 已在 `backend/requirements.txt` 固定增加 `pdfplumber==0.11.10`。该依赖使用 MIT 许可证，适合读取机器生成 PDF 中字符、词和页面坐标；不提供 OCR，扫描件边界保持不变。
+- `ResumePdfExtractor` 继续使用 PyPDF2 完成损坏、加密、页数和 100 页上限检查；文字提取改由 pdfplumber 按页面坐标排序，显式禁用内容流顺序，并保持原页码顺序、空白页跳过、1,000,000 字符上限、低质量检测和稳定错误文案。
+- 已用 pdfplumber/PDFium 把真实 PDF 渲染为图片并检查页面布局；临时 PNG 和浏览器失败时生成的空白截图均已删除，不提交或保留包含候选人隐私的测试产物。
+- 真实样本只读提取后四个主要区块位置恢复为 `教育背景=60 < 技能证书=173 < 项目经历=398 < 综合评价=1915`，总原文 2,063 字符；标题和正文顺序与视觉页面一致。顶部姓名、地点等横向信息仍按实际坐标排序，不承诺把所有复杂双栏 PDF 自动还原为唯一的语义阅读顺序。
+- 本步新增 2 项隔离测试，专门覆盖“内部内容流先保存第二部分，但视觉位置第一部分在上”和“同一视觉行内部先保存右侧文字”两种错序；PDF 提取器 16 项、PDF/状态 Service/Resume API 定向 57 项全部通过，后端全量回归从 249 增至 251 项全部通过。
+- 真实 FastAPI + PostgreSQL + 私有临时目录验证通过：真实 PDF 上传生成 Resume ID 35，文件写入临时目录的 `v2/resumes/2026/08/<UUID>.pdf`，提取保存 2,063 字符且四区块顺序断言成功；伪造 PDF 返回 `400`；删除临时原文件后提取返回 `422` 并保存 `failed + 原始简历文件不存在`；真实事务强制 commit 失败后 Resume 回滚为 `uploaded` 且 `raw_text` 为空。
+- 验证开始和清理后的 Resume 总数均为 1，只保留用户已创建的 Resume ID 32/Candidate ID 64；临时 Resume 35 及其他失败场景记录、文件、进程、日志和系统临时目录均已精确清理。已有 Resume 32 的旧 `raw_text` 和 Candidate 64 未被后台改写，因为已解析 Resume 的接口保持幂等；需要重新上传该 PDF 才会在页面看到新版顺序。
+- 本步没有新增或修改 API、Model、Schema、Alembic、数据库字段、上传事务、TXT/DOCX、前端、旧 SQLite、旧 `/api/resume/upload` 或 `backend/uploads/`，也没有调用 OCR、LLM、LangGraph、AI 初筛或报告生成。
+
+### 阶段 4 第十小步进度：候选人详情安全查看与下载原始简历
+
+- 已新增 `GET /api/v2/resumes/{resume_id}/file`；默认对 PDF/TXT 返回 `Content-Disposition: inline`，传入 `?download=true` 时返回 `attachment`，DOCX 因浏览器通常无法直接预览而始终返回 `attachment`。响应使用数据库保存的服务端 MIME 和原始展示文件名，中文文件名通过 RFC 5987 `filename*=utf-8''...` 返回。
+- 文件响应不会公开或接受客户端磁盘路径。ResumeService 根据 ID读取 Resume，再次通过 `ResumeFileAccess` 校验文件必须位于私有 `V2_STORAGE_DIR/v2/resumes`、不得进入 `.staging`、扩展名必须与服务端 MIME一致、文件必须存在且实际大小等于数据库元数据；未知 MIME返回 `415`，路径越界、缺失或大小变化返回 `422`。
+- 响应增加 `Cache-Control: private, no-store` 与 `X-Content-Type-Options: nosniff`，避免浏览器缓存候选人隐私文件和进行 MIME嗅探。项目当前仍没有登录/权限系统，因此本步只能保证私有路径和安全文件读取，不能声称已经实现按 HR账号授权。
+- `GET /api/v2/resumes` 新增可选 `candidate_id`过滤；不传参数时原列表行为保持不变。候选人详情页使用过滤结果列出该候选人绑定的全部新版 Resume，展示原文件名、格式、大小和解析状态；PDF/TXT显示“查看、下载”，DOCX显示“下载”。前端不读取或展示 Resume的服务端 `file_path`。
+- 对于只有 Candidate历史路径、没有新版 Resume记录的候选人，页面明确提示“没有可安全读取的新版 Resume记录”，不会把旧候选人路径伪装为新版文件；无简历候选人显示未绑定提示。
+- 本步新增 11项 Resume Service/API隔离测试，Resume定向测试共46项全部通过；覆盖候选人过滤、私有PDF、中文文件名、同一格式内联/下载、DOCX强制下载、记录不存在、未知MIME、路径穿越、缺失、大小变化和安全下载名。后端全量回归从251增至262项全部通过。
+- 前端生产构建通过，共转换3918个模块；入口JavaScript为264.23 kB（gzip 89.84 kB），候选人详情块为13.87 kB（gzip 4.97 kB），最大页面块仍为422.01 kB（gzip 116.50 kB），没有Vite 500 kB大块警告。
+- 已通过真实 Vite代理、FastAPI、PostgreSQL和用户现有 Resume ID 32验证：`candidate_id=64`过滤只返回绑定记录；PDF查看和下载均返回200及327,781字节，分别使用 `inline`/`attachment`，服务端 MIME为 `application/pdf`，中文原文件名、`private, no-store`和`nosniff`均正确。
+- 真实临时目录验证通过：TXT Resume ID 39内联和下载字节均与源文件一致，DOCX Resume ID 40返回附件且字节一致；删除文件、改变文件大小、伪造 `../outside.pdf`和未知 MIME分别返回422/422/422/415，没有返回文件内容。所有临时记录、输入、私有存储、日志和8002进程均已精确清理，验证前后 Resume总数均为2。
+- 当前真实 PostgreSQL保留用户数据：Candidate ID 64绑定 Resume ID 32；用户重新上传但未确认创建候选人的 Resume ID 38保持 `candidate_id=NULL + parsed`，本步没有把它当测试数据删除。内置浏览器没有可连接实例，因此不声称完成按钮点击或截图验收；真实页面、过滤接口和文件响应均已通过HTTP验证。
+- 本步没有新增迁移，没有修改 Model/Schema、上传/提取事务、TXT/PDF/DOCX提取器、旧 SQLite、旧 `/api/resume/upload`、旧 `/uploads`或 `backend/uploads/`，也没有调用 OCR、LLM、LangGraph、AI初筛或报告生成。读取接口不写数据库或文件，因此不存在本步新增的数据库回滚或孤立文件场景。
+
+### 阶段 4 第十一小步进度：取消创建时安全放弃未绑定简历
+
+- 新版 `DELETE /api/v2/resumes/{resume_id}` 已收紧为“放弃未绑定 Resume”语义：使用 PostgreSQL `SELECT ... FOR UPDATE` 锁定目标记录，只允许 `candidate_id IS NULL` 的 Resume 删除；已绑定候选人的 Resume 返回 `409`，不存在返回 `404`。旧 `/api/resume/upload`、新版 `/api/v2/resumes/upload` 和新版读取接口继续并存。
+- 新增独立 `ResumeFileCleanup`：先通过服务端 MIME、扩展名、大小和私有命名空间校验原文件，再使用同一文件系统内的原子移动把文件送入 `V2_STORAGE_DIR/v2/resumes/.trash/<UUID>.<ext>`。数据库删除提交失败时 rollback 并把文件恢复原位；文件隔离失败时不执行数据库删除；数据库已经提交但最终清除 `.trash` 失败时，实时文件和数据库记录保持已删除状态，私有垃圾文件留给下一小步的清扫器重试。
+- `ResumeFileAccess` 已明确拒绝读取 `.trash`，因此待清理文件无法通过查看、下载或提取接口暴露。文件恢复时拒绝覆盖原位置出现的新文件，避免补偿操作造成同名覆盖。
+- 新增候选人页已接入主动清理：原文提取成功或失败后均可点击“放弃这份简历”；左上角返回和底部取消会弹出确认框，确认后调用新版 DELETE，成功才离开页面。上传、提取、候选人提交或清理进行中会禁用相关入口，避免异步上传结束后留下未知 Resume。直接关闭浏览器无法可靠等待异步 DELETE，因此页面如实提示超时自动清理将在下一小步实现。
+- 本步新增/调整的 Resume 文件清理、Service 和 API 定向测试共 62 项全部通过；后端全量回归从 262 增至 278 项全部通过。覆盖成功隔离/恢复/清除、路径穿越、未知 MIME、文件移动失败、数据库提交失败恢复、恢复失败告警、最终垃圾清除延迟、已绑定冲突、404/409/415/422/500 映射和绝对路径信息隐藏。
+- 真实 PostgreSQL `recruitment_assistant` + 系统临时目录验证通过：成功场景测试 Resume 45 删除后数据库行和文件均不存在；测试 Resume 46 强制 PostgreSQL commit 失败后数据库行仍在且文件恢复；Resume 47 强制文件移动失败、Resume 48 制造大小元数据不一致后，数据库和原文件都保持不变。45–48 最终均精确清理，验证后只保留原有用户数据。
+- 真实 HTTP + 独立 `tmp/stage4-http-storage` 验证通过：未绑定 Resume 49 删除返回 `204`，数据库和实际文件同时消失；绑定 Candidate 64 的专用 Resume 50 返回 `409` 且数据库和文件保持，解除专用测试绑定后返回 `204` 并清理；不存在 ID 返回 `404`。临时存储最终文件数为 0，测试进程、日志和临时目录均已停止并删除。
+- 一次验收曾误连仍运行旧代码的后端，旧版数据库-only DELETE 意外删除 Resume 32 数据库行，但原始 PDF、Candidate 64 和 Candidate 中保存的 1,939 字原文均未丢失。已立即按原 ID 32、Candidate 64、原路径 `v2/resumes/2026/08/c838a5123e734768ab7fa9937414f012.pdf`、327,781 字节、`parsed` 状态及原文恢复；上传/解析时间使用原文件修改时间恢复。最终核对 Resume 32 文件读取返回 `200/327781`，Resume 38 仍为 `candidate_id=NULL + parsed`，两条用户记录都存在。后续删除验收统一使用专用临时 Resume，不再用用户记录测试破坏性边界。
+- 前端生产构建通过，共转换 3918 个模块；入口 JavaScript 为 264.24 kB（gzip 89.85 kB），新增候选人页块为 17.16 kB（gzip 5.84 kB），最大块仍为 422.01 kB（gzip 116.50 kB），没有 Vite 500 kB 大块警告。`git diff --check` 通过，仅有既有换行符提示。内置浏览器仍无可连接实例，因此不声称完成确认弹窗的实际点击或截图验收。
+- 本步没有新增迁移，没有修改 Resume Model/Schema、上传/提取器、旧版业务、旧 SQLite 或 `backend/uploads/`，也没有调用 OCR、LLM、LangGraph、AI 初筛或报告生成。
+
+### 阶段 4 第十二小步进度：24 小时未绑定 Resume 自动清理
+
+- 新增 `ResumeRetentionService`，默认把 `candidate_id IS NULL` 且 `uploaded_at <= 当前时间 - 24小时` 的 Resume 视为过期。每次先按最早上传时间查询最多 50 个 ID，再逐条使用 `SELECT ... FOR UPDATE SKIP LOCKED` 重新确认“仍未绑定且仍已过期”；候选人绑定事务和清理事务竞争同一行锁，已经绑定、尚未过期、正被其他事务处理或已经删除的记录都会跳过。
+- 自动清理复用第十一小步的文件隔离与数据库补偿逻辑，不另写一套删除代码：文件进入 `.trash` 失败时数据库不删除；PostgreSQL delete/commit 失败时 rollback 并把文件恢复原位；单条 Resume 失败会记录失败并继续下一条，不会让整批任务停止。
+- `.trash` 文件名从随机 UUID 收紧为 `resume-{resume_id}-{uuid}.{pdf|docx|txt}`。垃圾清扫只识别位于新版私有 `.trash` 根目录、符合严格命名规则且不是符号链接的普通文件；只有 PostgreSQL 已经不存在对应 Resume ID 时才删除，数据库仍有记录时保守保留，避免进程崩溃或数据库回滚后误删唯一可恢复文件。未知名称、嵌套目录和路径越界均忽略或拒绝。
+- FastAPI 生命周期已启动轻量异步定时任务：默认启动后先等待 60 分钟，再每 60 分钟执行一批；应用关闭时主动 cancel 并等待任务结束，不遗留后台协程。配置项为 `RESUME_CLEANUP_ENABLED`、`RESUME_UNBOUND_RETENTION_HOURS`、`RESUME_CLEANUP_INTERVAL_MINUTES`、`RESUME_CLEANUP_BATCH_SIZE`，Pydantic 对数值范围进行校验，`.env.example` 和 Docker Compose 已同步透传。
+- 由于正式规则默认启用，现有 Resume 38 已超过 24 小时且仍未绑定；正式后端连续运行到第一次定时检查时，它将符合自动清理条件。本步真实验证没有启动正式库的全量定时扫描，而是使用比 Resume 38 更早的专用测试时间和 `batch_size=1`，因此没有删除或改写 Resume 38。
+- 本步新增 15 项隔离测试，文件清理、Resume Service、Retention Service、配置和 FastAPI 生命周期定向共 41 项全部通过；后端全量回归从 278 增至 293 项全部通过。覆盖严格垃圾命名/批次/路径校验、锁内过期复核、绑定/新鲜/锁定跳过、单条失败继续、垃圾有无数据库记录分流、目录扫描失败、时区与参数校验、首次等待、循环执行、关闭取消和禁用配置。
+- 真实 PostgreSQL `recruitment_assistant` + 系统临时目录验证通过：过期 Resume 51 自动删除后数据库与文件均不存在；Resume 52 强制 PostgreSQL commit 失败后报告失败、数据库行保留且文件恢复；Resume 53 强制文件移动失败后数据库和文件均保留；绑定 Candidate 64 的 Resume 54 被锁内条件跳过；无数据库记录的垃圾文件被清除，有数据库记录的垃圾文件被保留。所有 51–54、辅助记录和临时文件最终精确清理，临时文件数和测试数据库残留均为 0。
+- 最终 PostgreSQL 核对仍只保留用户数据：Resume 32 为 `candidate_id=64 + parsed` 且原文件存在，Resume 38 为 `candidate_id=NULL + parsed` 且原文件存在。短时启动后端并显式关闭自动清理后，健康接口返回 `ok`，OpenAPI 确认旧 `/api/resume/upload`、新版 `/api/v2/resumes/upload` 和新版 Resume DELETE 继续并存；进程和日志随后精确清理。`git diff --check` 通过；本步没有修改前端，因此未重复运行前端构建，继续沿用第十一小步已通过的 3918 模块生产构建结果。
+- 本步没有新增或修改 API、Model、Schema、Alembic、上传/提取器、旧版业务、旧 SQLite 或 `backend/uploads/`，也没有调用 OCR、LLM、LangGraph、AI 初筛或报告生成。
+
+### 阶段 4 最终人工验收与收尾状态
+
+- 用户已在真实前端页面完成人工操作并反馈测试完成。随后执行只读核对：PostgreSQL 当前保留 Candidate 64、绑定的 Resume 32 和未绑定的 Resume 38；两份数据库文件大小均为 327,781 字节并与实际文件一致，新版私有存储中实时文件 2 个、`.trash` 0 个、`.staging` 0 个，没有孤立测试文件。
+- 后端日志没有业务异常；前端日志只有前后端启动先后造成的瞬时 `/api/v2/jobs ECONNREFUSED`，服务就绪后 Vite 代理返回 `200`。本轮人工验收进程以 `RESUME_CLEANUP_ENABLED=false` 启动，因此没有把已超过 24 小时的 Resume 38 当成自动清理对象。
+- 阶段 4 至此明确完成：新版安全上传、PDF/DOCX/TXT 原文提取、PDF 视觉顺序优化、待绑定 Resume、候选人单事务确认绑定、原文件查看/下载、主动放弃和 24 小时自动清理均已实现并验证。结构化字段识别、自动填表、LLM 和 LangGraph 不属于阶段 4，尚未实现。
+
+### 阶段 5 方案讨论备忘（未定稿，不能视为实施决定）
+
+#### 已明确的需求和阶段边界
+
+- 用户期望的最终前端流程是：“新增候选人”页面既可手动填写，也可上传简历；上传后先复用阶段 4 得到 `Resume.raw_text`，再识别姓名、电话、邮箱、城市、学历、当前公司/职位、教育经历、工作经历、项目经历和技能等结构化字段，自动补充表单，最后由 HR 检查、修改并确认创建候选人。
+- 阶段 4 的“解析”准确含义是文件转原文，不等于结构化理解。阶段 5 才负责 `Resume.raw_text -> 结构化候选人草稿`。
+- AI 结果必须是“草稿”而不是正式 Candidate：建议先进入 `Resume.parsed_snapshot` 或等价草稿存储；不得直接创建或改写 Candidate、Education、WorkExperience、ProjectExperience。前端只补充空字段，不覆盖 HR 已填写内容；无法确定的字段保持 `null`，禁止编造。
+- 性别、年龄即使作为基础资料提取，也不得用于后续岗位匹配、评分或淘汰决策。
+
+#### 已讨论的三种候选方案
+
+1. **单次大模型结构化提取**：把完整 `raw_text` 一次发送给 DeepSeek，要求返回统一的 `ResumeParseDraft`；随后执行 JSON 解析、Pydantic Schema 校验、业务规则校验和有限整体重试。优点是代码少、调用次数少、速度和费用更可控，适合先做 MVP；缺点是复杂简历可能漏段落，局部错误需要整体重试。
+2. **LangGraph 多节点解析**：拆成基本信息、教育、工作、项目、技能、校验等节点，State 保存中间结果，校验失败时只重试对应节点。优点是局部重试、可观测性和复杂简历完整性更好；缺点是调用次数、延迟、费用、代码量和调试成本明显增加。如果实际只有一个 Prompt 和一次调用，为了包装而使用 LangGraph 属于过度设计。
+3. **渐进/混合方案**：第一版先通过统一 `ResumeStructureService.parse(resume_id, raw_text) -> ResumeParseDraft` 使用单次模型调用；API 和前端只依赖该抽象。积累真实样本后，如果发现稳定的遗漏、某类字段需要独立 Prompt 或局部重试，再把 Service 内部升级为 LangGraph；也可以先整体提取，只对缺失/可疑部分运行补充节点。
+
+#### 关于 JSON 的共同安全原则
+
+- LangGraph 不保证 JSON；它只负责编排状态、节点、分支和重试。JSON 安全必须独立实现。
+- 不能保证模型每次都返回正确 JSON，但必须保证错误输出无法进入数据库或自动填表。建议的防线顺序是：模型结构化输出/JSON Schema（若所选模型接口支持）→ `json.loads` 或等价解析 → Pydantic 严格 Schema（建议 `extra='forbid'`）→ 日期、重复经历、长度和前后逻辑等业务校验 → 最多 1～2 次有限重试。
+- 非 JSON、合法 JSON 但类型错误、额外字段、日期矛盾或业务规则不通过时，不写 `parsed_snapshot`、不创建 Candidate、不覆盖表单；达到重试上限后显示稳定失败原因，保留 `raw_text`，允许 HR 手填和重新识别。
+- “合法 JSON”不等于“事实正确”。仍需要求只引用原文、不确定返回 `null`，必要时保存字段证据或警告，并由 HR 最终确认。
+
+#### 当前倾向，但尚未确认
+
+- 当前讨论更倾向先实现“单次 DeepSeek 结构化输出 + Pydantic/业务校验 + 有限重试”，不要一开始就使用 LangGraph。这样能先验证真实简历的一次调用效果，并避免为了展示 Agent 而增加不必要复杂度。
+- 如果采用该方案，更准确的名称是“AI 结构化提取服务”，不应把单次模型调用包装成 Agent。LangGraph 应在出现多节点、状态、条件分支、局部重试或多工具协作的真实需求后再引入。
+- 上述只是讨论倾向，不是最终技术决定。`docs/implementation-plan.md` 当前仍把阶段 5 定义为 LangGraph `resume_parse` 工作流；若最终选择单次或混合方案，必须先明确记录设计偏差并同步修改实施计划，不能文档写 LangGraph、代码却静默采用另一套方案。
+
+#### 换电脑后必须继续讨论、尚未决定的问题
+
+1. 最终选择单次调用、LangGraph 多节点还是渐进/混合方案。
+2. `ResumeParseDraft` 的完整字段、嵌套结构、日期格式、空值、额外字段和版本号规则。
+3. 是否保存原文证据、警告、缺失字段和模型信息；是否需要独立的结构化解析状态/错误字段及数据库迁移，不能复用阶段 4 的文件 `parse_status` 造成语义混淆。
+4. DeepSeek 当前接口采用哪种结构化输出能力、超时、重试次数、并发限制、费用控制和失败码映射。
+5. 教育/工作/项目等列表在 HR 已经手填部分内容时如何合并、提示和去重，不能简单覆盖或直接拼接。
+6. 结构化解析 API 路径、幂等/重新识别规则、`parsed_snapshot` 覆盖或版本保留规则。
+7. 用哪些真实但去隐私样本评估完整性，如何定义“足够好”；在没有遗漏率、格式失败率等证据前，不提前决定必须上 LangGraph。
+
+#### 下一台电脑的恢复起点
+
+- 先完整阅读 `AGENTS.md`、`CLAUDE.md`、本文件、`docs/implementation-plan.md` 和权威设计文档，并检查分支、提交和全部未提交修改；阶段 3/4 的大量修改尚未提交，严禁 reset、clean、覆盖或丢弃。
+- 阶段 5 尚未编码、未调用 DeepSeek、未创建 LangGraph、未新增结构化解析 API。第一步应继续讨论并形成可验证的最小设计，不要根据“当前倾向”直接开始实现。
+- 当前本机人工验收进程使用临时环境变量关闭自动过期清理；正常配置默认 `RESUME_CLEANUP_ENABLED=true`。Resume 38 仍未绑定且已超过 24 小时，换电脑或正常启动后端前必须再次明确是否保留，否则运行满第一个清理周期后会符合自动删除条件。
+
 优先任务：
 
-1. 下一步进入阶段 4 的第一个小步骤：先审计旧 `/api/resume/upload`、旧文件解析服务、新版 `/api/v2/resumes` Schema/API/Service/Model 和恢复后的 `backend/uploads/` 边界，明确新版上传接口路径、事务顺序、文件命名、重复文件、失败清理和回滚规则；先形成可验证的最小设计，再决定实现范围。
-2. 新版上传必须与旧接口并行，不覆盖、移动或删除 `backend/uploads/` 中已有恢复文件，不清空 PostgreSQL，不把候选人的旧文件路径伪装成新版 Resume 记录；优先使用独立的新文件命名空间和测试临时目录验证。
-3. 阶段 4 第一个实现小步只处理可靠的文件接收、元数据和状态边界；PDF、DOCX、TXT 文本提取应分小步验证。仍不进入阶段 5 LangGraph，不调用 LLM，不运行 AI 初筛或生成报告。
+1. 在另一台电脑继续讨论阶段 5，先确定单次调用、LangGraph 或渐进/混合路线；在用户确认最终方案前不编码。
+2. 路线确定后，第一个最小模块只定义 `ResumeParseDraft` Schema、字段映射、校验、失败和前端合并契约，不立即扩大到完整工作流。
+3. 再根据最终方案实现统一 `ResumeStructureService`、模型 Adapter、结构化解析 API、草稿持久化和新增候选人页自动填充，每个部分继续独立验证。
+4. 阶段 5 只处理简历结构化草稿；岗位匹配、AI 初筛、报告生成、扫描件 OCR和自动重复候选人判定仍不提前进入。
 
 ### 重要说明
 

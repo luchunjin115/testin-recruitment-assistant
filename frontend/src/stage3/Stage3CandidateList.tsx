@@ -7,8 +7,8 @@ import {
   TeamOutlined,
   UserAddOutlined,
 } from '@ant-design/icons';
-import { Alert, Avatar, Button, Empty, Input, Select, Skeleton, Tag, Tooltip } from 'antd';
-import { Link } from 'react-router-dom';
+import { Alert, Avatar, Button, Empty, Input, Select, Skeleton, Tag } from 'antd';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   getCandidateStatusMeta,
   getCandidateStatusOptionLabel,
@@ -36,6 +36,7 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat('zh-CN', {
 }).format(new Date(value));
 
 const Stage3CandidateList: React.FC = () => {
+  const navigate = useNavigate();
   const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -131,16 +132,14 @@ const Stage3CandidateList: React.FC = () => {
   ];
 
   return (
-    <main className="s3-main">
+      <main className="s3-main">
       <section className="s3-page-heading">
         <div>
           <span className="s3-section-kicker">新版候选人库 · 数据来源 /api/v2</span>
           <h2>候选人</h2>
-          <p>查看候选人身份、应聘岗位和当前经历；招聘流程操作暂不接入。</p>
+          <p>通过统一新增页面手动填写资料，也可以上传简历并提取原文后一次确认。</p>
         </div>
-        <Tooltip title="新增候选人流程将在后续小步骤中单独实现">
-          <Button disabled icon={<UserAddOutlined />} type="primary">新增候选人 · 后续</Button>
-        </Tooltip>
+        <Button icon={<UserAddOutlined />} onClick={() => navigate('/stage3/candidates/new')} type="primary">新增候选人</Button>
       </section>
 
       <section aria-label="候选人统计" className="s3-stat-grid">
@@ -193,11 +192,13 @@ const Stage3CandidateList: React.FC = () => {
             description={
               <div className="s3-empty-copy">
                 <strong>新版候选人库目前没有候选人</strong>
-                <span>页面已成功连接 /api/v2/candidates；后续通过新版录入或简历流程创建的数据会显示在这里。</span>
+                <span>可以纯手动创建，也可以先上传并提取简历原文。</span>
               </div>
             }
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-          />
+          >
+            <Button icon={<UserAddOutlined />} onClick={() => navigate('/stage3/candidates/new')} type="primary">新增候选人</Button>
+          </Empty>
         ) : filteredItems.length === 0 ? (
           <Empty
             className="s3-panel-empty s3-candidate-empty"
@@ -242,7 +243,7 @@ const Stage3CandidateList: React.FC = () => {
           </div>
         )}
       </section>
-    </main>
+      </main>
   );
 };
 
