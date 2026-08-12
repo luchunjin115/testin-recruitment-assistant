@@ -60,6 +60,12 @@ def make_resume(
         parse_status=parse_status,
         parse_error=None,
         parsed_snapshot=None,
+        structure_status="not_started",
+        structure_error=None,
+        structure_attempt_id=None,
+        structure_started_at=None,
+        structured_at=None,
+        structure_schema_version=None,
         uploaded_at=TEST_TIME,
         parsed_at=None,
     )

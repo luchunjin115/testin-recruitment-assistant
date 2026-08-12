@@ -36,6 +36,17 @@ class Resume(Base):
     )
     parse_error: Mapped[str | None] = mapped_column(Text)
     parsed_snapshot: Mapped[dict | None] = mapped_column(JSONB)
+    structure_status: Mapped[str] = mapped_column(
+        String(30),
+        default="not_started",
+        server_default="not_started",
+        index=True,
+    )
+    structure_error: Mapped[str | None] = mapped_column(Text)
+    structure_attempt_id: Mapped[str | None] = mapped_column(String(36))
+    structure_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    structured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    structure_schema_version: Mapped[str | None] = mapped_column(String(20))
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     parsed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
