@@ -8,6 +8,7 @@
 2. `PROJECT_STATE.md`
 3. `docs/implementation-plan.md`
 4. `docs/specs/2026-07-15-hr-agent-platform-design.md`
+5. 开发阶段 5 时额外阅读 `docs/specs/2026-08-12-stage5-resume-structure-design.md`
 
 以这些文件确认当前进度、下一小步和架构边界，不依赖旧对话记忆。
 

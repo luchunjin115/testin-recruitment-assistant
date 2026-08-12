@@ -1,7 +1,8 @@
 # HR Agent 招聘提效平台实施计划
 
 > 日期：2026-07-15  
-> 状态：阶段 0 已启动  
+> 最近修订：2026-08-12（阶段 5 技术方案正式调整）
+> 状态：阶段 4 已完成；阶段 5 设计已确认，尚未编码
 > 权威设计文档：`docs/specs/2026-07-15-hr-agent-platform-design.md`  
 > 目的：把最终成品拆成可执行阶段，后续开发按阶段推进、验收和记录。
 
@@ -14,7 +15,7 @@
 - 前端：React 18 + TypeScript + Ant Design 5 + Vite + zustand
 - 后端：FastAPI + SQLAlchemy 2.0 + Pydantic v2 + Alembic
 - 数据：PostgreSQL 16 + Redis + Chroma
-- AI：DeepSeek API + LangGraph
+- AI：DeepSeek API；LangGraph 按真实工作流复杂度使用，不强制包装普通单次模型调用
 - 部署：Docker Compose
 
 核心原则：先做可靠的招聘业务闭环，再把 AI 放进关键节点。不要先追求“会聊天”，而是先保证 HR 可以真实完成“上传简历 -> 解析 -> 匹配 -> 报告”的主流程。
@@ -49,7 +50,7 @@
 - 旧版 `PROJECT_STATE.md` 显示“已完成”，但这是旧演示版本，不代表新架构完成。
 - 旧版后端目录是 `routers/`、`services/` 结构，新设计要求 `api/`、`core/`、`agents/`、`rag/` 等分层。
 - 旧版数据库默认偏 SQLite，本次目标是 PostgreSQL + Alembic。
-- 旧版 AI 服务是直接服务调用和 Mock fallback，本次要拆成 LangGraph 工作流。
+- 旧版 AI 服务职责混杂，需要按业务边界重写；普通单次模型能力放在 Service，确有条件路由、循环或多工具协作的复杂流程才使用 LangGraph。
 
 ### 验收标准
 
@@ -179,59 +180,73 @@ AI 结果最终必须落到业务数据里。候选人、岗位、筛选结果�
 
 ### 要做什么
 
-- 实现 `POST /api/resume/upload`。
-- 支持 PDF、Word、TXT。
-- 迁移并升级 `file_parser.py`。
-- 保存原始文件路径、文件元数据和提取出的文本。
-- 创建候选人初始记录。
-- 记录状态：`uploaded`、`parsing`、`parsed`、`failed`。
+- 通过 `POST /api/v2/resumes/upload` 安全接收 PDF、DOCX、TXT，校验真实文件类型、大小和私有存储路径。
+- 通过 `POST /api/v2/resumes/{resume_id}/extract-text` 把文件转换为 `Resume.raw_text`，记录 `uploaded/parsing/parsed/failed` 文件解析状态和稳定错误。
+- 支持 `candidate_id = NULL` 的待绑定 Resume，使 HR 可以先上传和提取原文，再确认候选人。
+- 通过 `POST /api/v2/candidates/from-resume` 在一个数据库事务中创建 Candidate、三类经历并绑定 Resume；阶段 4 不识别结构化字段。
+- 提供原始简历的安全查看/下载、主动放弃未绑定 Resume 和 24 小时过期自动清理。
+- 旧 `/api/resume/*` 与新版 `/api/v2/resumes/*` 隔离并存，避免破坏旧演示系统。
 
 ### 为什么这样做
 
-简历上传是整条链路的入口。没有可靠的文本提取，后面的 AI 解析和匹配都会变得不稳定。
+简历上传是整条链路的入口。阶段 4 只负责“文件 → 可信原文”，并保证文件、数据库记录和候选人确认绑定之间的安全边界；阶段 5 才负责“原文 → 结构化草稿”。
 
 ### 可能遇到的问题
 
 - PDF 有扫描件、表格、乱码等情况。
-- Word 文件可能存在复杂格式。
+- DOCX 可能有表格、合并单元格或复杂压缩包结构。
 - 上传失败、解析失败需要明确状态，不应该悄悄吞掉错误。
+- 文件系统与 PostgreSQL 无法组成真正的跨系统原子事务，需要补偿清理和孤立文件边界。
+- 未绑定 Resume 需要主动放弃和过期清理，同时不能误删已绑定或正在使用的文件。
 
 ### 验收标准
 
 - PDF、DOCX、TXT 至少各有一个样例能成功解析。
-- 候选人记录、简历原文和文件路径能保存。
-- 前端能展示上传进度和失败原因。
+- 原始文件、元数据、`raw_text` 和文件解析状态真实保存，读取和下载不暴露私有路径。
+- 待绑定 Resume 能在 HR 确认后与 Candidate 及经历记录单事务保存，失败不会留下半绑定数据。
+- 主动放弃和 24 小时清理不会删除已绑定 Resume，数据库失败时能够补偿恢复文件。
+- 前端能展示上传、提取、失败、查看、下载、放弃和确认创建的真实状态。
 
-## 阶段 5：LangGraph 简历解析工作流
+## 阶段 5：大模型简历结构化提取与表单辅助填写
 
 ### 要做什么
 
-建立 `resume_parse` 工作流：
+阶段 5 复用阶段 4 已保存的 `Resume.raw_text`，不重复处理文件。第一版不使用 Agent 或 LangGraph，建立普通 `ResumeStructureService`：
 
-- `file_to_text`
-- `extract_basic_info`
-- `extract_education`
-- `extract_work_experience`
-- `extract_project_experience`
-- `extract_skills`
-- `validate_result`
-- `save_candidate`
+1. 定义版本化、严格的 `ResumeParseDraft`，包含基本资料、教育、工作、项目、技能、证书、自我评价、警告和缺失字段。
+2. 通过模型 Adapter 正常只调用一次 DeepSeek，使用 JSON Output，把完整原文转换成统一草稿。
+3. 依次执行 JSON 解析、Pydantic 严格 Schema 校验和日期、重复项、长度、空记录等业务校验；未知字段禁止静默进入系统。
+4. 成功草稿保存到 `Resume.parsed_snapshot`；新增独立的结构化识别状态、错误和版本字段，不复用阶段 4 的文件 `parse_status`。
+5. 新增 `POST /api/v2/resumes/{resume_id}/structure`。已有成功草稿时默认直接返回，只有 HR 明确点击“重新识别”才再次调用模型；同一 Resume 并发识别返回 `409`。
+6. 前端在阶段 4 原文提取成功后触发识别，将 AI 结果只补充到空字段。HR 已填写的普通字段不得覆盖；已有经历列表时不得静默拼接，由 HR 选择是否导入。
+7. AI 只生成草稿，不直接创建或改写 Candidate 及三类经历；HR 检查、修改并确认后，才复用现有单事务接口创建 Candidate 并绑定 Resume。
+
+完整设计与字段、状态、API、异常和验收规则见 `docs/specs/2026-08-12-stage5-resume-structure-design.md`。
 
 ### 为什么这样做
 
-简历解析信息多，如果用一个大 Prompt 一次性提取，容易漏字段、输出不稳定。拆成多个节点后，每个节点职责更小，Prompt 更清晰，也更容易测试。
+当前输入和输出都是固定的：`Resume.raw_text -> ResumeParseDraft`。第一版用一次模型调用即可验证真实简历上的完整性、延迟和费用；此时引入 Agent 或多节点 LangGraph 会增加调用次数和调试成本，但没有相应的自主决策价值。通过稳定的 Service/API 抽象保留演进空间，只有真实样本证明存在稳定的局部遗漏或局部重试需求后，才评估内部升级为多节点工作流。
 
 ### 可能遇到的问题
 
 - LLM 输出不是合法 JSON。
+- JSON 合法但字段类型、日期关系或业务内容不合法。
+- 模型可能返回空内容、输出被截断、超时、限流或服务错误。
 - 同一信息在简历里重复出现。
 - 某些字段无法确定，要填 `null`，不能编造。
+- AI 结果可能与 HR 已填写字段或经历列表冲突。
+- 大模型服务失败不能破坏阶段 4 已保存的原文件和原文。
 
 ### 验收标准
 
-- 上传简历后能生成结构化候选人数据。
-- 候选人详情页能展示教育、工作、项目和技能。
-- 每个节点可以独立测试。
+- 每次正常识别只调用一次 DeepSeek，不使用 Agent 或 LangGraph。
+- 模型错误、空响应和非法输出无法写入草稿或自动填表；失败后原文件、原文和人工输入保持不变。
+- 合法草稿写入 `Resume.parsed_snapshot`，页面刷新后可以重新取得；结构化状态与阶段 4 文件解析状态语义分离。
+- 前端能辅助填写基本资料、教育、工作、项目和技能，但不覆盖 HR 已填写字段，也不静默合并已有经历列表。
+- 应聘岗位、来源和招聘状态不由模型猜测；性别和年龄不得用于后续评分。
+- 学校名称在本阶段只按原文提取，不推断 985/211；后续如用于初筛，必须通过可追溯的标准院校数据判断。
+- AI 不直接创建 Candidate；只有 HR 最终确认才写入正式候选人和经历表。
+- Fake Adapter 的自动化测试、真实 DeepSeek + FastAPI + PostgreSQL 验证、前端生产构建和人工操作验收均通过。
 
 ## 阶段 6：岗位 JD 管理
 
@@ -270,6 +285,8 @@ AI 匹配必须有明确目标。岗位 JD 既要保存原文，也要有结构�
 - `risk_analysis`
 - `overall_score`
 - `save_screening_result`
+
+院校条件如确有岗位业务需求，应使用“学校名称标准化 + 可追溯院校目录”取得 985/211/双一流等标签，再结合岗位配置判断。不得依赖大模型记忆自由推断；院校标签更适合作为可解释的匹配维度或加分项，不应由系统据此自动淘汰候选人。
 
 ### 为什么这样做
 

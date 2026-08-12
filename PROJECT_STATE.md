@@ -1,6 +1,6 @@
 # 项目进度状态
 
-> 最新更新：2026-08-11（架构重建阶段 4 已完成并完成人工验收；阶段 5 仅完成方案讨论，尚未确定最终实现方案、尚未开始编码）
+> 最新更新：2026-08-12（架构重建阶段 4 已完成并完成人工验收；阶段 5 前两小步已完成：严格草稿 Schema 与 Resume 独立结构化状态迁移）
 
 ## 当前总状态：🚧 新架构重建已启动，旧版演示系统作为迁移资产保留
 
@@ -10,6 +10,7 @@
 - 权威设计文档：`docs/specs/2026-07-15-hr-agent-platform-design.md`
 - 实施计划：`docs/implementation-plan.md`
 - 迁移清单：`docs/migration-inventory.md`
+- 阶段 5 换电脑交接手册：`docs/handoff/2026-08-12-stage5-development-handoff.md`
 
 ### 阶段 0 已完成事项
 
@@ -489,7 +490,7 @@
 - 后端日志没有业务异常；前端日志只有前后端启动先后造成的瞬时 `/api/v2/jobs ECONNREFUSED`，服务就绪后 Vite 代理返回 `200`。本轮人工验收进程以 `RESUME_CLEANUP_ENABLED=false` 启动，因此没有把已超过 24 小时的 Resume 38 当成自动清理对象。
 - 阶段 4 至此明确完成：新版安全上传、PDF/DOCX/TXT 原文提取、PDF 视觉顺序优化、待绑定 Resume、候选人单事务确认绑定、原文件查看/下载、主动放弃和 24 小时自动清理均已实现并验证。结构化字段识别、自动填表、LLM 和 LangGraph 不属于阶段 4，尚未实现。
 
-### 阶段 5 方案讨论备忘（未定稿，不能视为实施决定）
+### 阶段 5 正式方案：大模型简历结构化提取与表单辅助填写（已定稿，前两小步已完成）
 
 #### 已明确的需求和阶段边界
 
@@ -498,46 +499,73 @@
 - AI 结果必须是“草稿”而不是正式 Candidate：建议先进入 `Resume.parsed_snapshot` 或等价草稿存储；不得直接创建或改写 Candidate、Education、WorkExperience、ProjectExperience。前端只补充空字段，不覆盖 HR 已填写内容；无法确定的字段保持 `null`，禁止编造。
 - 性别、年龄即使作为基础资料提取，也不得用于后续岗位匹配、评分或淘汰决策。
 
-#### 已讨论的三种候选方案
+#### 已确认的技术决定
 
-1. **单次大模型结构化提取**：把完整 `raw_text` 一次发送给 DeepSeek，要求返回统一的 `ResumeParseDraft`；随后执行 JSON 解析、Pydantic Schema 校验、业务规则校验和有限整体重试。优点是代码少、调用次数少、速度和费用更可控，适合先做 MVP；缺点是复杂简历可能漏段落，局部错误需要整体重试。
-2. **LangGraph 多节点解析**：拆成基本信息、教育、工作、项目、技能、校验等节点，State 保存中间结果，校验失败时只重试对应节点。优点是局部重试、可观测性和复杂简历完整性更好；缺点是调用次数、延迟、费用、代码量和调试成本明显增加。如果实际只有一个 Prompt 和一次调用，为了包装而使用 LangGraph 属于过度设计。
-3. **渐进/混合方案**：第一版先通过统一 `ResumeStructureService.parse(resume_id, raw_text) -> ResumeParseDraft` 使用单次模型调用；API 和前端只依赖该抽象。积累真实样本后，如果发现稳定的遗漏、某类字段需要独立 Prompt 或局部重试，再把 Service 内部升级为 LangGraph；也可以先整体提取，只对缺失/可疑部分运行补充节点。
+- 阶段 5 第一版采用普通 `ResumeStructureService` 和模型 Adapter，不使用 Agent 或 LangGraph，也不把一个 Prompt 包装成 Agent。
+- 一次正常识别只调用一次 DeepSeek：完整 `Resume.raw_text -> ResumeParseDraft`。服务超时、限流、返回空内容或校验失败时不自动连续调用；页面展示失败，由 HR 决定是否发起一次新的“重新识别”。
+- 使用 DeepSeek JSON Output 约束合法 JSON，但模型响应仍必须通过 `json.loads`、Pydantic 严格 Schema（`extra='forbid'`）和日期、重复项、长度、空记录等业务校验。
+- 后端和前端只依赖稳定的 Service/API/草稿契约。未来只有真实去隐私样本证明存在稳定的局部遗漏、局部重试或多步骤编排需求后，才重新评估 LangGraph；当前不为尚未出现的复杂度预先设计。
 
-#### 关于 JSON 的共同安全原则
+#### JSON 和数据安全原则
 
-- LangGraph 不保证 JSON；它只负责编排状态、节点、分支和重试。JSON 安全必须独立实现。
-- 不能保证模型每次都返回正确 JSON，但必须保证错误输出无法进入数据库或自动填表。建议的防线顺序是：模型结构化输出/JSON Schema（若所选模型接口支持）→ `json.loads` 或等价解析 → Pydantic 严格 Schema（建议 `extra='forbid'`）→ 日期、重复经历、长度和前后逻辑等业务校验 → 最多 1～2 次有限重试。
-- 非 JSON、合法 JSON 但类型错误、额外字段、日期矛盾或业务规则不通过时，不写 `parsed_snapshot`、不创建 Candidate、不覆盖表单；达到重试上限后显示稳定失败原因，保留 `raw_text`，允许 HR 手填和重新识别。
+- 不能保证模型每次都返回正确内容，但必须保证错误输出无法进入数据库或自动填表。防线顺序为：DeepSeek JSON Output → JSON 解析 → Pydantic 严格 Schema → 业务校验。
+- 非 JSON、合法 JSON 但类型错误、额外字段、日期矛盾或业务规则不通过时，不写入新的成功草稿、不创建 Candidate、不覆盖表单；显示稳定失败原因，保留原文件和 `raw_text`，允许 HR 手填和人工重新识别。
 - “合法 JSON”不等于“事实正确”。仍需要求只引用原文、不确定返回 `null`，必要时保存字段证据或警告，并由 HR 最终确认。
 
-#### 当前倾向，但尚未确认
+#### 草稿、状态和前端合并规则
 
-- 当前讨论更倾向先实现“单次 DeepSeek 结构化输出 + Pydantic/业务校验 + 有限重试”，不要一开始就使用 LangGraph。这样能先验证真实简历的一次调用效果，并避免为了展示 Agent 而增加不必要复杂度。
-- 如果采用该方案，更准确的名称是“AI 结构化提取服务”，不应把单次模型调用包装成 Agent。LangGraph 应在出现多节点、状态、条件分支、局部重试或多工具协作的真实需求后再引入。
-- 上述只是讨论倾向，不是最终技术决定。`docs/implementation-plan.md` 当前仍把阶段 5 定义为 LangGraph `resume_parse` 工作流；若最终选择单次或混合方案，必须先明确记录设计偏差并同步修改实施计划，不能文档写 LangGraph、代码却静默采用另一套方案。
+- 合法结果先保存为版本化 `ResumeParseDraft`，成功草稿进入 `Resume.parsed_snapshot`，不直接创建或改写 Candidate、Education、WorkExperience、ProjectExperience。
+- 新增独立的结构化识别状态、错误、开始/完成时间和 Schema 版本，不能复用阶段 4 的文件 `parse_status/parse_error/parsed_at`。
+- API 采用 `POST /api/v2/resumes/{resume_id}/structure`。已有成功草稿时默认直接返回，避免重复收费；只有 HR 明确重新识别才调用一次新请求，同一 Resume 正在处理时返回 `409`。
+- 前端普通字段只补充空值，不覆盖 HR 已填写内容；经历列表为空时可导入 AI 草稿，已经有人工作记录时不自动覆盖或拼接，展示差异并由 HR 选择。
+- 应聘岗位、来源和招聘状态不从简历猜测。性别和年龄只在原文明确出现时提取，且不得用于后续匹配、评分或淘汰。
+- 阶段 5 只忠实提取学校名称，不由大模型推断 985/211。后续初筛确有需要时，通过标准化学校名称和可追溯院校目录取得 985/211/双一流标签，再结合岗位要求生成可解释结论，不依赖模型记忆，也不据此自动淘汰。
 
-#### 换电脑后必须继续讨论、尚未决定的问题
+#### 已确认的实现顺序
 
-1. 最终选择单次调用、LangGraph 多节点还是渐进/混合方案。
-2. `ResumeParseDraft` 的完整字段、嵌套结构、日期格式、空值、额外字段和版本号规则。
-3. 是否保存原文证据、警告、缺失字段和模型信息；是否需要独立的结构化解析状态/错误字段及数据库迁移，不能复用阶段 4 的文件 `parse_status` 造成语义混淆。
-4. DeepSeek 当前接口采用哪种结构化输出能力、超时、重试次数、并发限制、费用控制和失败码映射。
-5. 教育/工作/项目等列表在 HR 已经手填部分内容时如何合并、提示和去重，不能简单覆盖或直接拼接。
-6. 结构化解析 API 路径、幂等/重新识别规则、`parsed_snapshot` 覆盖或版本保留规则。
-7. 用哪些真实但去隐私样本评估完整性，如何定义“足够好”；在没有遗漏率、格式失败率等证据前，不提前决定必须上 LangGraph。
+1. ✅ 已定义和测试 `ResumeParseDraft` Schema、字段映射、日期/空值/额外字段/去重规则及前端合并契约，未调用 DeepSeek。
+2. ✅ 已增加结构化状态数据库字段，并完成 Alembic 隔离数据库往返和正式开发数据库向前升级。
+3. 实现可替换的 DeepSeek Adapter；自动化测试全部使用 Fake Adapter，不产生真实费用。
+4. 实现 `ResumeStructureService` 的幂等、并发、失败和旧成功草稿保护。
+5. 实现结构化 API，再接入新增候选人页面的进度、AI 标记、冲突提示和辅助填写。
+6. 使用至少 15～20 份去隐私样本评估字段完整性、格式失败率、响应时间和费用，最后完成真实前后端人工验收。
+
+#### 阶段 5 第一小步进度：`ResumeParseDraft` Schema 和业务校验
+
+- 已新增隔离的 `backend/app/schemas/rebuilt/resume_parse.py`，定义 `ResumeBasicInfoDraft`、`ResumeEducationDraft`、`ResumeWorkExperienceDraft`、`ResumeProjectExperienceDraft` 和 `ResumeParseDraft` 五类 Pydantic v2 Schema，并通过 `backend/app/schemas/rebuilt/__init__.py` 统一导出，供后续 Service/API 复用。
+- 草稿 Schema 版本固定为 `1.0`；五类 Schema 均使用严格类型和 `extra="forbid"`。所有契约字段都必须出现：无法确定的普通字段使用 `null`，无内容的列表使用 `[]`，列表本身不能为 `null`，未知字段不能静默进入草稿。
+- 基本资料长度上限已与现有 `CandidateCreate` 对齐；教育、工作和项目的短字段上限已与现有正式经历 Schema 对齐。由于正式描述字段使用 PostgreSQL `TEXT`，草稿额外设置了明确服务端安全上限：工作/项目描述 10,000 字符，项目成果/自我评价 5,000 字符，避免异常超长模型输出进入后续链路。
+- `age` 限制为 `0..120`，`work_years` 限制为 `0..80`；电话保留国际区号、空格、括号、点和连字符等合理格式，但要求 6～15 位数字且总长不超过 20；邮箱保留原值并检查基本 local/domain 边界，不擅自改写联系方式。
+- 日期只允许 `YYYY`、`YYYY-MM`，结束时间额外允许 `至今`；月份必须为 `01..12`，`至今` 不能作为开始时间。开始年份晚于结束年份、或同年月精度下开始月份晚于结束月份时拒绝；同年但一侧只有年份时不武断推断月份顺序。
+- 完全空白的教育、工作或项目对象采用明确拒绝策略，不静默删除模型返回内容；技能、工作/项目技术栈和证书会去除首尾空白、空项和完全重复项，保持首次出现顺序及原有大小写。
+- 教育草稿只包含 `school/degree/major/start_date/end_date`，没有 `is_985/is_211`。字段映射已记录在 `docs/specs/2026-08-12-stage5-resume-draft-field-mapping.md`：应聘岗位、来源、招聘状态没有 AI 映射；证书、自我评价、警告和缺失字段当前保留在草稿；性别和年龄不得用于后续筛选决策。
+- 新增 22 项纯 Schema 隔离测试，覆盖完整草稿、大量 `null`、空数组、缺失键、额外字段、错误类型、Schema 版本、年龄/工作年限、日期格式/顺序、`至今`、空经历、列表清理去重、超长字符串、邮箱/电话边界、学校标签边界、统一导出和 JSON Schema 导出；22 项全部通过。
+- 后端全量回归从 293 项增至 315 项，315 项全部通过；新增 Schema Python 编译通过，导出的 JSON Schema 确认顶层 `additionalProperties=false`、10 个顶层字段全部必填、教育结构只有 5 个允许字段。
+- 本步没有调用 DeepSeek，没有新增或修改 API、Service、Adapter、数据库 Model、Alembic migration、前端或 PostgreSQL 数据，也没有启动正式 FastAPI 生命周期及自动清理任务；Resume 38 未被读取、修改或删除。
+
+#### 阶段 5 第二小步进度：Resume 独立结构化状态及 Alembic 迁移
+
+- 已在新版 `Resume` SQLAlchemy Model 增加 `structure_status`、`structure_error`、`structure_attempt_id`、`structure_started_at`、`structured_at`、`structure_schema_version` 六个字段；它们与阶段 4 的 `parse_status/parse_error/parsed_at` 完全独立。
+- `structure_status` 使用 `VARCHAR(30) NOT NULL`，ORM 与 PostgreSQL 默认值均为 `not_started`，并建立独立索引；其余字段按设计允许为空。`structure_attempt_id` 为 36 字符，供后续服务端 UUID 尝试编号使用；两个时间字段使用带时区时间；Schema 版本字段为 20 字符。
+- `ResumeRead` 已增加四种合法结构化状态：`not_started/processing/succeeded/failed` 及六个状态字段。通用 `ResumeCreate/ResumeUpdate` 故意不开放这些字段，避免客户端通过普通 CRUD 伪造 AI 处理状态；后续由专用 `ResumeStructureService` 控制写入。
+- 已新增 Alembic revision `f5a7c9e2d104_add_resume_structure_state.py`，上游为 `d3f6a8c1b204`。升级只增加六个字段和一个索引；降级只移除本步新增索引和字段，不修改阶段 4 字段、原文、草稿或绑定关系。
+- 新增 8 项 Model/Schema/migration 隔离测试，覆盖字段类型、长度、默认值、可空规则、独立索引、读取状态限制、普通 CRUD 写入边界和升级/降级操作范围；Resume API 定向共 44 项全部通过，后端全量回归从 315 项增至 323 项，323 项全部通过。
+- Python 编译和 Alembic PostgreSQL 离线 SQL 生成通过；离线 SQL 确认本 revision 只包含六次 `ADD COLUMN` 和一次 `CREATE INDEX`。
+- 使用专用临时数据库 `recruitment_assistant_stage5_migration_test` 完成真实 PostgreSQL `upgrade -> downgrade d3f6a8c1b204 -> upgrade`：首次升级后测试 Resume 默认 `not_started`；降级后测试 Resume 及原 `parse_status=parsed` 保持存在，而六个新字段和索引计数均为 0；再次升级后同一既有 Resume 自动恢复六个字段并获得 `not_started`。验证结束后专用数据库已精确删除，存在数量确认为 0。
+- 正式开发数据库只执行安全的向前升级，没有执行 downgrade，当前 Alembic head 为 `f5a7c9e2d104`。升级前后 Resume 32 仍绑定 Candidate 64、`parse_status=parsed`、原文和旧快照存在；Resume 38 仍未绑定、`parse_status=parsed`、原文存在。两条记录均只新增 `structure_status=not_started`，其余五个新字段为空。
+- `alembic check` 输出 `No new upgrade operations detected`，证明当前 SQLAlchemy Model 与正式 PostgreSQL 表结构一致。本步没有启动 FastAPI，因此 24 小时自动清理任务未运行；没有调用 DeepSeek，没有实现 Adapter、Service、结构化 API或前端。
 
 #### 下一台电脑的恢复起点
 
-- 先完整阅读 `AGENTS.md`、`CLAUDE.md`、本文件、`docs/implementation-plan.md` 和权威设计文档，并检查分支、提交和全部未提交修改；阶段 3/4 的大量修改尚未提交，严禁 reset、clean、覆盖或丢弃。
-- 阶段 5 尚未编码、未调用 DeepSeek、未创建 LangGraph、未新增结构化解析 API。第一步应继续讨论并形成可验证的最小设计，不要根据“当前倾向”直接开始实现。
+- 继续工作前完整阅读 `AGENTS.md`、`CLAUDE.md`、本文件、`docs/implementation-plan.md`、权威设计文档和阶段 5 专项设计，并检查分支及未提交修改。2026-08-12 文档修改前工作区为干净状态；后续仍严禁 reset、clean、覆盖或丢弃用户修改。
+- 阶段 5 前两小步已经完成；仍未调用 DeepSeek、未创建结构化解析 API。方案已经确认，不再重复讨论是否使用 LangGraph；下一小步只实现 DeepSeek Adapter。
 - 当前本机人工验收进程使用临时环境变量关闭自动过期清理；正常配置默认 `RESUME_CLEANUP_ENABLED=true`。Resume 38 仍未绑定且已超过 24 小时，换电脑或正常启动后端前必须再次明确是否保留，否则运行满第一个清理周期后会符合自动删除条件。
 
 优先任务：
 
-1. 在另一台电脑继续讨论阶段 5，先确定单次调用、LangGraph 或渐进/混合路线；在用户确认最终方案前不编码。
-2. 路线确定后，第一个最小模块只定义 `ResumeParseDraft` Schema、字段映射、校验、失败和前端合并契约，不立即扩大到完整工作流。
-3. 再根据最终方案实现统一 `ResumeStructureService`、模型 Adapter、结构化解析 API、草稿持久化和新增候选人页自动填充，每个部分继续独立验证。
+1. 下一小步只实现 DeepSeek Adapter：单次 JSON Output 请求、禁用自动模型重试、稳定异常映射和 Fake/Mock 隔离测试；不得实现数据库状态流转或 API。
+2. 之后再依次实现 `ResumeStructureService`、结构化解析 API、草稿持久化和新增候选人页自动填充，每个部分继续独立验证。
+3. 实现依据为 `docs/specs/2026-08-12-stage5-resume-structure-design.md`；如需改变一次调用、不用 Agent/LangGraph、HR 最终确认等核心决定，必须先与用户重新确认并同步文档。
 4. 阶段 5 只处理简历结构化草稿；岗位匹配、AI 初筛、报告生成、扫描件 OCR和自动重复候选人判定仍不提前进入。
 
 ### 重要说明

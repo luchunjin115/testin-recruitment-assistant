@@ -11,7 +11,7 @@ HR Agent 招聘提效平台 — 面向公司内部 HR 团队的 AI 招聘助手�
 ## 当前状态
 
 项目处于**架构重建阶段**。现有代码是旧版本（React + FastAPI + SQLite + Mock LLM），
-新版本将升级为: React + Ant Design 5 定制主题 + FastAPI + PostgreSQL + Chroma + Redis + LangGraph + DeepSeek API。
+新版本将升级为: React + Ant Design 5 定制主题 + FastAPI + PostgreSQL + Chroma + Redis + DeepSeek API；LangGraph 只在后续确有多步骤编排价值的工作流中使用，不作为所有 AI 能力的强制包装。
 
 ## 工作原则
 
@@ -28,7 +28,7 @@ HR Agent 招聘提效平台 — 面向公司内部 HR 团队的 AI 招聘助手�
 前端: React 18 + TypeScript + Ant Design 5 (Design Token 定制) + Vite 5 + zustand
 后端: FastAPI + SQLAlchemy 2.0 + Pydantic v2 + Alembic
 数据库: PostgreSQL 16 + Chroma (向量) + Redis (缓存)
-AI: DeepSeek API + LangGraph (工作流编排)
+AI: DeepSeek API + 按需使用 LangGraph（复杂工作流编排）
 部署: Docker Compose
 ```
 
@@ -61,18 +61,18 @@ frontend/src/
 
 backend/app/
   api/           FastAPI 路由
-  services/      业务逻辑
-  agents/        ★ LangGraph 工作流（graphs/ nodes/ states/ prompts/）
+  services/      普通业务与 AI 服务（阶段 5 简历结构化提取位于此层）
+  agents/        LangGraph 工作流（仅用于确有多步骤编排需求的模块）
   rag/           RAG 检索层（Chroma）
   models/        SQLAlchemy 数据模型
   schemas/       Pydantic 请求/响应
   core/          基础设施（config, database, llm, file_parser）
 ```
 
-## 核心 AI 工作流（LangGraph）
+## 核心 AI 能力
 
-1. **resume_parse** — 简历解析: 文件转文本 → 分步提取 → 校验 → 存储
-2. **jd_match** — JD 匹配: 解析 JD → 硬性条件检查 → 多维度评分 → 综合推荐
+1. **resume_structure** — 阶段 5 普通 AI Service：`Resume.raw_text` → 单次 DeepSeek 结构化提取 → 严格校验 → 草稿持久化 → 表单辅助填写；不使用 Agent/LangGraph，不直接创建 Candidate
+2. **jd_match** — JD 匹配: 解析 JD → 硬性条件检查 → 多维度评分 → 综合推荐；实现时再依据真实分支复杂度决定是否使用 LangGraph
 3. **report_gen** — 报告生成: 汇总数据 → 摘要 → 分析 → 结论 → 格式化
 4. **smart_assistant** — 智能助手: 意图识别 → 路由到对应工作流
 
@@ -95,4 +95,7 @@ backend/app/
 - AI 模型: DeepSeek（通过 OpenAI 兼容接口）
 - Prompt 设计: 禁止使用性别/年龄/民族/婚姻状况进行评估
 - 简历解析: 全量信息提取，不遗漏
+- 阶段 5 的一次识别正常只调用一次 DeepSeek；失败不自动连续重试，由 HR 决定是否重新识别
+- 阶段 5 只保存结构化草稿并补充前端空字段，正式 Candidate 必须由 HR 检查并确认后创建
+- 阶段 5 只忠实提取学校名称，不让模型推断 985/211；后续初筛如需院校标签，使用可追溯的标准院校数据，不依赖模型记忆
 - 匹配打分: 不通过硬性条件的候选人不直接淘汰，标记原因让 HR 决策
