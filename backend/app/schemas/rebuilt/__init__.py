@@ -9,6 +9,14 @@ from app.schemas.rebuilt.project_experience import (
 )
 from app.schemas.rebuilt.report import ReportCreate, ReportRead, ReportUpdate
 from app.schemas.rebuilt.resume import ResumeCreate, ResumeRead, ResumeUpdate
+from app.schemas.rebuilt.resume_parse import (
+    RESUME_PARSE_SCHEMA_VERSION,
+    ResumeBasicInfoDraft,
+    ResumeEducationDraft,
+    ResumeParseDraft,
+    ResumeProjectExperienceDraft,
+    ResumeWorkExperienceDraft,
+)
 from app.schemas.rebuilt.screening_result import (
     ScreeningResultCreate,
     ScreeningResultRead,
@@ -41,6 +49,12 @@ __all__ = [
     "ResumeCreate",
     "ResumeRead",
     "ResumeUpdate",
+    "RESUME_PARSE_SCHEMA_VERSION",
+    "ResumeBasicInfoDraft",
+    "ResumeEducationDraft",
+    "ResumeParseDraft",
+    "ResumeProjectExperienceDraft",
+    "ResumeWorkExperienceDraft",
     "ScreeningResultCreate",
     "ScreeningResultRead",
     "ScreeningResultUpdate",
