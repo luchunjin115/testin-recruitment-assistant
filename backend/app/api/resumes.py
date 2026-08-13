@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +10,23 @@ from app.core.config import get_settings
 from app.core.database import get_db
 from app.models.rebuilt.resume import Resume
 from app.schemas.rebuilt.resume import ResumeCreate, ResumeRead, ResumeUpdate
+from app.schemas.rebuilt.resume_structure import (
+    ResumeStructureRequest,
+    ResumeStructureResponse,
+)
+from app.adapters.rebuilt.resume_structure import (
+    ResumeStructureAdapterError,
+    ResumeStructureAuthenticationError,
+    ResumeStructureConfigurationError as ResumeStructureAdapterConfigurationError,
+    ResumeStructureEmptyResponseError,
+    ResumeStructureInputError as ResumeStructureAdapterInputError,
+    ResumeStructureQuotaError,
+    ResumeStructureRateLimitError,
+    ResumeStructureResponseInterruptedError,
+    ResumeStructureServiceUnavailableError,
+    ResumeStructureTimeoutError,
+    ResumeStructureUpstreamError,
+)
 from app.services.rebuilt.resume_service import (
     ResumeAlreadyBoundError,
     ResumeCandidateNotFoundError,
@@ -19,6 +37,18 @@ from app.services.rebuilt.resume_service import (
     UnsupportedResumeFileError,
     UnsupportedResumeTextExtractionError,
     resume_service,
+)
+from app.services.rebuilt.resume_structure_service import (
+    ResumeStructureConflictError,
+    ResumeStructureConfigurationError,
+    ResumeStructureDisabledError,
+    ResumeStructureInputError,
+    ResumeStructureInvalidOutputError,
+    ResumeStructureNotFoundError,
+    ResumeStructurePrerequisiteError,
+    ResumeStructureServiceResult,
+    ResumeStructureUnexpectedError,
+    resume_structure_service,
 )
 from app.services.rebuilt.resume_file_cleanup import (
     ResumeCleanupStorageError,
@@ -37,6 +67,40 @@ from app.services.rebuilt.resume_storage import (
 
 router = APIRouter(prefix="/resumes", tags=["resumes"])
 RESUME_NOT_FOUND = "简历不存在"
+
+
+def _structure_response(result: ResumeStructureServiceResult) -> ResumeStructureResponse:
+    return ResumeStructureResponse(
+        resume_id=result.resume_id,
+        structure_status=result.structure_status,
+        structure_error=result.structure_error,
+        from_cache=result.from_cache,
+        has_previous_draft=result.has_previous_draft,
+        draft=result.draft,
+    )
+
+
+async def _raise_structure_http_error(
+    *,
+    db: AsyncSession,
+    resume_id: int,
+    force: bool,
+    status_code: int,
+    detail: str,
+) -> None:
+    if force:
+        try:
+            previous = await resume_structure_service.get_current_result(db, resume_id)
+        except Exception:
+            previous = None
+        if previous is not None and previous.structure_status in {"succeeded", "failed"}:
+            body = _structure_response(previous).model_dump(mode="json")
+            body["detail"] = detail
+            raise HTTPException(
+                status_code=status_code,
+                detail=jsonable_encoder(body),
+            )
+    raise HTTPException(status_code=status_code, detail=detail)
 
 
 @router.post("/upload", response_model=ResumeRead, status_code=status.HTTP_201_CREATED)
@@ -115,6 +179,110 @@ async def extract_resume_text(
             detail=RESUME_NOT_FOUND,
         )
     return resume
+
+
+@router.post(
+    "/{resume_id}/structure",
+    response_model=ResumeStructureResponse,
+)
+async def structure_resume(
+    resume_id: int,
+    data: ResumeStructureRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ResumeStructureResponse:
+    try:
+        result = await resume_structure_service.structure_resume(
+            db=db,
+            resume_id=resume_id,
+            force=data.force,
+        )
+    except ResumeStructureNotFoundError as exc:
+        await _raise_structure_http_error(
+            db=db,
+            resume_id=resume_id,
+            force=data.force,
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )
+    except (ResumeStructurePrerequisiteError, ResumeStructureConflictError) as exc:
+        await _raise_structure_http_error(
+            db=db,
+            resume_id=resume_id,
+            force=data.force,
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        )
+    except (ResumeStructureInputError, ResumeStructureAdapterInputError) as exc:
+        await _raise_structure_http_error(
+            db=db,
+            resume_id=resume_id,
+            force=data.force,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        )
+    except ResumeStructureRateLimitError as exc:
+        await _raise_structure_http_error(
+            db=db,
+            resume_id=resume_id,
+            force=data.force,
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=str(exc),
+        )
+    except ResumeStructureTimeoutError as exc:
+        await _raise_structure_http_error(
+            db=db,
+            resume_id=resume_id,
+            force=data.force,
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail=str(exc),
+        )
+    except (
+        ResumeStructureDisabledError,
+        ResumeStructureConfigurationError,
+        ResumeStructureAdapterConfigurationError,
+        ResumeStructureAuthenticationError,
+        ResumeStructureQuotaError,
+        ResumeStructureServiceUnavailableError,
+    ) as exc:
+        await _raise_structure_http_error(
+            db=db,
+            resume_id=resume_id,
+            force=data.force,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        )
+    except (
+        ResumeStructureInvalidOutputError,
+        ResumeStructureEmptyResponseError,
+        ResumeStructureResponseInterruptedError,
+        ResumeStructureUpstreamError,
+        ResumeStructureAdapterError,
+    ) as exc:
+        await _raise_structure_http_error(
+            db=db,
+            resume_id=resume_id,
+            force=data.force,
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        )
+    except ResumeStructureUnexpectedError as exc:
+        await _raise_structure_http_error(
+            db=db,
+            resume_id=resume_id,
+            force=data.force,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        )
+    except Exception:
+        await _raise_structure_http_error(
+            db=db,
+            resume_id=resume_id,
+            force=data.force,
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="简历结构化识别发生未预期错误",
+        )
+
+    return _structure_response(result)
 
 
 @router.post("", response_model=ResumeRead, status_code=status.HTTP_201_CREATED)

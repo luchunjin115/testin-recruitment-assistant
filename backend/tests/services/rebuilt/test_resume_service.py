@@ -431,12 +431,14 @@ class ResumeServiceTest(IsolatedAsyncioTestCase):
         cleanup = Mock()
         cleanup.quarantine.return_value = Mock()
         cutoff = datetime(2026, 8, 10, tzinfo=timezone.utc)
+        processing_cutoff = datetime(2026, 8, 11, 11, 57, tzinfo=timezone.utc)
 
         deleted = await self.service.delete_expired_resume(
             self.db,
             4,
             cutoff,
             Path("C:/storage"),
+            processing_cutoff=processing_cutoff,
             cleanup=cleanup,
         )
 
@@ -445,6 +447,8 @@ class ResumeServiceTest(IsolatedAsyncioTestCase):
         statement_text = str(statement)
         self.assertIn("resumes.candidate_id IS NULL", statement_text)
         self.assertIn("resumes.uploaded_at <=", statement_text)
+        self.assertIn("resumes.structure_status !=", statement_text)
+        self.assertIn("resumes.structure_started_at <=", statement_text)
         self.db.delete.assert_awaited_once_with(existing)
         self.db.commit.assert_awaited_once()
 

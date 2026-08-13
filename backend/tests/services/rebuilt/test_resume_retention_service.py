@@ -58,7 +58,14 @@ class ResumeRetentionServiceTest(IsolatedAsyncioTestCase):
         self.db.rollback.assert_awaited_once()
         statement = self.db.scalars.await_args.args[0]
         self.assertIn("resumes.candidate_id IS NULL", str(statement))
+        self.assertIn("resumes.structure_status !=", str(statement))
+        self.assertIn("resumes.structure_started_at <=", str(statement))
         self.assertEqual(statement.compile().params["param_1"], 50)
+        for call_args in resumes.delete_expired_resume.await_args_list:
+            self.assertEqual(
+                call_args.kwargs["processing_cutoff"],
+                self.now - timedelta(seconds=180),
+            )
 
     async def test_trash_is_purged_only_when_resume_row_is_absent(self) -> None:
         self.scalar_ids([])
@@ -127,6 +134,14 @@ class ResumeRetentionServiceTest(IsolatedAsyncioTestCase):
             await self.service.run_once(self.db, Path("C:/storage"), 0, 50)
         with self.assertRaisesRegex(ValueError, "batch_size"):
             await self.service.run_once(self.db, Path("C:/storage"), 24, 0)
+        with self.assertRaisesRegex(ValueError, "processing_lease_seconds"):
+            await self.service.run_once(
+                self.db,
+                Path("C:/storage"),
+                24,
+                50,
+                processing_lease_seconds=0,
+            )
 
     async def test_loop_waits_before_first_run_and_stops_on_cancellation(self) -> None:
         db = Mock()
@@ -156,4 +171,5 @@ class ResumeRetentionServiceTest(IsolatedAsyncioTestCase):
             storage_root=Path("C:/storage"),
             retention_hours=24,
             batch_size=50,
+            processing_lease_seconds=180,
         )

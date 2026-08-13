@@ -53,6 +53,23 @@ class Settings(BaseSettings):
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
     DEEPSEEK_MODEL: str = "deepseek-chat"
 
+    RESUME_STRUCTURE_ENABLED: bool = True
+    RESUME_STRUCTURE_MODEL: str = "deepseek-v4-flash"
+    RESUME_STRUCTURE_TIMEOUT_SECONDS: float = Field(default=90, gt=0, le=600)
+    RESUME_STRUCTURE_PROCESSING_LEASE_SECONDS: int = Field(default=180, ge=30, le=3600)
+    RESUME_STRUCTURE_MAX_INPUT_CHARS: int = Field(default=100_000, ge=1_000, le=1_000_000)
+    RESUME_STRUCTURE_MAX_OUTPUT_TOKENS: int = Field(default=12_000, ge=1_000, le=384_000)
+    RESUME_STRUCTURE_PROMPT_VERSION: str = Field(
+        default="resume_structure_v1",
+        min_length=1,
+        max_length=100,
+    )
+    RESUME_STRUCTURE_SCHEMA_VERSION: str = Field(
+        default="1.0",
+        min_length=1,
+        max_length=20,
+    )
+
     UPLOAD_DIR: str = str((BACKEND_DIR / "uploads").resolve())
     V2_STORAGE_DIR: str = str((BACKEND_DIR / "storage").resolve())
     MAX_FILE_SIZE_MB: int = 10

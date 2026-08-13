@@ -41,6 +41,7 @@ export type Stage3CandidateCreateInput = {
 };
 
 export type Stage3EducationInput = {
+  aiCandidateKey?: string;
   school?: string;
   degree?: string;
   major?: string;
@@ -51,6 +52,7 @@ export type Stage3EducationInput = {
 };
 
 export type Stage3WorkExperienceInput = {
+  aiCandidateKey?: string;
   company?: string;
   title?: string;
   startDate?: string;
@@ -60,6 +62,7 @@ export type Stage3WorkExperienceInput = {
 };
 
 export type Stage3ProjectExperienceInput = {
+  aiCandidateKey?: string;
   projectName?: string;
   role?: string;
   startDate?: string;

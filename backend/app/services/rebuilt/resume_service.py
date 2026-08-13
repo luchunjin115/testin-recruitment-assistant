@@ -1,16 +1,17 @@
 import asyncio
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from fastapi import UploadFile
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.rebuilt.candidate import Candidate
 from app.models.rebuilt.job import Job
 from app.models.rebuilt.resume import Resume
+from app.core.config import get_settings
 from app.schemas.rebuilt.resume import ResumeCreate, ResumeUpdate
 from app.services.rebuilt.resume_docx_extractor import (
     ResumeDocxExtractor,
@@ -308,14 +309,26 @@ class ResumeService:
         resume_id: int,
         cutoff: datetime,
         storage_root: Path,
+        processing_cutoff: datetime | None = None,
         cleanup: ResumeFileCleanup = resume_file_cleanup,
     ) -> bool:
+        processing_cutoff = processing_cutoff or (
+            datetime.now(timezone.utc)
+            - timedelta(
+                seconds=get_settings().RESUME_STRUCTURE_PROCESSING_LEASE_SECONDS
+            )
+        )
         result = await db.execute(
             select(Resume)
             .where(
                 Resume.id == resume_id,
                 Resume.candidate_id.is_(None),
                 Resume.uploaded_at <= cutoff,
+                or_(
+                    Resume.structure_status != "processing",
+                    Resume.structure_started_at.is_(None),
+                    Resume.structure_started_at <= processing_cutoff,
+                ),
             )
             .with_for_update(skip_locked=True)
         )

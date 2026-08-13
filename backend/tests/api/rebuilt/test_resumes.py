@@ -9,8 +9,19 @@ from fastapi.testclient import TestClient
 
 from app.api.resumes import router
 from app.core.database import get_db
+from app.adapters.rebuilt.resume_structure import (
+    ResumeStructureAuthenticationError,
+    ResumeStructureEmptyResponseError,
+    ResumeStructureQuotaError,
+    ResumeStructureRateLimitError,
+    ResumeStructureResponseInterruptedError,
+    ResumeStructureServiceUnavailableError,
+    ResumeStructureTimeoutError,
+    ResumeStructureUpstreamError,
+)
 from app.models.rebuilt.resume import Resume
 from app.schemas.rebuilt.resume import ResumeCreate, ResumeUpdate
+from app.schemas.rebuilt.resume_parse import ResumeParseDraft
 from app.services.rebuilt.resume_service import resume_service
 from app.services.rebuilt.resume_service import (
     ResumeAlreadyBoundError,
@@ -22,6 +33,19 @@ from app.services.rebuilt.resume_service import (
     ResumeTextExtractionFailedError,
     UnsupportedResumeFileError,
     UnsupportedResumeTextExtractionError,
+)
+from app.services.rebuilt.resume_structure_service import (
+    ResumeStructureConflictError,
+    ResumeStructureConfigurationError,
+    ResumeStructureDisabledError,
+    ResumeStructureInputError,
+    ResumeStructureInvalidOutputError,
+    ResumeStructureNotFoundError,
+    ResumeStructurePrerequisiteError,
+    ResumeStructureServiceResult,
+    ResumeStructureSnapshotMetadata,
+    ResumeStructureUnexpectedError,
+    resume_structure_service,
 )
 from app.services.rebuilt.resume_file_cleanup import (
     ResumeCleanupStorageError,
@@ -38,6 +62,62 @@ from app.services.rebuilt.resume_storage import (
 
 
 TEST_TIME = datetime(2026, 7, 22, 12, 0, tzinfo=timezone.utc)
+TEST_ATTEMPT_ID = "11111111-1111-4111-8111-111111111111"
+
+
+def make_structure_draft() -> ResumeParseDraft:
+    return ResumeParseDraft.model_validate(
+        {
+            "schema_version": "1.0",
+            "basic_info": {
+                "name": "测试候选人",
+                "phone": "13800138000",
+                "email": "candidate@example.com",
+                "gender": None,
+                "age": None,
+                "location": "上海",
+                "current_company": None,
+                "current_title": None,
+                "work_years": None,
+                "education_level": "本科",
+            },
+            "education_records": [],
+            "work_experiences": [],
+            "project_experiences": [],
+            "skills": ["Python"],
+            "certifications": [],
+            "self_evaluation": None,
+            "warnings": [],
+            "missing_fields": [],
+        }
+    )
+
+
+def make_structure_result(
+    *,
+    structure_status: str = "succeeded",
+    structure_error: str | None = None,
+    from_cache: bool = False,
+    has_previous_draft: bool = False,
+) -> ResumeStructureServiceResult:
+    return ResumeStructureServiceResult(
+        resume_id=32,
+        structure_status=structure_status,
+        structure_error=structure_error,
+        draft=make_structure_draft(),
+        metadata=ResumeStructureSnapshotMetadata(
+            model="deepseek-v4-flash",
+            prompt_version="resume_structure_v1",
+            schema_version="1.0",
+            structured_at=TEST_TIME,
+            input_characters=100,
+            input_tokens=20,
+            output_tokens=40,
+            attempt_id=TEST_ATTEMPT_ID,
+        ),
+        from_cache=from_cache,
+        has_previous_draft=has_previous_draft,
+    )
 
 
 def make_resume(
@@ -562,3 +642,193 @@ class ResumeApiTest(TestCase):
         self.assertEqual(response.status_code, 500)
         self.assertEqual(response.json(), {"detail": "简历文件清理失败"})
         self.assertNotIn("private", response.text)
+
+    def test_structure_resume_uses_false_by_default_and_returns_draft(self) -> None:
+        structure_mock = AsyncMock(return_value=make_structure_result())
+
+        with patch.object(resume_structure_service, "structure_resume", structure_mock):
+            response = self.client.post("/resumes/32/structure", json={})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["resume_id"], 32)
+        self.assertEqual(response.json()["structure_status"], "succeeded")
+        self.assertFalse(response.json()["from_cache"])
+        self.assertFalse(response.json()["has_previous_draft"])
+        self.assertEqual(response.json()["draft"]["basic_info"]["name"], "测试候选人")
+        self.assertNotIn("metadata", response.json())
+        structure_mock.assert_awaited_once_with(db=self.db, resume_id=32, force=False)
+
+    def test_structure_resume_passes_force_to_service(self) -> None:
+        structure_mock = AsyncMock(
+            return_value=make_structure_result(
+                has_previous_draft=True,
+            )
+        )
+
+        with patch.object(resume_structure_service, "structure_resume", structure_mock):
+            response = self.client.post("/resumes/32/structure", json={"force": True})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["from_cache"])
+        self.assertTrue(response.json()["has_previous_draft"])
+        structure_mock.assert_awaited_once_with(db=self.db, resume_id=32, force=True)
+
+    def test_structure_resume_rejects_unknown_request_fields(self) -> None:
+        structure_mock = AsyncMock()
+
+        with patch.object(resume_structure_service, "structure_resume", structure_mock):
+            response = self.client.post(
+                "/resumes/32/structure",
+                json={"force": False, "draft": {}},
+            )
+
+        self.assertEqual(response.status_code, 422)
+        structure_mock.assert_not_awaited()
+
+    def test_structure_resume_maps_local_service_errors(self) -> None:
+        cases = (
+            (ResumeStructureNotFoundError("Resume 不存在"), 404),
+            (ResumeStructurePrerequisiteError("简历原文尚未成功提取"), 409),
+            (ResumeStructureConflictError("该简历正在进行结构化识别"), 409),
+            (ResumeStructureInputError("简历原文超过安全长度上限"), 422),
+            (ResumeStructureDisabledError("功能未启用"), 503),
+            (ResumeStructureConfigurationError("配置无效"), 503),
+            (ResumeStructureUnexpectedError("结构化识别元数据无效"), 500),
+        )
+
+        for error, expected_status in cases:
+            with self.subTest(error=type(error).__name__):
+                structure_mock = AsyncMock(side_effect=error)
+                with patch.object(
+                    resume_structure_service,
+                    "structure_resume",
+                    structure_mock,
+                ):
+                    response = self.client.post("/resumes/32/structure", json={})
+
+                self.assertEqual(response.status_code, expected_status)
+                self.assertEqual(response.json(), {"detail": str(error)})
+
+    def test_structure_resume_maps_upstream_errors(self) -> None:
+        cases = (
+            (ResumeStructureRateLimitError("请求达到速率上限"), 429),
+            (ResumeStructureEmptyResponseError("模型返回空内容"), 502),
+            (ResumeStructureResponseInterruptedError("模型输出被截断"), 502),
+            (ResumeStructureInvalidOutputError("草稿校验失败"), 502),
+            (ResumeStructureUpstreamError("上游请求失败"), 502),
+            (ResumeStructureAuthenticationError("认证失败"), 503),
+            (ResumeStructureQuotaError("余额不足"), 503),
+            (ResumeStructureServiceUnavailableError("服务不可用"), 503),
+            (ResumeStructureTimeoutError("模型调用超时"), 504),
+        )
+
+        for error, expected_status in cases:
+            with self.subTest(error=type(error).__name__):
+                structure_mock = AsyncMock(side_effect=error)
+                with patch.object(
+                    resume_structure_service,
+                    "structure_resume",
+                    structure_mock,
+                ):
+                    response = self.client.post("/resumes/32/structure", json={})
+
+                self.assertEqual(response.status_code, expected_status)
+                self.assertEqual(response.json(), {"detail": str(error)})
+
+    def test_failed_forced_refresh_returns_safe_error_and_previous_draft(self) -> None:
+        private_error = "模型调用超时"
+        previous = make_structure_result(
+            structure_status="failed",
+            structure_error=private_error,
+            from_cache=True,
+            has_previous_draft=True,
+        )
+        structure_mock = AsyncMock(side_effect=ResumeStructureTimeoutError(private_error))
+        current_mock = AsyncMock(return_value=previous)
+
+        with (
+            patch.object(resume_structure_service, "structure_resume", structure_mock),
+            patch.object(resume_structure_service, "get_current_result", current_mock),
+        ):
+            response = self.client.post(
+                "/resumes/32/structure",
+                json={"force": True},
+            )
+
+        self.assertEqual(response.status_code, 504)
+        error_body = response.json()["detail"]
+        self.assertEqual(error_body["detail"], private_error)
+        self.assertEqual(error_body["structure_status"], "failed")
+        self.assertEqual(error_body["structure_error"], private_error)
+        self.assertTrue(error_body["from_cache"])
+        self.assertTrue(error_body["has_previous_draft"])
+        self.assertEqual(error_body["draft"]["skills"], ["Python"])
+        self.assertNotIn("metadata", error_body)
+        current_mock.assert_awaited_once_with(self.db, 32)
+
+    def test_non_forced_failure_does_not_query_previous_draft(self) -> None:
+        structure_mock = AsyncMock(side_effect=ResumeStructureTimeoutError("模型调用超时"))
+        current_mock = AsyncMock()
+
+        with (
+            patch.object(resume_structure_service, "structure_resume", structure_mock),
+            patch.object(resume_structure_service, "get_current_result", current_mock),
+        ):
+            response = self.client.post("/resumes/32/structure", json={})
+
+        self.assertEqual(response.status_code, 504)
+        current_mock.assert_not_awaited()
+
+    def test_unexpected_error_response_is_sanitized(self) -> None:
+        structure_mock = AsyncMock(
+            side_effect=RuntimeError("candidate@example.com sk-private C:/secret")
+        )
+
+        with patch.object(resume_structure_service, "structure_resume", structure_mock):
+            response = self.client.post("/resumes/32/structure", json={})
+
+        self.assertEqual(response.status_code, 500)
+        self.assertEqual(
+            response.json(),
+            {"detail": "简历结构化识别发生未预期错误"},
+        )
+        self.assertNotIn("candidate@example.com", response.text)
+        self.assertNotIn("sk-private", response.text)
+
+    def test_failed_previous_draft_lookup_falls_back_to_safe_error(self) -> None:
+        structure_mock = AsyncMock(side_effect=ResumeStructureTimeoutError("模型调用超时"))
+        current_mock = AsyncMock(side_effect=RuntimeError("postgresql://private"))
+
+        with (
+            patch.object(resume_structure_service, "structure_resume", structure_mock),
+            patch.object(resume_structure_service, "get_current_result", current_mock),
+        ):
+            response = self.client.post(
+                "/resumes/32/structure",
+                json={"force": True},
+            )
+
+        self.assertEqual(response.status_code, 504)
+        self.assertEqual(response.json(), {"detail": "模型调用超时"})
+        self.assertNotIn("postgresql", response.text)
+
+    def test_structure_route_openapi_contract_is_registered_once(self) -> None:
+        schema = self.app.openapi()
+        operation = schema["paths"]["/resumes/{resume_id}/structure"]["post"]
+
+        self.assertEqual(operation["tags"], ["resumes"])
+        self.assertEqual(
+            operation["requestBody"]["content"]["application/json"]["schema"]["$ref"],
+            "#/components/schemas/ResumeStructureRequest",
+        )
+        self.assertEqual(
+            operation["responses"]["200"]["content"]["application/json"]["schema"]["$ref"],
+            "#/components/schemas/ResumeStructureResponse",
+        )
+        matching_routes = [
+            route
+            for route in self.app.routes
+            if getattr(route, "path", None) == "/resumes/{resume_id}/structure"
+            and "POST" in getattr(route, "methods", set())
+        ]
+        self.assertEqual(len(matching_routes), 1)

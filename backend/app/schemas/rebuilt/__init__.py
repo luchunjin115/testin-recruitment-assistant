@@ -17,6 +17,10 @@ from app.schemas.rebuilt.resume_parse import (
     ResumeProjectExperienceDraft,
     ResumeWorkExperienceDraft,
 )
+from app.schemas.rebuilt.resume_structure import (
+    ResumeStructureRequest,
+    ResumeStructureResponse,
+)
 from app.schemas.rebuilt.screening_result import (
     ScreeningResultCreate,
     ScreeningResultRead,
@@ -55,6 +59,8 @@ __all__ = [
     "ResumeParseDraft",
     "ResumeProjectExperienceDraft",
     "ResumeWorkExperienceDraft",
+    "ResumeStructureRequest",
+    "ResumeStructureResponse",
     "ScreeningResultCreate",
     "ScreeningResultRead",
     "ScreeningResultUpdate",

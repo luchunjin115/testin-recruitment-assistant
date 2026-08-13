@@ -1,7 +1,7 @@
 # 阶段 5：大模型简历结构化提取与表单辅助填写设计
 
 > 日期：2026-08-12  
-> 状态：方案已确认，尚未编码  
+> 状态：方案已确认，前五小步及前端接入前四小步已完成；下一步实现技能候选和未建模内容安全展示
 > 上游依赖：阶段 4 已完成，能够把 PDF、DOCX、TXT 安全转换并保存为 `Resume.raw_text`  
 > 设计结论：第一版正常识别只调用一次 DeepSeek，不使用 Agent 或 LangGraph
 
@@ -342,7 +342,7 @@ Content-Type: application/json
 
 ```env
 RESUME_STRUCTURE_ENABLED=true
-RESUME_STRUCTURE_MODEL=<部署时确认的 DeepSeek 模型名>
+RESUME_STRUCTURE_MODEL=deepseek-v4-flash
 RESUME_STRUCTURE_TIMEOUT_SECONDS=90
 RESUME_STRUCTURE_PROCESSING_LEASE_SECONDS=180
 RESUME_STRUCTURE_MAX_INPUT_CHARS=100000
@@ -351,16 +351,16 @@ RESUME_STRUCTURE_PROMPT_VERSION=resume_structure_v1
 RESUME_STRUCTURE_SCHEMA_VERSION=1.0
 ```
 
-实际模型名和接口能力在实现 Adapter 时再次按 DeepSeek 官方文档核对，不将会变化的模型别名固定进设计文档。
+2026-08-13 实现 Adapter 时已按 DeepSeek 官方文档核对并选用 `deepseek-v4-flash`；部署时仍可通过环境变量覆盖，未来模型升级应再次核对官方文档和 JSON Output 能力。
 
 ## 13. 分步实施顺序
 
-1. **Schema 契约**：实现五类草稿 Schema、字段规则、业务校验和测试，不调用模型。
-2. **数据库迁移**：增加独立结构化状态字段，完成 Alembic 往返和真实 PostgreSQL 验证。
-3. **模型 Adapter**：实现单次 DeepSeek JSON Output 调用和稳定错误转换；测试使用 Fake Adapter。
-4. **结构化 Service**：实现幂等、并发保护、短事务、校验、成功保存、失败和旧草稿保护。
-5. **API**：实现结构化端点和状态码测试，并挂载到正式 `/api/v2`。
-6. **前端接入**：实现进度、失败、AI 标记、普通字段空值填充和经历冲突选择。
+1. ✅ **Schema 契约**：已实现五类草稿 Schema、字段规则、业务校验和测试，不调用模型。
+2. ✅ **数据库迁移**：已增加独立结构化状态字段，完成 Alembic 往返和真实 PostgreSQL 验证。
+3. ✅ **模型 Adapter**：已实现单次 DeepSeek JSON Output 调用和稳定错误转换；测试使用 Fake Adapter。
+4. ✅ **结构化 Service**：已实现幂等、并发保护、短事务、校验、成功保存、失败和旧草稿保护。
+5. ✅ **API**：已实现结构化端点和状态码测试，并挂载到正式 `/api/v2`。
+6. 🚧 **前端接入**：TypeScript 草稿类型、结构化 API 调用、页面状态、普通字段安全合并和三类经历人工确认导入已完成；下一步处理技能候选以及证书、自我评价、warnings、missing_fields 等未建模内容的安全展示。
 7. **样本评估与验收**：使用去隐私真实样本评估后，再完成一次真实 DeepSeek、FastAPI、PostgreSQL、Vite 全链路和人工验收。
 
 每一步都必须独立说明、测试、验证并更新 `PROJECT_STATE.md`，用户未确认理解当前步骤前不提前扩展到下一模块。

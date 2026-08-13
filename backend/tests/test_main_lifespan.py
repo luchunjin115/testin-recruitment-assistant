@@ -14,6 +14,7 @@ class MainLifespanTest(IsolatedAsyncioTestCase):
             RESUME_UNBOUND_RETENTION_HOURS=24,
             RESUME_CLEANUP_INTERVAL_MINUTES=60,
             RESUME_CLEANUP_BATCH_SIZE=50,
+            RESUME_STRUCTURE_PROCESSING_LEASE_SECONDS=180,
         )
         session_factory = Mock()
         started = asyncio.Event()
@@ -46,6 +47,7 @@ class MainLifespanTest(IsolatedAsyncioTestCase):
             retention_hours=24,
             interval_seconds=3600,
             batch_size=50,
+            processing_lease_seconds=180,
         )
         self.assertTrue(captured_task.cancelled())
 

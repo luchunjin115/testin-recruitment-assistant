@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.rebuilt.resume import Resume
@@ -40,6 +40,7 @@ class ResumeRetentionService:
         storage_root: Path,
         retention_hours: int,
         batch_size: int,
+        processing_lease_seconds: int = 180,
         *,
         now: datetime | None = None,
         resumes: ResumeService = resume_service,
@@ -49,17 +50,25 @@ class ResumeRetentionService:
             raise ValueError("retention_hours must be positive")
         if batch_size <= 0:
             raise ValueError("batch_size must be positive")
+        if processing_lease_seconds <= 0:
+            raise ValueError("processing_lease_seconds must be positive")
 
         current_time = now or datetime.now(timezone.utc)
         if current_time.tzinfo is None or current_time.utcoffset() is None:
             raise ValueError("now must be timezone-aware")
         cutoff = current_time - timedelta(hours=retention_hours)
+        processing_cutoff = current_time - timedelta(seconds=processing_lease_seconds)
 
         result = await db.scalars(
             select(Resume.id)
             .where(
                 Resume.candidate_id.is_(None),
                 Resume.uploaded_at <= cutoff,
+                or_(
+                    Resume.structure_status != "processing",
+                    Resume.structure_started_at.is_(None),
+                    Resume.structure_started_at <= processing_cutoff,
+                ),
             )
             .order_by(Resume.uploaded_at.asc(), Resume.id.asc())
             .limit(batch_size)
@@ -75,6 +84,7 @@ class ResumeRetentionService:
                     resume_id=resume_id,
                     cutoff=cutoff,
                     storage_root=storage_root,
+                    processing_cutoff=processing_cutoff,
                     cleanup=files,
                 )
             except Exception:
@@ -131,6 +141,7 @@ async def run_resume_retention_loop(
     retention_hours: int,
     interval_seconds: int,
     batch_size: int,
+    processing_lease_seconds: int = 180,
     *,
     service: ResumeRetentionService | None = None,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
@@ -148,6 +159,7 @@ async def run_resume_retention_loop(
                     storage_root=storage_root,
                     retention_hours=retention_hours,
                     batch_size=batch_size,
+                    processing_lease_seconds=processing_lease_seconds,
                 )
             logger.info(
                 "Resume retention cleanup completed: scanned=%s deleted=%s "

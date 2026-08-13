@@ -3,7 +3,7 @@
 > 项目：AI 招聘助手（`testin-recruitment-assistant`）  
 > 日期：2026-08-12  
 > 当前分支：`1lcj`  
-> 当前进度：阶段 5 第一、第二小步已完成；下一步只实现 DeepSeek Adapter  
+> 当前进度：阶段 5 前五小步及前端接入前四小步已完成；下一步只实现技能候选和未建模内容安全展示
 > 适用对象：在另一台电脑继续开发的本人、协作者或新的编码 Agent
 
 ## 0. 最重要的交接提醒
@@ -60,21 +60,18 @@ git diff --stat
 git diff
 ```
 
-### 0.3 Resume 38 与自动清理规则
+### 0.3 历史 Resume 32/38 与当前数据库的区别
 
-阶段 4 已实现正常业务规则：未绑定 Candidate 且超过 24 小时的 Resume 会被自动清理。Resume 38 在最后核对时仍是：
+旧电脑在阶段 4 验收时曾记录 Resume 32/38，且未绑定 Candidate、超过 24 小时的 Resume 会按正常业务规则自动清理。但 2026-08-13 当前电脑连接的 PostgreSQL 数据卷最初只在 `bbd627449743`，安全升级到 `f5a7c9e2d104` 后只读核对 Resume 总数为 0。
 
 ```text
-id = 38
-candidate_id = NULL
-parse_status = parsed
-raw_text = 已存在
-structure_status = not_started
+current Resume count = 0
+Alembic head = f5a7c9e2d104
 ```
 
-它已经可能符合 24 小时自动清理条件。自动清理它属于产品预期，不是程序错误；但开发和集成测试不得把 Resume 38 当成删除、回滚或破坏性测试数据。
+因此 Resume 32/38 只能视为旧数据卷的历史记录，不能假设它们存在于当前数据库，也不能用历史 ID 做测试。开发和集成测试始终应创建唯一标记的临时 Resume，并在验证后精确清理。
 
-需要保留它进行人工验收时，启动正式 FastAPI 前显式使用：
+将来如果需要暂时保留未绑定 Resume 做人工验收，启动正式 FastAPI 前可临时使用：
 
 ```powershell
 $env:RESUME_CLEANUP_ENABLED='false'
@@ -349,9 +346,9 @@ f5a7c9e2d104_add_resume_structure_state.py
 
 `metadata` 必须由服务端生成，不能接受模型提供或覆盖。普通日志不能记录完整简历原文、完整 Prompt、原始模型响应、手机号或邮箱。
 
-## 7. 第三小步：DeepSeek Adapter 详细方案
+## 7. 第三小步：DeepSeek Adapter 详细方案（已完成）
 
-这是换电脑后的下一步，只做 Adapter，不实现 Service、API、数据库状态流转或前端。
+本步已于 2026-08-13 完成，只实现 Adapter、版本化 Prompt、专用配置和 Fake/Mock 测试，未实现 Service、API、数据库状态流转或前端。
 
 ### 7.1 Adapter 输入
 
@@ -417,7 +414,7 @@ Adapter 不在此步执行 `json.loads` 或 `ResumeParseDraft` 校验；这些�
 8. `finish_reason=length` 等截断情况失败。
 9. 日志和异常文案不包含简历原文、邮箱、手机号或 API Key。
 
-## 8. 第四小步：`ResumeStructureService` 详细方案
+## 8. 第四小步：`ResumeStructureService` 详细方案（已完成）
 
 Service 是整个阶段 5 最关键的业务层。
 
@@ -657,13 +654,13 @@ DeepSeek
 
 真实调用前确认 API Key、模型名和 DeepSeek 当前官方 JSON Output 支持；一次验证只发一次请求，不自动重试。
 
-## 12. 配置计划
+## 12. 已实现配置
 
-后续预计增加：
+第三小步已经增加：
 
 ```env
 RESUME_STRUCTURE_ENABLED=true
-RESUME_STRUCTURE_MODEL=<实现 Adapter 时按官方文档确认>
+RESUME_STRUCTURE_MODEL=deepseek-v4-flash
 RESUME_STRUCTURE_TIMEOUT_SECONDS=90
 RESUME_STRUCTURE_PROCESSING_LEASE_SECONDS=180
 RESUME_STRUCTURE_MAX_INPUT_CHARS=100000
@@ -672,7 +669,7 @@ RESUME_STRUCTURE_PROMPT_VERSION=resume_structure_v1
 RESUME_STRUCTURE_SCHEMA_VERSION=1.0
 ```
 
-模型名和接口参数可能变化，第三小步实现 Adapter 时必须按 DeepSeek 官方文档重新核对，不凭记忆写死。
+2026-08-13 实现时已按 DeepSeek 官方文档核对模型名和接口参数；模型仍可通过环境变量覆盖，后续升级时应再次查阅官方文档，不凭记忆修改。
 
 ## 13. 已完成工作
 
@@ -711,7 +708,7 @@ RESUME_STRUCTURE_SCHEMA_VERSION=1.0
 
 验证结果：新增 8 项测试；Resume 定向 44 项通过；后端全量 323 项通过；`alembic check` 无差异。
 
-正式数据库最后核对：
+旧电脑当时的历史核对（不代表当前数据库）：
 
 ```text
 Resume 32: candidate_id=64, parse_status=parsed, structure_status=not_started
@@ -723,14 +720,6 @@ Alembic head: f5a7c9e2d104
 
 以下内容仍不存在，不要误认为已经完成：
 
-- DeepSeek Adapter
-- 阶段 5 版本化 Prompt
-- 结构化 Service
-- JSON 解析与 Schema 在 Service 中的组合
-- attempt ID 并发接管逻辑
-- 处理租约
-- 成功草稿持久化信封
-- 失败状态和旧草稿保护
 - `POST /api/v2/resumes/{id}/structure`
 - 前端识别进度和辅助填表
 - 去隐私样本评估
@@ -743,10 +732,10 @@ Alembic head: f5a7c9e2d104
 
 1. ✅ ResumeParseDraft Schema 和业务校验
 2. ✅ Resume 独立结构化状态及 Alembic 迁移
-3. ⏭ DeepSeek Adapter
-4. ResumeStructureService
-5. 结构化 API
-6. 新增候选人页面辅助填表
+3. ✅ DeepSeek Adapter
+4. ✅ ResumeStructureService
+5. ✅ 结构化 API
+6. 🚧 新增候选人页面辅助填表（前端类型/API、识别状态、普通字段安全合并和三类经历人工确认导入已完成）
 7. 去隐私样本评估、真实全链路和人工验收
 
 每个小步都必须：
@@ -814,7 +803,7 @@ cd backend
 ..\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-预期基线为 323 项全部通过；如果后续新增测试，总数可以增加，但不能少于当前基线且不能有失败。
+当前基线为 356 项全部通过；如果后续新增测试，总数可以增加，但不能少于当前基线且不能有失败。
 
 ### 16.5 PostgreSQL 与 migration
 
@@ -845,29 +834,73 @@ $env:RESUME_CLEANUP_ENABLED='false'
 
 然后再启动后端。验收结束应停止进程，不把临时环境变量写成永久产品默认值。
 
-## 17. 第三小步开始时的建议修改边界
+## 17. 第四小步实际修改边界与下一步边界
 
-预计新增或修改：
+第四小步已新增或修改：
 
 ```text
-backend/app/adapters/（若项目最终采用该目录，先核对现有结构）
-backend/app/prompts/rebuilt/resume_structure.py
-backend/app/core/config.py
-.env.example
-backend/tests/...adapter...
+backend/app/services/rebuilt/resume_structure_service.py
+backend/app/services/rebuilt/resume_service.py
+backend/app/services/rebuilt/resume_retention_service.py
+backend/app/services/rebuilt/__init__.py
+backend/app/main.py
+backend/tests/services/rebuilt/test_resume_structure_service.py
+backend/tests/services/rebuilt/test_resume_service.py
+backend/tests/services/rebuilt/test_resume_retention_service.py
+backend/tests/test_main_lifespan.py
 PROJECT_STATE.md
 ```
 
-开始前必须先扫描现有 Adapter/LLM 客户端目录，避免创建重复层。第三小步不要修改：
+已复用第三小步的 Adapter 和第一小步的严格草稿 Schema，完成缓存、租约、attempt ID、两段短事务、成功/失败持久化及清理保护，没有接入旧 `ai_service.py`。第四小步未修改：
 
 ```text
-Resume 数据库状态流转
-ResumeStructureService
 结构化 API
 前端页面
 Candidate 创建逻辑
-自动清理逻辑
+DeepSeek Adapter 与 Prompt
 ```
+
+第四小步完成时约定的下一步是：只实现结构化 API 及其请求/响应和异常映射测试，不同时接入前端，也不真实调用 DeepSeek；该步骤现已按此边界完成。
+
+第四小步真实 PostgreSQL 验证已经覆盖普通保存/缓存和两个独立会话的租约接管。查询使用 `populate_existing=True` 强制刷新 ORM 对象，确保第二段事务依据数据库最新 attempt ID 判断，旧请求不能依靠会话缓存覆盖新任务。两轮临时验证记录均已精确清理，残留为 0。
+
+### 17.1 第五小步实际完成结果与下一步边界
+
+第五小步已完成 `POST /api/v2/resumes/{resume_id}/structure`、专用请求/响应 Schema、按异常类型映射的 `404/409/422/429/502/503/504/500` 状态码、重识别失败时的旧草稿恢复响应以及隔离测试。结构化 API 与 Service 定向 67 项、后端全量 368 项均通过；正式 OpenAPI 路由唯一性和真实 PostgreSQL + Fake Adapter HTTP 缓存闭环通过，临时验证记录已清理为 0。
+
+本步没有修改前端、Candidate 创建逻辑、DeepSeek Prompt/调用约束、Model、Alembic 或数据库表结构，也没有真实调用 DeepSeek。下一小步只接入新增候选人页面辅助填表：普通字段只补空值，人工经历不自动覆盖或拼接，所有 AI 内容继续由 HR 最终确认。
+
+### 17.2 第六步第一小步实际完成结果与下一步边界
+
+已新增与后端 `ResumeParseDraft v1` 一致的前端 TypeScript 类型，并在新版 Resume 前端 Service 中增加 `structureStage3Resume(resumeId, force=false)`。调用继续使用 `v2Http`，不会混入旧 `/api`；默认请求复用缓存，只有显式 `force=true` 才表示重新识别。Vite + Fake Axios Adapter 隔离测试、TypeScript 严格检查和 3918 模块生产构建均通过。
+
+本小步没有修改新增候选人页面或表单值，也没有调用真实 DeepSeek。下一小步只在页面展示识别开始、处理中、成功、缓存、失败、冲突和旧草稿可用状态；不同时实现普通字段自动补空、经历导入或 AI 来源标记。
+
+### 17.3 第六步第二小步实际完成结果与下一步边界
+
+新增候选人页面现已在原文提取成功后自动开始结构化识别，展示处理轨道、处理中、成功、缓存、失败、`409` 冲突和旧草稿仍可用状态，并提供二次确认后的重新识别。识别期间禁止候选人创建、Resume 删除和离开页面；结构化请求专用超时为 100 秒，以覆盖后端 90 秒模型超时。页面只展示草稿各类数量，未写入表单。
+
+Vite 隔离测试覆盖请求参数、专用超时、错误分类、旧草稿恢复和草稿计数；两项测试分别输出 `STAGE3_RESUME_STRUCTURE_SERVICE_TEST_OK`、`STAGE3_RESUME_STRUCTURE_STATE_TEST_OK`。TypeScript 严格检查、`git diff --check` 和 3919 模块生产构建通过；未真实调用 DeepSeek，也未完成浏览器人工视觉验收。
+
+下一小步只实现基本资料等普通字段的“AI 只补空值”和人工冲突提示，不导入三类经历，不写应聘岗位、来源或招聘状态。
+
+### 17.4 第六步第三小步实际完成结果与下一步边界
+
+已新增独立纯合并模块，只允许 AI 草稿映射到姓名、电话、邮箱、性别、年龄、城市、当前公司、当前职位、工作年限和最高学历。页面在结构化成功时读取最新表单值，仅填充 `undefined/null/空白字符串`；数字 `0` 和其他人工值均保留。人工值与 AI 不同时显示字段级提示和 AI 候选值，HR 可单独采用；AI 自动补充字段带轻量来源标记，人工修改后标记消失。
+
+合并测试覆盖空值、`0`、相同值、冲突、AI `null` 和岗位/来源排除边界，输出 `STAGE3_RESUME_DRAFT_MERGE_TEST_OK`；既有结构化请求与状态测试、TypeScript 严格检查和前端生产构建均通过，构建转换 3920 个模块，后端全量 368 项回归继续全部通过。本步没有导入三类经历，没有写应聘岗位、来源或招聘状态，没有修改后端、数据库或 DeepSeek，也没有自动创建 Candidate。
+
+下一小步只实现教育、工作和项目经历的人工确认导入：空列表可明确导入，已有人工记录时只能展示并逐条选择，不得自动覆盖、删除或静默拼接；不在该步实现模糊去重、岗位匹配或评分。
+
+### 17.5 第六步第四小步实际完成结果与下一步边界
+
+已新增三类经历草稿转换模块和共用候选托盘。教育、工作和项目经历在 AI 草稿成功后只作为候选展示：对应表单为空时可明确导入全部或部分，已有人工记录时必须逐条勾选后追加，不自动覆盖、删除或静默拼接。技术栈转换为现有表单文本；教育草稿不携带 `985/211` 判断。
+
+每条候选使用稳定的前端标识防止重复导入；导入后的表单记录显示“AI 导入”，删除后可重新选择。该来源标识只存在于前端表单，既有请求构造函数不会把它发送到后端。AI 经历仍是可编辑草稿，只有 HR 最终点击创建候选人才通过现有事务写入 Candidate 和三类经历表。
+
+新增转换隔离测试输出 `STAGE3_RESUME_EXPERIENCE_IMPORT_TEST_OK`；四项阶段 5 前端定向测试、TypeScript 严格检查、`git diff --check`、3921 模块生产构建和后端全量 368 项回归均通过。当前浏览器运行环境没有可用实例，因此浏览器点击、截图和视觉验收未完成；本步也没有真实调用 DeepSeek、修改后端或数据库。
+
+下一小步只处理技能候选以及证书、自我评价、warnings、missing_fields 等暂未建模内容的安全展示；不写应聘岗位、来源和状态，不做岗位匹配、评分或模糊自动去重。
 
 ## 18. 失败时必须保持的数据
 

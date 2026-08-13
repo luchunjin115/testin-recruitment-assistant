@@ -1,6 +1,25 @@
 import { API_BASE_URL, v2Http } from '../../services/http';
+import type {
+  ResumeStructureRequest,
+  ResumeStructureResponse,
+} from '../types/resumeStructure';
+
+export type {
+  ResumeBasicInfoDraft,
+  ResumeEducationDraft,
+  ResumeParseDraft,
+  ResumeProjectExperienceDraft,
+  ResumeStructureErrorDetail,
+  ResumeStructureErrorResponse,
+  ResumeStructureFailureWithDraft,
+  ResumeStructureRequest,
+  ResumeStructureResponse,
+  ResumeStructureStatus,
+  ResumeWorkExperienceDraft,
+} from '../types/resumeStructure';
 
 export type ResumeParseStatus = 'uploaded' | 'parsing' | 'parsed' | 'failed';
+export const RESUME_STRUCTURE_REQUEST_TIMEOUT_MS = 100_000;
 
 export type ResumeListItem = {
   id: number;
@@ -145,6 +164,19 @@ export const extractStage3ResumeText = async (
 ): Promise<Stage3ResumeDetail> => {
   const response = await v2Http.post<ResumeResponse>(`/resumes/${resumeId}/extract-text`);
   return mapResumeDetail(response.data);
+};
+
+export const structureStage3Resume = async (
+  resumeId: number,
+  force = false,
+): Promise<ResumeStructureResponse> => {
+  const request: ResumeStructureRequest = { force };
+  const response = await v2Http.post<ResumeStructureResponse>(
+    `/resumes/${resumeId}/structure`,
+    request,
+    { timeout: RESUME_STRUCTURE_REQUEST_TIMEOUT_MS },
+  );
+  return response.data;
 };
 
 export const abandonStage3Resume = async (resumeId: number): Promise<void> => {

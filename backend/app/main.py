@@ -45,6 +45,9 @@ async def lifespan(app: FastAPI):
                     rebuilt_settings.RESUME_CLEANUP_INTERVAL_MINUTES * 60
                 ),
                 batch_size=rebuilt_settings.RESUME_CLEANUP_BATCH_SIZE,
+                processing_lease_seconds=(
+                    rebuilt_settings.RESUME_STRUCTURE_PROCESSING_LEASE_SECONDS
+                ),
             ),
             name="resume-retention-cleanup",
         )
