@@ -14,6 +14,7 @@ export type {
   ResumeStructureFailureWithDraft,
   ResumeStructureRequest,
   ResumeStructureResponse,
+  ResumeStructurePerformance,
   ResumeStructureStatus,
   ResumeWorkExperienceDraft,
 } from '../types/resumeStructure';

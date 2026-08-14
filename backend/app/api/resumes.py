@@ -70,6 +70,7 @@ RESUME_NOT_FOUND = "简历不存在"
 
 
 def _structure_response(result: ResumeStructureServiceResult) -> ResumeStructureResponse:
+    performance = result.performance
     return ResumeStructureResponse(
         resume_id=result.resume_id,
         structure_status=result.structure_status,
@@ -77,6 +78,13 @@ def _structure_response(result: ResumeStructureServiceResult) -> ResumeStructure
         from_cache=result.from_cache,
         has_previous_draft=result.has_previous_draft,
         draft=result.draft,
+        performance=None if performance is None else {
+            "total_ms": performance.total_ms,
+            "preparation_ms": performance.preparation_ms,
+            "model_ms": performance.model_ms,
+            "validation_ms": performance.validation_ms,
+            "persistence_ms": performance.persistence_ms,
+        },
     )
 
 

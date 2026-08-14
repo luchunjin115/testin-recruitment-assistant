@@ -3,6 +3,7 @@ from __future__ import annotations
 import zipfile
 from pathlib import Path
 
+import mammoth
 from docx import Document
 from docx.document import Document as DocumentObject
 from docx.opc.exceptions import PackageNotFoundError
@@ -46,7 +47,7 @@ class ResumeDocxExtractor:
         except ResumeFileAccessError as exc:
             raise ResumeDocxExtractorError(str(exc)) from exc
 
-        self._validate_archive(target)
+        contains_text_boxes = self._validate_archive(target)
         try:
             document = Document(target)
         except (OSError, ValueError, KeyError, PackageNotFoundError, zipfile.BadZipFile) as exc:
@@ -54,27 +55,61 @@ class ResumeDocxExtractor:
         except Exception as exc:
             raise ResumeDocxExtractorError("DOCX 文件损坏或无法读取") from exc
 
-        text = self._extract_document_content(document)
-        if not text.strip():
-            raise ResumeDocxExtractorError("DOCX 简历没有可提取的有效文本")
-        return text
+        standard_text = self._extract_document_content(document)
+
+        # python-docx intentionally exposes body paragraphs and tables, but not
+        # Word/VML text boxes. Resume templates frequently put nearly all visible
+        # content in those text boxes, so use Mammoth for that document shape.
+        if contains_text_boxes or not standard_text:
+            try:
+                mammoth_text = self._extract_with_mammoth(target)
+            except ResumeDocxExtractorError:
+                if standard_text:
+                    return standard_text
+                raise
+            if mammoth_text:
+                return mammoth_text
+
+        if standard_text:
+            return standard_text
+        raise ResumeDocxExtractorError("DOCX 简历没有可提取的有效文本")
 
     @staticmethod
-    def _validate_archive(target: Path) -> None:
+    def _validate_archive(target: Path) -> bool:
         try:
             with zipfile.ZipFile(target) as archive:
                 members = archive.infolist()
+                if len(members) > MAX_DOCX_ARCHIVE_ENTRIES:
+                    raise ResumeDocxExtractorError("DOCX 文件结构过于复杂")
+                if any(member.flag_bits & 0x1 for member in members):
+                    raise ResumeDocxExtractorError("DOCX 已加密，暂不支持提取")
+
+                uncompressed_size = sum(member.file_size for member in members)
+                if uncompressed_size > MAX_DOCX_UNCOMPRESSED_BYTES:
+                    raise ResumeDocxExtractorError("DOCX 解压后内容超过安全限制")
+
+                try:
+                    document_xml = archive.read("word/document.xml")
+                except KeyError as exc:
+                    raise ResumeDocxExtractorError("DOCX 文件损坏或无法读取") from exc
         except (OSError, zipfile.BadZipFile, zipfile.LargeZipFile) as exc:
             raise ResumeDocxExtractorError("DOCX 文件损坏或无法读取") from exc
 
-        if len(members) > MAX_DOCX_ARCHIVE_ENTRIES:
-            raise ResumeDocxExtractorError("DOCX 文件结构过于复杂")
-        if any(member.flag_bits & 0x1 for member in members):
-            raise ResumeDocxExtractorError("DOCX 已加密，暂不支持提取")
+        return b"txbxContent" in document_xml
 
-        uncompressed_size = sum(member.file_size for member in members)
-        if uncompressed_size > MAX_DOCX_UNCOMPRESSED_BYTES:
-            raise ResumeDocxExtractorError("DOCX 解压后内容超过安全限制")
+    @classmethod
+    def _extract_with_mammoth(cls, target: Path) -> str:
+        try:
+            with target.open("rb") as source:
+                result = mammoth.extract_raw_text(source)
+        except Exception as exc:
+            raise ResumeDocxExtractorError("DOCX 文件损坏或无法读取") from exc
+
+        parts = [line.strip() for line in result.value.splitlines() if line.strip()]
+        character_count = sum(len(part) for part in parts)
+        if character_count > MAX_EXTRACTED_CHARACTERS:
+            raise ResumeDocxExtractorError("DOCX 提取文本超过安全长度限制")
+        return "\n".join(parts)
 
     @classmethod
     def _extract_document_content(cls, document: DocumentObject) -> str:

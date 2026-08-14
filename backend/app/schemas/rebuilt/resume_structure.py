@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.rebuilt.resume_parse import ResumeParseDraft
 
@@ -11,6 +11,18 @@ class ResumeStructureRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     force: bool = False
+
+
+class ResumeStructurePerformance(BaseModel):
+    """Privacy-safe timing breakdown for the current structure request."""
+
+    model_config = ConfigDict(extra="forbid", protected_namespaces=())
+
+    total_ms: int = Field(ge=0)
+    preparation_ms: int = Field(ge=0)
+    model_ms: int = Field(ge=0)
+    validation_ms: int = Field(ge=0)
+    persistence_ms: int = Field(ge=0)
 
 
 class ResumeStructureResponse(BaseModel):
@@ -24,3 +36,4 @@ class ResumeStructureResponse(BaseModel):
     from_cache: bool
     has_previous_draft: bool
     draft: ResumeParseDraft
+    performance: ResumeStructurePerformance | None = None

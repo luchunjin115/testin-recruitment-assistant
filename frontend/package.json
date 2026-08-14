@@ -10,6 +10,8 @@
     "test:resume-structure-state": "node tests/stage3-resume-structure-state.test.mjs",
     "test:resume-draft-merge": "node tests/stage3-resume-draft-merge.test.mjs",
     "test:resume-experience-import": "node tests/stage3-resume-experience-import.test.mjs",
+    "test:resume-supplementary-info": "node tests/stage3-resume-supplementary-info.test.mjs",
+    "test:resume-intake-ui-copy": "node tests/stage3-resume-intake-ui-copy.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

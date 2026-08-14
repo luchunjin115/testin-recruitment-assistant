@@ -8,7 +8,7 @@
 2. `PROJECT_STATE.md`
 3. `docs/implementation-plan.md`
 4. `docs/specs/2026-07-15-hr-agent-platform-design.md`
-5. 开发阶段 5 时额外阅读 `docs/specs/2026-08-12-stage5-resume-structure-design.md`
+5. 阶段 5 已于 2026-08-14 完成。后续阶段不要求常规阅读阶段 5 专项设计或交接手册；只有修改简历上传、原文提取、结构化识别、辅助填表，或排查阶段 5 回归问题时，才额外阅读 `docs/specs/2026-08-12-stage5-resume-structure-design.md` 与 `docs/handoff/2026-08-12-stage5-development-handoff.md`
 
 以这些文件确认当前进度、下一小步和架构边界，不依赖旧对话记忆。
 

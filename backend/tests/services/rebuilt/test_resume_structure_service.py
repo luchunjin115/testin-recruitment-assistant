@@ -17,6 +17,7 @@ from app.services.rebuilt.resume_structure_service import (
     ResumeStructureInputError,
     ResumeStructureInvalidOutputError,
     ResumeStructureNotFoundError,
+    ResumeStructurePerformance,
     ResumeStructurePrerequisiteError,
     ResumeStructureService,
     ResumeStructureSnapshot,
@@ -168,6 +169,9 @@ class ResumeStructureServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(result.structure_error, "最近一次重新识别失败")
         self.assertTrue(result.from_cache)
         self.assertTrue(result.has_previous_draft)
+        self.assertIsInstance(result.performance, ResumeStructurePerformance)
+        assert result.performance is not None
+        self.assertEqual(result.performance.model_ms, 0)
         db.commit.assert_not_awaited()
         db.rollback.assert_awaited_once()
 
@@ -193,7 +197,20 @@ class ResumeStructureServiceTest(IsolatedAsyncioTestCase):
 
         db.commit.side_effect = capture_commit
 
-        result = await self.call(db, adapter)
+        timer = Mock(side_effect=[
+            0.0,
+            0.01,
+            0.03,
+            0.04,
+            1.24,
+            1.25,
+            1.255,
+            1.26,
+            1.28,
+            1.30,
+        ])
+
+        result = await self.call(db, adapter, timer=timer)
 
         self.assertEqual(
             committed_states,
@@ -212,6 +229,16 @@ class ResumeStructureServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(snapshot.metadata.input_characters, len(resume.raw_text))
         self.assertEqual(snapshot.metadata.input_tokens, 50)
         self.assertEqual(snapshot.metadata.output_tokens, 100)
+        self.assertEqual(
+            result.performance,
+            ResumeStructurePerformance(
+                total_ms=1_300,
+                preparation_ms=20,
+                model_ms=1_200,
+                validation_ms=5,
+                persistence_ms=20,
+            ),
+        )
 
     async def test_valid_cached_draft_returns_without_adapter_or_commit(self) -> None:
         resume = make_resume(

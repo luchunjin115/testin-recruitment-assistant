@@ -8,6 +8,13 @@ const successPayload = {
   structure_error: null,
   from_cache: false,
   has_previous_draft: false,
+  performance: {
+    total_ms: 1350,
+    preparation_ms: 30,
+    model_ms: 1250,
+    validation_ms: 10,
+    persistence_ms: 40,
+  },
   draft: {
     schema_version: '1.0',
     basic_info: {

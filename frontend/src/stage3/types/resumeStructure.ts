@@ -57,6 +57,14 @@ export type ResumeStructureRequest = {
   force: boolean;
 };
 
+export type ResumeStructurePerformance = {
+  total_ms: number;
+  preparation_ms: number;
+  model_ms: number;
+  validation_ms: number;
+  persistence_ms: number;
+};
+
 export type ResumeStructureResponse = {
   resume_id: number;
   structure_status: ResumeStructureStatus;
@@ -64,6 +72,7 @@ export type ResumeStructureResponse = {
   from_cache: boolean;
   has_previous_draft: boolean;
   draft: ResumeParseDraft;
+  performance: ResumeStructurePerformance | null;
 };
 
 export type ResumeStructureFailureWithDraft = ResumeStructureResponse & {

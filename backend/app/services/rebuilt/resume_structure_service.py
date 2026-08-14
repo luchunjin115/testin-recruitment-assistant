@@ -4,6 +4,7 @@ import json
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from time import perf_counter
 from typing import Any, Protocol
 from uuid import UUID, uuid4
 
@@ -90,6 +91,15 @@ class ResumeStructureSnapshot(BaseModel):
 
 
 @dataclass(frozen=True, slots=True)
+class ResumeStructurePerformance:
+    total_ms: int
+    preparation_ms: int
+    model_ms: int
+    validation_ms: int
+    persistence_ms: int
+
+
+@dataclass(frozen=True, slots=True)
 class ResumeStructureServiceResult:
     resume_id: int
     structure_status: str
@@ -98,6 +108,7 @@ class ResumeStructureServiceResult:
     metadata: ResumeStructureSnapshotMetadata
     from_cache: bool
     has_previous_draft: bool
+    performance: ResumeStructurePerformance | None = None
 
 
 class ResumeStructureService:
@@ -107,6 +118,7 @@ class ResumeStructureService:
         resume_id: int,
     ) -> ResumeStructureServiceResult | None:
         """Return the latest valid stored draft without starting a model call."""
+        total_started = perf_counter()
         try:
             result = await db.execute(
                 select(Resume)
@@ -123,11 +135,19 @@ class ResumeStructureService:
                 await db.rollback()
                 return None
 
+            total_ms = self._elapsed_ms(perf_counter, total_started)
             current_result = self._build_result(
                 resume=resume,
                 snapshot=snapshot,
                 from_cache=True,
                 has_previous_draft=True,
+                performance=ResumeStructurePerformance(
+                    total_ms=total_ms,
+                    preparation_ms=total_ms,
+                    model_ms=0,
+                    validation_ms=0,
+                    persistence_ms=0,
+                ),
             )
             await db.rollback()
             return current_result
@@ -144,8 +164,11 @@ class ResumeStructureService:
         adapter: ResumeStructureAdapter | None = None,
         settings: Settings | None = None,
         clock: Callable[[], datetime] | None = None,
+        timer: Callable[[], float] | None = None,
         attempt_id_factory: Callable[[], str] | None = None,
     ) -> ResumeStructureServiceResult:
+        timer_provider = timer or perf_counter
+        total_started = timer_provider()
         resolved_settings = settings or get_settings()
         if not resolved_settings.RESUME_STRUCTURE_ENABLED:
             raise ResumeStructureDisabledError("简历结构化识别功能当前未启用")
@@ -154,6 +177,7 @@ class ResumeStructureService:
         now_provider = clock or (lambda: datetime.now(timezone.utc))
         current_time = self._aware_time(now_provider())
         new_attempt_id = attempt_id_factory or (lambda: str(uuid4()))
+        preparation_started = timer_provider()
 
         try:
             resume = await self._get_locked_resume(db, resume_id)
@@ -166,14 +190,23 @@ class ResumeStructureService:
                 and resume.structure_status in {"succeeded", "failed"}
                 and not force
             ):
-                result = self._build_result(
+                preparation_ms = self._elapsed_ms(timer_provider, preparation_started)
+                total_ms = self._elapsed_ms(timer_provider, total_started)
+                current_result = self._build_result(
                     resume=resume,
                     snapshot=cached_snapshot,
                     from_cache=True,
                     has_previous_draft=True,
+                    performance=ResumeStructurePerformance(
+                        total_ms=total_ms,
+                        preparation_ms=preparation_ms,
+                        model_ms=0,
+                        validation_ms=0,
+                        persistence_ms=0,
+                    ),
                 )
                 await db.rollback()
-                return result
+                return current_result
 
             raw_text = self._validate_resume_and_get_text(resume, resolved_settings)
             self._reject_active_attempt(resume, current_time, resolved_settings)
@@ -185,6 +218,7 @@ class ResumeStructureService:
             resume.structure_attempt_id = attempt_id
             resume.structure_started_at = current_time
             await db.commit()
+            preparation_ms = self._elapsed_ms(timer_provider, preparation_started)
         except ResumeStructureServiceError:
             await db.rollback()
             raise
@@ -196,8 +230,12 @@ class ResumeStructureService:
             resolved_adapter = adapter or DeepSeekResumeStructureAdapter(
                 settings=resolved_settings
             )
+            model_started = timer_provider()
             adapter_result = await resolved_adapter.extract(raw_text)
+            model_ms = self._elapsed_ms(timer_provider, model_started)
+            validation_started = timer_provider()
             draft = self._parse_and_validate(adapter_result.content)
+            validation_ms = self._elapsed_ms(timer_provider, validation_started)
         except ResumeStructureAdapterError as exc:
             await self._save_failure(db, resume_id, attempt_id, str(exc))
             raise
@@ -209,6 +247,7 @@ class ResumeStructureService:
             await self._save_failure(db, resume_id, attempt_id, str(error))
             raise error from None
 
+        persistence_started = timer_provider()
         try:
             completed_at = self._aware_time(now_provider())
             snapshot = ResumeStructureSnapshot(
@@ -245,15 +284,24 @@ class ResumeStructureService:
             resume.structured_at = completed_at
             resume.structure_schema_version = RESUME_PARSE_SCHEMA_VERSION
             await db.commit()
+            persistence_ms = self._elapsed_ms(timer_provider, persistence_started)
         except BaseException:
             await db.rollback()
             raise
 
+        total_ms = self._elapsed_ms(timer_provider, total_started)
         return self._build_result(
             resume=resume,
             snapshot=snapshot,
             from_cache=False,
             has_previous_draft=has_previous_draft,
+            performance=ResumeStructurePerformance(
+                total_ms=total_ms,
+                preparation_ms=preparation_ms,
+                model_ms=model_ms,
+                validation_ms=validation_ms,
+                persistence_ms=persistence_ms,
+            ),
         )
 
     @staticmethod
@@ -374,6 +422,7 @@ class ResumeStructureService:
         snapshot: ResumeStructureSnapshot,
         from_cache: bool,
         has_previous_draft: bool,
+        performance: ResumeStructurePerformance | None,
     ) -> ResumeStructureServiceResult:
         return ResumeStructureServiceResult(
             resume_id=resume.id,
@@ -383,7 +432,12 @@ class ResumeStructureService:
             metadata=snapshot.metadata,
             from_cache=from_cache,
             has_previous_draft=has_previous_draft,
+            performance=performance,
         )
+
+    @staticmethod
+    def _elapsed_ms(timer: Callable[[], float], started: float) -> int:
+        return max(0, round((timer() - started) * 1_000))
 
     @staticmethod
     def _aware_time(value: datetime) -> datetime:

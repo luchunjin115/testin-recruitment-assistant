@@ -13,6 +13,8 @@ HR Agent 招聘提效平台 — 面向公司内部 HR 团队的 AI 招聘助手�
 项目处于**架构重建阶段**。现有代码是旧版本（React + FastAPI + SQLite + Mock LLM），
 新版本将升级为: React + Ant Design 5 定制主题 + FastAPI + PostgreSQL + Chroma + Redis + DeepSeek API；LangGraph 只在后续确有多步骤编排价值的工作流中使用，不作为所有 AI 能力的强制包装。
 
+阶段 4“简历上传与文件解析”和阶段 5“大模型简历结构化提取与表单辅助填写”已于 2026-08-14 完成，当前进入阶段 6“岗位 JD 管理”。阶段 6 日常开发无需阅读阶段 5 专项文档；只有修改阶段 5 功能或排查其回归时才重新读取。
+
 ## 工作原则
 
 1. **先读设计文档** `docs/specs/2026-07-15-hr-agent-platform-design.md`，理解全局设计

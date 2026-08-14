@@ -3,6 +3,7 @@ import {
   ArrowLeftOutlined,
   BookOutlined,
   CheckCircleOutlined,
+  ClockCircleOutlined,
   CloudUploadOutlined,
   DeleteOutlined,
   FileTextOutlined,
@@ -10,14 +11,17 @@ import {
   ReloadOutlined,
   SafetyCertificateOutlined,
   SolutionOutlined,
+  TagsOutlined,
   ThunderboltOutlined,
   UserOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import axios from 'axios';
 import {
   Alert,
   Button,
   Checkbox,
+  Collapse,
   Form,
   Input,
   InputNumber,
@@ -43,6 +47,7 @@ import {
   abandonStage3Resume,
   extractStage3ResumeText,
   ResumeStructureResponse,
+  ResumeStructurePerformance,
   Stage3ResumeDetail,
   structureStage3Resume,
   uploadStage3Resume,
@@ -66,6 +71,13 @@ import {
   ResumeExperienceCandidate,
   ResumeExperienceKind,
 } from './resumeExperienceImport';
+import {
+  buildResumeSkillCandidates,
+  buildResumeSupplementaryInfo,
+  mergeConfirmedResumeSkills,
+  ResumeSkillCandidate,
+  ResumeSupplementaryInfo,
+} from './resumeSupplementaryInfo';
 import './styles/index.css';
 
 type JobLoadState =
@@ -95,6 +107,11 @@ type ResumeExperienceImportViewState = Record<
   ResumeExperienceImportItemState
 >;
 
+type ResumeSkillImportViewState = {
+  selectedKeys: string[];
+  importedKeys: string[];
+};
+
 type ResumeExperienceCandidateTrayProps<TFormValue> = {
   candidates: ResumeExperienceCandidate<TFormValue>[];
   disabled: boolean;
@@ -110,6 +127,11 @@ const emptyExperienceImportState = (): ResumeExperienceImportViewState => ({
   education: { selectedKeys: [], importedKeys: [] },
   work: { selectedKeys: [], importedKeys: [] },
   project: { selectedKeys: [], importedKeys: [] },
+});
+
+const emptySkillImportState = (): ResumeSkillImportViewState => ({
+  selectedKeys: [],
+  importedKeys: [],
 });
 
 const ResumeExperienceCandidateTray = <TFormValue,>({
@@ -208,6 +230,138 @@ const ResumeExperienceCandidateTray = <TFormValue,>({
   );
 };
 
+type ResumeSkillCandidateTrayProps = {
+  candidates: ResumeSkillCandidate[];
+  currentSkills: string[];
+  disabled: boolean;
+  importedKeys: string[];
+  onImport: (keys: string[]) => void;
+  onSelectionChange: (keys: string[]) => void;
+  selectedKeys: string[];
+};
+
+const ResumeSkillCandidateTray: React.FC<ResumeSkillCandidateTrayProps> = ({
+  candidates,
+  currentSkills,
+  disabled,
+  importedKeys,
+  onImport,
+  onSelectionChange,
+  selectedKeys,
+}) => {
+  if (candidates.length === 0) return null;
+
+  const availableCandidates = candidates.filter(candidate => (
+    !importedKeys.includes(candidate.key) && !currentSkills.includes(candidate.value)
+  ));
+  const availableKeys = availableCandidates.map(candidate => candidate.key);
+  const selectedAvailableKeys = selectedKeys.filter(key => availableKeys.includes(key));
+  const allSelected = availableKeys.length > 0
+    && availableKeys.every(key => selectedAvailableKeys.includes(key));
+
+  const changeSelection = (candidateKey: string, checked: boolean) => {
+    onSelectionChange(checked
+      ? Array.from(new Set([...selectedKeys, candidateKey]))
+      : selectedKeys.filter(key => key !== candidateKey));
+  };
+
+  return (
+    <div className="s3-candidate-ai-tray s3-candidate-ai-skill-tray">
+      <div className="s3-candidate-ai-tray-heading">
+        <div>
+          <span>AI 识别候选</span>
+          <strong>{candidates.length} 项技能</strong>
+        </div>
+        <Tag bordered={false} color="blue">必须人工确认</Tag>
+      </div>
+      <p className="s3-candidate-ai-tray-guidance">
+        AI 技能不会自动写入候选人。请勾选原文中确实成立的技能，再导入正式标签。
+      </p>
+      {availableCandidates.length > 0 && (
+        <Checkbox
+          checked={allSelected}
+          disabled={disabled}
+          indeterminate={selectedAvailableKeys.length > 0 && !allSelected}
+          onChange={event => onSelectionChange(event.target.checked ? availableKeys : [])}
+        >
+          全选待确认技能
+        </Checkbox>
+      )}
+      <div className="s3-candidate-ai-skill-candidates">
+        {candidates.map(candidate => {
+          const imported = importedKeys.includes(candidate.key);
+          const alreadyExists = !imported && currentSkills.includes(candidate.value);
+          const checked = imported || alreadyExists || selectedKeys.includes(candidate.key);
+          return (
+            <label
+              className={`s3-candidate-ai-skill ${imported || alreadyExists ? 'is-imported' : ''}`}
+              key={candidate.key}
+            >
+              <Checkbox
+                checked={checked}
+                disabled={disabled || imported || alreadyExists}
+                onChange={event => changeSelection(candidate.key, event.target.checked)}
+              />
+              <span>{candidate.value}</span>
+              <Tag bordered={false} color={imported ? 'green' : alreadyExists ? 'default' : 'blue'}>
+                {imported ? '已导入' : alreadyExists ? '表单已有' : '待确认'}
+              </Tag>
+            </label>
+          );
+        })}
+      </div>
+      {availableCandidates.length > 0 ? (
+        <Button
+          disabled={disabled || selectedAvailableKeys.length === 0}
+          onClick={() => onImport(selectedAvailableKeys)}
+          type="primary"
+        >
+          {selectedAvailableKeys.length > 0
+            ? `导入所选 ${selectedAvailableKeys.length} 项技能`
+            : '请先勾选要导入的技能'}
+        </Button>
+      ) : (
+        <span className="s3-candidate-ai-tray-complete"><CheckCircleOutlined /> 技能候选均已处理</span>
+      )}
+    </div>
+  );
+};
+
+const ResumeSupplementaryPanel: React.FC<{ info: ResumeSupplementaryInfo }> = ({ info }) => (
+  <section aria-label="简历识别补充信息" className="s3-candidate-supplementary">
+    <div className="s3-candidate-supplementary-heading">
+      <strong>识别补充信息</strong>
+      <Tag bordered={false}>只读，不写入候选人字段</Tag>
+    </div>
+    {!info.hasContent ? (
+      <p className="s3-candidate-supplementary-empty">本次识别没有额外证书、自我评价或需要核对的警告。</p>
+    ) : (
+      <div className="s3-candidate-supplementary-list">
+        {info.warnings.length > 0 && (
+          <div className="s3-candidate-supplementary-item is-warning">
+            <strong><WarningOutlined /> 需要 HR 核对</strong>
+            <ul>{info.warnings.map(item => <li key={item}>{item}</li>)}</ul>
+          </div>
+        )}
+        {info.certifications.length > 0 && (
+          <div className="s3-candidate-supplementary-item">
+            <strong>证书</strong>
+            <div className="s3-candidate-supplementary-tags">
+              {info.certifications.map(item => <Tag color="geekblue" key={item}>{item}</Tag>)}
+            </div>
+          </div>
+        )}
+        {info.selfEvaluation && (
+          <div className="s3-candidate-supplementary-item">
+            <strong>简历中的自我评价</strong>
+            <p>{info.selfEvaluation}</p>
+          </div>
+        )}
+      </div>
+    )}
+  </section>
+);
+
 const acceptedExtensions = ['.pdf', '.docx', '.txt'];
 const maxFileSize = 10 * 1024 * 1024;
 
@@ -230,6 +384,34 @@ const formatFileSize = (size: number | null) => {
   return `${(size / 1024).toFixed(1)} KB`;
 };
 
+const formatDuration = (milliseconds: number) => (
+  milliseconds < 1_000
+    ? `${milliseconds} ms`
+    : `${(milliseconds / 1_000).toFixed(2)} 秒`
+);
+
+const ResumeStructureTiming: React.FC<{
+  fromCache: boolean;
+  performance: ResumeStructurePerformance;
+}> = ({ fromCache, performance }) => (
+  <section aria-label={fromCache ? '缓存读取耗时' : '本次识别耗时'} className="s3-candidate-structure-timing">
+    <div className="s3-candidate-structure-timing-heading">
+      <strong><ClockCircleOutlined /> {fromCache ? '缓存读取耗时' : '本次识别耗时'}</strong>
+      <span>{formatDuration(performance.total_ms)}</span>
+    </div>
+    {fromCache ? (
+      <p>本次直接读取已保存结果，没有再次调用模型。</p>
+    ) : (
+      <div className="s3-candidate-structure-timing-grid">
+        <span>数据准备<strong>{formatDuration(performance.preparation_ms)}</strong></span>
+        <span>模型调用<strong>{formatDuration(performance.model_ms)}</strong></span>
+        <span>结果校验<strong>{formatDuration(performance.validation_ms)}</strong></span>
+        <span>结果保存<strong>{formatDuration(performance.persistence_ms)}</strong></span>
+      </div>
+    )}
+  </section>
+);
+
 const Stage3CandidateCreate: React.FC = () => {
   const navigate = useNavigate();
   const [form] = Form.useForm<Stage3CandidateCreateInput>();
@@ -247,8 +429,12 @@ const Stage3CandidateCreate: React.FC = () => {
   const [experienceImportState, setExperienceImportState] = useState<ResumeExperienceImportViewState>(
     emptyExperienceImportState,
   );
+  const [skillImportState, setSkillImportState] = useState<ResumeSkillImportViewState>(
+    emptySkillImportState,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [abandoning, setAbandoning] = useState(false);
+  const formSkills = Form.useWatch('tags', form) || [];
 
   const loadJobs = useCallback(async () => {
     setJobState({ status: 'loading' });
@@ -309,6 +495,18 @@ const Stage3CandidateCreate: React.FC = () => {
       : [],
     [displayedStructureResult],
   );
+  const skillCandidates = useMemo(
+    () => displayedStructureResult
+      ? buildResumeSkillCandidates(displayedStructureResult.draft.skills)
+      : [],
+    [displayedStructureResult],
+  );
+  const supplementaryInfo = useMemo(
+    () => displayedStructureResult
+      ? buildResumeSupplementaryInfo(displayedStructureResult.draft)
+      : undefined,
+    [displayedStructureResult],
+  );
 
   const abandonAttachedResume = async () => {
     if (!attachedResume) return true;
@@ -319,6 +517,8 @@ const Stage3CandidateCreate: React.FC = () => {
       setResumeWorkflow({ status: 'idle' });
       setStructureWorkflow({ status: 'idle' });
       setBasicMergeState(previous => ({ ...previous, conflicts: {} }));
+      setExperienceImportState(emptyExperienceImportState());
+      setSkillImportState(emptySkillImportState());
       messageApi.success('未绑定的简历文件和记录已清理');
       return true;
     } catch (error) {
@@ -371,14 +571,28 @@ const Stage3CandidateCreate: React.FC = () => {
     }));
   };
 
+  const syncSkillImportCandidates = (result: ResumeStructureResponse) => {
+    const candidates = buildResumeSkillCandidates(result.draft.skills);
+    const candidateKeys = candidates.map(candidate => candidate.key);
+    const currentSkills = form.getFieldValue('tags') || [];
+    setSkillImportState(previous => ({
+      selectedKeys: [],
+      importedKeys: previous.importedKeys.filter(key => {
+        const candidate = candidates.find(item => item.key === key);
+        return candidateKeys.includes(key) && candidate && currentSkills.includes(candidate.value);
+      }),
+    }));
+  };
+
   const structureResume = async (resume: Stage3ResumeDetail, force = false) => {
     setStructureWorkflow({ status: 'processing', force });
     try {
       const result = await structureStage3Resume(resume.id, force);
       const mergeResult = mergeBasicInfoIntoForm(result);
       syncExperienceImportCandidates(result);
+      syncSkillImportCandidates(result);
       setStructureWorkflow({ status: 'succeeded', result });
-      const sourceText = result.from_cache ? '已加载保存的 AI 草稿' : 'AI 简历识别完成';
+      const sourceText = result.from_cache ? '已加载保存的识别结果' : '简历信息识别完成';
       messageApi.success(
         `${sourceText}：补充 ${mergeResult.filledFields.length} 个空字段，${Object.keys(mergeResult.conflicts).length} 个字段待核对`,
       );
@@ -391,6 +605,31 @@ const Stage3CandidateCreate: React.FC = () => {
     setExperienceImportState(previous => ({
       ...previous,
       [kind]: { ...previous[kind], selectedKeys },
+    }));
+  };
+
+  const changeSkillSelection = (selectedKeys: string[]) => {
+    setSkillImportState(previous => ({ ...previous, selectedKeys }));
+  };
+
+  const importSkillCandidates = (keys: string[]) => {
+    const nextSkills = mergeConfirmedResumeSkills(formSkills, skillCandidates, keys);
+    const importedCandidates = skillCandidates.filter(candidate => keys.includes(candidate.key));
+    form.setFieldValue('tags', nextSkills);
+    setSkillImportState(previous => ({
+      selectedKeys: previous.selectedKeys.filter(key => !keys.includes(key)),
+      importedKeys: Array.from(new Set([...previous.importedKeys, ...keys])),
+    }));
+    messageApi.success(`已将 ${importedCandidates.length} 项技能加入表单，请继续核对和修改`);
+  };
+
+  const handleSkillValuesChange = (values: string[]) => {
+    setSkillImportState(previous => ({
+      selectedKeys: previous.selectedKeys,
+      importedKeys: previous.importedKeys.filter(key => {
+        const candidate = skillCandidates.find(item => item.key === key);
+        return Boolean(candidate && values.includes(candidate.value));
+      }),
     }));
   };
 
@@ -557,6 +796,7 @@ const Stage3CandidateCreate: React.FC = () => {
     setStructureWorkflow({ status: 'idle' });
     setBasicMergeState(previous => ({ ...previous, conflicts: {} }));
     setExperienceImportState(emptyExperienceImportState());
+    setSkillImportState(emptySkillImportState());
     setResumeWorkflow({ status: 'uploading', filename: file.name });
     try {
       const uploadedResume = await uploadStage3Resume(file);
@@ -628,7 +868,7 @@ const Stage3CandidateCreate: React.FC = () => {
       <main className="s3-main s3-candidate-create-page">
         <section className="s3-page-heading s3-candidate-create-heading">
           <div>
-            <span className="s3-section-kicker">阶段 5 · AI 草稿辅助录入</span>
+            <span className="s3-section-kicker">阶段 5 · 简历智能识别</span>
             <h2>新增候选人</h2>
             <p>岗位数据加载成功后才能建立一致的候选人和简历关联。</p>
           </div>
@@ -662,9 +902,9 @@ const Stage3CandidateCreate: React.FC = () => {
               type="text"
             />
             <div>
-              <span className="s3-section-kicker">阶段 5 · AI 草稿辅助录入</span>
+              <span className="s3-section-kicker">阶段 5 · 简历智能识别</span>
               <h2>新增候选人</h2>
-              <p>可以纯手动填写，也可以上传简历生成待核对的 AI 草稿，确认后一次性创建并绑定。</p>
+              <p>可以纯手动填写，也可以上传简历自动识别并补充表单，核对后一次性创建并绑定。</p>
             </div>
           </div>
           <Tag bordered={false} color="blue">真实写入 /api/v2</Tag>
@@ -672,8 +912,8 @@ const Stage3CandidateCreate: React.FC = () => {
 
         <Alert
           className="s3-candidate-create-boundary"
-          description="上传后会自动生成 AI 草稿。普通字段只补当前空值；教育、工作和项目经历只展示为候选内容，必须由 HR 明确选择后才进入可编辑表单。人工已有内容不会被覆盖。"
-          message="AI 只补空字段，人工内容始终优先"
+          description="上传后会自动识别候选人信息。普通字段只补当前空值；教育、工作、项目经历和技能必须由 HR 明确选择后才进入可编辑表单。人工已有内容不会被覆盖。"
+          message="识别结果只补空字段，人工内容始终优先"
           showIcon
           type="info"
         />
@@ -681,7 +921,7 @@ const Stage3CandidateCreate: React.FC = () => {
         <Form<Stage3CandidateCreateInput>
           autoComplete="off"
           form={form}
-          initialValues={{ source: 'HR手动录入', educationRecords: [], workExperiences: [], projectExperiences: [] }}
+          initialValues={{ source: 'HR手动录入', tags: [], educationRecords: [], workExperiences: [], projectExperiences: [] }}
           layout="vertical"
           onFinish={values => void handleSubmit(values)}
           onValuesChange={handleFormValuesChange}
@@ -775,6 +1015,47 @@ const Stage3CandidateCreate: React.FC = () => {
                     />
                   </Form.Item>
                 </div>
+              </section>
+
+              <section className="s3-candidate-form-card">
+                <div className="s3-candidate-form-card-header">
+                  <span><TagsOutlined /></span>
+                  <div><h3>技能标签</h3><p>人工标签直接保留，AI 候选必须勾选确认后才会加入</p></div>
+                </div>
+                <div className="s3-candidate-skill-form">
+                  <Form.Item
+                    extra="输入技能后按 Enter；创建候选人时会保存到 Candidate.tags。"
+                    label={(
+                      <span className="s3-candidate-field-label">
+                        <span>已确认技能</span>
+                        {skillImportState.importedKeys.length > 0 && (
+                          <Tag bordered={false} color="blue">
+                            {skillImportState.importedKeys.length} 项 AI 导入
+                          </Tag>
+                        )}
+                      </span>
+                    )}
+                    name="tags"
+                  >
+                    <Select
+                      disabled={submitting}
+                      maxTagCount="responsive"
+                      mode="tags"
+                      onChange={handleSkillValuesChange}
+                      placeholder="例如：Python、FastAPI、PostgreSQL"
+                      tokenSeparators={[',', '，', '、', ';', '；']}
+                    />
+                  </Form.Item>
+                </div>
+                <ResumeSkillCandidateTray
+                  candidates={skillCandidates}
+                  currentSkills={formSkills}
+                  disabled={submitting || resumeBusy}
+                  importedKeys={skillImportState.importedKeys}
+                  onImport={importSkillCandidates}
+                  onSelectionChange={changeSkillSelection}
+                  selectedKeys={skillImportState.selectedKeys}
+                />
               </section>
 
               <Form.List name="educationRecords">
@@ -936,7 +1217,7 @@ const Stage3CandidateCreate: React.FC = () => {
               <section className="s3-candidate-resume-card">
                 <div className="s3-candidate-resume-heading">
                   <span><FileTextOutlined /></span>
-                  <div><h3>简历与 AI 草稿</h3><p>上传后依次提取原文并生成待核对草稿</p></div>
+                  <div><h3>简历智能识别</h3><p>上传后自动读取简历内容并识别候选人信息</p></div>
                 </div>
 
                 {resumeWorkflow.status === 'idle' && (
@@ -968,10 +1249,10 @@ const Stage3CandidateCreate: React.FC = () => {
                     <div className="s3-candidate-resume-track" aria-label="简历处理进度">
                       <span className="is-done"><CheckCircleOutlined /> 文件已上传</span>
                       <i />
-                      <span className="is-done"><CheckCircleOutlined /> 原文已提取</span>
+                      <span className="is-done"><CheckCircleOutlined /> 内容已读取</span>
                       <i className={displayedStructureResult ? 'is-done' : ''} />
                       <span className={displayedStructureResult ? 'is-done' : ''}>
-                        <ThunderboltOutlined /> AI 草稿
+                        <ThunderboltOutlined /> 信息识别
                       </span>
                     </div>
                     <div className="s3-candidate-resume-meta">
@@ -982,8 +1263,8 @@ const Stage3CandidateCreate: React.FC = () => {
                     {structureWorkflow.status === 'idle' && (
                       <Alert
                         action={<Button onClick={() => void structureResume(resumeWorkflow.resume)}>开始识别</Button>}
-                        description="原文已经准备好。开始后会生成待 HR 核对的结构化草稿。"
-                        message="可以开始 AI 识别"
+                        description="简历内容已经读取。开始后会识别基本信息、经历和技能，并补充到待核对表单。"
+                        message="可以开始识别候选人信息"
                         showIcon
                         type="info"
                       />
@@ -992,8 +1273,8 @@ const Stage3CandidateCreate: React.FC = () => {
                       <div aria-live="polite" className="s3-candidate-structure-progress">
                         <Spin size="small" />
                         <div>
-                          <strong>{structureWorkflow.force ? '正在重新识别' : '正在生成 AI 草稿'}</strong>
-                          <span>请保持当前页面开启；等待期间不会长期占用数据库事务。</span>
+                          <strong>{structureWorkflow.force ? '正在重新识别候选人信息' : '正在识别候选人信息'}</strong>
+                          <span>系统正在整理基本信息、教育经历、工作经历、项目经历和技能，请稍候。</span>
                         </div>
                       </div>
                     )}
@@ -1001,11 +1282,11 @@ const Stage3CandidateCreate: React.FC = () => {
                       <div className="s3-candidate-structure-state is-success" aria-live="polite">
                         <Alert
                           description={structureWorkflow.result.from_cache
-                            ? '本次直接读取之前保存的草稿，没有再次调用 AI。普通空字段已安全补充，请核对带有 AI 标记的内容。'
-                            : '普通空字段已安全补充，人工已有内容保持不变；三类经历已作为候选内容展示，请按需确认导入。'}
+                            ? '本次直接读取之前保存的识别结果，没有再次调用 AI。请核对带有 AI 标记的普通字段、经历和技能候选。'
+                            : '普通空字段已安全补充，人工已有内容保持不变；三类经历和技能已作为候选内容展示，请按需确认导入。'}
                           message={structureWorkflow.result.from_cache
-                            ? '已加载保存的 AI 草稿'
-                            : 'AI 草稿生成完成'}
+                            ? '已加载上次识别结果，请继续核对'
+                            : '简历识别完成，请核对后创建候选人'}
                           showIcon
                           type={structureWorkflow.result.from_cache ? 'info' : 'success'}
                         />
@@ -1016,6 +1297,12 @@ const Stage3CandidateCreate: React.FC = () => {
                           <span><strong>{structureSummary.projects}</strong> 条项目经历</span>
                           <span><strong>{structureSummary.skills}</strong> 项技能</span>
                         </div>
+                        {structureWorkflow.result.performance && (
+                          <ResumeStructureTiming
+                            fromCache={structureWorkflow.result.from_cache}
+                            performance={structureWorkflow.result.performance}
+                          />
+                        )}
                         <Button
                           icon={<ReloadOutlined />}
                           onClick={() => confirmRestructure(resumeWorkflow.resume)}
@@ -1028,7 +1315,7 @@ const Stage3CandidateCreate: React.FC = () => {
                       <div className={`s3-candidate-structure-state ${structureWorkflow.previousResult ? 'is-previous' : 'is-failed'}`} aria-live="polite">
                         <Alert
                           description={structureWorkflow.previousResult
-                            ? '最近一次重新识别失败，下面的数量来自上一次成功草稿；原表单和此前已补充的内容保持不变。'
+                            ? '最近一次重新识别失败，下面的数量来自上一次成功识别结果；原表单和此前已补充的内容保持不变。'
                             : structureWorkflow.httpStatus === 409
                               ? '同一份简历已有识别任务正在执行，没有产生第二次 AI 调用。请稍后再次检查。'
                               : '原文件、提取原文和人工表单均未受影响，你可以继续手动填写或主动重试。'}
@@ -1059,10 +1346,21 @@ const Stage3CandidateCreate: React.FC = () => {
                         </Button>
                       </div>
                     )}
-                    <div className="s3-candidate-raw-text">
-                      <span>提取原文预览</span>
-                      <pre>{resumeWorkflow.resume.rawText}</pre>
-                    </div>
+                    {supplementaryInfo && <ResumeSupplementaryPanel info={supplementaryInfo} />}
+                    <Collapse
+                      className="s3-candidate-raw-text"
+                      items={[{
+                        children: (
+                          <div className="s3-candidate-raw-text-content">
+                            <p>这是系统从附件中读取的原始文字，仅用于核对；候选人表单使用的是上方结构化识别结果。</p>
+                            <pre>{resumeWorkflow.resume.rawText}</pre>
+                          </div>
+                        ),
+                        key: 'raw-text',
+                        label: '查看提取文本（核对用）',
+                      }]}
+                      size="small"
+                    />
                     <Button
                       danger
                       disabled={structureWorkflow.status === 'processing'}

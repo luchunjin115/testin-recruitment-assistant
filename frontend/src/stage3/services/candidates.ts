@@ -33,6 +33,7 @@ export type Stage3CandidateCreateInput = {
   currentTitle?: string;
   workYears?: number;
   educationLevel?: string;
+  tags?: string[];
   source?: string;
   appliedJobId?: number;
   educationRecords?: Stage3EducationInput[];
@@ -157,6 +158,11 @@ const splitKeywords = (value?: string) => {
   return items?.length ? Array.from(new Set(items)) : null;
 };
 
+const cleanKeywordList = (values?: string[]) => {
+  const items = values?.map(value => value.trim()).filter(Boolean);
+  return items?.length ? Array.from(new Set(items)) : null;
+};
+
 const buildCandidatePayload = (input: Stage3CandidateCreateInput) => {
   const educationRecords = (input.educationRecords || []).filter(record => (
     Boolean(
@@ -202,6 +208,7 @@ const buildCandidatePayload = (input: Stage3CandidateCreateInput) => {
     current_title: cleanText(input.currentTitle),
     work_years: input.workYears ?? null,
     education_level: cleanText(input.educationLevel),
+    tags: cleanKeywordList(input.tags),
     source: cleanText(input.source) || 'HR手动录入',
     status: 'new',
     applied_job_id: input.appliedJobId ?? null,

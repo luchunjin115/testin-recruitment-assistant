@@ -4,6 +4,7 @@ from unittest import TestCase
 from unittest.mock import patch
 
 from docx import Document
+from docx.oxml import parse_xml
 
 from app.services.rebuilt.resume_docx_extractor import (
     ResumeDocxExtractor,
@@ -32,6 +33,30 @@ class ResumeDocxExtractorTest(TestCase):
             path.stat().st_size,
         )
 
+    @staticmethod
+    def add_text_box(document: Document, text: str) -> None:
+        paragraph = document.add_paragraph()
+        paragraph._p.append(
+            parse_xml(
+                f"""
+                <w:r
+                    xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                    xmlns:v="urn:schemas-microsoft-com:vml"
+                >
+                    <w:pict>
+                        <v:shape id="ResumeTextBox">
+                            <v:textbox>
+                                <w:txbxContent>
+                                    <w:p><w:r><w:t>{text}</w:t></w:r></w:p>
+                                </w:txbxContent>
+                            </v:textbox>
+                        </v:shape>
+                    </w:pict>
+                </w:r>
+                """
+            )
+        )
+
     def test_extracts_paragraphs_and_tables_in_document_order(self) -> None:
         document = Document()
         document.add_paragraph("个人简介")
@@ -58,6 +83,25 @@ class ResumeDocxExtractorTest(TestCase):
         path = self.save_document(document)
 
         self.assertEqual(self.extract(path), "合并标题")
+
+    def test_extracts_text_from_word_text_boxes(self) -> None:
+        document = Document()
+        self.add_text_box(document, "文本框中的项目经历")
+        path = self.save_document(document)
+
+        self.assertEqual(self.extract(path), "文本框中的项目经历")
+
+    def test_uses_standard_text_when_mammoth_fails(self) -> None:
+        document = Document()
+        document.add_paragraph("普通段落仍然可用")
+        self.add_text_box(document, "文本框内容")
+        path = self.save_document(document)
+
+        with patch(
+            "app.services.rebuilt.resume_docx_extractor.mammoth.extract_raw_text",
+            side_effect=RuntimeError("simulated failure"),
+        ):
+            self.assertEqual(self.extract(path), "普通段落仍然可用")
 
     def test_rejects_document_without_effective_text(self) -> None:
         path = self.save_document(Document())

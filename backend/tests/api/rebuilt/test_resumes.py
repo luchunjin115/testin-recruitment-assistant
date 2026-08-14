@@ -41,6 +41,7 @@ from app.services.rebuilt.resume_structure_service import (
     ResumeStructureInputError,
     ResumeStructureInvalidOutputError,
     ResumeStructureNotFoundError,
+    ResumeStructurePerformance,
     ResumeStructurePrerequisiteError,
     ResumeStructureServiceResult,
     ResumeStructureSnapshotMetadata,
@@ -117,6 +118,13 @@ def make_structure_result(
         ),
         from_cache=from_cache,
         has_previous_draft=has_previous_draft,
+        performance=ResumeStructurePerformance(
+            total_ms=1_350,
+            preparation_ms=30,
+            model_ms=1_250,
+            validation_ms=10,
+            persistence_ms=40,
+        ),
     )
 
 
@@ -655,6 +663,8 @@ class ResumeApiTest(TestCase):
         self.assertFalse(response.json()["from_cache"])
         self.assertFalse(response.json()["has_previous_draft"])
         self.assertEqual(response.json()["draft"]["basic_info"]["name"], "测试候选人")
+        self.assertEqual(response.json()["performance"]["total_ms"], 1_350)
+        self.assertEqual(response.json()["performance"]["model_ms"], 1_250)
         self.assertNotIn("metadata", response.json())
         structure_mock.assert_awaited_once_with(db=self.db, resume_id=32, force=False)
 
