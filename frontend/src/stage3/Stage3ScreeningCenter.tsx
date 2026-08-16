@@ -60,7 +60,11 @@ const Stage3ScreeningCenter: React.FC = () => {
   const loadScreeningCenter = useCallback(async () => {
     setLoadState({ status: 'loading' });
     try {
-      setLoadState({ status: 'ready', data: await getStage3ScreeningCenter() });
+      const data = await getStage3ScreeningCenter();
+      setLoadState({ status: 'ready', data });
+      setJobFilter(current => (
+        current === 'all' || data.jobs.some(job => job.id === current) ? current : 'all'
+      ));
     } catch (error) {
       setLoadState({
         status: 'error',
@@ -276,6 +280,9 @@ const Stage3ScreeningCenter: React.FC = () => {
                     <div className="s3-screening-job">
                       <strong>{item.jobTitle}</strong>
                       <span>岗位 #{item.jobId}</span>
+                      {item.jobStatus === 'closed' && (
+                        <Tag bordered={false} className="s3-status-tag is-neutral">岗位已关闭</Tag>
+                      )}
                     </div>
                     <div className="s3-screening-tags">
                       <Tag bordered={false} className={`s3-status-tag is-${recommendationTone}`}>

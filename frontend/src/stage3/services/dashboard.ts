@@ -43,8 +43,9 @@ export type DashboardSnapshot = {
 };
 
 export const getStage3DashboardSnapshot = async (): Promise<DashboardSnapshot> => {
-  const [jobsResponse, candidatesResponse, screeningResultsResponse] = await Promise.all([
+  const [jobsResponse, openJobsResponse, candidatesResponse, screeningResultsResponse] = await Promise.all([
     v2Http.get<Job[]>('/jobs'),
+    v2Http.get<Job[]>('/jobs', { params: { status: 'open' } }),
     v2Http.get<Candidate[]>('/candidates'),
     v2Http.get<ScreeningResult[]>('/screening-results'),
   ]);
@@ -82,7 +83,7 @@ export const getStage3DashboardSnapshot = async (): Promise<DashboardSnapshot> =
     });
 
   return {
-    openJobs: jobs.filter(job => ['open', 'active'].includes(job.status.toLowerCase())).length,
+    openJobs: openJobsResponse.data.filter(job => job.status === 'open').length,
     candidateCount: candidates.length,
     pendingScreening: candidates.filter(candidate => !latestScreeningByCandidate.has(candidate.id)).length,
     recentCandidates,

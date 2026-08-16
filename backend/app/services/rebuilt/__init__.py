@@ -1,7 +1,16 @@
 from app.services.rebuilt.activity_log_service import ActivityLogService, activity_log_service
 from app.services.rebuilt.candidate_service import CandidateService, candidate_service
 from app.services.rebuilt.education_service import EducationService, education_service
-from app.services.rebuilt.job_service import JobService, job_service
+from app.services.rebuilt.job_service import (
+    InvalidJobStatusTransitionError,
+    JobHasReferencesError,
+    JobMustBeClosedBeforeDeleteError,
+    JobOpenValidationError,
+    JobReferenceCounts,
+    JobService,
+    JobServiceError,
+    job_service,
+)
 from app.services.rebuilt.project_experience_service import (
     ProjectExperienceService,
     project_experience_service,
@@ -44,7 +53,13 @@ __all__ = [
     "ActivityLogService",
     "CandidateService",
     "EducationService",
+    "InvalidJobStatusTransitionError",
+    "JobHasReferencesError",
+    "JobMustBeClosedBeforeDeleteError",
+    "JobOpenValidationError",
+    "JobReferenceCounts",
     "JobService",
+    "JobServiceError",
     "ProjectExperienceService",
     "ResumeService",
     "ResumeStructureAttemptSupersededError",

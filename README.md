@@ -2,6 +2,8 @@
 
 基于 AI 技术的智能招聘管理系统，解决 HR 手动录入、数据失真、跟进遗漏等痛点，实现招聘数据的自动化记录与智能化跟踪。
 
+> 当前仓库同时保留旧版 SQLite 演示系统和正在重建的 PostgreSQL `/api/v2` 新架构。阶段 5 后的新产品路线是“完整招聘链路 + 首页综合 Agent + 公司知识库 RAG”，详见 `docs/specs/2026-08-14-post-stage5-product-roadmap.md`；当前开发进度见 `PROJECT_STATE.md`。每个新阶段开始前会先讨论并确认业务需求和完成标准。
+
 详细使用方式请查看《使用说明.md》
 
 ## 核心功能
@@ -48,7 +50,32 @@
 
 ## 快速启动
 
-### 方式一：Docker（推荐）
+### 当前新版 PostgreSQL 主链路：一键启动（推荐）
+
+Windows 直接双击项目根目录：
+
+```text
+launch\start_project.bat
+```
+
+脚本会按顺序启动 PostgreSQL、Redis、Chroma，执行最新版 Alembic migration，再分别打开后端和前端服务窗口，最后自动打开：
+
+```text
+http://localhost:5173/stage3/jobs
+```
+
+后端接口文档仍为 `http://localhost:8000/docs`。两个服务窗口需要保持打开；停止时分别在窗口中按 `Ctrl+C`。第一次使用前需要安装并启动 Docker Desktop，同时本机需要 Python、Node.js 和 npm。
+
+也可以在项目根目录使用命令启动，或只检查环境而不启动服务：
+
+```powershell
+.\launch\start_project.bat
+powershell.exe -ExecutionPolicy Bypass -File .\scripts\start_project.ps1 -CheckOnly
+```
+
+原有 `start_backend.bat`、`start_frontend.bat` 和下面的整套 Docker 方式继续保留给旧版 SQLite 演示兼容。它们不能单独证明新版 PostgreSQL `/api/v2` 主链路已经启动。
+
+### 方式一：旧版整套 Docker 演示（保留）
 
 ```bash
 docker-compose up --build
@@ -80,7 +107,11 @@ npm run dev
 
 解压项目压缩包后，必须使用 Vite 开发服务器启动前端。不要使用 `python -m http.server` 或 Python `http.server` 打开 `frontend` 静态文件；静态服务器无法代理 `/api` 请求到后端，页面会看不到候选人、Dashboard、AI 初筛等演示数据。
 
-### 方式一：双击脚本启动
+### 方式一：双击新版一键脚本（推荐）
+
+双击项目 `launch` 目录中的 `start_project.bat`，等待出现“Project is ready”，浏览器会自动打开新版岗位管理页。这个入口会同时处理 PostgreSQL 和数据库 migration。
+
+### 方式二：分别启动旧版兼容脚本
 
 第一步：双击项目根目录的 `start_backend.bat`
 
@@ -98,7 +129,7 @@ http://localhost:5173
 http://localhost:8000/docs
 ```
 
-### 方式二：手动启动
+### 方式三：手动启动
 
 ```bash
 # 终端 1：后端
@@ -300,6 +331,8 @@ testin云测面试题/
 ├── sample_data/             # 示例数据
 ├── start_backend.bat        # Windows 后端一键启动
 ├── start_frontend.bat       # Windows 前端 Vite 一键启动
+├── launch/start_project.bat # 当前新版 PostgreSQL 主链路一键启动入口
+├── scripts/start_project.ps1 # 基础设施、migration、前后端和浏览器编排
 ├── docker-compose.yml
 ├── .env.example
 └── README.md

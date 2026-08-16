@@ -443,7 +443,7 @@ const Stage3CandidateCreate: React.FC = () => {
     } catch (error) {
       setJobState({
         status: 'error',
-        message: getRequestErrorMessage(error, '无法读取新版岗位数据'),
+        message: getRequestErrorMessage(error, '无法读取开放岗位数据'),
       });
     }
   }, []);
@@ -870,7 +870,7 @@ const Stage3CandidateCreate: React.FC = () => {
           <div>
             <span className="s3-section-kicker">阶段 5 · 简历智能识别</span>
             <h2>新增候选人</h2>
-            <p>岗位数据加载成功后才能建立一致的候选人和简历关联。</p>
+            <p>开放岗位加载成功后，才能为新候选人建立岗位关联。</p>
           </div>
           <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/stage3/candidates')}>返回列表</Button>
         </section>
@@ -878,7 +878,7 @@ const Stage3CandidateCreate: React.FC = () => {
           action={<Button icon={<ReloadOutlined />} onClick={() => void loadJobs()}>重新加载</Button>}
           className="s3-section-gap"
           description={jobState.message}
-          message="新版岗位数据加载失败"
+          message="开放岗位数据加载失败"
           showIcon
           type="error"
         />
@@ -984,10 +984,10 @@ const Stage3CandidateCreate: React.FC = () => {
                     <Select
                       allowClear
                       disabled={submitting}
-                      notFoundContent="新版岗位库暂无记录"
+                      notFoundContent="当前没有开放岗位"
                       optionFilterProp="label"
                       options={jobState.jobs.map(job => ({ value: job.id, label: job.title }))}
-                      placeholder="选择应聘岗位"
+                      placeholder="选择开放岗位"
                       showSearch
                     />
                   </Form.Item>

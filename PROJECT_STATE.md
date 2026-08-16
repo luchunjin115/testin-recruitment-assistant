@@ -1,6 +1,6 @@
 # 项目进度状态
 
-> 最新更新：2026-08-14（阶段 5 已按当前 MVP 范围完成并通过用户人工验收；下一步进入阶段 6“岗位 JD 管理”）
+> 最新更新：2026-08-15（阶段 6 前六小步已完成：岗位管理主链路与下游开放岗位读取边界）
 
 ## 当前总状态：🚧 新架构重建已启动，旧版演示系统作为迁移资产保留
 
@@ -8,6 +8,7 @@
 
 - 项目指令：`CLAUDE.md`
 - 权威设计文档：`docs/specs/2026-07-15-hr-agent-platform-design.md`
+- 阶段 5 后路线基线：`docs/specs/2026-08-14-post-stage5-product-roadmap.md`
 - 实施计划：`docs/implementation-plan.md`
 - 迁移清单：`docs/migration-inventory.md`
 - 阶段 5 历史实现与回归排查资料：`docs/handoff/2026-08-12-stage5-development-handoff.md`（阶段 6 日常开发无需读取）
@@ -661,12 +662,86 @@
 - 原计划 15～20 份脱敏样本的字段完整性、格式失败率、token 和费用统计没有执行，已转为后续质量增强项，不记录为已完成，也不阻塞当前 MVP 进入阶段 6。
 - 阶段 5 于 2026-08-14 正式完成。后续阶段日常开发只需按 `AGENTS.md` 阅读通用权威文档，不必重复阅读阶段 5 专项设计或交接手册；只有修改简历上传、原文提取、结构化识别、辅助填表或排查相关回归时再读取。
 
-#### 下一阶段恢复起点
+### 阶段 6：结构化岗位管理（进行中）
 
-- 当前分支为 `1lcj`，阶段 5 代码和文档仍可能位于未提交工作区。新对话必须先检查 `git status` 和 `git diff`，严禁 reset、clean、checkout 覆盖或丢弃现有修改。
-- 下一阶段是阶段 6“岗位 JD 管理”，不是候选人公开投递页。优先复用现有 `Job.description`、`Job.requirements` JSONB、`/api/v2/jobs` CRUD 和 `/stage3/jobs` 表单骨架。
-- 阶段 6 第一小步应先固定版本化、严格的岗位要求 Schema 和字段映射，再逐步接入后端业务校验、JD 智能提取、前端真实保存及 AI 初筛中心的开放岗位选择。
-- 阶段 6 不提前实现阶段 7 的候选人匹配评分、阶段 8 的报告、阶段 11 的公开投递，也不重新开启阶段 5 的性能优化、轻量模型或 OCR。
+#### 需求确认与专项设计
+
+- 用户已确认阶段 6 的范围、基础字段、`JobRequirements v1`、草稿/开放完整性、`draft/open/closed` 状态机、开放岗位编辑、关闭后重新开放、安全删除、旧数据迁移、薪资暂缓、API/前端失败语义以及自动化和人工验收标准。
+- 已新增并获用户确认专项设计 `docs/specs/2026-08-15-stage6-structured-job-management-design.md`；后续严格按其中第 14 节逐个小步骤开发，出现会改变字段、状态、流程或验收的新问题时先暂停讨论。
+
+#### 第一小步进度：JobRequirements v1 与 Job Schema
+
+- 已在 `backend/app/schemas/rebuilt/job.py` 固定 `JobStatus`、`EmploymentType`、`EducationRequirement` 三组枚举和 `JobRequirementsV1`；Schema 版本为 `1.0`，10 个要求字段全部必须出现，未知字段禁止进入。
+- 岗位要求列表已固定数量和单项长度上限，统一去除首尾空白、空项和完全重复项；最低工作年限只接受 `0—80` 严格整数。岗位基础输入已增加地点、用工类型、招聘人数和描述约束，标题会去除首尾空白且不能只含空格。
+- `JobCreate` 默认创建 `draft` 和完整空 v1，只允许初始状态 `draft/open`；`JobUpdate` 不允许普通更新状态，拒绝未知字段、空请求、`title=null` 和 `requirements=null`，要求 requirements 更新时提交完整 v1。
+- 第一步曾为 migration 前旧 PostgreSQL 数据保留临时读取兼容，并在默认空值时避免向尚无新列的 Model 传参；第二步数据库迁移完成后，两处临时桥均已删除，`JobRead` 已收紧为严格 v1 和三种正式状态。
+- 新增 22 项纯 Job Schema 测试，覆盖完整/空 v1、字段缺失和额外字段、版本、类型、长度、数量、列表清理、严格整数、枚举、草稿默认值、空白标题、创建关闭状态、人数边界、未知字段、局部更新和旧数据读取兼容。
+- Job Schema、既有 Job Service/API 定向共 41 项测试全部通过；后端全量回归从 370 项增至 392 项，392 项全部通过。验证使用 Mock/Fake 和纯 Schema，不连接正式 PostgreSQL，因此能证明校验契约和现有后端回归稳定，不能证明新数据库列、旧数据迁移、开放完整性 Service 或前端交互已经完成。
+- 第一步没有修改 Job Model、Service、API 路由、Alembic migration、PostgreSQL 或前端，没有调用 DeepSeek。
+
+#### 第二小步进度：Job Model 与 Alembic migration
+
+- `backend/app/models/rebuilt/job.py` 已增加 `location`、`employment_type`、`headcount` 和内部旧要求快照 `legacy_requirements`；`requirements` 改为非空，岗位默认状态改为 `draft`，数据库增加合法状态和招聘人数 CHECK。
+- 新 migration `c8e1a6f4d205_structure_jobs_for_stage6.py` 会把 `active/open/inactive/closed/未知` 确定性映射到正式状态，把 null、合法 v1、已知旧格式和未知 JSON 转成完整 v1；旧/未知非空 JSON 会完整保存在 `legacy_requirements`，原岗位 ID、标题、description、时间和外键不改写。
+- 迁移前真实开发 PostgreSQL 位于 `f5a7c9e2d104`，新版 `jobs` 表为 0 条；旧 SQLite 的 8 条演示岗位未导入、未修改，也未被当成 PostgreSQL 主链路数据。
+- 专用临时 PostgreSQL 使用 4 种旧岗位和 1 条 Candidate 外键执行 `upgrade -> downgrade -> upgrade`。验证发现并修复 JSONB 的 Python `None` 被存为 JSON `null` 的差异，最终旧 JSON 可恢复、合法 v1 不被降级覆盖，岗位身份哈希 `1a2a2dad7384853eabd388f76395d0a0` 和外键数量全程不变。
+- 开发 PostgreSQL 已只向前升级到 `c8e1a6f4d205`，升级后仍为 0 条岗位；12 列、`requirements NOT NULL`、`draft` 默认值和两条 CHECK 已真实查询确认，`alembic check` 返回无待生成操作。
+- 新增 Model/migration 测试后，Schema/Model/migration 定向 32 项、既有 Job Service/API 19 项和后端全量 402 项全部通过；`git diff --check` 通过，仅有仓库既存的 LF/CRLF 提示。
+- 本步位于 `Schema -> Model -> PostgreSQL`，没有修改 Job Service、API 路由或前端，没有实现开放校验、状态动作、行锁、安全删除，也没有调用 DeepSeek。
+
+#### 第三小步进度：Job Service 业务规则
+
+- `backend/app/services/rebuilt/job_service.py` 已实现创建并开放前校验、开放岗位合并后编辑校验、`draft -> open`、`open -> closed`、`closed -> open` 三种合法迁移，以及全部非法迁移拒绝。
+- 编辑、状态动作和删除均通过 PostgreSQL `SELECT ... FOR UPDATE` 读取最新 Job；开放失败会一次返回全部缺失字段，并在修改 ORM 对象前完成校验，避免失败数据留在 Session 中等待误提交。
+- 安全删除只允许无关联的 `draft/closed` 岗位；`open` 岗位必须先关闭，Candidate、Resume、ScreeningResult、Report 任一关联都会阻止删除，并保留四类关联数量。
+- 所有预期业务失败、查询失败和提交失败都会 rollback；新增 `JobOpenValidationError`、`InvalidJobStatusTransitionError`、`JobMustBeClosedBeforeDeleteError`、`JobHasReferencesError` 和 `JobReferenceCounts`，供下一小步 API 映射稳定错误码。
+- Service 定向 19 项、既有 Job API 回归 11 项和后端全量 413 项测试全部通过；Python 全量语法编译和 `git diff --check` 通过，仅有仓库既存 LF/CRLF 提示。
+- 专用真实 PostgreSQL 已验证不完整开放、失败编辑不落库、关闭/重新开放、有关联删除拒绝和双会话行锁等待；验证结束时岗位与候选人均清到 0 条，临时数据库随后删除。
+- 本步位于 `Schema -> Service -> Model -> PostgreSQL`；没有新增 API 状态动作或错误映射，没有修改前端，也没有调用 DeepSeek。当前 Service 异常尚不能代表最终 HTTP 响应，必须完成下一小步 API 契约后才可从接口正式验收。
+
+#### 第四小步进度：Job API 与错误契约
+
+- `backend/app/api/jobs.py` 已增加严格单状态筛选 `GET /api/v2/jobs?status=draft|open|closed`，以及 `POST /{id}/open`、`POST /{id}/close`、`POST /{id}/reopen` 三个专用状态动作；普通 PUT 仍不能修改状态。
+- Job 不存在统一返回 `404 JOB_NOT_FOUND`；非法迁移、开放岗位删除、有关联删除分别返回设计确认的 `409` code；创建并开放、开放、重新开放或编辑开放岗位不完整时返回 `422 JOB_OPEN_VALIDATION_FAILED` 和全部字段路径。
+- 空更新 `{}` 通过只匹配新版 Job PUT 路径的请求校验处理器返回 `422 JOB_UPDATE_EMPTY`；其他字段类型、枚举、长度、未知字段和非法查询状态继续使用 FastAPI 默认 422，不改变项目其他接口的验证格式。
+- 所有未预期 Service/数据库异常统一隐藏为 `500 JOB_OPERATION_FAILED`，不会向前端返回数据库地址、SQL、文件路径、环境变量或调用栈。
+- 主 FastAPI 应用已安装 Job 空更新处理器；OpenAPI 确认 `/api/v2/jobs` 列表/创建、详情/更新/删除和三个状态动作各挂载一次，operationId 不重复。
+- API 定向 16 项、Service/API 联合 34 项和后端全量 418 项测试全部通过；Python 全量语法编译和 `git diff --check` 通过，`ruff` 因项目虚拟环境未安装而未执行，没有为本步临时增加依赖。
+- 专用真实 PostgreSQL + FastAPI ASGI 已完成创建草稿、开放失败、空更新、补齐开放、状态筛选、失败编辑不落库、重复开放、关闭、重新开放、两类删除冲突和最终删除；结束时岗位与候选人均为 0 条，临时数据库随后删除。
+- 本步位于 `API -> Schema -> Service -> Model -> PostgreSQL`；没有修改前端页面和下游岗位读取，也没有调用 DeepSeek。
+
+#### 第五小步进度：岗位前端真实表单
+
+- `/stage3/jobs` 已从只读骨架升级为真实岗位管理页：HR 可以创建草稿、创建并开放、编辑基础字段与完整 `JobRequirements v1`，并通过专用操作开放、关闭、重新开放和安全删除岗位；状态不再使用普通表单下拉框修改。
+- 新版前端 API Service 已固定 `draft/open/closed`、用工类型、学历要求和完整 v1 类型，接入 `POST /jobs`、`PUT /jobs/{id}`、三个状态动作与 DELETE；列表增加草稿统计，并继续兼容展示现有 Candidate 岗位关联数量。
+- 表单按基础信息、岗位职责、必备要求、加分与补充四区展示。草稿只由前端要求岗位名称；创建并开放、重新开放和开放岗位编辑由后端统一校验，失败时保留输入、标出全部缺失项并滚动到第一项。
+- 关闭、重新开放和删除提供二次确认；关闭明确提示不会删除历史候选人和初筛结果。开放岗位不展示删除入口；有关联删除失败会显示服务端返回的候选人、简历、初筛结果和报告数量。写请求期间禁用关闭和重复操作，有未保存内容时关闭抽屉需要再次确认。
+- 新增岗位 Service 与 UI 两项前端测试，失败基线分别捕获了缺少草稿统计/写接口和缺少真实保存操作；实现后两项均通过。阶段 5 既有 6 项前端测试全部回归通过，`tsc && vite build` 成功构建 3922 个模块，`git diff --check` 通过。
+- 第一次生产构建因工作区沙箱拒绝 Vite 读取配置目录而失败；在获准的构建环境中使用同一命令重跑后成功，因此这不是代码或 Vite 配置缺陷。本步没有启动真实浏览器，也没有对真实 PostgreSQL 执行页面写入，自动化结果能证明类型、请求映射、关键交互源码和生产打包正确，不能替代第七小步的真实页面与数据库人工验收。
+- 本步位于 `前端 -> API`，复用第四小步及其后的 `Schema -> Service -> Model -> PostgreSQL`，没有修改下游初筛、投递、Dashboard 或候选人岗位选择，也没有调用 DeepSeek。
+
+#### 第六小步进度：下游开放岗位读取边界
+
+- 投递骨架 `getStage3ApplicationJobs` 和内部新增候选人 `getStage3CandidateJobs` 现在都直接请求 `GET /api/v2/jobs?status=open`，并在前端再次只接受严格 `status=open`；不再把全部岗位下载到浏览器后兼容过滤 `active`。投递页同时改为读取 `JobRequirements v1.responsibilities` 和 `required_skills`，不再读取旧 `requirements.summary`。
+- Dashboard 用独立开放岗位请求计算“开放岗位”数量，不再把旧 `active` 当成新版状态；它仍保留一次全部岗位读取，为历史候选人显示已关闭岗位名称，避免统计收紧后破坏历史展示。
+- AI 初筛页把“可选岗位”限制为开放岗位，同时继续读取全部岗位为已有初筛结果补齐历史名称与状态；关闭岗位不会出现在新选择中，但其历史结果仍显示，并明确标记“岗位已关闭”。若刷新后当前筛选岗位已关闭，页面自动回到“全部岗位”。
+- 候选人列表、候选人详情、简历和报告等历史展示读取没有被改成只读开放岗位，因此已有候选人关联关闭岗位时仍可显示原岗位名称。阶段 8 才建立真正的公开岗位 API；当前投递页仍是明确标注“不提交”的内部预览骨架。
+- 新增 1 项下游读取边界测试，先证明旧实现请求没有 `status=open`，再覆盖四个开放岗位请求、三个历史全岗位请求、v1 职责映射、Dashboard 精确计数、关闭岗位历史候选人名称和历史初筛状态。连同阶段 5 的 6 项及岗位管理 2 项，前端共 9 项测试全部通过；`tsc && vite build` 成功构建 3922 个模块。
+- 本步只修改 `前端 -> API` 的读取参数、结果映射和提示，不修改 API、Schema、Service、Model、PostgreSQL，不创建 Application，不运行 AI 初筛，也不调用 DeepSeek。自动测试与构建证明请求边界、历史映射和编译打包正确，不能替代第七小步的真实页面与 PostgreSQL 人工验收。
+
+#### 下一小步恢复起点
+
+- 当前分支为 `1lcj`。阶段 5 已形成本地提交 `3e832fa`；新对话仍必须先检查 `git status`、`git log` 和 `git diff`，严禁 reset、clean、checkout 覆盖或丢弃现有修改。
+- 用户已同意将 `docs/specs/2026-08-14-post-stage5-product-roadmap.md` 作为当前方向基线；该路线允许在每个阶段的业务讨论后继续修订。
+- 阶段 6 下一小步是最终集成与人工验收：运行全量后端回归，在真实 PostgreSQL 和页面中验证创建草稿、开放失败、补齐开放、编辑、关闭、重新开放、安全删除、刷新持久化及下游开放岗位边界，并按专项设计第 16 节逐项记录结果。
+- 阶段 6 由 HR 直接填写结构化岗位表单，不把 AI 解析 JD 作为必经步骤，也不在本阶段调用 DeepSeek。综合 Agent 后续可以按 HR 明确要求生成 JD 草稿，并在 HR 确认后保存。
+- 阶段 6 业务方案和专项设计已经确认；第七小步验收完成前不能宣布阶段 6 正式完成，也不提前进入阶段 7。
+- 后续路线暂定为：阶段 7 Application 与 AI 初筛底座；阶段 8 公开投递和自动初筛；阶段 9 面试、Offer、录取和报告；阶段 10 首页综合 Agent；阶段 11 知识库 RAG 与语义搜索；阶段 12 质量、权限、部署和交付。
+- 已新增 `docs/research/2026-08-15-github-recruiting-project-comparison.md`，对比 Reqcore、SAP Recruiting Agent、HackerRank Hiring Agent、Resume Screening RAG Pipeline 和 MCP Resume Screening，记录当前差距、借鉴原因和明确不借鉴项。
+- Reqcore 只用于校准 Application、招聘 Pipeline、公开/后台接口、私有简历和数据保留；不切换其 Nuxt/Vue 技术栈，不直接复制 AGPL 代码，也不提前建设多租户和计费。
+- 初筛借鉴 HackerRank Hiring Agent 的 Rubric、逐项证据、加分/扣分、版本、缓存和公平性约束，但不增加 PDF 转 Markdown，不照搬每个章节一次模型调用或默认 GitHub 评价。
+- 阶段 10 借鉴 SAP Recruiting Agent 的职责分工，固定方向为 `Agent -> Tool -> Service -> PostgreSQL/Chroma`；Tools 必须强类型、可测试、可授权和可审计，MCP 仅作为未来外部调用适配，不是当前 MVP 必选项。
+- 阶段 11 使用 `Resume.raw_text` 和 `Resume.parsed_snapshot` 生成带来源元数据的检索片段，支持查询分类、结构化过滤、Small-to-Big、去重重排和引用；RAG 负责召回，不替代正式初筛评分，也不生成 `.md` 文件。
 
 ### 重要说明
 

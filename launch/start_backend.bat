@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0backend"
+cd /d "%~dp0..\backend"
 
 echo Installing backend dependencies...
 python -m pip install -r requirements.txt

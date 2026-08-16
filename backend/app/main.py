@@ -68,6 +68,7 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+rebuilt_jobs.install_job_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,

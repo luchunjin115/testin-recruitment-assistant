@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckCircleOutlined,
+  DeleteOutlined,
   EditOutlined,
+  FileTextOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -16,16 +18,30 @@ import {
   Empty,
   Form,
   Input,
+  InputNumber,
+  message,
+  Modal,
   Select,
   Skeleton,
   Tag,
 } from 'antd';
 import {
+  closeStage3Job,
+  createStage3Job,
+  deleteStage3Job,
+  EducationRequirement,
+  EmploymentType,
+  getStage3JobApiError,
   getStage3Jobs,
   isClosedJobStatus,
   isOpenJobStatus,
   JobListSnapshot,
+  JobStatus,
+  openStage3Job,
+  reopenStage3Job,
   Stage3Job,
+  Stage3JobInput,
+  updateStage3Job,
 } from './services/jobs';
 
 type LoadState =
@@ -36,60 +52,156 @@ type LoadState =
 type JobFormValues = {
   title: string;
   department?: string;
-  status: string;
+  location?: string;
+  employmentType?: EmploymentType;
+  headcount?: number;
   description?: string;
-  requirementSummary?: string;
-  requiredSkills?: string;
+  responsibilities?: string;
+  requiredSkills?: string[];
+  preferredSkills?: string[];
+  minimumWorkYears?: number;
+  educationRequirement?: EducationRequirement;
+  requiredExperiences?: string;
+  preferredExperiences?: string;
+  keywords?: string[];
+  additionalRequirements?: string;
 };
 
-const getStatusMeta = (status: string) => {
+const statusOptions: { value: 'all' | JobStatus; label: string }[] = [
+  { value: 'all', label: '全部状态' },
+  { value: 'draft', label: '草稿' },
+  { value: 'open', label: '开放招聘' },
+  { value: 'closed', label: '已关闭' },
+];
+
+const employmentOptions = [
+  { value: 'full_time', label: '全职' },
+  { value: 'part_time', label: '兼职' },
+  { value: 'internship', label: '实习' },
+  { value: 'contract', label: '合同制' },
+];
+
+const educationOptions = [
+  { value: 'none', label: '不限学历' },
+  { value: 'associate_or_above', label: '大专及以上' },
+  { value: 'bachelor_or_above', label: '本科及以上' },
+  { value: 'master_or_above', label: '硕士及以上' },
+  { value: 'doctorate', label: '博士' },
+];
+
+const backendFieldToFormField: Record<string, keyof JobFormValues> = {
+  title: 'title',
+  department: 'department',
+  location: 'location',
+  employment_type: 'employmentType',
+  headcount: 'headcount',
+  description: 'description',
+  requirements: 'responsibilities',
+  'requirements.responsibilities': 'responsibilities',
+  'requirements.required_skills': 'requiredSkills',
+  'requirements.preferred_skills': 'preferredSkills',
+  'requirements.minimum_work_years': 'minimumWorkYears',
+  'requirements.education_requirement': 'educationRequirement',
+  'requirements.required_experiences': 'requiredExperiences',
+  'requirements.preferred_experiences': 'preferredExperiences',
+  'requirements.keywords': 'keywords',
+  'requirements.additional_requirements': 'additionalRequirements',
+};
+
+const getStatusMeta = (status: JobStatus) => {
   if (isOpenJobStatus(status)) return { label: '开放招聘', tone: 'success' };
   if (isClosedJobStatus(status)) return { label: '已关闭', tone: 'neutral' };
-  return { label: status || '状态未填写', tone: 'warning' };
+  return { label: '草稿', tone: 'warning' };
 };
 
 const formatDateTime = (value: string) => new Intl.DateTimeFormat('zh-CN', {
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  hour12: false,
+  year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', hour12: false,
 }).format(new Date(value));
+
+const toLines = (value?: string) => (value || '')
+  .split(/\r?\n/)
+  .map(item => item.trim())
+  .filter(Boolean);
+
+const fromLines = (value: string[]) => value.join('\n');
+const optionalText = (value?: string) => value?.trim() || null;
+
+const formatReferenceCounts = (references: Record<string, number> | null) => {
+  if (!references) return '';
+  const labels: Record<string, string> = {
+    candidates: '候选人',
+    resumes: '简历',
+    screening_results: '初筛结果',
+    reports: '报告',
+  };
+  const details = Object.entries(references)
+    .filter(([, count]) => count > 0)
+    .map(([key, count]) => `${labels[key] || key} ${count} 条`);
+  return details.length ? `（${details.join('、')}）` : '';
+};
+
+const buildJobInput = (values: JobFormValues): Stage3JobInput => ({
+  title: values.title.trim(),
+  department: optionalText(values.department),
+  location: optionalText(values.location),
+  employment_type: values.employmentType || null,
+  headcount: values.headcount ?? null,
+  description: optionalText(values.description),
+  requirements: {
+    schema_version: '1.0',
+    responsibilities: toLines(values.responsibilities),
+    required_skills: values.requiredSkills || [],
+    preferred_skills: values.preferredSkills || [],
+    minimum_work_years: values.minimumWorkYears ?? null,
+    education_requirement: values.educationRequirement || null,
+    required_experiences: toLines(values.requiredExperiences),
+    preferred_experiences: toLines(values.preferredExperiences),
+    keywords: values.keywords || [],
+    additional_requirements: toLines(values.additionalRequirements),
+  },
+});
+
+const formValuesFromJob = (job: Stage3Job): JobFormValues => ({
+  title: job.title,
+  department: job.department || undefined,
+  location: job.location || undefined,
+  employmentType: job.employmentType || undefined,
+  headcount: job.headcount || undefined,
+  description: job.description || undefined,
+  responsibilities: fromLines(job.requirements.responsibilities),
+  requiredSkills: job.requirements.required_skills,
+  preferredSkills: job.requirements.preferred_skills,
+  minimumWorkYears: job.requirements.minimum_work_years ?? undefined,
+  educationRequirement: job.requirements.education_requirement || undefined,
+  requiredExperiences: fromLines(job.requirements.required_experiences),
+  preferredExperiences: fromLines(job.requirements.preferred_experiences),
+  keywords: job.requirements.keywords,
+  additionalRequirements: fromLines(job.requirements.additional_requirements),
+});
 
 const Stage3JobList: React.FC = () => {
   const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
   const [keyword, setKeyword] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | JobStatus>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Stage3Job | null>(null);
+  const [operationPending, setOperationPending] = useState(false);
+  const [operationError, setOperationError] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false);
   const [form] = Form.useForm<JobFormValues>();
+  const [messageApi, messageContext] = message.useMessage();
 
   const loadJobs = useCallback(async () => {
     setLoadState({ status: 'loading' });
     try {
       setLoadState({ status: 'ready', data: await getStage3Jobs() });
     } catch (error) {
-      setLoadState({
-        status: 'error',
-        message: error instanceof Error ? error.message : '无法连接新版岗位接口',
-      });
+      setLoadState({ status: 'error', message: error instanceof Error ? error.message : '无法连接新版岗位接口' });
     }
   }, []);
 
-  useEffect(() => {
-    void loadJobs();
-  }, [loadJobs]);
-
-  const statusOptions = useMemo(() => {
-    if (loadState.status !== 'ready') return [{ value: 'all', label: '全部状态' }];
-    return [
-      { value: 'all', label: '全部状态' },
-      ...Array.from(new Set(loadState.data.items.map(item => item.status)))
-        .sort()
-        .map(status => ({ value: status, label: getStatusMeta(status).label })),
-    ];
-  }, [loadState]);
+  useEffect(() => { void loadJobs(); }, [loadJobs]);
 
   const filteredItems = useMemo(() => {
     if (loadState.status !== 'ready') return [];
@@ -99,9 +211,11 @@ const Stage3JobList: React.FC = () => {
       const matchesKeyword = !normalizedKeyword || [
         item.title,
         item.department,
+        item.location,
         item.description,
-        item.requirementSummary,
-        ...item.requiredSkills,
+        ...item.requirements.responsibilities,
+        ...item.requirements.required_skills,
+        ...item.requirements.keywords,
       ].some(value => value?.toLowerCase().includes(normalizedKeyword));
       return matchesStatus && matchesKeyword;
     });
@@ -109,35 +223,148 @@ const Stage3JobList: React.FC = () => {
 
   const openForm = (job: Stage3Job | null) => {
     setSelectedJob(job);
-    form.setFieldsValue(job ? {
-      title: job.title,
-      department: job.department || undefined,
-      status: job.status,
-      description: job.description || undefined,
-      requirementSummary: job.requirementSummary || undefined,
-      requiredSkills: job.requiredSkills.join('、'),
-    } : {
-      title: '',
-      department: undefined,
-      status: 'open',
-      description: undefined,
-      requirementSummary: undefined,
-      requiredSkills: undefined,
-    });
+    setOperationError(null);
+    form.resetFields();
+    form.setFieldsValue(job ? formValuesFromJob(job) : { title: '' });
+    setDirty(false);
     setFormOpen(true);
   };
 
-  const resetFilters = () => {
-    setKeyword('');
-    setStatusFilter('all');
+  const closeFormNow = () => {
+    setFormOpen(false);
+    setSelectedJob(null);
+    setOperationError(null);
+    setDirty(false);
+    form.resetFields();
+  };
+
+  const requestCloseForm = () => {
+    if (!dirty && !form.isFieldsTouched()) {
+      closeFormNow();
+      return;
+    }
+    Modal.confirm({
+      title: '放弃未保存的修改？',
+      content: '关闭后，本次尚未保存的表单内容会丢失。',
+      okText: '放弃修改',
+      cancelText: '继续填写',
+      okButtonProps: { danger: true },
+      onOk: closeFormNow,
+    });
+  };
+
+  const showOperationError = (error: unknown, jobToEdit?: Stage3Job) => {
+    const apiError = getStage3JobApiError(error);
+    if (apiError.code !== 'JOB_OPEN_VALIDATION_FAILED') {
+      setOperationError(apiError.message);
+      return;
+    }
+
+    if (jobToEdit && (!formOpen || selectedJob?.id !== jobToEdit.id)) openForm(jobToEdit);
+    setOperationError(apiError.message);
+    const formFields = apiError.fields
+      .map(field => backendFieldToFormField[field])
+      .filter((field): field is keyof JobFormValues => Boolean(field));
+    window.setTimeout(() => {
+      form.setFields(formFields.map(name => ({ name, errors: ['开放岗位前必须填写此项'] })));
+      if (formFields[0]) form.scrollToField(formFields[0], { block: 'center' });
+    });
+  };
+
+  const refreshAfterSuccess = async (successMessage: string) => {
+    closeFormNow();
+    await loadJobs();
+    messageApi.success(successMessage);
+  };
+
+  const saveNewJob = async (status: 'draft' | 'open') => {
+    setOperationPending(true);
+    setOperationError(null);
+    try {
+      const values = await form.validateFields();
+      await createStage3Job({ ...buildJobInput(values), status });
+      await refreshAfterSuccess(status === 'open' ? '岗位已创建并开放' : '岗位草稿已保存');
+    } catch (error) {
+      if (!(error && typeof error === 'object' && 'errorFields' in error)) showOperationError(error);
+    } finally {
+      setOperationPending(false);
+    }
+  };
+
+  const saveExistingJob = async () => {
+    if (!selectedJob) return;
+    setOperationPending(true);
+    setOperationError(null);
+    try {
+      const values = await form.validateFields();
+      await updateStage3Job(selectedJob.id, buildJobInput(values));
+      await refreshAfterSuccess('岗位修改已保存');
+    } catch (error) {
+      if (!(error && typeof error === 'object' && 'errorFields' in error)) showOperationError(error);
+    } finally {
+      setOperationPending(false);
+    }
+  };
+
+  const runStatusAction = async (job: Stage3Job, action: 'open' | 'close' | 'reopen') => {
+    setOperationPending(true);
+    setOperationError(null);
+    try {
+      if (action === 'open') await openStage3Job(job.id);
+      if (action === 'close') await closeStage3Job(job.id);
+      if (action === 'reopen') await reopenStage3Job(job.id);
+      await refreshAfterSuccess(action === 'close' ? '岗位已关闭' : '岗位已开放');
+    } catch (error) {
+      showOperationError(error, job);
+    } finally {
+      setOperationPending(false);
+    }
+  };
+
+  const confirmStatusAction = (job: Stage3Job) => {
+    const action = job.status === 'draft' ? 'open' : job.status === 'open' ? 'close' : 'reopen';
+    const actionLabel = action === 'open' ? '开放岗位' : action === 'close' ? '关闭岗位' : '重新开放';
+    Modal.confirm({
+      title: `确认${actionLabel}？`,
+      content: action === 'close'
+        ? '关闭后，新申请不能再选择该岗位；此操作不会删除历史候选人和初筛结果。'
+        : '开放前会检查岗位标准是否填写完整。',
+      okText: actionLabel,
+      cancelText: '取消',
+      onOk: () => runStatusAction(job, action),
+    });
+  };
+
+  const confirmDelete = (job: Stage3Job) => {
+    Modal.confirm({
+      title: '确认删除岗位？',
+      content: '只能删除没有候选人、申请或初筛记录的草稿或已关闭岗位。删除后无法恢复。',
+      okText: '删除岗位',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        setOperationPending(true);
+        try {
+          await deleteStage3Job(job.id);
+          await refreshAfterSuccess('岗位已删除');
+        } catch (error) {
+          const apiError = getStage3JobApiError(error);
+          setOperationError(apiError.code === 'JOB_HAS_REFERENCES'
+            ? `岗位已有历史业务数据，不能删除${formatReferenceCounts(apiError.references)}`
+            : apiError.message);
+        } finally {
+          setOperationPending(false);
+        }
+      },
+    });
   };
 
   if (loadState.status === 'loading') {
     return (
       <main aria-busy="true" aria-label="岗位列表加载中" className="s3-main">
         <section className="s3-page-heading"><Skeleton active paragraph={{ rows: 2 }} /></section>
-        <section className="s3-stat-grid">
-          {[0, 1, 2, 3].map(item => <article className="s3-stat-card" key={item}><Skeleton active paragraph={false} /></article>)}
+        <section className="s3-stat-grid s3-job-stat-grid">
+          {[0, 1, 2, 3, 4].map(item => <article className="s3-stat-card" key={item}><Skeleton active paragraph={false} /></article>)}
         </section>
         <section className="s3-state-panel"><Skeleton active paragraph={{ rows: 6 }} /></section>
       </main>
@@ -148,12 +375,12 @@ const Stage3JobList: React.FC = () => {
     return (
       <main className="s3-main">
         <section className="s3-page-heading">
-          <div><span className="s3-section-kicker">新版岗位库 · 数据来源 /api/v2</span><h2>岗位管理</h2><p>集中查看招聘岗位、岗位状态和候选人关联。</p></div>
+          <div><span className="s3-section-kicker">新版岗位库 · 数据来源 /api/v2</span><h2>岗位管理</h2><p>创建并维护可供招聘流程使用的结构化岗位标准。</p></div>
         </section>
         <Alert
           action={<Button icon={<ReloadOutlined />} onClick={() => void loadJobs()}>重新加载</Button>}
           className="s3-dashboard-alert s3-section-gap"
-          description={`请确认 FastAPI 已启动，且 /api/v2/jobs 与 /api/v2/candidates 可访问。技术信息：${loadState.message}`}
+          description={`请确认 FastAPI 已启动，且新版岗位与候选人接口可访问。技术信息：${loadState.message}`}
           message="新版岗位数据加载失败"
           showIcon
           type="error"
@@ -165,23 +392,25 @@ const Stage3JobList: React.FC = () => {
   const { data } = loadState;
   const stats = [
     { label: '岗位总数', value: data.total, note: '新版岗位表真实记录', icon: <SolutionOutlined />, tone: 'blue' },
-    { label: '开放岗位', value: data.openCount, note: '当前可以继续招聘', icon: <CheckCircleOutlined />, tone: 'green' },
-    { label: '已关闭', value: data.closedCount, note: 'closed / inactive', icon: <StopOutlined />, tone: 'orange' },
-    { label: '关联候选人', value: data.linkedCandidateCount, note: '按应聘岗位汇总', icon: <TeamOutlined />, tone: 'blue' },
+    { label: '草稿', value: data.draftCount, note: '可以继续补充和编辑', icon: <FileTextOutlined />, tone: 'orange' },
+    { label: '开放岗位', value: data.openCount, note: '可供后续申请与初筛选择', icon: <CheckCircleOutlined />, tone: 'green' },
+    { label: '已关闭', value: data.closedCount, note: '保留历史数据，可重新开放', icon: <StopOutlined />, tone: 'orange' },
+    { label: '关联候选人', value: data.linkedCandidateCount, note: '当前兼容关联统计', icon: <TeamOutlined />, tone: 'blue' },
   ];
 
   return (
     <main className="s3-main">
+      {messageContext}
       <section className="s3-page-heading">
         <div>
           <span className="s3-section-kicker">新版岗位库 · 数据来源 /api/v2</span>
           <h2>岗位管理</h2>
-          <p>查看岗位状态、职责要求和候选人关联；新增与编辑目前只开放表单结构预览。</p>
+          <p>HR 可创建、编辑、开放、关闭和重新开放岗位；岗位状态由独立操作控制。</p>
         </div>
-        <Button icon={<PlusOutlined />} onClick={() => openForm(null)} type="primary">新增岗位 · 表单预览</Button>
+        <Button icon={<PlusOutlined />} onClick={() => openForm(null)} type="primary">新增岗位</Button>
       </section>
 
-      <section aria-label="岗位统计" className="s3-stat-grid">
+      <section aria-label="岗位统计" className="s3-stat-grid s3-job-stat-grid">
         {stats.map(stat => (
           <article className="s3-stat-card" key={stat.label}>
             <div className={`s3-stat-icon is-${stat.tone}`}>{stat.icon}</div>
@@ -190,27 +419,27 @@ const Stage3JobList: React.FC = () => {
         ))}
       </section>
 
+      {operationError && (
+        <Alert
+          className="s3-section-gap"
+          closable
+          message="岗位操作没有完成"
+          description={operationError}
+          onClose={() => setOperationError(null)}
+          showIcon
+          type="error"
+        />
+      )}
+
       <section className="s3-panel s3-job-list-panel">
         <div className="s3-job-toolbar">
-          <div>
-            <h3>岗位列表</h3>
-            <p>共 {data.total} 个真实岗位，候选人数来自新版候选人关联</p>
-          </div>
+          <div><h3>岗位列表</h3><p>共 {data.total} 个岗位；修改状态不会删除历史招聘记录</p></div>
           <div className="s3-job-filter-controls">
             <Input
-              allowClear
-              aria-label="搜索岗位"
-              onChange={event => setKeyword(event.target.value)}
-              placeholder="搜索岗位、部门、职责或技能"
-              prefix={<SearchOutlined />}
-              value={keyword}
+              allowClear aria-label="搜索岗位" onChange={event => setKeyword(event.target.value)}
+              placeholder="搜索岗位、部门、地点、职责或技能" prefix={<SearchOutlined />} value={keyword}
             />
-            <Select
-              aria-label="按岗位状态筛选"
-              onChange={setStatusFilter}
-              options={statusOptions}
-              value={statusFilter}
-            />
+            <Select aria-label="按岗位状态筛选" onChange={setStatusFilter} options={statusOptions} value={statusFilter} />
             <Button aria-label="刷新岗位列表" icon={<ReloadOutlined />} onClick={() => void loadJobs()} />
           </div>
         </div>
@@ -218,49 +447,47 @@ const Stage3JobList: React.FC = () => {
         {data.total === 0 ? (
           <Empty
             className="s3-panel-empty s3-job-empty"
-            description={
-              <div className="s3-empty-copy">
-                <strong>新版岗位库目前没有岗位</strong>
-                <span>页面已成功连接 /api/v2/jobs；后续通过新版岗位表单创建的数据会显示在这里。</span>
-              </div>
-            }
+            description={<div className="s3-empty-copy"><strong>新版岗位库目前没有岗位</strong><span>先创建草稿，补充完整后再开放招聘。</span></div>}
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           >
-            <Button icon={<PlusOutlined />} onClick={() => openForm(null)}>查看新增表单结构</Button>
+            <Button icon={<PlusOutlined />} onClick={() => openForm(null)}>新增岗位</Button>
           </Empty>
         ) : filteredItems.length === 0 ? (
-          <Empty
-            className="s3-panel-empty s3-job-empty"
-            description="没有符合当前搜索和筛选条件的岗位"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          >
-            <Button onClick={resetFilters}>清除筛选</Button>
+          <Empty className="s3-panel-empty s3-job-empty" description="没有符合当前条件的岗位" image={Empty.PRESENTED_IMAGE_SIMPLE}>
+            <Button onClick={() => { setKeyword(''); setStatusFilter('all'); }}>清除筛选</Button>
           </Empty>
         ) : (
           <div aria-label="新版岗位列表" className="s3-table" role="table">
             <div className="s3-table-head s3-job-table-columns" role="row">
-              <span>岗位</span><span>部门</span><span>岗位要求</span><span>候选人</span><span>状态</span><span>更新时间</span><span>表单</span>
+              <span>岗位</span><span>部门 / 地点</span><span>岗位要求</span><span>人数</span><span>状态</span><span>更新时间</span><span>操作</span>
             </div>
             {filteredItems.map(item => {
               const statusMeta = getStatusMeta(item.status);
+              const actionLabel = item.status === 'draft' ? '开放岗位' : item.status === 'open' ? '关闭岗位' : '重新开放';
               return (
                 <div className="s3-table-row s3-job-table-columns" key={item.id} role="row">
                   <div className="s3-job-title-cell">
                     <span className="s3-job-mark"><SolutionOutlined /></span>
                     <div><strong>{item.title}</strong><span>岗位 #{item.id}</span></div>
                   </div>
-                  <span className="s3-role-cell">{item.department || '部门未填写'}</span>
+                  <div className="s3-job-location-cell"><strong>{item.department || '部门未填写'}</strong><span>{item.location || '地点未填写'}</span></div>
                   <div className="s3-job-requirement-cell">
-                    <strong>{item.requirementSummary || item.description || '岗位要求未填写'}</strong>
+                    <strong>{item.requirements.responsibilities[0] || item.description || '岗位要求未填写'}</strong>
                     <div>
-                      {item.requiredSkills.slice(0, 3).map(skill => <Tag bordered={false} key={skill}>{skill}</Tag>)}
-                      {item.requiredSkills.length > 3 && <span>+{item.requiredSkills.length - 3}</span>}
+                      {item.requirements.required_skills.slice(0, 3).map(skill => <Tag bordered={false} key={skill}>{skill}</Tag>)}
+                      {item.requirements.required_skills.length > 3 && <span>+{item.requirements.required_skills.length - 3}</span>}
                     </div>
                   </div>
-                  <div className="s3-job-candidate-count"><strong>{item.candidateCount}</strong><span>人</span></div>
+                  <div className="s3-job-candidate-count"><strong>{item.headcount ?? '—'}</strong><span>招聘 / {item.candidateCount} 候选</span></div>
                   <div><Tag bordered={false} className={`s3-status-tag is-${statusMeta.tone}`}>{statusMeta.label}</Tag></div>
                   <span className="s3-time-cell">{formatDateTime(item.updatedAt)}</span>
-                  <Button icon={<EditOutlined />} onClick={() => openForm(item)} size="small">查看结构</Button>
+                  <div className="s3-job-action-cell">
+                    <Button icon={<EditOutlined />} onClick={() => openForm(item)} size="small">编辑</Button>
+                    <Button disabled={operationPending} onClick={() => confirmStatusAction(item)} size="small">{actionLabel}</Button>
+                    {item.status !== 'open' && (
+                      <Button danger disabled={operationPending} icon={<DeleteOutlined />} onClick={() => confirmDelete(item)} size="small" aria-label={`删除岗位 ${item.title}`} />
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -270,49 +497,109 @@ const Stage3JobList: React.FC = () => {
 
       <Drawer
         className="s3-job-form-drawer"
-        extra={(
-          <div className="s3-job-form-actions">
-            <Button onClick={() => setFormOpen(false)}>关闭</Button>
-            <Button disabled type="primary">保存岗位 · 后续</Button>
-          </div>
-        )}
-        onClose={() => setFormOpen(false)}
+        closable={!operationPending}
+        destroyOnClose
+        keyboard={!operationPending}
+        maskClosable={!operationPending}
+        onClose={requestCloseForm}
         open={formOpen}
-        title={selectedJob ? `岗位表单结构 · #${selectedJob.id}` : '新增岗位表单结构'}
-        width="min(520px, 100vw)"
+        title={selectedJob ? `编辑岗位 · #${selectedJob.id}` : '新增岗位'}
+        width="min(720px, 100vw)"
       >
         <Alert
-          description="当前只验证字段和操作布局，保存入口尚未连接 /api/v2 写接口，不会修改 PostgreSQL。"
-          message="阶段 3 表单结构预览"
+          description={selectedJob
+            ? '保存修改不会自动改变岗位状态。开放中的岗位修改后仍需满足全部开放条件。'
+            : '草稿只要求岗位名称；选择“保存并开放”时会检查所有开放必填项。'}
+          message={selectedJob ? `当前状态：${getStatusMeta(selectedJob.status).label}` : '先保存草稿也可以'}
           showIcon
           type="info"
         />
-        <Form className="s3-job-form" form={form} layout="vertical">
-          <Form.Item label="岗位名称" name="title" required>
-            <Input placeholder="例如：高级后端工程师" />
-          </Form.Item>
-          <div className="s3-job-form-grid">
-            <Form.Item label="所属部门" name="department">
-              <Input placeholder="例如：技术部" />
+        {operationError && <Alert className="s3-job-form-error" message={operationError} showIcon type="error" />}
+        <Form
+          className="s3-job-form"
+          form={form}
+          layout="vertical"
+          onValuesChange={() => setDirty(true)}
+        >
+          <section className="s3-job-form-section">
+            <h3>基础信息</h3>
+            <Form.Item label="岗位名称" name="title" rules={[{ required: true, whitespace: true, message: '请填写岗位名称' }, { max: 200, message: '岗位名称不能超过 200 个字符' }]}>
+              <Input placeholder="例如：高级后端工程师" />
             </Form.Item>
-            <Form.Item label="岗位状态" name="status" required>
-              <Select options={[
-                { value: 'open', label: '开放招聘' },
-                { value: 'closed', label: '已关闭' },
-                { value: 'draft', label: '草稿结构' },
-              ]} />
+            <div className="s3-job-form-grid">
+              <Form.Item label="所属部门" name="department" rules={[{ max: 100 }]}><Input placeholder="例如：技术部" /></Form.Item>
+              <Form.Item label="工作地点" name="location" rules={[{ max: 100 }]}><Input placeholder="例如：上海 / 远程" /></Form.Item>
+              <Form.Item label="用工类型" name="employmentType"><Select allowClear options={employmentOptions} placeholder="请选择" /></Form.Item>
+              <Form.Item label="招聘人数" name="headcount"><InputNumber min={1} max={999} precision={0} placeholder="例如：2" /></Form.Item>
+            </div>
+            <Form.Item label="岗位描述" name="description" rules={[{ max: 20000 }]}>
+              <Input.TextArea autoSize={{ minRows: 4, maxRows: 8 }} placeholder="介绍岗位目标、团队和工作内容" />
             </Form.Item>
-          </div>
-          <Form.Item label="岗位描述" name="description">
-            <Input.TextArea autoSize={{ minRows: 4, maxRows: 7 }} placeholder="填写岗位职责和工作内容" />
-          </Form.Item>
-          <Form.Item extra="这里只展示新版 requirements JSONB 对应的摘要字段。" label="任职要求摘要" name="requirementSummary">
-            <Input.TextArea autoSize={{ minRows: 4, maxRows: 7 }} placeholder="填写学历、经验和能力要求" />
-          </Form.Item>
-          <Form.Item extra="多个技能可使用顿号或逗号分隔；当前不会保存。" label="必备技能" name="requiredSkills">
-            <Input placeholder="例如：Python、FastAPI、PostgreSQL" />
-          </Form.Item>
+          </section>
+
+          <section className="s3-job-form-section">
+            <h3>岗位职责</h3>
+            <Form.Item extra="每行一项，开放岗位时至少填写一项。" label="岗位职责" name="responsibilities">
+              <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder={'负责招聘平台岗位管理\n与产品和后端协作交付功能'} />
+            </Form.Item>
+          </section>
+
+          <section className="s3-job-form-section">
+            <h3>必备要求</h3>
+            <div className="s3-job-form-grid">
+              <Form.Item extra="输入后按回车添加。" label="必备技能" name="requiredSkills">
+                <Select mode="tags" placeholder="例如：React" tokenSeparators={[',', '，', '、']} />
+              </Form.Item>
+              <Form.Item label="最低工作年限" name="minimumWorkYears">
+                <InputNumber min={0} max={80} precision={0} placeholder="0 表示不限经验" />
+              </Form.Item>
+              <Form.Item label="学历要求" name="educationRequirement">
+                <Select allowClear options={educationOptions} placeholder="请选择" />
+              </Form.Item>
+            </div>
+            <Form.Item extra="每行一项。" label="必备经历" name="requiredExperiences">
+              <Input.TextArea autoSize={{ minRows: 3, maxRows: 7 }} placeholder="例如：有 B 端系统开发经历" />
+            </Form.Item>
+          </section>
+
+          <section className="s3-job-form-section">
+            <h3>加分与补充</h3>
+            <div className="s3-job-form-grid">
+              <Form.Item extra="输入后按回车添加。" label="加分技能" name="preferredSkills">
+                <Select mode="tags" placeholder="例如：TypeScript" tokenSeparators={[',', '，', '、']} />
+              </Form.Item>
+              <Form.Item extra="每行一项。" label="加分经历" name="preferredExperiences">
+                <Input.TextArea autoSize={{ minRows: 3, maxRows: 7 }} placeholder="例如：有招聘产品经验" />
+              </Form.Item>
+            </div>
+            <Form.Item extra="输入后按回车添加。" label="岗位关键词" name="keywords">
+              <Select mode="tags" placeholder="例如：招聘、SaaS" tokenSeparators={[',', '，', '、']} />
+            </Form.Item>
+            <Form.Item extra="每行一项。" label="其他要求" name="additionalRequirements">
+              <Input.TextArea autoSize={{ minRows: 3, maxRows: 7 }} placeholder="例如：能够接受偶尔出差" />
+            </Form.Item>
+          </section>
         </Form>
+
+        <div className="s3-job-form-footer">
+          <Button disabled={operationPending} onClick={requestCloseForm}>取消</Button>
+          {selectedJob ? (
+            <>
+              {selectedJob.status !== 'open' && (
+                <Button danger disabled={operationPending} icon={<DeleteOutlined />} onClick={() => confirmDelete(selectedJob)}>删除岗位</Button>
+              )}
+              <Button disabled={operationPending || dirty || form.isFieldsTouched()} onClick={() => confirmStatusAction(selectedJob)}>
+                {selectedJob.status === 'draft' ? '开放岗位' : selectedJob.status === 'open' ? '关闭岗位' : '重新开放'}
+              </Button>
+              <Button loading={operationPending} onClick={() => void saveExistingJob()} type="primary">保存修改</Button>
+            </>
+          ) : (
+            <>
+              <Button loading={operationPending} onClick={() => void saveNewJob('draft')}>保存草稿</Button>
+              <Button loading={operationPending} onClick={() => void saveNewJob('open')} type="primary">保存并开放</Button>
+            </>
+          )}
+        </div>
       </Drawer>
     </main>
   );

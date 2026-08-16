@@ -1,6 +1,6 @@
 @echo off
 setlocal
-cd /d "%~dp0frontend"
+cd /d "%~dp0..\frontend"
 
 echo Installing frontend dependencies...
 call npm.cmd install

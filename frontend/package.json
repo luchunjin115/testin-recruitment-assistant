@@ -12,6 +12,9 @@
     "test:resume-experience-import": "node tests/stage3-resume-experience-import.test.mjs",
     "test:resume-supplementary-info": "node tests/stage3-resume-supplementary-info.test.mjs",
     "test:resume-intake-ui-copy": "node tests/stage3-resume-intake-ui-copy.test.mjs",
+    "test:stage3-jobs-service": "node tests/stage3-jobs-service.test.mjs",
+    "test:stage3-jobs-ui": "node tests/stage3-jobs-ui.test.mjs",
+    "test:stage3-job-read-boundaries": "node tests/stage3-job-read-boundaries.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

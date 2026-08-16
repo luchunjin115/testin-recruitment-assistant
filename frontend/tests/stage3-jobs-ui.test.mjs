@@ -1,0 +1,78 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+
+
+const source = await readFile(
+  new URL('../src/stage3/Stage3JobList.tsx', import.meta.url),
+  'utf8',
+);
+const styles = await readFile(
+  new URL('../src/stage3/styles/jobs.css', import.meta.url),
+  'utf8',
+);
+
+for (const expectedText of [
+  '新增岗位',
+  '保存草稿',
+  '保存并开放',
+  '保存修改',
+  '开放岗位',
+  '关闭岗位',
+  '重新开放',
+  '删除岗位',
+  '岗位名称',
+  '所属部门',
+  '工作地点',
+  '用工类型',
+  '招聘人数',
+  '岗位描述',
+  '岗位职责',
+  '必备技能',
+  '加分技能',
+  '最低工作年限',
+  '学历要求',
+  '必备经历',
+  '加分经历',
+  '岗位关键词',
+  '其他要求',
+  '不会删除历史候选人和初筛结果',
+  '岗位已有历史业务数据，不能删除',
+]) {
+  assert.ok(source.includes(expectedText), `岗位页面缺少真实交互或字段：${expectedText}`);
+}
+
+for (const removedText of [
+  '新增岗位 · 表单预览',
+  '查看新增表单结构',
+  '保存岗位 · 后续',
+  '当前不会保存',
+  '不会修改 PostgreSQL',
+]) {
+  assert.equal(source.includes(removedText), false, `岗位页面仍存在骨架文案：${removedText}`);
+}
+
+assert.ok(source.includes('Modal.confirm'), '关闭、重新开放和删除必须提供二次确认');
+assert.ok(source.includes('isFieldsTouched'), '关闭抽屉前必须检查未保存修改');
+assert.ok(source.includes('scrollToField'), '开放校验失败后必须定位第一个字段');
+assert.match(
+  styles,
+  /\.s3-job-form-footer\s*\{[^}]*display:\s*flex;/s,
+  '岗位表单底部操作区必须使用可换行布局',
+);
+assert.match(
+  styles,
+  /\.s3-job-form-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s,
+  '岗位表单两列必须允许收缩，不能被超长技能标签挤坏',
+);
+assert.match(
+  styles,
+  /\.s3-job-form-grid\s*>\s*\.ant-form-item[^{]*\{[^}]*min-width:\s*0;/s,
+  '网格内的表单项必须允许收缩',
+);
+assert.match(
+  styles,
+  /@media\s*\(max-width:\s*560px\)[\s\S]*?\.s3-job-form-footer\s*\{[^}]*flex-direction:\s*column;/s,
+  '390px 窄屏下表单操作按钮必须纵向排列',
+);
+
+console.log('STAGE3_JOBS_UI_TEST_OK');

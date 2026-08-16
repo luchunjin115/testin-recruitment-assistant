@@ -1,10 +1,11 @@
 import { v2Http } from '../../services/http';
+import type { JobStatus } from './jobs';
 
 type JobResponse = {
   id: number;
   title: string;
   department: string | null;
-  status: string;
+  status: JobStatus;
 };
 
 type CandidateResponse = {
@@ -37,7 +38,7 @@ export type Stage3ScreeningJob = {
   id: number;
   title: string;
   department: string | null;
-  status: string;
+  status: JobStatus;
   candidateCount: number;
   resultCount: number;
 };
@@ -50,6 +51,7 @@ export type Stage3ScreeningResult = {
   candidateStatus: string | null;
   jobId: number;
   jobTitle: string;
+  jobStatus: JobStatus | null;
   overallScore: number | null;
   hardPass: boolean | null;
   skillScore: number | null;
@@ -80,8 +82,9 @@ const asString = (value: unknown): string | null => {
 };
 
 export const getStage3ScreeningCenter = async (): Promise<ScreeningCenterSnapshot> => {
-  const [jobsResponse, candidatesResponse, screeningResultsResponse] = await Promise.all([
+  const [jobsResponse, openJobsResponse, candidatesResponse, screeningResultsResponse] = await Promise.all([
     v2Http.get<JobResponse[]>('/jobs'),
+    v2Http.get<JobResponse[]>('/jobs', { params: { status: 'open' } }),
     v2Http.get<CandidateResponse[]>('/candidates'),
     v2Http.get<ScreeningResultResponse[]>('/screening-results'),
   ]);
@@ -115,6 +118,7 @@ export const getStage3ScreeningCenter = async (): Promise<ScreeningCenterSnapsho
         candidateStatus: candidate?.status || null,
         jobId: result.job_id,
         jobTitle: job?.title || `岗位 #${result.job_id}`,
+        jobStatus: job?.status || null,
         overallScore: result.overall_score,
         hardPass: result.hard_pass,
         skillScore: result.skill_score,
@@ -134,14 +138,16 @@ export const getStage3ScreeningCenter = async (): Promise<ScreeningCenterSnapsho
     .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt));
 
   return {
-    jobs: jobsResponse.data.map(job => ({
-      id: job.id,
-      title: job.title,
-      department: job.department,
-      status: job.status,
-      candidateCount: candidateCounts.get(job.id) || 0,
-      resultCount: resultCounts.get(job.id) || 0,
-    })),
+    jobs: openJobsResponse.data
+      .filter(job => job.status === 'open')
+      .map(job => ({
+        id: job.id,
+        title: job.title,
+        department: job.department,
+        status: job.status,
+        candidateCount: candidateCounts.get(job.id) || 0,
+        resultCount: resultCounts.get(job.id) || 0,
+      })),
     items,
     totalCandidates: candidatesResponse.data.length,
     totalResults: items.length,

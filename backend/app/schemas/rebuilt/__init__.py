@@ -1,7 +1,17 @@
 from app.schemas.rebuilt.activity_log import ActivityLogCreate, ActivityLogRead
 from app.schemas.rebuilt.candidate import CandidateCreate, CandidateRead, CandidateUpdate
 from app.schemas.rebuilt.education import EducationCreate, EducationRead, EducationUpdate
-from app.schemas.rebuilt.job import JobCreate, JobRead, JobUpdate
+from app.schemas.rebuilt.job import (
+    JOB_REQUIREMENTS_SCHEMA_VERSION,
+    EducationRequirement,
+    EmploymentType,
+    JobCreate,
+    JobRead,
+    JobRequirementsV1,
+    JobStatus,
+    JobUpdate,
+    empty_job_requirements_v1,
+)
 from app.schemas.rebuilt.project_experience import (
     ProjectExperienceCreate,
     ProjectExperienceRead,
@@ -42,9 +52,15 @@ __all__ = [
     "EducationCreate",
     "EducationRead",
     "EducationUpdate",
+    "JOB_REQUIREMENTS_SCHEMA_VERSION",
+    "EducationRequirement",
+    "EmploymentType",
     "JobCreate",
     "JobRead",
+    "JobRequirementsV1",
+    "JobStatus",
     "JobUpdate",
+    "empty_job_requirements_v1",
     "ProjectExperienceCreate",
     "ProjectExperienceRead",
     "ProjectExperienceUpdate",

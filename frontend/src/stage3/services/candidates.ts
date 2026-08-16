@@ -1,4 +1,5 @@
 import { v2Http } from '../../services/http';
+import type { JobStatus } from './jobs';
 
 export type CandidateListItem = {
   id: number;
@@ -98,6 +99,7 @@ type CandidateResponse = {
 type JobResponse = {
   id: number;
   title: string;
+  status: JobStatus;
 };
 
 export type CandidateListSnapshot = {
@@ -271,6 +273,8 @@ export const createStage3CandidateFromResume = async (
 };
 
 export const getStage3CandidateJobs = async (): Promise<CandidateJobOption[]> => {
-  const response = await v2Http.get<JobResponse[]>('/jobs');
-  return response.data.map(job => ({ id: job.id, title: job.title }));
+  const response = await v2Http.get<JobResponse[]>('/jobs', { params: { status: 'open' } });
+  return response.data
+    .filter(job => job.status === 'open')
+    .map(job => ({ id: job.id, title: job.title }));
 };

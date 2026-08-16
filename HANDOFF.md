@@ -1,6 +1,7 @@
 # 交接说明
 
 > 最后更新：2026-04-26（第二十七轮，新电脑交付启动与演示数据自动兜底后）
+> 本文记录旧版 SQLite 演示系统的历史交接，不代表当前 PostgreSQL 新架构的完成度。当前进度以 `PROJECT_STATE.md` 为准，阶段 5 后产品方向以 `docs/specs/2026-08-14-post-stage5-product-roadmap.md` 为准。
 
 ---
 
