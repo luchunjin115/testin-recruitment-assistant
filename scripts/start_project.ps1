@@ -31,10 +31,61 @@ function Invoke-NativeCommand {
         [Parameter(Mandatory = $true)][string]$FailureMessage
     )
 
-    & $Command @Arguments
-    if ($LASTEXITCODE -ne 0) {
+    $previousErrorPreference = $ErrorActionPreference
+    try {
+        # Windows PowerShell can turn a native program's stderr into a
+        # NativeCommandError. Keep the process output visible, but decide
+        # success from its exit code so callers receive our stable message.
+        $ErrorActionPreference = "Continue"
+        & $Command @Arguments
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorPreference
+    }
+
+    if ($exitCode -ne 0) {
         throw $FailureMessage
     }
+}
+
+function Test-NativeCommand {
+    param(
+        [Parameter(Mandatory = $true)][string]$Command,
+        [Parameter(Mandatory = $true)][string[]]$Arguments
+    )
+
+    $previousErrorPreference = $ErrorActionPreference
+    try {
+        # Readiness checks are expected to fail while a service is starting.
+        # Suppress native stderr and return a Boolean instead of terminating
+        # the whole startup script before it can retry.
+        $ErrorActionPreference = "SilentlyContinue"
+        & $Command @Arguments *> $null
+        $exitCode = $LASTEXITCODE
+    }
+    catch {
+        return $false
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorPreference
+    }
+
+    return $exitCode -eq 0
+}
+
+function Get-DockerDesktopPath {
+    $candidatePaths = @(
+        (Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe")
+    )
+
+    foreach ($candidatePath in $candidatePaths) {
+        if (Test-Path -LiteralPath $candidatePath) {
+            return $candidatePath
+        }
+    }
+
+    return $null
 }
 
 function Test-ListeningPort {
@@ -124,25 +175,39 @@ if ($CheckOnly) {
     Write-Host "Startup script check passed." -ForegroundColor Green
     Write-Host "Project root: $projectRoot"
     Write-Host "Python: $pythonCommand"
+    $dockerReadyForCheck = Test-NativeCommand -Command "docker" -Arguments @("info")
+    $backendDependenciesReady = Test-NativeCommand -Command $pythonCommand -Arguments @(
+        "-c", "import fastapi, uvicorn, alembic, asyncpg, mammoth"
+    )
+    Write-Host "Docker engine ready: $dockerReadyForCheck"
+    Write-Host "Backend dependencies ready: $backendDependenciesReady"
+    if (-not $dockerReadyForCheck) {
+        Write-Host "Docker is currently stopped; a full startup will try to open Docker Desktop and wait for it."
+    }
     Write-Host "Run launch\start_project.bat to start the project."
     exit 0
 }
 
 Write-Host "[1/5] Checking Docker Desktop..." -ForegroundColor Cyan
-& docker info *> $null
-if ($LASTEXITCODE -ne 0) {
-    $dockerDesktopPath = Join-Path $env:ProgramFiles "Docker\Docker\Docker Desktop.exe"
-    if (-not (Test-Path -LiteralPath $dockerDesktopPath)) {
-        throw "Docker Desktop is not running. Open Docker Desktop, wait until it is ready, then run this script again."
+if (-not (Test-NativeCommand -Command "docker" -Arguments @("info"))) {
+    $dockerDesktopPath = Get-DockerDesktopPath
+    if ([string]::IsNullOrWhiteSpace($dockerDesktopPath)) {
+        throw "Docker Desktop was not found. Install Docker Desktop, open it once to finish setup, then run this script again."
     }
 
-    Write-Host "Starting Docker Desktop. This can take about one minute..."
-    Start-Process -FilePath $dockerDesktopPath -WindowStyle Hidden | Out-Null
+    $dockerDesktopProcess = Get-Process -Name "Docker Desktop" -ErrorAction SilentlyContinue
+    if ($null -eq $dockerDesktopProcess) {
+        Write-Host "Docker Desktop is not running. Starting it now..."
+        Start-Process -FilePath $dockerDesktopPath -WindowStyle Hidden | Out-Null
+    }
+    else {
+        Write-Host "Docker Desktop is already starting. Waiting for the engine..."
+    }
+
     $dockerReady = $false
     for ($attempt = 1; $attempt -le 60; $attempt++) {
         Start-Sleep -Seconds 2
-        & docker info *> $null
-        if ($LASTEXITCODE -eq 0) {
+        if (Test-NativeCommand -Command "docker" -Arguments @("info")) {
             $dockerReady = $true
             break
         }
@@ -161,8 +226,10 @@ try {
 
     $postgresReady = $false
     for ($attempt = 1; $attempt -le 30; $attempt++) {
-        & docker compose exec -T postgres pg_isready -U postgres -d recruitment_assistant *> $null
-        if ($LASTEXITCODE -eq 0) {
+        if (Test-NativeCommand -Command "docker" -Arguments @(
+            "compose", "exec", "-T", "postgres",
+            "pg_isready", "-U", "postgres", "-d", "recruitment_assistant"
+        )) {
             $postgresReady = $true
             break
         }
@@ -179,12 +246,9 @@ finally {
 Write-Host "[3/5] Preparing the backend database..." -ForegroundColor Cyan
 Push-Location $backendDir
 try {
-    $previousErrorPreference = $ErrorActionPreference
-    $ErrorActionPreference = "SilentlyContinue"
-    & $pythonCommand -c "import fastapi, uvicorn, alembic, asyncpg" *> $null
-    $dependencyCheckExitCode = $LASTEXITCODE
-    $ErrorActionPreference = $previousErrorPreference
-    if ($dependencyCheckExitCode -ne 0) {
+    if (-not (Test-NativeCommand -Command $pythonCommand -Arguments @(
+        "-c", "import fastapi, uvicorn, alembic, asyncpg, mammoth"
+    ))) {
         Write-Host "Installing missing backend dependencies..."
         Invoke-NativeCommand -Command $pythonCommand -Arguments @(
             "-m", "pip", "install", "-r", "requirements.txt"
