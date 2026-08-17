@@ -69,6 +69,17 @@ class Settings(BaseSettings):
         min_length=1,
         max_length=20,
     )
+    RUBRIC_GENERATION_ENABLED: bool = True
+    RUBRIC_GENERATION_MODEL: str = "deepseek-v4-flash"
+    RUBRIC_GENERATION_TIMEOUT_SECONDS: float = Field(default=90, gt=0, le=600)
+    RUBRIC_GENERATION_MAX_OUTPUT_TOKENS: int = Field(
+        default=8_000,
+        ge=1_000,
+        le=384_000,
+    )
+    RUBRIC_GENERATION_PROMPT_VERSION: str = "rubric_generation_v2"
+    RUBRIC_ITEM_ASSIST_PROMPT_VERSION: str = "rubric_item_assist_v1"
+    RUBRIC_GENERATION_SCHEMA_VERSION: str = "1.0"
 
     UPLOAD_DIR: str = str((BACKEND_DIR / "uploads").resolve())
     V2_STORAGE_DIR: str = str((BACKEND_DIR / "storage").resolve())

@@ -13,9 +13,21 @@ from app.adapters.rebuilt.resume_structure import (
     ResumeStructureTimeoutError,
     ResumeStructureUpstreamError,
 )
+from app.adapters.rebuilt.screening_rubric_generation import (
+    DeepSeekRubricGenerationAdapter,
+    RubricGenerationAdapterError,
+    RubricGenerationAdapterResult,
+    RubricGenerationConfigurationError,
+    RubricGenerationTimeoutError,
+)
 
 __all__ = [
     "DeepSeekResumeStructureAdapter",
+    "DeepSeekRubricGenerationAdapter",
+    "RubricGenerationAdapterError",
+    "RubricGenerationAdapterResult",
+    "RubricGenerationConfigurationError",
+    "RubricGenerationTimeoutError",
     "ResumeStructureAdapterError",
     "ResumeStructureAdapterResult",
     "ResumeStructureAuthenticationError",

@@ -7,6 +7,8 @@ Create Date: 2026-08-17 16:00:00
 
 from __future__ import annotations
 
+import json
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
@@ -25,6 +27,69 @@ DEFAULT_RUBRIC_WEIGHTS = {
     "preferred_qualifications_weight": 10,
     "keywords_and_additional_weight": 5,
 }
+
+DEFAULT_STANDARD_SEMANTIC_ITEMS = [
+    {
+        "key": "responsibility_alignment",
+        "name": "岗位职责相关性",
+        "description": "评价候选人既往实际职责与当前岗位核心职责的相关程度。",
+        "dimension": "work_experience_relevance",
+        "max_score": 10,
+        "suggested_share": 50,
+        "high_score_anchor": "有多段直接相关经历，并清楚说明本人承担的核心职责。",
+        "mid_score_anchor": "有部分相关职责，但覆盖范围、持续时间或本人角色不够完整。",
+        "low_score_anchor": "经历与岗位职责关联较弱，或只有笼统表述而缺少本人职责证据。",
+        "source": "template",
+    },
+    {
+        "key": "experience_depth",
+        "name": "相关经验深度",
+        "description": "评价候选人是否在岗位相关场景中承担过有实质深度的工作。",
+        "dimension": "work_experience_relevance",
+        "max_score": 10,
+        "suggested_share": 50,
+        "high_score_anchor": "长期承担关键工作，能够说明复杂场景、决策和实际结果。",
+        "mid_score_anchor": "具备相关实践，但复杂度、独立性或结果证据有限。",
+        "low_score_anchor": "仅接触基础任务，或无法证明真实参与深度。",
+        "source": "template",
+    },
+    {
+        "key": "project_impact",
+        "name": "项目成果与影响",
+        "description": "评价候选人项目成果是否具体、可核对并与岗位目标相关。",
+        "dimension": "projects_and_capability",
+        "max_score": 10,
+        "suggested_share": 50,
+        "high_score_anchor": "成果具体且可核对，能说明本人贡献和对业务或交付的明确影响。",
+        "mid_score_anchor": "有项目成果，但量化程度、本人贡献或岗位相关性不完整。",
+        "low_score_anchor": "只有项目名称或职责罗列，没有可核对的结果证据。",
+        "source": "template",
+    },
+    {
+        "key": "problem_solving_depth",
+        "name": "问题解决能力",
+        "description": "评价候选人识别、分析和解决岗位相关复杂问题的实际证据。",
+        "dimension": "projects_and_capability",
+        "max_score": 10,
+        "suggested_share": 50,
+        "high_score_anchor": "能够说明复杂问题、分析过程、关键决策、解决方案和最终结果。",
+        "mid_score_anchor": "参与过问题处理，但分析深度、独立性或结果证据有限。",
+        "low_score_anchor": "只有一般性能力描述，没有具体问题和解决过程。",
+        "source": "template",
+    },
+    {
+        "key": "role_specific_context",
+        "name": "岗位补充场景匹配",
+        "description": "评价岗位补充说明中需要理解上下文的工作场景是否有简历证据支持。",
+        "dimension": "keywords_and_additional",
+        "max_score": 10,
+        "suggested_share": 100,
+        "high_score_anchor": "有直接、完整且可核对的相关场景证据。",
+        "mid_score_anchor": "存在部分相关场景，但范围或结果证据不足。",
+        "low_score_anchor": "没有直接相关场景，或只能依靠宽泛描述推测。",
+        "source": "template",
+    },
+]
 
 
 def upgrade() -> None:
@@ -63,11 +128,11 @@ def upgrade() -> None:
             server_default="5",
             nullable=False,
         ),
-        sa.Column("schema_version", sa.String(length=20), server_default="1.0", nullable=False),
+        sa.Column("schema_version", sa.String(length=20), server_default="2.0", nullable=False),
         sa.Column(
             "subcriteria_version",
             sa.String(length=20),
-            server_default="1.0",
+            server_default="2.0",
             nullable=False,
         ),
         sa.Column(
@@ -83,11 +148,53 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("is_current", sa.Boolean(), server_default="true", nullable=False),
+        sa.Column(
+            "source",
+            sa.String(length=30),
+            server_default="standard_template",
+            nullable=False,
+        ),
+        sa.Column(
+            "template_key",
+            sa.String(length=30),
+            server_default="standard",
+            nullable=True,
+        ),
+        sa.Column(
+            "status",
+            sa.String(length=20),
+            server_default="active",
+            nullable=False,
+        ),
+        sa.Column(
+            "semantic_items",
+            postgresql.JSONB(),
+            nullable=False,
+        ),
+        sa.Column("job_fingerprint", sa.String(length=64), nullable=True),
+        sa.Column(
+            "is_stale",
+            sa.Boolean(),
+            server_default="false",
+            nullable=False,
+        ),
+        sa.Column("stale_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("stale_reason", sa.Text(), nullable=True),
+        sa.Column("generation_metadata", postgresql.JSONB(), nullable=True),
         sa.Column("change_reason", sa.String(length=50), nullable=False),
         sa.Column("change_detail", sa.Text(), nullable=True),
         sa.Column("created_by", sa.String(length=100), nullable=True),
+        sa.Column("confirmed_by", sa.String(length=100), nullable=True),
+        sa.Column("confirmed_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("abandoned_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column(
             "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
+        ),
+        sa.Column(
+            "updated_at",
             sa.DateTime(timezone=True),
             server_default=sa.text("now()"),
             nullable=False,
@@ -122,6 +229,35 @@ def upgrade() -> None:
             "keywords_and_additional_weight = 100",
             name="ck_job_screening_rubrics_weight_total",
         ),
+        sa.CheckConstraint(
+            "source IN ('standard_template', 'technical_template', "
+            "'non_technical_template', 'ai_generated', 'hr_manual', "
+            "'legacy_migration')",
+            name="ck_job_screening_rubrics_source_allowed",
+        ),
+        sa.CheckConstraint(
+            "status IN ('draft', 'active', 'archived', 'abandoned')",
+            name="ck_job_screening_rubrics_status_allowed",
+        ),
+        sa.CheckConstraint(
+            "template_key IS NULL OR template_key IN "
+            "('standard', 'technical', 'non_technical')",
+            name="ck_job_screening_rubrics_template_allowed",
+        ),
+        sa.CheckConstraint(
+            "jsonb_typeof(semantic_items) = 'array'",
+            name="ck_job_screening_rubrics_semantic_items_array",
+        ),
+        sa.CheckConstraint(
+            "status NOT IN ('active', 'archived') OR "
+            "jsonb_array_length(semantic_items) BETWEEN 4 AND 10",
+            name="ck_job_screening_rubrics_published_item_count",
+        ),
+        sa.CheckConstraint(
+            "(status = 'active' AND is_current = true) OR "
+            "(status <> 'active' AND is_current = false)",
+            name="ck_job_screening_rubrics_current_status_consistent",
+        ),
         sa.ForeignKeyConstraint(["job_id"], ["jobs.id"]),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
@@ -143,13 +279,43 @@ def upgrade() -> None:
         unique=False,
     )
     op.create_index(
+        "ix_job_screening_rubrics_job_fingerprint",
+        "job_screening_rubrics",
+        ["job_fingerprint"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_job_screening_rubrics_is_stale",
+        "job_screening_rubrics",
+        ["is_stale"],
+        unique=False,
+    )
+    op.create_index(
+        "ix_job_screening_rubrics_status",
+        "job_screening_rubrics",
+        ["status"],
+        unique=False,
+    )
+    op.create_index(
         "uq_job_screening_rubrics_current_job",
         "job_screening_rubrics",
         ["job_id"],
         unique=True,
         postgresql_where=sa.text("is_current = true"),
     )
+    op.create_index(
+        "uq_job_screening_rubrics_draft_job",
+        "job_screening_rubrics",
+        ["job_id"],
+        unique=True,
+        postgresql_where=sa.text("status = 'draft'"),
+    )
 
+    semantic_items_json = json.dumps(
+        DEFAULT_STANDARD_SEMANTIC_ITEMS,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
     op.execute(
         sa.text(
             """
@@ -166,9 +332,15 @@ def upgrade() -> None:
                 recommendation_thresholds_version,
                 fairness_rules_version,
                 is_current,
+                source,
+                template_key,
+                status,
+                semantic_items,
                 change_reason,
                 change_detail,
-                created_by
+                created_by,
+                confirmed_by,
+                confirmed_at
             )
             SELECT
                 id,
@@ -178,18 +350,24 @@ def upgrade() -> None:
                 20,
                 10,
                 5,
-                '1.0',
-                '1.0',
+                '2.0',
+                '2.0',
                 '1.0',
                 '1.0',
                 true,
+                'standard_template',
+                'standard',
+                'active',
+                CAST(:semantic_items AS jsonb),
                 'initial_default',
                 '阶段 7 migration 为既有岗位创建默认 Rubric',
-                'migration'
+                'migration',
+                'migration',
+                now()
             FROM jobs
             ORDER BY id
             """
-        )
+        ).bindparams(semantic_items=semantic_items_json)
     )
 
     op.create_table(
@@ -625,7 +803,23 @@ def downgrade() -> None:
     )
 
     op.drop_index(
+        "uq_job_screening_rubrics_draft_job",
+        table_name="job_screening_rubrics",
+    )
+    op.drop_index(
         "uq_job_screening_rubrics_current_job",
+        table_name="job_screening_rubrics",
+    )
+    op.drop_index(
+        "ix_job_screening_rubrics_status",
+        table_name="job_screening_rubrics",
+    )
+    op.drop_index(
+        "ix_job_screening_rubrics_is_stale",
+        table_name="job_screening_rubrics",
+    )
+    op.drop_index(
+        "ix_job_screening_rubrics_job_fingerprint",
         table_name="job_screening_rubrics",
     )
     op.drop_index(

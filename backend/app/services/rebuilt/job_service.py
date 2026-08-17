@@ -91,7 +91,12 @@ class JobService:
             job = Job(**payload)
             db.add(job)
             await db.flush()
-            db.add(ScreeningRubricService.build_default_rubric(job_id=job.id))
+            db.add(
+                ScreeningRubricService.build_default_rubric(
+                    job_id=job.id,
+                    job_fingerprint=ScreeningRubricService.build_job_fingerprint(payload),
+                )
+            )
             await db.commit()
             await db.refresh(job)
             return job
@@ -127,13 +132,29 @@ class JobService:
                 return None
 
             changes = data.model_dump(exclude_unset=True, mode="json")
+            current_values = self._job_values(job)
+            old_fingerprint = ScreeningRubricService.build_job_fingerprint(
+                current_values
+            )
+            prospective = dict(current_values)
+            prospective.update(changes)
             if self._status_value(job.status) == JobStatus.OPEN.value:
-                prospective = self._job_values(job)
-                prospective.update(changes)
                 self._ensure_open_valid(prospective)
 
             for field, value in changes.items():
                 setattr(job, field, value)
+
+            new_fingerprint = ScreeningRubricService.build_job_fingerprint(
+                prospective
+            )
+            if new_fingerprint != old_fingerprint:
+                await ScreeningRubricService().mark_current_stale(
+                    db,
+                    job_id=job_id,
+                    old_fingerprint=old_fingerprint,
+                    new_fingerprint=new_fingerprint,
+                    reason="岗位评分相关内容已修改，需要 HR 重新确认评分标准",
+                )
 
             await db.commit()
             await db.refresh(job)

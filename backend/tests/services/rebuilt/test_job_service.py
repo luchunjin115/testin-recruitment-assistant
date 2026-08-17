@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, Mock
 
 from sqlalchemy.dialects import postgresql
 
+from app.models.rebuilt.activity_log import ActivityLog
 from app.models.rebuilt.job import Job
 from app.models.rebuilt.job_screening_rubric import JobScreeningRubric
 from app.schemas.rebuilt.job import JobCreate, JobUpdate
@@ -106,6 +107,11 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(rubric.version, 1)
         self.assertEqual(rubric.weights["must_have_requirements"], 40)
         self.assertTrue(rubric.is_current)
+        self.assertEqual(rubric.status, "active")
+        self.assertEqual(rubric.source, "standard_template")
+        self.assertEqual(rubric.template_key, "standard")
+        self.assertEqual(len(rubric.semantic_items), 5)
+        self.assertEqual(len(rubric.job_fingerprint), 64)
         self.db.flush.assert_awaited_once()
         self.db.commit.assert_awaited_once()
         self.db.refresh.assert_awaited_once_with(job)
@@ -223,6 +229,38 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         self.assertIs(job, existing)
         self.assertEqual(existing.title, "高级后端开发工程师")
         self.assertEqual(existing.headcount, 3)
+        self.db.commit.assert_awaited_once()
+
+    async def test_scoring_related_job_change_marks_rubric_and_results_stale(self) -> None:
+        existing = make_job(status="open")
+        self.db.scalar.return_value = existing
+
+        await self.service.update_job(
+            self.db,
+            1,
+            JobUpdate(description="负责新的 AI 招聘平台核心能力"),
+        )
+
+        self.assertEqual(self.db.execute.await_count, 2)
+        statements = [str(call.args[0]) for call in self.db.execute.await_args_list]
+        self.assertIn("UPDATE job_screening_rubrics", statements[0])
+        self.assertIn("UPDATE screening_results", statements[1])
+        activity = self.db.add.call_args.args[0]
+        self.assertIsInstance(activity, ActivityLog)
+        self.assertEqual(activity.action, "job_screening_rubric_marked_stale")
+        self.db.commit.assert_awaited_once()
+
+    async def test_non_scoring_job_change_does_not_mark_rubric_stale(self) -> None:
+        existing = make_job(status="open")
+        self.db.scalar.return_value = existing
+
+        await self.service.update_job(
+            self.db,
+            1,
+            JobUpdate(headcount=5, location="杭州"),
+        )
+
+        self.db.execute.assert_not_awaited()
         self.db.commit.assert_awaited_once()
 
     async def test_update_returns_none_when_not_found(self) -> None:

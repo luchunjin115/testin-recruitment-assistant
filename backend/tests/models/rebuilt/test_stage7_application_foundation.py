@@ -58,7 +58,16 @@ class JobScreeningRubricModelTest(TestCase):
         self.assertEqual(table.c.projects_and_capability_weight.server_default.arg, "20")
         self.assertEqual(table.c.preferred_qualifications_weight.server_default.arg, "10")
         self.assertEqual(table.c.keywords_and_additional_weight.server_default.arg, "5")
-        self.assertEqual(table.c.schema_version.server_default.arg, "1.0")
+        self.assertEqual(table.c.schema_version.server_default.arg, "2.0")
+        self.assertEqual(table.c.subcriteria_version.server_default.arg, "2.0")
+        self.assertEqual(table.c.source.server_default.arg, "standard_template")
+        self.assertEqual(table.c.template_key.server_default.arg, "standard")
+        self.assertEqual(table.c.status.server_default.arg, "active")
+        self.assertFalse(table.c.semantic_items.nullable)
+        self.assertTrue(table.c.job_fingerprint.nullable)
+        self.assertEqual(table.c.is_stale.server_default.arg, "false")
+        self.assertTrue(table.c.stale_at.nullable)
+        self.assertTrue(table.c.stale_reason.nullable)
         self.assertTrue(
             {
                 "uq_job_screening_rubrics_job_version",
@@ -69,6 +78,12 @@ class JobScreeningRubricModelTest(TestCase):
                 "ck_job_screening_rubrics_preferred_weight_range",
                 "ck_job_screening_rubrics_additional_weight_range",
                 "ck_job_screening_rubrics_weight_total",
+                "ck_job_screening_rubrics_source_allowed",
+                "ck_job_screening_rubrics_status_allowed",
+                "ck_job_screening_rubrics_template_allowed",
+                "ck_job_screening_rubrics_semantic_items_array",
+                "ck_job_screening_rubrics_published_item_count",
+                "ck_job_screening_rubrics_current_status_consistent",
             }.issubset(constraint_names)
         )
 
@@ -83,6 +98,17 @@ class JobScreeningRubricModelTest(TestCase):
         self.assertEqual(
             str(index.dialect_options["postgresql"]["where"]),
             "is_current = true",
+        )
+
+        draft_index = next(
+            item
+            for item in JobScreeningRubric.__table__.indexes
+            if item.name == "uq_job_screening_rubrics_draft_job"
+        )
+        self.assertTrue(draft_index.unique)
+        self.assertEqual(
+            str(draft_index.dialect_options["postgresql"]["where"]),
+            "status = 'draft'",
         )
 
 

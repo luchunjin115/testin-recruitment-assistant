@@ -14,6 +14,7 @@ from app.schemas.rebuilt import (
     ScreeningRubricWeights,
     default_screening_rubric_weights,
 )
+from app.prompts.rebuilt.screening_rubric_templates import get_rubric_template
 
 
 class ScreeningRubricWeightsTest(TestCase):
@@ -118,20 +119,33 @@ class ScreeningRubricRequestTest(TestCase):
             job_id=2,
             version=1,
             weights=default_screening_rubric_weights(),
-            schema_version="1.0",
-            subcriteria_version="1.0",
+            schema_version="2.0",
+            subcriteria_version="2.0",
             recommendation_thresholds_version="1.0",
             fairness_rules_version="1.0",
             is_current=True,
+            source="standard_template",
+            template_key="standard",
+            status="active",
+            semantic_items=get_rubric_template("standard").semantic_items,
+            job_fingerprint="a" * 64,
+            is_stale=False,
+            stale_at=None,
+            stale_reason=None,
+            generation_metadata=None,
             change_reason="initial_default",
             change_detail=None,
             created_by=None,
+            confirmed_by="system",
+            confirmed_at=timestamp,
+            abandoned_at=None,
             created_at=timestamp,
+            updated_at=timestamp,
         )
         self.assertTrue(rubric.is_current)
 
         payload = rubric.model_dump()
-        payload["schema_version"] = "2.0"
+        payload["schema_version"] = "3.0"
         with self.assertRaises(ValidationError):
             JobScreeningRubricRead.model_validate(payload)
 

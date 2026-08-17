@@ -7,13 +7,20 @@ from app.models.rebuilt.job import Job
 from app.models.rebuilt.job_screening_rubric import JobScreeningRubric
 from app.schemas.rebuilt.screening_rubric import (
     JobScreeningRubricRead,
+    ScreeningRubricDraftUpdateRequest,
+    ScreeningRubricPublishRequest,
+    ScreeningRubricReconfirmRequest,
+    ScreeningRubricTemplateDraftRequest,
     ScreeningRubricUpdateRequest,
 )
 from app.services.rebuilt.screening_rubric_service import (
     CurrentScreeningRubricNotFoundError,
+    ScreeningRubricPublishValidationError,
     ScreeningRubricJobNotFoundError,
     ScreeningRubricService,
+    ScreeningRubricStaleError,
 )
+from app.prompts.rebuilt.screening_rubric_templates import get_rubric_template
 
 
 TEST_TIME = datetime(2026, 8, 17, tzinfo=timezone.utc)
@@ -45,15 +52,31 @@ def make_rubric(
         projects_and_capability_weight=weights[2],
         preferred_qualifications_weight=weights[3],
         keywords_and_additional_weight=weights[4],
-        schema_version="1.0",
-        subcriteria_version="1.0",
+        schema_version="2.0",
+        subcriteria_version="2.0",
         recommendation_thresholds_version="1.0",
         fairness_rules_version="1.0",
         is_current=is_current,
+        source="standard_template",
+        template_key="standard",
+        status="active" if is_current else "archived",
+        semantic_items=[
+            item.model_dump(mode="json")
+            for item in get_rubric_template("standard").semantic_items
+        ],
+        job_fingerprint="a" * 64,
+        is_stale=False,
+        stale_at=None,
+        stale_reason=None,
+        generation_metadata=None,
         change_reason="initial_default",
         change_detail="默认规则",
         created_by="system",
+        confirmed_by="system",
+        confirmed_at=TEST_TIME,
+        abandoned_at=None,
         created_at=TEST_TIME,
+        updated_at=TEST_TIME,
     )
 
 
@@ -62,6 +85,8 @@ def make_session() -> Mock:
     session.get = AsyncMock()
     session.scalar = AsyncMock()
     session.add_all = Mock()
+    session.add = Mock()
+    session.execute = AsyncMock()
     session.flush = AsyncMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
@@ -116,8 +141,12 @@ class ScreeningRubricServiceTest(IsolatedAsyncioTestCase):
         result = await self.service.update_rubric(self.db, 1, request)
 
         self.assertFalse(current.is_current)
+        self.assertEqual(current.status, "archived")
         self.assertEqual(result.version, 2)
         self.assertTrue(result.is_current)
+        self.assertEqual(result.status, "active")
+        self.assertEqual(len(result.semantic_items), 5)
+        self.assertEqual(result.job_fingerprint, "a" * 64)
         self.assertEqual(result.change_reason, "hr_adjustment")
         self.assertEqual(result.weights["must_have_requirements"], 45)
         rubric, activity = self.db.add_all.call_args.args[0]
@@ -176,3 +205,131 @@ class ScreeningRubricServiceTest(IsolatedAsyncioTestCase):
 
         self.assertEqual(result.weights.must_have_requirements, 40)
         self.assertEqual(result.version, 1)
+
+    async def test_template_draft_is_saved_without_replacing_active_rubric(self) -> None:
+        job = make_job()
+        current = make_rubric()
+        self.db.scalar.side_effect = [job, None, current, 2]
+
+        draft = await self.service.create_template_draft(
+            self.db,
+            1,
+            ScreeningRubricTemplateDraftRequest(
+                template_key="technical",
+                change_detail="从技术岗位模板开始编辑",
+            ),
+        )
+
+        self.assertEqual(draft.status, "draft")
+        self.assertFalse(draft.is_current)
+        self.assertEqual(draft.version, 2)
+        self.assertEqual(draft.template_key, "technical")
+        self.assertTrue(current.is_current)
+        self.assertEqual(current.status, "active")
+        self.assertEqual(
+            draft.job_fingerprint,
+            self.service.build_job_fingerprint(self.service._job_values(job)),
+        )
+        self.db.commit.assert_awaited_once()
+
+    async def test_changed_job_fingerprint_blocks_draft_update(self) -> None:
+        job = make_job()
+        draft = make_rubric(version=2, is_current=False)
+        draft.status = "draft"
+        draft.confirmed_by = None
+        draft.confirmed_at = None
+        draft.job_fingerprint = "b" * 64
+        self.db.scalar.side_effect = [job, draft]
+
+        with self.assertRaises(ScreeningRubricStaleError):
+            await self.service.update_draft(
+                self.db,
+                1,
+                ScreeningRubricDraftUpdateRequest(
+                    expected_job_fingerprint="b" * 64,
+                    weights=draft.weights,
+                    change_detail="保存草稿",
+                ),
+            )
+
+        self.db.commit.assert_not_awaited()
+        self.db.rollback.assert_awaited_once()
+
+    async def test_publish_archives_current_and_marks_old_results_outdated(self) -> None:
+        job = make_job()
+        fingerprint = self.service.build_job_fingerprint(self.service._job_values(job))
+        current = make_rubric()
+        draft = make_rubric(version=2, is_current=False)
+        draft.status = "draft"
+        draft.job_fingerprint = fingerprint
+        draft.confirmed_by = None
+        draft.confirmed_at = None
+        self.db.scalar.side_effect = [job, draft, current]
+
+        result = await self.service.publish_draft(
+            self.db,
+            1,
+            ScreeningRubricPublishRequest(
+                expected_job_fingerprint=fingerprint,
+                change_detail="确认并发布技术岗位评分标准",
+            ),
+        )
+
+        self.assertIs(result, draft)
+        self.assertEqual(current.status, "archived")
+        self.assertFalse(current.is_current)
+        self.assertEqual(draft.status, "active")
+        self.assertTrue(draft.is_current)
+        self.assertFalse(draft.is_stale)
+        self.db.execute.assert_awaited_once()
+        self.assertIn("UPDATE screening_results", str(self.db.execute.await_args.args[0]))
+        self.db.commit.assert_awaited_once()
+
+    async def test_publish_rejects_draft_with_too_few_semantic_items(self) -> None:
+        job = make_job()
+        fingerprint = self.service.build_job_fingerprint(self.service._job_values(job))
+        current = make_rubric()
+        draft = make_rubric(version=2, is_current=False)
+        draft.status = "draft"
+        draft.job_fingerprint = fingerprint
+        draft.semantic_items = draft.semantic_items[:3]
+        self.db.scalar.side_effect = [job, draft, current]
+
+        with self.assertRaises(ScreeningRubricPublishValidationError):
+            await self.service.publish_draft(
+                self.db,
+                1,
+                ScreeningRubricPublishRequest(
+                    expected_job_fingerprint=fingerprint,
+                    change_detail="尝试发布不完整草稿",
+                ),
+            )
+
+        self.assertTrue(current.is_current)
+        self.db.commit.assert_not_awaited()
+        self.db.rollback.assert_awaited_once()
+
+    async def test_reconfirm_creates_new_active_version_for_stale_rubric(self) -> None:
+        job = make_job()
+        fingerprint = self.service.build_job_fingerprint(self.service._job_values(job))
+        current = make_rubric()
+        current.is_stale = True
+        current.stale_reason = "岗位描述已修改"
+        self.db.scalar.side_effect = [job, current, 2]
+
+        result = await self.service.reconfirm_current(
+            self.db,
+            1,
+            ScreeningRubricReconfirmRequest(
+                expected_job_fingerprint=fingerprint,
+                change_detail="确认原评分标准仍然适用",
+            ),
+        )
+
+        self.assertEqual(current.status, "archived")
+        self.assertFalse(current.is_current)
+        self.assertEqual(result.version, 2)
+        self.assertEqual(result.status, "active")
+        self.assertFalse(result.is_stale)
+        self.assertEqual(result.job_fingerprint, fingerprint)
+        self.db.commit.assert_awaited_once()

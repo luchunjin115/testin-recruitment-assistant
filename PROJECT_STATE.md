@@ -1,6 +1,6 @@
 # 项目进度状态
 
-> 最新更新：2026-08-17（阶段 7 小步骤 1—5 已完成；Rubric 方案改为“预设模板 + AI 根据岗位生成评分项”，已确认默认 5—8 个、允许 4—10 个语义项及“结构化要求由 Python 执行、手动语义规则发布后由 DeepSeek 评价”的双入口，步骤 6 继续等待其余设计门禁确认，正式开发库尚未升级）
+> 最新更新：2026-08-17（阶段 7 小步骤 1—5 与 Rubric 修订小步骤 5A 已完成；下一步进入小步骤 6 DeepSeek 候选人语义评价 Adapter；正式开发库仍停留在阶段 6 revision，尚未升级）
 
 ## 当前总状态：🚧 新架构重建已启动，旧版演示系统作为迁移资产保留
 
@@ -755,7 +755,7 @@
 - 阶段 6 的自动化、真实 PostgreSQL 和真实 API 技术集成验收已经通过；用户于 2026-08-17 明确确认阶段 6 已完成，阶段 7 前置门禁据此关闭。此前 Codex 受控浏览器没有可用实例的事实仍保留在上方记录中，本次用户确认不伪装成新增的 Codex 截图证据。
 - 阶段 6 由 HR 直接填写结构化岗位表单，不把 AI 解析 JD 作为必经步骤，也不在本阶段调用 DeepSeek。综合 Agent 后续可以按 HR 明确要求生成 JD 草稿，并在 HR 确认后保存。
 - 阶段 6 业务方案、专项设计、技术集成验收和用户最终确认均已完成，已允许进入阶段 7。
-- 阶段 7 小步骤 1—5 已按原专项设计完成。用户随后明确选择 Reqcore 式“预设模板 + AI 根据岗位生成评分项”；该变更重新打开评分子方案门禁，下一步不是直接进入 DeepSeek 候选人评价 Adapter，而是先确认修订后的专项设计，再执行小步骤 5A。
+- 阶段 7 小步骤 1—5 已按原专项设计完成。用户随后明确选择 Reqcore 式“预设模板 + AI 根据岗位生成评分项”，并已逐项确认小步骤 5A 的修订设计；评分子方案门禁现已关闭，下一步执行小步骤 5A，完成前不直接进入 DeepSeek 候选人评价 Adapter。
 - 后续路线暂定为：阶段 7 Application 与 AI 初筛底座；阶段 8 公开投递和自动初筛；阶段 9 面试、Offer、录取和报告；阶段 10 首页综合 Agent；阶段 11 知识库 RAG 与语义搜索；阶段 12 质量、权限、部署和交付。
 - 已新增 `docs/research/2026-08-15-github-recruiting-project-comparison.md`，对比 Reqcore、SAP Recruiting Agent、HackerRank Hiring Agent、Resume Screening RAG Pipeline 和 MCP Resume Screening，记录当前差距、借鉴原因和明确不借鉴项。
 - Reqcore 只用于校准 Application、招聘 Pipeline、公开/后台接口、私有简历和数据保留；不切换其 Nuxt/Vue 技术栈，不直接复制 AGPL 代码，也不提前建设多租户和计费。
@@ -763,7 +763,7 @@
 - 阶段 10 借鉴 SAP Recruiting Agent 的职责分工，固定方向为 `Agent -> Tool -> Service -> PostgreSQL/Chroma`；Tools 必须强类型、可测试、可授权和可审计，MCP 仅作为未来外部调用适配，不是当前 MVP 必选项。
 - 阶段 11 使用 `Resume.raw_text` 和 `Resume.parsed_snapshot` 生成带来源元数据的检索片段，支持查询分类、结构化过滤、Small-to-Big、去重重排和引用；RAG 负责召回，不替代正式初筛评分，也不生成 `.md` 文件。
 
-### 阶段 7：Application 与 AI 初筛底座（进行中：小步骤 1—5 已完成，评分方案修订待确认）
+### 阶段 7：Application 与 AI 初筛底座（进行中：小步骤 1—5、5A 已完成）
 
 #### 已确认的业务边界
 
@@ -788,7 +788,7 @@
 
 - 使用 20 份脱敏样本覆盖高匹配 4、中匹配 4、低匹配 4、硬性失败 3、信息未知 3、资料冲突 2；敏感信息隔离率和确定性规则正确率必须 100%，Schema 成功率至少 95%，证据可定位率至少 90%，推荐方向与 HR 复核一致率至少 80%，关键事实幻觉为 0。
 - 完成 Schema、Model/migration、Application Service/API、HR 决策、Rubric、DeepSeek Adapter、ScreeningService、小批量、前端、旧数据迁移和综合验收共 12 个小步骤；每次只推进一个可理解、可验证的小步骤。
-- 阶段 6 已获用户最终确认；阶段 7 Application/状态部分门禁仍然有效，但评分核心方案发生变化，评分子方案门禁已重新打开。只有用户确认修订后的 `docs/specs/2026-08-17-stage7-application-ai-screening-design.md`，才能修改 Rubric 业务代码并继续步骤 6。
+- 阶段 6 已获用户最终确认；阶段 7 Application/状态部分门禁继续有效。用户已逐项确认小步骤 5A 的内部占比、AI 权重建议、空维度、岗位变更、失败语义、草稿发布、AI 辅助和验收场景，评分子方案门禁已关闭，可以修改 Rubric 业务代码；小步骤 5A 验证完成前仍不能进入步骤 6。
 
 #### 小步骤 1：Application、StageHistory 与 Rubric Schema（已完成）
 
@@ -848,7 +848,7 @@
 - 独立临时 PostgreSQL 验证中，新岗位自动获得版本 1；两个并发调整安全生成版本 2、3 且只有版本 3 为 current；故意制造版本约束失败后版本 3 保持 current；无引用草稿岗位与 Rubric 均可清理，临时数据库已删除。
 - 本步位于 `API -> Schema -> ScreeningRubricService/ScreeningRuleService -> JobScreeningRubric/ActivityLog -> PostgreSQL`。它已经能管理评分尺子并进行纯规则计算，但还没有生成真实语义档位、没有调用 DeepSeek、没有保存 ScreeningResult、没有修改前端或升级正式开发库。下一小步是 DeepSeek 语义评价 Adapter。
 
-#### Rubric 方案变更检查点（数量边界已确认，其余设计门禁待确认）
+#### Rubric 方案变更检查点（需求已全部确认，下一步执行小步骤 5A）
 
 - 用户明确选择借鉴 Reqcore 的“预设模板 + AI 根据 JD/岗位生成评分项”思路；本项目保留五维外框、Python 确定性规则、HR 决策边界和不可变版本历史，不直接照搬其全部模型评分方式。
 - 新岗位仍自动创建 `standard` 默认 Rubric，不在创建事务中调用 DeepSeek；HR 可预览技术/非技术模板，或主动默认生成 5—8 个岗位专用语义项，简单/复杂岗位允许 4—10 个。Python 确定性规则不计入该数量，语义项不得与确定性规则重复计分。
@@ -856,7 +856,57 @@
 - HR 手动语义项与模板/AI 生成项使用相同的 4—10 条总量、公平性、去重、证据和版本约束。新增规则只影响新评分；旧结果保留并标记 outdated，不自动重跑。
 - AI 生成结果不得自动生效。HR 审核名称、说明、维度、0—10 分锚点和占比后发布新版本；生成失败、非法输出、偏见项或岗位输入已变化时，当前 Rubric 和岗位保持不变。
 - 语义评分由六档改为 `0—10/unknown + confidence/evidence/reason/strengths/gaps`；未配置亮点忽略，学历阶段 7 只比较学历层级，不判断 985/211 或公司院校名单。
-- 该变化会调整 `screening_rubric.py`、JobScreeningRubric Model/migration、Rubric Service/API、固定子项与六档规则测试，并新增模板、RubricGenerationAdapter 和 ScreeningPromptBuilder。当前只更新权威文档，没有修改上述业务代码，步骤 6 继续暂停。
+- 五维内部由确定性规则与语义项共同分配 100% 占比；系统提供安全初值，AI 可以生成或优化占比并说明理由，但只能进入草稿。空维度按其他有效维度原权重比例重分配，已配置但缺证据必须保持 unknown。
+- 影响评分的岗位字段变化会使 Rubric 待重新确认、旧结果 outdated 并暂停新评分；AI 失败、非法输出或生成期间岗位变化不影响当前正式版本。每个岗位最多一个编辑草稿，发布生成不可变新版本，放弃和替换留审计。
+- HR 可以让 AI 生成整份评分标准，也可以用 AI 完善手动评分项的说明和高/中/低分锚点；所有结果均须后端校验和 HR 发布。
+- 小步骤 5A 的验收覆盖技术/非技术岗位生成、手动项 AI 辅助、重复/偏见拦截、草稿隔离、发布与历史版本、岗位过期、失败不破坏和生成并发变化；先用 Fake Adapter 完整验证，再用少量脱敏岗位验证真实 DeepSeek。
+- 该变化会调整 `screening_rubric.py`、JobScreeningRubric Model/migration、Rubric Service/API、固定子项与六档规则测试，并新增模板、RubricGenerationAdapter 和 ScreeningPromptBuilder。当前已完成权威文档对齐，尚未修改上述业务代码；下一步执行小步骤 5A，步骤 6 继续暂停。
+
+#### 小步骤 5A 第一小段：Rubric v2 合同、模板与 Prompt Builder（已完成）
+
+- 已在 `backend/app/schemas/rebuilt/screening_rubric.py` 增加 Rubric 来源、模板、生命周期、评分项来源和固定五维枚举；新增严格语义评分项合同，固定 `max_score=10`、内部占比 1—100、稳定 key、高/中/低分锚点及公平性禁止内容。
+- 已明确区分“允许暂时不完整的编辑草稿”和“必须包含 4—10 个语义项的可发布内容”；AI 生成输出固定为 4—10 项、`source=ai_generated`、拒绝额外字段、重复 key、重复名称和非法维度。HR 手动新增只填写名称、维度、说明、占比和三档锚点，不暴露内部 key、source、max_score 或 Prompt。
+- 已在 `backend/app/prompts/rebuilt/screening_rubric_templates.py` 新增 `standard/technical/non_technical` 三套后端版本化模板，分别提供 5、6、6 个可从简历核对的语义评分项；模板返回深拷贝，调用方修改草稿不会污染全局模板资产。
+- 已新增版本化 `ScreeningRubricPromptBuilder`，分别构建整份 Rubric 生成和单项 AI 辅助消息；岗位输入使用标题、部门、描述和结构化要求白名单，额外传入的候选人手机号等字段不会进入 Prompt。Prompt 明确阻止确定性规则重复评分、公平性禁止项、岗位内容指令注入和非 JSON 输出。
+- 新旧 Rubric 合同定向 18 项、全部新版 Schema 82 项，以及既有 ScreeningRule/Rubric Service/API 25 项测试全部通过；相关模块 `compileall` 和 `git diff --check` 通过。
+- 本段位于 `Schema/模板/Prompt -> 后续 Adapter/Service` 的合同层，没有修改 JobScreeningRubric Model、Alembic migration、Rubric Service/API、正式 PostgreSQL 或前端，也没有调用真实 DeepSeek。下一段才进入 Model/migration 和草稿/发布持久化能力；小步骤 5A 尚未整体完成，步骤 6 继续暂停。
+
+#### 小步骤 5A 第二小段：Rubric v2 Model 与 migration（已完成）
+
+- `JobScreeningRubric` 已从旧权重版本扩展为 v2 持久化结构，新增 source、template_key、draft/active/archived/abandoned 状态、semantic_items JSONB、job_fingerprint、generation_metadata、确认/放弃审计和更新时间；五维权重、岗位版本号和既有关系继续保留。
+- 数据库新增来源、状态、模板、JSON 数组、正式版本 4—10 项和 `status/is_current` 一致性 CHECK；保留“每岗位一个当前 active”部分唯一索引，并新增“每岗位最多一个 draft”部分唯一索引。active 版本不可原地伪装成草稿，archived/abandoned 也不能继续被标成 current。
+- 尚未进入正式开发库的 migration `e7b1c9d4a206` 已同步 v2 表结构，并为既有岗位回填自包含的 standard 模板 5 个语义项、active 状态和确认审计；migration 内置模板与运行时代码模板的严格相等测试通过。既有岗位的指纹在正式迁移/重新确认流程中生成，本段不根据旧数据猜测。
+- 新岗位创建时仍在同一事务中生成默认 Rubric，但现在会带 standard 模板 5 项和由标题、参与评分的描述及 JobRequirements 计算的 64 位 SHA-256 岗位指纹；旧权重更新兼容逻辑会把旧 current 标为 archived，并保留语义项和岗位指纹。
+- Model/migration/Job Service/Rubric Service/API 等定向 60 项首次通过；修复模板放在 Service 包导致的循环导入后，后端全量 523 项测试全部通过，Python `compileall` 通过。Alembic 离线 SQL 被阶段 6 既有 migration 的数据库读取逻辑阻断，因此本段用 migration 操作结构测试验证 e7 声明，尚未把离线输出或真实 PostgreSQL 往返冒充为已通过。
+- 本段位于 `Schema -> Model/migration -> PostgreSQL` 的结构层，尚未实现一个草稿的创建/编辑/发布/放弃 Service/API、岗位修改后的暂停评分、AI 生成 Adapter 或前端，也没有升级正式开发库。下一段继续完成 Service/API 和岗位过期事务语义；小步骤 5A 仍未整体完成。
+
+#### 小步骤 5A 第三小段：Rubric 草稿生命周期、发布 API 与岗位过期语义（已完成）
+
+- `ScreeningRubricService` 已实现每岗位单草稿的查询、模板创建、编辑、发布、放弃和替换；草稿永远不是 current，只有 HR 显式发布后才归档旧 active 并把草稿切为新的 active。创建、更新、发布、放弃和重确认均记录 ActivityLog，失败统一 rollback。
+- 新增草稿查询、模板草稿创建、草稿更新、发布、放弃和 current 重确认 API；旧的 `PUT /jobs/{job_id}/screening-rubric` 直接生效入口已移除，避免绕过草稿和 HR 发布门禁。不存在、重复草稿、岗位输入过期、发布内容不完整和未知失败分别使用稳定且不泄密的错误码。
+- 草稿保存和发布都要求客户端提交岗位指纹，并同时核对草稿生成时指纹与当前岗位指纹；生成或编辑期间岗位标题、描述或结构化要求发生变化时返回 `RUBRIC_STALE`，旧 active 不被破坏。
+- 岗位标题、描述或 JobRequirements 变化会在同一岗位更新事务中把 current Rubric 标记为 stale，并把该岗位旧 ScreeningResult 标记为 outdated；部门、地点、人数等不参与评分的字段变化不会误触发。当前 stale 版本必须由 HR 重新确认并产生新 active 版本，后续评分 Service 应拒绝使用 stale current。
+- JobScreeningRubric Model 和尚未进入正式库的 `e7b1c9d4a206` migration 已增加 `is_stale/stale_at/stale_reason` 与索引；发布内容仍由严格 Schema 校验 4—10 个语义项、权重、公平性和重复项。
+- 本段定向 71 项测试和 64 组子场景通过；后端全量 533 项测试和 261 组子场景通过，`compileall` 与 `git diff --check` 通过。Docker Hub 拉取基础镜像超时，因此没有在本段重复执行真实 PostgreSQL migration 往返；正式开发库仍保持阶段 6 revision，未升级或写入。
+- 本段位于 `API -> Schema -> ScreeningRubricService/JobService -> JobScreeningRubric/ScreeningResult/ActivityLog -> PostgreSQL`。尚未实现 AI 生成 Adapter、Fake 生成异常测试、真实 DeepSeek 或前端；下一段接入 RubricGenerationAdapter，小步骤 5A 仍为进行中。
+
+#### 小步骤 5A 第四小段：RubricGenerationAdapter 与 Fake AI 生成闭环（已完成）
+
+- 新增 `DeepSeekRubricGenerationAdapter` 和独立客户端工厂，整份 Rubric 生成与 HR 单项辅助都固定单次非流式 JSON Output 调用、90 秒有界超时、SDK 隐式重试关闭，并把认证、配额、限流、超时、连接、空响应和截断响应转换为不泄露岗位内容或上游响应的稳定错误。
+- 新增生成配置、严格请求/响应 Schema 和 `POST /jobs/{job_id}/screening-rubric/generate`、`POST /jobs/{job_id}/screening-rubric/draft/assist-item`。整份生成保存 `ai_generated` 草稿及模型、Prompt/Schema 版本、token 和生成理由；单项辅助只返回已校验的 HR 可编辑字段，不自动修改草稿或正式版本。
+- `ScreeningRubricService.generate_draft` 在模型调用前读取岗位快照并主动结束数据库读事务，不在外部网络等待期间持有行锁；模型返回后重新锁定岗位，复核岗位指纹、当前 Rubric 和单草稿约束，全部通过才原子保存草稿与 ActivityLog。
+- Fake Adapter 已覆盖成功、已有草稿调用前拒绝、超时、非法 JSON、公平性禁止项、生成期间岗位变化以及单项辅助；任何失败都不会写入新草稿、替换旧草稿或改变当前 active。API 对非法标准、stale 和模型不可用分别返回 `RUBRIC_CRITERIA_INVALID`、`RUBRIC_DRAFT_STALE` 和 `RUBRIC_GENERATION_MODEL_UNAVAILABLE`。
+- Adapter/Fake Service/API/Prompt 定向 41 项测试和 38 组子场景通过；后端全量 545 项测试和 269 组子场景通过，`compileall` 与 `git diff --check` 通过。真实 DeepSeek 未调用，正式开发库未升级或写入。
+- 本段完成 `Prompt -> Adapter -> ScreeningRubricService -> draft Model` 的 Fake 闭环。小步骤 5A 尚余隔离 PostgreSQL 往返、少量脱敏岗位真实 DeepSeek 验证及最终文档收口；完成前不进入候选人语义评分 Adapter。
+
+#### 小步骤 5A 第五小段：真实 PostgreSQL、真实 DeepSeek 与最终收口（已完成）
+
+- 在独立临时库 `recruitment_assistant_stage7_rubric_test` 首次执行真实 `c8 -> e7` 时发现 migration 把内嵌 JSON 中的 `:10/:50` 误识别为 SQLAlchemy bind 参数；PostgreSQL 事务完整回滚并保持 c8。已改为 `CAST(:semantic_items AS jsonb)` 参数绑定，并增加结构回归断言，避免模型模板内容参与 SQL 字符串拼接。
+- 修复后真实完成 `空库 -> c8 -> e7 -> c8 -> e7`。迁移前脱敏岗位 700001 在 e7 自动获得 standard、active、v2、5项语义标准；降级后岗位保留且三张阶段 7 表移除，再升级后默认 Rubric 正确重建。单 active、单 draft、stale 索引和 16 项 Rubric 约束均存在，`alembic check` 输出 `No new upgrade operations detected`。
+- 第一次真实 DeepSeek 技术模板验证发现模型受系统 JSON 示例影响返回错误 `template_key`；后端严格校验正确拒绝该结果。生成 Prompt 随即升级为 `rubric_generation_v2`，在用户消息中明确要求返回模板必须与请求严格一致，并新增自动化断言。
+- Prompt v2 下真实 DeepSeek `deepseek-v4-flash` 验证通过：脱敏技术岗位生成 6 项、非技术岗位生成 7 项，均在默认 5—8 项范围并通过严格 Schema/公平性校验；单项辅助保留名称、维度和占比并返回合法锚点。本次三次成功调用共 3355 input tokens、2392 output tokens，只使用虚构岗位，不包含候选人或联系方式。
+- 最终后端全量 545 项测试和 269 组子场景通过，`compileall`、`git diff --check` 和 migration 4 项定向测试通过。正式开发库只读确认仍为 `c8e1a6f4d205`，没有升级或写入；临时数据库已精确删除，存在计数为 0。
+- 小步骤 5A 至此完成：岗位级 Rubric 已具备模板、AI 整份生成、HR 单项辅助、严格校验、草稿/发布/放弃、版本、岗位过期、失败保护、Fake 异常、真实 PostgreSQL 和真实 DeepSeek 证据。下一步进入小步骤 6，只评价候选人材料，不再改变 Rubric 生成合同。
 
 ### 重要说明
 
