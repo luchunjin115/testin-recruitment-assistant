@@ -9,6 +9,7 @@
 > **设计变更**: 2026-08-12 正式将阶段 5 从多节点 LangGraph 调整为单次 DeepSeek 结构化提取 Service；详见 `2026-08-12-stage5-resume-structure-design.md`
 > **路线变更**: 2026-08-14 将阶段 5 后目标收敛为“完整招聘链路 + 首页综合 Agent + 公司知识库 RAG”，并建立逐阶段需求确认门禁；详见 `2026-08-14-post-stage5-product-roadmap.md`
 > **参考决策**: 2026-08-15 完成 GitHub 招聘项目对比，确认 Application、评分证据、Agent Tools、RAG 召回和 MCP 边界；详见 `../research/2026-08-15-github-recruiting-project-comparison.md`
+> **阶段 7 评分变更**: 2026-08-17 用户决定采用“预设 Rubric 模板 + AI 根据岗位默认生成 5—8 个待确认语义评分项，允许 4—10 个”；Python 确定性规则不计入该数量，并保留五维外框、HR 确认、版本和证据边界；详见 `2026-08-17-stage7-application-ai-screening-design.md`
 
 ---
 
@@ -750,6 +751,9 @@ data: {"type": "action", "content": {"action": "show_candidates", "ids": [1, 2, 
 | 项目方式 | 架构重建 | 分层清晰，LangGraph 独立层，可演进 |
 | 交互模式 | 混合（助手 + 页面） | 兼顾效率和灵活性 |
 | 阶段 6 岗位录入 | HR 直接填写结构化表单 | 避免把 AI 解析变成无必要的创建前置步骤 |
+| 阶段 7 Rubric 来源 | 自动 standard 默认模板 + 可选技术/非技术模板 + AI 根据岗位生成建议 | HR 不必从空白创建；AI 生成失败不阻塞岗位，建议经 HR 确认后才生效 |
+| 阶段 7 规则入口 | 结构化 JobRequirements 生成 Python 规则 + Rubric 编辑器新增语义项 | Python 只执行字段比较，不解析自由文本；手动语义项发布后才注入 DeepSeek |
+| 阶段 7 语义评分 | 已确认岗位评分项逐项 `0—10/unknown`，Python 加权 | 保留模型语义判断自由度，同时要求证据、原因、置信度并避免模型直接决定总分 |
 | 招聘流程主对象 | Candidate 与 Application 分离 | 同一候选人可拥有多个岗位独立投递和流程状态 |
 | 公开投递处理 | 可靠保存后异步自动初筛 | 支持大批量投递，正常简历不要求 HR 逐份确认 |
 | 综合 Agent | 受控工具 + 分级确认 + 审计 | 自然语言复用真实业务能力，同时保护高风险操作 |

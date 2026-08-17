@@ -1,6 +1,6 @@
 # 项目进度状态
 
-> 最新更新：2026-08-15（阶段 6 前六小步已完成：岗位管理主链路与下游开放岗位读取边界）
+> 最新更新：2026-08-17（阶段 7 小步骤 1—5 已完成；Rubric 方案改为“预设模板 + AI 根据岗位生成评分项”，已确认默认 5—8 个、允许 4—10 个语义项及“结构化要求由 Python 执行、手动语义规则发布后由 DeepSeek 评价”的双入口，步骤 6 继续等待其余设计门禁确认，正式开发库尚未升级）
 
 ## 当前总状态：🚧 新架构重建已启动，旧版演示系统作为迁移资产保留
 
@@ -9,6 +9,7 @@
 - 项目指令：`CLAUDE.md`
 - 权威设计文档：`docs/specs/2026-07-15-hr-agent-platform-design.md`
 - 阶段 5 后路线基线：`docs/specs/2026-08-14-post-stage5-product-roadmap.md`
+- 阶段 7 专项设计与执行计划：`docs/specs/2026-08-17-stage7-application-ai-screening-design.md`
 - 实施计划：`docs/implementation-plan.md`
 - 迁移清单：`docs/migration-inventory.md`
 - 阶段 5 历史实现与回归排查资料：`docs/handoff/2026-08-12-stage5-development-handoff.md`（阶段 6 日常开发无需读取）
@@ -662,7 +663,7 @@
 - 原计划 15～20 份脱敏样本的字段完整性、格式失败率、token 和费用统计没有执行，已转为后续质量增强项，不记录为已完成，也不阻塞当前 MVP 进入阶段 6。
 - 阶段 5 于 2026-08-14 正式完成。后续阶段日常开发只需按 `AGENTS.md` 阅读通用权威文档，不必重复阅读阶段 5 专项设计或交接手册；只有修改简历上传、原文提取、结构化识别、辅助填表或排查相关回归时再读取。
 
-### 阶段 6：结构化岗位管理（进行中）
+### 阶段 6：结构化岗位管理（已完成）
 
 #### 需求确认与专项设计
 
@@ -729,19 +730,133 @@
 - 新增 1 项下游读取边界测试，先证明旧实现请求没有 `status=open`，再覆盖四个开放岗位请求、三个历史全岗位请求、v1 职责映射、Dashboard 精确计数、关闭岗位历史候选人名称和历史初筛状态。连同阶段 5 的 6 项及岗位管理 2 项，前端共 9 项测试全部通过；`tsc && vite build` 成功构建 3922 个模块。
 - 本步只修改 `前端 -> API` 的读取参数、结果映射和提示，不修改 API、Schema、Service、Model、PostgreSQL，不创建 Application，不运行 AI 初筛，也不调用 DeepSeek。自动测试与构建证明请求边界、历史映射和编译打包正确，不能替代第七小步的真实页面与 PostgreSQL 人工验收。
 
+#### 第七小步验收准备：Windows 一键启动脚本修复
+
+- 已定位 `scripts/start_project.ps1` 在 Docker Desktop 未运行时提前退出的原因：脚本全局使用 `$ErrorActionPreference = "Stop"`，`docker info` 写入标准错误后被 Windows PowerShell 转成终止性的 `NativeCommandError`，因此尚未执行 `$LASTEXITCODE` 判断和自动启动 Docker Desktop 分支。
+- 已新增统一原生命令执行与就绪检查：需要展示输出的命令按退出码转换为稳定错误；Docker Engine 和 PostgreSQL 等预期会暂时失败的就绪检查返回布尔值，不再中断等待循环。
+- Docker Engine 未就绪时会检查标准 Docker Desktop 安装路径；进程未启动则自动启动，进程已存在则继续等待，最长等待约 120 秒。Docker Desktop 不存在或等待超时会返回明确提示。
+- PostgreSQL `pg_isready` 已复用同一安全检查；后端依赖预检已加入 `mammoth`，新电脑缺少 DOCX 文本框解析依赖时会按 `backend/requirements.txt` 自动补齐。
+- PowerShell 语法解析、PowerShell `-CheckOnly` 和 `launch/start_project.bat -CheckOnly` 均通过；在 Docker Engine 关闭时正确输出 `Docker engine ready: False` 和“完整启动将自动打开 Docker Desktop”，没有再次出现 `NativeCommandError`。后端依赖检查输出 `True`，Docker Desktop 标准程序路径存在，`git diff --check` 通过。
+- 本步只修改启动编排和项目状态文档，没有启动 Docker、容器、PostgreSQL、FastAPI 或 Vite，没有执行 migration 或页面写入。因此当前结果证明脚本可以安全识别“Docker 未运行”并进入后续自动启动路径，不能代替第七小步的真实完整启动、数据库和浏览器人工验收。
+
+#### 第七小步进度：技术集成验收通过，用户已确认阶段完成
+
+- 已通过修复后的 `scripts/start_project.ps1 -NoBrowser` 完成真实完整启动：Docker Desktop、PostgreSQL、Redis、Chroma、FastAPI 和 Vite 均就绪；`/api/health` 成功，`/stage3/jobs` 返回 HTTP 200。当前 `/api/v2/jobs` 及 open/close/reopen 动作均存在于运行中的 OpenAPI。
+- Alembic 当前 revision 为 `c8e1a6f4d205 (head)`，自动迁移检查输出 `No new upgrade operations detected`；岗位表保留 8 条旧数据，ID 仍为 1—8，候选人和初筛结果的岗位关联分别为 30、29 条，8 条旧岗位快照及描述均存在，阶段 6 两个 CHECK 约束均存在。
+- 后端全量 418 项测试通过；前端 9 项脚本测试全部通过；`npm run build` 成功构建 3922 个模块。结果覆盖 Schema、Service、API、状态机、安全删除、下游开放岗位读取边界和生产编译，但自动化测试不能替代真实页面视觉与点击验收。
+- 已在真实 FastAPI + PostgreSQL 上使用隔离的 `S6-Acceptance-*` 数据完成 API 集成验收：不完整草稿开放失败并返回 9 个缺失字段；完整岗位可开放；开放岗位非法编辑会回滚、合法编辑会持久化；关闭后退出开放列表；关闭岗位不完整时无法重新开放，补齐后可重新开放；开放岗位删除返回 `409`；无关联草稿/关闭岗位可删除；Candidate、Resume、ScreeningResult 和 Report 的关联计数都会阻止删除并返回准确数量。
+- 验收脚本在 `finally` 中清理全部隔离数据；验收前后 Candidate、Job、Resume、ScreeningResult、Report 计数完全一致，数据库中没有残留 `S6-Acceptance-*` 记录。详细证据见 `docs/handoff/2026-08-17-stage6-acceptance.md`。
+- `/stage3/jobs`、`/stage3/screening`、`/stage3/apply` 和 `/stage3/candidates/new` 均可访问，但受控浏览器运行时没有任何可用浏览器实例，因此本次没有执行真实点击、刷新后的视觉确认、1440 像素桌面截图或严格 390 像素窄屏验收。HTTP 200 和源码测试不冒充这部分人工验收。
+
 #### 下一小步恢复起点
 
 - 当前分支为 `1lcj`。阶段 5 已形成本地提交 `3e832fa`；新对话仍必须先检查 `git status`、`git log` 和 `git diff`，严禁 reset、clean、checkout 覆盖或丢弃现有修改。
 - 用户已同意将 `docs/specs/2026-08-14-post-stage5-product-roadmap.md` 作为当前方向基线；该路线允许在每个阶段的业务讨论后继续修订。
-- 阶段 6 下一小步是最终集成与人工验收：运行全量后端回归，在真实 PostgreSQL 和页面中验证创建草稿、开放失败、补齐开放、编辑、关闭、重新开放、安全删除、刷新持久化及下游开放岗位边界，并按专项设计第 16 节逐项记录结果。
+- 阶段 6 的自动化、真实 PostgreSQL 和真实 API 技术集成验收已经通过；用户于 2026-08-17 明确确认阶段 6 已完成，阶段 7 前置门禁据此关闭。此前 Codex 受控浏览器没有可用实例的事实仍保留在上方记录中，本次用户确认不伪装成新增的 Codex 截图证据。
 - 阶段 6 由 HR 直接填写结构化岗位表单，不把 AI 解析 JD 作为必经步骤，也不在本阶段调用 DeepSeek。综合 Agent 后续可以按 HR 明确要求生成 JD 草稿，并在 HR 确认后保存。
-- 阶段 6 业务方案和专项设计已经确认；第七小步验收完成前不能宣布阶段 6 正式完成，也不提前进入阶段 7。
+- 阶段 6 业务方案、专项设计、技术集成验收和用户最终确认均已完成，已允许进入阶段 7。
+- 阶段 7 小步骤 1—5 已按原专项设计完成。用户随后明确选择 Reqcore 式“预设模板 + AI 根据岗位生成评分项”；该变更重新打开评分子方案门禁，下一步不是直接进入 DeepSeek 候选人评价 Adapter，而是先确认修订后的专项设计，再执行小步骤 5A。
 - 后续路线暂定为：阶段 7 Application 与 AI 初筛底座；阶段 8 公开投递和自动初筛；阶段 9 面试、Offer、录取和报告；阶段 10 首页综合 Agent；阶段 11 知识库 RAG 与语义搜索；阶段 12 质量、权限、部署和交付。
 - 已新增 `docs/research/2026-08-15-github-recruiting-project-comparison.md`，对比 Reqcore、SAP Recruiting Agent、HackerRank Hiring Agent、Resume Screening RAG Pipeline 和 MCP Resume Screening，记录当前差距、借鉴原因和明确不借鉴项。
 - Reqcore 只用于校准 Application、招聘 Pipeline、公开/后台接口、私有简历和数据保留；不切换其 Nuxt/Vue 技术栈，不直接复制 AGPL 代码，也不提前建设多租户和计费。
 - 初筛借鉴 HackerRank Hiring Agent 的 Rubric、逐项证据、加分/扣分、版本、缓存和公平性约束，但不增加 PDF 转 Markdown，不照搬每个章节一次模型调用或默认 GitHub 评价。
 - 阶段 10 借鉴 SAP Recruiting Agent 的职责分工，固定方向为 `Agent -> Tool -> Service -> PostgreSQL/Chroma`；Tools 必须强类型、可测试、可授权和可审计，MCP 仅作为未来外部调用适配，不是当前 MVP 必选项。
 - 阶段 11 使用 `Resume.raw_text` 和 `Resume.parsed_snapshot` 生成带来源元数据的检索片段，支持查询分类、结构化过滤、Small-to-Big、去重重排和引用；RAG 负责召回，不替代正式初筛评分，也不生成 `.md` 文件。
+
+### 阶段 7：Application 与 AI 初筛底座（进行中：小步骤 1—5 已完成，评分方案修订待确认）
+
+#### 已确认的业务边界
+
+- `Candidate` 表示人员，`Application` 表示其对一个具体岗位的一次申请；同一人员可以有多个岗位申请，每个申请独立评分、独立决策、独立保留历史。
+- 候选人页面按“HR 已通过的 Application”展示，不把 AI 完成评分等同于候选人通过；同一人员的不同岗位申请可以分别出现，人员详情聚合其全部申请。
+- 候选人页面“新增候选人”是 HR 直通入口，确认后立即形成 `passed/screening_passed` 的 Application，但仍必须自动执行 AI 岗位匹配；AI 结果不能撤销 HR 已作出的通过决定。
+- AI 初筛中心“录入新申请”创建 `pending` Application，评分结果只供 HR 参考；只有 HR 明确通过后才进入候选人页面。阶段 7 同时实现通过、备选、淘汰、决定反转和误录作废，阶段 9 不再承担首次初筛决定。
+- 所有新 Application 都必须选择开放岗位、绑定当前 Resume，并填写姓名、手机号和邮箱；手机号或邮箱缺少任意一项都拒绝正式创建。手机号与邮箱共同命中同一 Candidate 才自动复用，冲突时进入人工处理，复用不会静默覆盖原资料。
+- 同一 Candidate 与同一 Job 同时只允许一个未结束 Application；上一条结束后可重新申请。关闭岗位不允许新申请或新评分，但已开始的评分可按已捕获快照完成，历史流程仍可查看和推进。
+
+#### 已确认的 AI 与评分边界
+
+- 阶段 7 是固定 AI 工作流，由可测试的 Service 编排确定性规则与 DeepSeek 语义判断，不使用 LangGraph；LangGraph 留到阶段 10 综合 Agent 的意图路由、工具选择、确认中断和多步骤恢复。
+- 默认五维权重仍为硬性/必备条件 40、经验与职责 25、项目/成果/深度 20、加分项 10、关键词/补充要求 5，作为稳定外框；HR 继续只能在受限区间内调整且总和必须为 100。
+- 新方案内置 `standard/technical/non_technical` 模板，并允许 HR 主动让 DeepSeek 根据结构化岗位要求和 JD 默认生成 5—8 个岗位专用语义评分项，简单/复杂岗位允许 4—10 个。Python 确定性规则不计入该数量；生成结果只是一份 draft，必须由 HR 确认发布；岗位创建自动获得 standard 默认 Rubric，不依赖模型成功。
+- 候选人语义评分合同改为逐项 `0—10/unknown`，并返回证据、原因、置信度、优势和缺口；固定 `full/strong/partial/weak/none` 六档只属于已完成步骤 5 的历史实现，不再作为最终合同。Python 继续负责确定性规则、五维加权、证据覆盖率和推荐上限。
+- 推荐等级为 85—100 `strong_recommend`、70—84 `recommend`、50—69 `review_required`、0—49 `low_match`；存在硬性失败、硬性 unknown 或证据覆盖率低于 60% 时，推荐上限为 `review_required`，但绝不自动淘汰。
+- 每次评分生成不可变 ScreeningResult，保存输入快照、指纹、证据和规则/Prompt/模型/Rubric/岗位版本；失败重跑保留上一次成功结果。首次评分在 Application 可靠保存后自动触发，后续重试和重评由 HR 手动触发。
+- 阶段 7 只支持同一开放岗位最多 5 份的小批量评分，单份失败互不影响；阶段 8 才接入公开投递、Redis 持久化队列、Worker 和更大批量自动处理。
+
+#### 已确认的质量与开发门禁
+
+- 使用 20 份脱敏样本覆盖高匹配 4、中匹配 4、低匹配 4、硬性失败 3、信息未知 3、资料冲突 2；敏感信息隔离率和确定性规则正确率必须 100%，Schema 成功率至少 95%，证据可定位率至少 90%，推荐方向与 HR 复核一致率至少 80%，关键事实幻觉为 0。
+- 完成 Schema、Model/migration、Application Service/API、HR 决策、Rubric、DeepSeek Adapter、ScreeningService、小批量、前端、旧数据迁移和综合验收共 12 个小步骤；每次只推进一个可理解、可验证的小步骤。
+- 阶段 6 已获用户最终确认；阶段 7 Application/状态部分门禁仍然有效，但评分核心方案发生变化，评分子方案门禁已重新打开。只有用户确认修订后的 `docs/specs/2026-08-17-stage7-application-ai-screening-design.md`，才能修改 Rubric 业务代码并继续步骤 6。
+
+#### 小步骤 1：Application、StageHistory 与 Rubric Schema（已完成）
+
+- 新增 `backend/app/schemas/rebuilt/application.py`：固定 Application 来源、生命周期、招聘阶段、AI 状态和 HR 决策枚举；定义内部录入、持久化输入、读取响应和评分重跑请求合同。
+- 内部录入请求强制姓名、手机号、邮箱、开放岗位 ID 和当前 Resume ID；手机号去除空格、短横线和括号差异，邮箱去除首尾空白并转小写。`hr_direct` 必须明确确认人工通过，`hr_screening` 禁止伪装为已通过。
+- 新增 `backend/app/schemas/rebuilt/stage_history.py`：固定岗位相关的通过、备选、淘汰、决定反转和作废原因；人工覆盖必须写说明，淘汰和作废必须提交严格布尔二次确认；StageHistory 请求/响应采用固定阶段、决策、操作者和原因枚举。
+- 新增 `backend/app/schemas/rebuilt/screening_rubric.py`：固定版本化 Rubric 合同、默认 40/25/20/10/5、五维可调范围、整数与总和 100 校验，并定义“提交新权重”和“恢复默认”二选一的更新请求。
+- 新增 27 项阶段 7 纯 Schema 单元测试；阶段 7 定向测试 27/27 通过，包含既有阶段 5/6 Schema 的回归测试 71/71 通过，后端全量测试 445/445 通过，`compileall`、导入冒烟检查和 `git diff --check` 通过。
+- 本步只位于 `前端 -> API -> Schema` 链路的 Schema 边界，未新增 API、Service、Model 或 PostgreSQL 表，未执行 migration，也未调用 DeepSeek。测试证明非法输入会在进入业务层前被拒绝，不能证明数据库状态机、并发、事务或 AI 评分已经可用。
+- 用户理解并确认后已进入小步骤 2。
+
+#### 小步骤 2：Model 与 Alembic migration（已完成）
+
+- 新增 `Application`、`StageHistory`、`JobScreeningRubric` SQLAlchemy Model，并在 Candidate、Job、Resume、ScreeningResult 上建立明确的双向关系；SQLAlchemy 全部 mapper 配置检查通过。
+- `applications` 使用数据库 CHECK 固定来源、生命周期、招聘阶段、AI 状态和 HR 决策；使用 PostgreSQL 部分唯一索引保证同一 Candidate 与 Job 同时最多一个 active Application；非 legacy Application 必须绑定当前 Resume。
+- `job_screening_rubrics` 保存五个独立权重、四类规则版本、版本号和变更审计；数据库约束再次保证各项范围、总和 100、同一 Job 版本唯一且最多一个当前 Rubric。
+- `stage_histories` 保存阶段与 HR 决策前后值、固定原因、操作者、关联评分和人工覆盖标记，表结构只提供追加记录所需字段，不提供普通更新时间字段。
+- 扩展 `screening_results`：增加 Application/Resume 关联、attempt、执行状态、输入指纹、证据覆盖率、硬性检查、维度分数、证据与输入快照、规则/Prompt/模型版本、稳定错误、耗时/token/费用、重跑、outdated 和操作者字段；移除旧 `candidate_id + job_id` 唯一约束，改为 `application_id + attempt_number` 唯一，并用部分唯一索引限制同一 Application 同时只有一个 `screening` 执行。
+- migration `e7b1c9d4a206_add_stage7_application_foundation.py` 正确接在阶段 6 revision `c8e1a6f4d205` 后；升级时为既有岗位补默认 40/25/20/10/5 Rubric。既有 ScreeningResult 保留原 ID、分数与关系，暂时允许 `application_id=NULL`，等待小步骤 11 的正式旧数据迁移，不根据 AI 分数猜测 HR 决策。
+- 只读核对正式开发库仍为 `c8e1a6f4d205`，基线仍是 Candidate 30、Job 8、Resume 0、ScreeningResult 29；本步没有升级或写入正式开发库。
+- 独立临时 PostgreSQL 已完成 `base -> c8 -> e7 -> c8 -> e7` 往返：三张新表、默认 Rubric、旧结果兼容、多 attempt、当前结果指针、active Application 并发约束、单一运行任务约束和 Rubric 总和约束均通过；`alembic check` 输出 `No new upgrade operations detected`，临时数据库已删除。
+- 新增 10 项 Model/migration 测试，后端全量测试 455/455 通过，`compileall` 与 `git diff --check` 通过。
+- 本步位于 `Schema -> Service -> Model -> PostgreSQL` 链路中的 Model 和数据库结构层；当时尚未实现 Application Service/API，尚未向正式开发库执行 migration，也未修改前端或调用 DeepSeek。用户理解并确认后已进入小步骤 3。
+
+#### 小步骤 3：Application Service 与内部录入 API（已完成）
+
+- 新增 `ApplicationIntakeService`，把开放岗位检查、当前 Resume 锁定、Candidate 安全识别或创建、Resume 绑定、Application 创建和首条 StageHistory 写入放在同一个数据库事务中；任一环节失败都会 rollback，不留下“有人但没申请”或“简历绑了一半”的中间状态。
+- 手机号与邮箱共同且唯一命中同一 Candidate 时复用；只命中一项、两项分别命中不同人员、指定 Candidate 与联系方式不一致时返回稳定冲突。仅姓名相同不会自动合并，只在成功响应中返回疑似重复 ID 供后续人工提示。
+- 同一 Candidate 与 Job 已有 active Application 时不重复创建，API 返回原记录并以 `existing_application_reused=true` 明确说明；PostgreSQL 部分唯一索引继续作为最后一道并发保护。
+- 新增 `POST /api/v2/applications/intake`：新建返回 201，幂等复用返回 200；缺少联系方式或 Resume、岗位未开放、Resume 归属冲突和身份冲突使用稳定错误码，未知异常隐藏数据库细节。Application 的校验异常处理会委托给既有 Job 处理器，未改变旧入口的 422 合同。
+- `hr_screening` 固定创建 `active/applied/not_started/pending` 和 `application_created` 历史；`hr_direct` 需要明确人工确认，固定创建 `active/screening_passed/not_started/passed` 和 `hr_direct_entry` 历史。本步只建立申请事实，不触发 DeepSeek 或 AI 评分。
+- 新增 8 项 Service、6 项 API 及 2 项 Schema 增量测试；步骤 3 定向相关测试 34/34、后端全量测试 471/471、`compileall` 和 `git diff --check` 通过。
+- 独立临时 PostgreSQL 真实并发验证中，两次相同提交得到同一 Application，结果为一条 Candidate、一条 Application、一条 StageHistory；联系方式冲突和故意制造的数据库约束失败均完整回滚，HR 直通初始状态正确；`alembic check` 无漂移，临时数据库已删除。
+- 正式开发库仍停留在阶段 6 revision `c8e1a6f4d205`，本步没有升级或写入正式库，也没有修改前端。用户理解并确认后已进入小步骤 4。
+
+#### 小步骤 4：Application 状态、HR 决策与历史（已完成）
+
+- 新增 `ApplicationDecisionService`，实现 pass、backup、reject、undo-rejection 和 void 五种操作，并使用 `SELECT ... FOR UPDATE` 锁定 Application 后校验最新状态，避免并发请求静默覆盖。
+- HR 初筛申请只有在 AI 状态进入 `completed/blocked/failed` 且招聘阶段进入 `hr_review` 后才能作决定；`screening` 期间禁止决策和作废。通过、备选、淘汰、撤销及作废均拒绝非法状态跳转。
+- 通过固定落到 `active/screening_passed/passed`，备选固定落到 `active/backup/backup`，淘汰固定落到 `ended/rejected/rejected`；撤销淘汰回到 `active/hr_review/pending`，但同 Candidate/Job 已有其他 active Application 时拒绝恢复；作废只改变生命周期为 `voided`，不伪装成淘汰。
+- 每次成功操作都会在同一个事务中更新 Application、追加 StageHistory 并追加 ActivityLog；人工覆盖 AI 建议会明确记录 `overrides_ai_recommendation=true`。审计写入失败时 Application 更新也会完整 rollback。
+- 新增 `POST /api/v2/applications/{id}/pass|backup|reject|undo-rejection|void` 与 `GET /api/v2/applications/{id}/history`；不存在返回稳定 `APPLICATION_NOT_FOUND`，非法迁移返回 `INVALID_APPLICATION_TRANSITION`，未知错误不泄露数据库细节。
+- 新增 10 项 Service 和 6 项 API 测试；步骤 4 联合定向测试 30/30、后端全量测试 487/487、`compileall` 和 `git diff --check` 通过。
+- 独立临时 PostgreSQL 验证中，并发两次“通过”只有一次成功，另一次读取最新状态后拒绝；通过→备选→淘汰→撤销淘汰→作废留下 5 条 ActivityLog 和完整 StageHistory，故意制造审计约束失败后业务状态未改变；`alembic check` 无漂移，临时数据库已删除。
+- 本步位于 `API -> Schema -> ApplicationDecisionService -> Application/StageHistory/ActivityLog Model -> PostgreSQL`；没有调用 DeepSeek、没有实现评分、没有修改前端，也没有升级正式开发库。用户理解并确认后已进入小步骤 5。
+
+#### 小步骤 5：Rubric 与确定性评分规则（已完成）
+
+- 新增严格 `screening_rules` Schema 和纯 `ScreeningRuleService`，固定 13 个内部评分子项、五个大维度、`full/strong/partial/weak/none/unknown = 100%/80%/50%/20%/0%/0%` 换算与最终四舍五入规则。
+- 实现技能规范化和受控别名（如 Node.js/node、PostgreSQL/postgres、Kubernetes/k8s），明确 Java 不会误匹配 JavaScript；技能清单未被 HR 确认为完整时，缺少必备技能只记为 unknown，不能假设 failed。
+- 工作年限使用已确认整数比较；学历只比较大专/本科/硕士/博士层级，不使用学校名称、985/211 或其他声誉信息；必备经历必须提交 passed/failed/unknown 和可核对证据，不用关键词猜测语义结论。
+- 岗位未配置的子项不扣分，同一维度内按固定比例重新分配；整个维度不适用时从有效总权重中排除。非 unknown 档位必须提供证据；全部有效项均 unknown 时返回 blocked 和 `overall_score=None`，不制造虚假 0 分。
+- 实现证据覆盖率与 `strong_recommend/recommend/review_required/low_match` 阈值；存在硬性 failed、硬性 unknown 或覆盖率低于 60% 时推荐最高为 review_required，但规则结果不修改 HR 决策或招聘阶段。
+- 新增 `ScreeningRubricService` 和 `GET/PUT /api/v2/jobs/{id}/screening-rubric`。HR 调整或恢复默认都会保留旧版本、创建新 current 版本并写 ActivityLog；权重越界或总和不为 100 返回稳定 `RUBRIC_WEIGHT_INVALID`。
+- 新岗位现在会在同一事务内自动创建版本 1 的默认 40/25/20/10/5 Rubric；无业务引用的草稿/关闭岗位删除时同步清理其内部 Rubric，失败时岗位与 Rubric 一起 rollback。
+- 新增 13 项纯规则、6 项 Rubric Service 和 6 项 Rubric API 测试；步骤 5 联合定向测试 69/69、后端全量测试 512/512、`compileall`、`alembic check` 和 `git diff --check` 通过。
+- 独立临时 PostgreSQL 验证中，新岗位自动获得版本 1；两个并发调整安全生成版本 2、3 且只有版本 3 为 current；故意制造版本约束失败后版本 3 保持 current；无引用草稿岗位与 Rubric 均可清理，临时数据库已删除。
+- 本步位于 `API -> Schema -> ScreeningRubricService/ScreeningRuleService -> JobScreeningRubric/ActivityLog -> PostgreSQL`。它已经能管理评分尺子并进行纯规则计算，但还没有生成真实语义档位、没有调用 DeepSeek、没有保存 ScreeningResult、没有修改前端或升级正式开发库。下一小步是 DeepSeek 语义评价 Adapter。
+
+#### Rubric 方案变更检查点（数量边界已确认，其余设计门禁待确认）
+
+- 用户明确选择借鉴 Reqcore 的“预设模板 + AI 根据 JD/岗位生成评分项”思路；本项目保留五维外框、Python 确定性规则、HR 决策边界和不可变版本历史，不直接照搬其全部模型评分方式。
+- 新岗位仍自动创建 `standard` 默认 Rubric，不在创建事务中调用 DeepSeek；HR 可预览技术/非技术模板，或主动默认生成 5—8 个岗位专用语义项，简单/复杂岗位允许 4—10 个。Python 确定性规则不计入该数量，语义项不得与确定性规则重复计分。
+- 用户确认规则采用两个明确入口：最低年限、最低学历、必备/加分技能和明确关键词在结构化 JobRequirements 表单维护，由 Service 编译为 `字段 + 操作符 + 目标值` 的 Python 规则；Rubric 编辑器允许 HR 手动新增语义项，设置维度、说明和高/中/低分锚点，发布后由 ScreeningPromptBuilder 注入 DeepSeek。Python 不理解 HR 自由文本，大模型不接管明确结构化比较。
+- HR 手动语义项与模板/AI 生成项使用相同的 4—10 条总量、公平性、去重、证据和版本约束。新增规则只影响新评分；旧结果保留并标记 outdated，不自动重跑。
+- AI 生成结果不得自动生效。HR 审核名称、说明、维度、0—10 分锚点和占比后发布新版本；生成失败、非法输出、偏见项或岗位输入已变化时，当前 Rubric 和岗位保持不变。
+- 语义评分由六档改为 `0—10/unknown + confidence/evidence/reason/strengths/gaps`；未配置亮点忽略，学历阶段 7 只比较学历层级，不判断 985/211 或公司院校名单。
+- 该变化会调整 `screening_rubric.py`、JobScreeningRubric Model/migration、Rubric Service/API、固定子项与六档规则测试，并新增模板、RubricGenerationAdapter 和 ScreeningPromptBuilder。当前只更新权威文档，没有修改上述业务代码，步骤 6 继续暂停。
 
 ### 重要说明
 

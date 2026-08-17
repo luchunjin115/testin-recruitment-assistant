@@ -2,6 +2,8 @@
 
 > 日期：2026-08-15
 >
+> 最近修订：2026-08-17（补充 Reqcore 的预设评分模板与 AI 根据岗位生成 criteria，阶段 7 决定借鉴该思路）
+>
 > 状态：已完成讨论，作为阶段 6—12 的外部参考基线；具体字段、状态和验收标准仍须在每个阶段开始前单独确认
 >
 > 上游路线：`../specs/2026-08-14-post-stage5-product-roadmap.md`
@@ -46,7 +48,7 @@
 
 | 参考项目 | 核心定位 | 它对当前项目最有价值的部分 | 明确不照搬的部分 |
 | --- | --- | --- | --- |
-| [Reqcore](https://github.com/reqcore-inc/reqcore) | 完整 ATS | Application、Pipeline、公开/后台边界、私有简历、历史保留 | Nuxt/Vue、早期多租户和计费、AGPL 代码 |
+| [Reqcore](https://github.com/reqcore-inc/reqcore) | 完整 ATS | Application、Pipeline、预设评分模板、AI 根据 JD 生成岗位评分项、私有简历、历史保留 | Nuxt/Vue、早期多租户和计费、AGPL 代码 |
 | [SAP Recruiting Agent](https://github.com/SAP-samples/smartrecruiters-ai-recruiting-custom-agent) | 现有 ATS 上的招聘 Agent | LLM、Tools、确定性 Python 业务逻辑分工和降级 | SmartRecruiters/SAP/Teams 集成、过早预测模型 |
 | [HackerRank Hiring Agent](https://github.com/interviewstreet/hiring-agent) | 简历评价流水线 | Rubric、逐项证据、加分/扣分、Prompt/模型版本和缓存 | PDF 转 Markdown、每章节一次模型调用、默认 GitHub 评价 |
 | [Resume Screening RAG Pipeline](https://github.com/Hungreeee/Resume-Screening-RAG-Pipeline) | 简历语义召回 POC | 查询分类、多查询、Small-to-Big、去重重排和命中片段 | Streamlit 上传、用向量相似度直接决定招聘结果 |
@@ -72,6 +74,11 @@ Reqcore 已经是一套 ATS，岗位、候选人、Application、公开投递、
    - 原因：简历包含联系方式和工作经历，不能公开暴露底层文件地址。
 5. **岗位关闭后保留历史 Application、数据保留与删除**
    - 原因：招聘记录需要追溯，也必须支持后续隐私和删除要求。
+6. **预设评分模板 + AI 根据岗位生成评分项**
+   - Reqcore 提供 `standard/technical/non_technical` 预设 criteria，并允许模型根据岗位标题和描述生成 4—6 个可从简历衡量的岗位专用评分项。
+   - 每项包含稳定 key、名称、说明、类别、10 分上限和建议权重；候选人评价再逐项返回分数、证据、置信度、优势和缺口，最终加权由程序计算。
+   - 本项目借鉴“HR 不必从空白创建 Rubric”和“岗位专用评分项”思想，但增加 HR 确认发布、版本历史、岗位指纹、确定性规则和公平性禁止项校验，AI 生成结果不能直接成为正式招聘标准。
+   - 数量上不直接照搬：本项目默认生成 5—8 个语义项，并允许简单/复杂岗位在 4—10 个范围内调整；Python 确定性规则不计入该数量，且语义项不得重复评价同一确定性事实。
 
 ### 4.3 不借鉴项
 
@@ -206,7 +213,7 @@ MCP 不作为阶段 10 或当前 MVP 的必选项。业务实现放在 Service�
 | 阶段 | 主要参考 | 落地内容 |
 | --- | --- | --- |
 | 阶段 6 | Reqcore | 结构化岗位、状态和开放/关闭边界 |
-| 阶段 7 | Reqcore + Hiring Agent | Application、正式初筛、Rubric、证据、快照和版本 |
+| 阶段 7 | Reqcore + Hiring Agent | Application、预设模板、AI 生成岗位评分项、HR 确认、正式初筛、证据、快照和版本 |
 | 阶段 8 | Reqcore | 公开/后台隔离、可靠投递、异步自动处理和异常区 |
 | 阶段 9 | Reqcore | Pipeline、面试、Offer、录取和阶段历史 |
 | 阶段 10 | SAP Agent + MCP 示例 | 内部 Tools、确定性 Service、分级确认、降级和审计 |
