@@ -21,12 +21,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.models.rebuilt.job import Job
 from app.schemas.rebuilt.job import JobCreate, JobRead, JobStatus, JobUpdate
+from app.schemas.rebuilt.screening_rubric import (
+    JobScreeningRubricRead,
+    ScreeningRubricUpdateRequest,
+)
 from app.services.rebuilt.job_service import (
     InvalidJobStatusTransitionError,
     JobHasReferencesError,
     JobMustBeClosedBeforeDeleteError,
     JobOpenValidationError,
     job_service,
+)
+from app.services.rebuilt.screening_rubric_service import (
+    CurrentScreeningRubricNotFoundError,
+    ScreeningRubricJobNotFoundError,
+    screening_rubric_service,
 )
 
 
@@ -45,6 +54,9 @@ JOB_UPDATE_EMPTY = {
     "message": "岗位更新内容不能为空",
 }
 _JOB_UPDATE_PATH = re.compile(r"^(?:/api/v2)?/jobs/-?\d+/?$")
+_RUBRIC_UPDATE_PATH = re.compile(
+    r"^(?:/api/v2)?/jobs/-?\d+/screening-rubric/?$"
+)
 _StatusAction = Callable[[AsyncSession, int], Awaitable[Job | None]]
 
 
@@ -64,6 +76,16 @@ async def _job_request_validation_handler(
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={"detail": JOB_UPDATE_EMPTY},
+        )
+    if request.method == "PUT" and _RUBRIC_UPDATE_PATH.fullmatch(request.url.path):
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "detail": {
+                    "code": "RUBRIC_WEIGHT_INVALID",
+                    "message": "Rubric 权重或变更请求不合法",
+                }
+            },
         )
     return await request_validation_exception_handler(request, exc)
 
@@ -179,6 +201,59 @@ async def update_job(
     if job is None:
         raise _not_found()
     return job
+
+
+@router.get(
+    "/{job_id}/screening-rubric",
+    response_model=JobScreeningRubricRead,
+)
+async def get_screening_rubric(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await screening_rubric_service.get_current_rubric(db, job_id)
+    except ScreeningRubricJobNotFoundError as exc:
+        raise _not_found() from exc
+    except CurrentScreeningRubricNotFoundError as exc:
+        raise _job_http_exception(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "RUBRIC_OPERATION_FAILED",
+            "岗位评分规则暂时不可用",
+        ) from exc
+    except Exception as exc:
+        raise _job_http_exception(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "RUBRIC_OPERATION_FAILED",
+            "岗位评分规则读取失败",
+        ) from exc
+
+
+@router.put(
+    "/{job_id}/screening-rubric",
+    response_model=JobScreeningRubricRead,
+)
+async def update_screening_rubric(
+    job_id: int,
+    data: ScreeningRubricUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await screening_rubric_service.update_rubric(db, job_id, data)
+    except ScreeningRubricJobNotFoundError as exc:
+        raise _not_found() from exc
+    except CurrentScreeningRubricNotFoundError as exc:
+        raise _job_http_exception(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "RUBRIC_OPERATION_FAILED",
+            "岗位评分规则暂时不可用",
+        ) from exc
+    except Exception as exc:
+        raise _job_http_exception(
+            status.HTTP_500_INTERNAL_SERVER_ERROR,
+            "RUBRIC_OPERATION_FAILED",
+            "岗位评分规则更新失败，已回滚本次操作",
+        ) from exc
 
 
 @router.post("/{job_id}/open", response_model=JobRead)

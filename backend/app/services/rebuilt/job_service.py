@@ -4,11 +4,12 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from pydantic import ValidationError
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.rebuilt.candidate import Candidate
 from app.models.rebuilt.job import Job
+from app.models.rebuilt.job_screening_rubric import JobScreeningRubric
 from app.models.rebuilt.report import Report
 from app.models.rebuilt.resume import Resume
 from app.models.rebuilt.screening_result import ScreeningResult
@@ -18,6 +19,7 @@ from app.schemas.rebuilt.job import (
     JobStatus,
     JobUpdate,
 )
+from app.services.rebuilt.screening_rubric_service import ScreeningRubricService
 
 
 class JobServiceError(Exception):
@@ -88,6 +90,8 @@ class JobService:
 
             job = Job(**payload)
             db.add(job)
+            await db.flush()
+            db.add(ScreeningRubricService.build_default_rubric(job_id=job.id))
             await db.commit()
             await db.refresh(job)
             return job
@@ -215,6 +219,11 @@ class JobService:
             if references.total:
                 raise JobHasReferencesError(references)
 
+            await db.execute(
+                delete(JobScreeningRubric).where(
+                    JobScreeningRubric.job_id == job_id
+                )
+            )
             await db.delete(job)
             await db.commit()
             return True

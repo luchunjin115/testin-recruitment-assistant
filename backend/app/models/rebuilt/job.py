@@ -50,3 +50,8 @@ class Job(Base):
     resumes: Mapped[list["Resume"]] = relationship(back_populates="job")
     screening_results: Mapped[list["ScreeningResult"]] = relationship(back_populates="job")
     reports: Mapped[list["Report"]] = relationship(back_populates="job")
+    applications: Mapped[list["Application"]] = relationship(back_populates="job")
+    screening_rubrics: Mapped[list["JobScreeningRubric"]] = relationship(
+        back_populates="job",
+        order_by="JobScreeningRubric.version",
+    )

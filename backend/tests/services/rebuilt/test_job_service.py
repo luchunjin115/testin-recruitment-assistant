@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, Mock
 from sqlalchemy.dialects import postgresql
 
 from app.models.rebuilt.job import Job
+from app.models.rebuilt.job_screening_rubric import JobScreeningRubric
 from app.schemas.rebuilt.job import JobCreate, JobUpdate
 from app.services.rebuilt.job_service import (
     InvalidJobStatusTransitionError,
@@ -56,6 +57,7 @@ def make_session() -> Mock:
     session.scalar = AsyncMock()
     session.scalars = AsyncMock()
     session.execute = AsyncMock()
+    session.flush = AsyncMock()
     session.delete = AsyncMock()
     session.commit = AsyncMock()
     session.refresh = AsyncMock()
@@ -82,6 +84,13 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         self.db = make_session()
 
     async def test_create_draft_commits_complete_empty_v1(self) -> None:
+        async def assign_job_id() -> None:
+            for call in self.db.add.call_args_list:
+                item = call.args[0]
+                if isinstance(item, Job) and item.id is None:
+                    item.id = 1
+
+        self.db.flush.side_effect = assign_job_id
         job = await self.service.create_job(
             self.db,
             JobCreate(title="后端开发工程师", department="研发部"),
@@ -90,7 +99,14 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(job.title, "后端开发工程师")
         self.assertEqual(job.status, "draft")
         self.assertEqual(job.requirements["schema_version"], "1.0")
-        self.db.add.assert_called_once_with(job)
+        added = [call.args[0] for call in self.db.add.call_args_list]
+        rubric = next(item for item in added if isinstance(item, JobScreeningRubric))
+        self.assertIn(job, added)
+        self.assertEqual(rubric.job_id, 1)
+        self.assertEqual(rubric.version, 1)
+        self.assertEqual(rubric.weights["must_have_requirements"], 40)
+        self.assertTrue(rubric.is_current)
+        self.db.flush.assert_awaited_once()
         self.db.commit.assert_awaited_once()
         self.db.refresh.assert_awaited_once_with(job)
         self.db.rollback.assert_not_awaited()
@@ -360,6 +376,12 @@ class JobServiceTest(IsolatedAsyncioTestCase):
                 deleted = await self.service.delete_job(db, existing.id)
 
                 self.assertTrue(deleted)
+                self.assertEqual(db.execute.await_count, 2)
+                rubric_delete = db.execute.await_args_list[1].args[0]
+                self.assertIn(
+                    "DELETE FROM job_screening_rubrics",
+                    str(rubric_delete.compile(dialect=postgresql.dialect())),
+                )
                 db.delete.assert_awaited_once_with(existing)
                 db.commit.assert_awaited_once()
 

@@ -10,6 +10,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 if TYPE_CHECKING:
+    from app.models.rebuilt.application import Application
     from app.models.rebuilt.education import Education
     from app.models.rebuilt.job import Job
     from app.models.rebuilt.project_experience import ProjectExperience
@@ -68,4 +69,5 @@ class Candidate(Base):
         cascade="all, delete-orphan",
     )
     screening_results: Mapped[list["ScreeningResult"]] = relationship(back_populates="candidate")
+    applications: Mapped[list["Application"]] = relationship(back_populates="candidate")
     reports: Mapped[list["Report"]] = relationship(back_populates="candidate")

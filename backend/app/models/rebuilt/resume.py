@@ -10,8 +10,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 if TYPE_CHECKING:
+    from app.models.rebuilt.application import Application
     from app.models.rebuilt.candidate import Candidate
     from app.models.rebuilt.job import Job
+    from app.models.rebuilt.screening_result import ScreeningResult
 
 
 class Resume(Base):
@@ -52,3 +54,10 @@ class Resume(Base):
 
     candidate: Mapped["Candidate | None"] = relationship(back_populates="resumes")
     job: Mapped["Job | None"] = relationship(back_populates="resumes")
+    current_applications: Mapped[list["Application"]] = relationship(
+        back_populates="current_resume",
+        foreign_keys="Application.current_resume_id",
+    )
+    screening_results: Mapped[list["ScreeningResult"]] = relationship(
+        back_populates="resume"
+    )
