@@ -1,1 +1,1 @@
-"""FastAPI routers for the rebuilt architecture."""
+"""FastAPI routers for the recruitment platform."""

@@ -10,6 +10,7 @@
 > **路线变更**: 2026-08-14 将阶段 5 后目标收敛为“完整招聘链路 + 首页综合 Agent + 公司知识库 RAG”，并建立逐阶段需求确认门禁；详见 `2026-08-14-post-stage5-product-roadmap.md`
 > **参考决策**: 2026-08-15 完成 GitHub 招聘项目对比，确认 Application、评分证据、Agent Tools、RAG 召回和 MCP 边界；详见 `../research/2026-08-15-github-recruiting-project-comparison.md`
 > **阶段 7 评分变更**: 2026-08-17 用户决定采用“预设 Rubric 模板 + AI 根据岗位默认生成 5—8 个待确认语义评分项，允许 4—10 个”；Python 确定性规则不计入该数量，并保留五维外框、HR 确认、版本和证据边界；详见 `2026-08-17-stage7-application-ai-screening-design.md`
+> **旧版退役变更**: 2026-08-18 用户明确放弃旧代码与旧演示数据；项目由“迁移旧系统”改为“新版直接替代旧版”；详见 `2026-08-18-legacy-system-retirement-decision.md`
 
 ---
 
@@ -25,7 +26,7 @@ HR 每天面对大量简历（来自招聘网站、邮件内推、自建投递�
 
 ### 1.3 项目方式
 
-在现有 `testin-recruitment-assistant` 项目基础上**架构重建**：重新规划项目结构，迁移有价值的代码（Prompt 模板、候选人投递页面、业务逻辑），用全新的分层架构承载。
+在现有 `testin-recruitment-assistant` 仓库中进行**架构重建**：已经进入新版的有效能力继续由新版分层架构承载；旧 React + FastAPI + SQLite + Mock LLM 演示系统及演示数据不再迁移或维护，由新版直接替代。
 
 ### 1.4 产品范围与里程碑
 
@@ -696,27 +697,19 @@ data: {"type": "action", "content": {"action": "show_candidates", "ids": [1, 2, 
 
 ---
 
-## 9. 从现有项目迁移
+## 9. 旧版系统退役
 
-### 9.1 可复用
+2026-08-18 起，项目不再执行旧系统业务迁移。旧 React 页面、旧 FastAPI Router、SQLite Model、Mock LLM、演示造数和旧数据导入均退出产品范围；已经在新版重新实现并验证的能力继续保留。
 
-| 现有文件/模块 | 迁移方式 | 目标位置 |
-|--------------|---------|---------|
-| `prompts/*.md` (5个) | 按职责优化后迁移 | 普通单次调用进入 `backend/app/prompts/rebuilt/`；工作流 Prompt 进入 `backend/app/agents/prompts/` |
-| `ApplyForm` 页面 | 迁移 + UI 升级 | `frontend/src/pages/Apply/` |
-| `file_parser.py` | 迁移 | `backend/app/core/file_parser.py` |
-| `dedup_service.py` | 迁移 | `backend/app/services/` |
-| Mock LLM 评分规则 | 提取作为 fallback | `backend/app/services/` |
-| 业务常量（985院校等） | 迁移 | `backend/app/core/constants.py` |
+退役已按以下顺序完成：
 
-### 9.2 需重写
+1. 先把新版前端和 `/api/v2` 切为唯一运行主链。
+2. 移除 Application 与 ScreeningResult 的 legacy 数据例外。
+3. 精确核对并清理旧演示数据库、导入数据和附件。
+4. 依据引用扫描删除无调用者的旧文件。
+5. 完成命名收口：`/stage3/*` 改为 `/app/*`，`frontend/src/stage3/` 改为 `frontend/src/features/recruitment/`，后端 `rebuilt/` 内容移入对应正式 package；`/api/v2` 作为正式版本化 API 保留。
 
-| 现有模块 | 原因 | 新实现 |
-|---------|------|-------|
-| `ai_service.py` | 职责混杂 | 按业务拆分：阶段 5 使用 `ResumeStructureService + DeepSeek Adapter`；复杂模块再按需使用 LangGraph |
-| `mock_llm.py` (577行) | 职责不清 | 拆分到各 graph fallback |
-| 前端所有页面 | UI 需全面升级 | Ant Design 5 定制主题重写 |
-| SQLite 数据模型 | 需优化字段 | PostgreSQL 新 schema |
+当前前端唯一业务源码位于 `frontend/src/features/recruitment/`；后端 Model、Schema、Service、Prompt 和 Adapter 均位于 `backend/app/` 下对应正式 package，不再存在 `rebuilt/` 中间目录。完整范围、数据边界和验收标准见 `2026-08-18-legacy-system-retirement-decision.md`。
 
 ---
 
@@ -749,6 +742,7 @@ data: {"type": "action", "content": {"action": "show_candidates", "ids": [1, 2, 
 | 向量库 | Chroma | 轻量 Python 原生，MVP 够用 |
 | AI 模型 | DeepSeek | 中文强，性价比高 |
 | 项目方式 | 架构重建 | 分层清晰，LangGraph 独立层，可演进 |
+| 旧版处置 | 新版直接替代，旧代码与演示数据退役 | 避免长期维护双路由、双数据库和 legacy 业务例外 |
 | 交互模式 | 混合（助手 + 页面） | 兼顾效率和灵活性 |
 | 阶段 6 岗位录入 | HR 直接填写结构化表单 | 避免把 AI 解析变成无必要的创建前置步骤 |
 | 阶段 7 Rubric 来源 | 自动 standard 默认模板 + 可选技术/非技术模板 + AI 根据岗位生成建议 | HR 不必从空白创建；AI 生成失败不阻塞岗位，建议经 HR 确认后才生效 |
@@ -771,8 +765,8 @@ data: {"type": "action", "content": {"action": "show_candidates", "ids": [1, 2, 
 
 1. **先读本文档**，理解全局设计
 2. 读 `CLAUDE.md` 了解项目上下文
-3. 读现有 `backend/app/prompts/` 下的 5 个 Prompt 模板，理解业务逻辑
-4. 读现有 `backend/app/services/mock_llm.py`，理解评分规则引擎（577行，包含完整的规则引擎逻辑，可作为 fallback 参考）
+3. 读当前阶段专项设计和 `2026-08-18-legacy-system-retirement-decision.md`
+4. 只读取新版主链实际引用的 Prompt、Service 和测试；旧 Mock/SQLite 代码不再作为实现依据
 
 ### 12.2 实施原则
 
@@ -781,7 +775,7 @@ data: {"type": "action", "content": {"action": "show_candidates", "ids": [1, 2, 
 3. 普通 AI Service 与模型 Adapter 要能独立测试；如果某阶段实际采用 LangGraph，每个节点也必须能独立运行和测试
 4. 前端每个页面先搭结构，再填充交互和样式
 5. Prompt 模板是核心资产，要认真编写和测试
-6. 迁移现有代码时，参考第 9 节的迁移指南
+6. 清理旧系统时，按第 9 节与退役决策分步执行，先切入口并验证，再删除文件
 
 ### 12.3 环境要求
 

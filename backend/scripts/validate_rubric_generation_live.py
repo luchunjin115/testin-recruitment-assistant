@@ -5,11 +5,11 @@ from __future__ import annotations
 import asyncio
 import json
 
-from app.adapters.rebuilt.screening_rubric_generation import (
+from app.adapters.screening_rubric_generation import (
     DeepSeekRubricGenerationAdapter,
 )
 from app.core.config import get_settings
-from app.schemas.rebuilt.screening_rubric import (
+from app.schemas.screening_rubric import (
     ManualSemanticCriterionInput,
     RubricGenerationSuggestion,
     RubricTemplateKey,

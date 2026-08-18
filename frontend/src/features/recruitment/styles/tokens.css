@@ -1,0 +1,10 @@
+/* Shared stage 3 visual tokens. */
+.recruitment-shell,
+.recruitment-apply-page {
+    --recruitment-primary: #3f6fd9;
+    --recruitment-primary-soft: #eef3ff;
+    --recruitment-text: #172033;
+    --recruitment-muted: #697386;
+    --recruitment-border: #e7eaf0;
+    --recruitment-surface: #ffffff
+}

@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.rebuilt.report import Report
-from app.schemas.rebuilt.report import ReportCreate, ReportRead, ReportUpdate
-from app.services.rebuilt.report_service import (
+from app.models.report import Report
+from app.schemas.report import ReportCreate, ReportRead, ReportUpdate
+from app.services.report_service import (
     ReportDependencyNotFoundError,
     ReportScreeningMismatchError,
     report_service,

@@ -1,77 +1,73 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Column, Date, DateTime, Float, ForeignKey, Integer, String, Text, func
-from sqlalchemy.orm import relationship
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ..database import Base
+from app.core.database import Base
+
+if TYPE_CHECKING:
+    from app.models.application import Application
+    from app.models.education import Education
+    from app.models.job import Job
+    from app.models.project_experience import ProjectExperience
+    from app.models.report import Report
+    from app.models.resume import Resume
+    from app.models.screening_result import ScreeningResult
+    from app.models.work_experience import WorkExperience
 
 
 class Candidate(Base):
     __tablename__ = "candidates"
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(50), nullable=False, index=True)
-    phone = Column(String(20), unique=True, index=True)
-    email = Column(String(100), index=True)
-    school = Column(String(100), default="")
-    degree = Column(String(20), default="")
-    major = Column(String(100), default="")
-    job_id = Column(Integer, ForeignKey("jobs.id"), nullable=True, index=True)
-    target_role = Column(String(100), default="")
-    experience_years = Column(Float, default=0)
-    experience_desc = Column(Text, default="")
-    skills = Column(Text, default="[]")
-    self_intro = Column(Text, default="")
-    resume_path = Column(String(500), default="")
-    resume_filename = Column(String(255), default="")
-    resume_file_type = Column(String(20), default="")
-    resume_file_size = Column(Integer, nullable=True)
-    resume_uploaded_at = Column(DateTime, nullable=True)
-    source_channel = Column(String(50), default="HR手动录入")
-    stage = Column(String(20), default="新投递", index=True)
-    screening_status = Column(String(20), default="pending", index=True)
-    interview_time = Column(DateTime, nullable=True)
-    interview_method = Column(String(50), default="")
-    interviewer = Column(String(100), default="")
-    interview_note = Column(Text, default="")
-    interview_feedback_text = Column(Text, default="")
-    interview_round = Column(String(50), default="")
-    feedback_time = Column(DateTime, nullable=True)
-    interview_ai_technical_summary = Column(Text, default="")
-    interview_ai_communication_summary = Column(Text, default="")
-    interview_ai_job_match = Column(Text, default="")
-    interview_ai_risk_points = Column(Text, default="[]")
-    interview_ai_recommendation = Column(String(50), default="")
-    interview_ai_next_step = Column(Text, default="")
-    interview_ai_generated_at = Column(DateTime, nullable=True)
-    recheck_note = Column(Text, default="")
-    second_interview_time = Column(DateTime, nullable=True)
-    second_interviewer = Column(String(100), default="")
-    offer_position = Column(String(100), default="")
-    salary_range = Column(String(100), default="")
-    expected_onboard_date = Column(Date, nullable=True)
-    offer_note = Column(Text, default="")
-    onboard_date = Column(Date, nullable=True)
-    onboard_note = Column(Text, default="")
-    reject_reason = Column(Text, default="")
-    reject_note = Column(Text, default="")
-    stage_source = Column(String(20), default="system_auto")
-    ai_summary = Column(Text, default="")
-    ai_tags = Column(Text, default="[]")
-    match_score = Column(Integer, nullable=True, index=True)
-    priority_level = Column(String(20), default="", index=True)
-    screening_result = Column(String(50), default="")
-    screening_reason = Column(Text, default="")
-    risk_flags = Column(Text, default="[]")
-    screening_updated_at = Column(DateTime, nullable=True)
-    hr_notes = Column(Text, default="")
-    follow_up_date = Column(Date, nullable=True)
-    is_duplicate = Column(Boolean, default=False)
-    duplicate_of_id = Column(Integer, ForeignKey("candidates.id"), nullable=True)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    phone: Mapped[str | None] = mapped_column(String(20), index=True)
+    email: Mapped[str | None] = mapped_column(String(100), index=True)
+    gender: Mapped[str | None] = mapped_column(String(10))
+    age: Mapped[int | None] = mapped_column(Integer)
+    location: Mapped[str | None] = mapped_column(String(100), index=True)
+    current_company: Mapped[str | None] = mapped_column(String(200))
+    current_title: Mapped[str | None] = mapped_column(String(200))
+    work_years: Mapped[int | None] = mapped_column(Integer, index=True)
+    education_level: Mapped[str | None] = mapped_column(String(50), index=True)
+    source: Mapped[str | None] = mapped_column(String(50), index=True)
+    status: Mapped[str] = mapped_column(
+        String(50),
+        default="new",
+        server_default="new",
+        index=True,
+    )
+    applied_job_id: Mapped[int | None] = mapped_column(ForeignKey("jobs.id"), index=True)
+    resume_file_path: Mapped[str | None] = mapped_column(String(500))
+    resume_text: Mapped[str | None] = mapped_column(Text)
+    parsed_data: Mapped[dict | None] = mapped_column(JSONB)
+    ai_summary: Mapped[str | None] = mapped_column(Text)
+    tags: Mapped[list | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
 
-    activity_logs = relationship("ActivityLog", back_populates="candidate", cascade="all, delete-orphan")
-    stage_change_logs = relationship("StageChangeLog", back_populates="candidate", cascade="all, delete-orphan")
-    job = relationship("Job", back_populates="candidates")
-    duplicate_of = relationship("Candidate", remote_side=[id], foreign_keys=[duplicate_of_id])
+    applied_job: Mapped["Job | None"] = relationship(back_populates="candidates")
+    resumes: Mapped[list["Resume"]] = relationship(back_populates="candidate")
+    education_records: Mapped[list["Education"]] = relationship(
+        back_populates="candidate",
+        cascade="all, delete-orphan",
+    )
+    work_experiences: Mapped[list["WorkExperience"]] = relationship(
+        back_populates="candidate",
+        cascade="all, delete-orphan",
+    )
+    project_experiences: Mapped[list["ProjectExperience"]] = relationship(
+        back_populates="candidate",
+        cascade="all, delete-orphan",
+    )
+    screening_results: Mapped[list["ScreeningResult"]] = relationship(back_populates="candidate")
+    applications: Mapped[list["Application"]] = relationship(back_populates="candidate")
+    reports: Mapped[list["Report"]] = relationship(back_populates="candidate")

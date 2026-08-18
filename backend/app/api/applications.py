@@ -2,19 +2,37 @@ from __future__ import annotations
 
 import re
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Response, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+    status,
+)
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.schemas.rebuilt.application import (
+from app.schemas.application import (
+    ApplicationAIStatus,
+    ApplicationLifecycleStatus,
     ApplicationRead,
     ApplicationIntakeRequest,
     ApplicationIntakeResponse,
+    HRDecision,
+    RecruitmentStage,
+    ScreeningRunRequest,
 )
-from app.schemas.rebuilt.stage_history import (
+from app.schemas.screening_result import (
+    ApplicationScreeningResultSummaryRead,
+    ApplicationScreeningRunResponse,
+)
+from app.schemas.stage_history import (
     BackupApplicationRequest,
     PassApplicationRequest,
     RejectApplicationRequest,
@@ -22,12 +40,12 @@ from app.schemas.rebuilt.stage_history import (
     StageHistoryRead,
     VoidApplicationRequest,
 )
-from app.services.rebuilt.application_decision_service import (
+from app.services.application_decision_service import (
     ApplicationNotFoundError,
     InvalidApplicationTransitionError,
     application_decision_service,
 )
-from app.services.rebuilt.application_intake_service import (
+from app.services.application_intake_service import (
     ApplicationCandidateNotFoundError,
     ApplicationContactIdentityConflictError,
     ApplicationIntakeResult,
@@ -35,6 +53,18 @@ from app.services.rebuilt.application_intake_service import (
     ApplicationResumeNotFoundError,
     ApplicationResumeOwnershipConflictError,
     application_intake_service,
+)
+from app.services.application_service import application_service
+from app.services.screening_result_service import screening_result_service
+from app.services.screening_service import (
+    ScreeningAlreadyRunningError,
+    ScreeningApplicationNotFoundError,
+    ScreeningJobNotOpenError,
+    ScreeningNotAllowedError,
+    ScreeningResumeRequiredError,
+    ScreeningRubricInvalidError,
+    ScreeningRubricStaleError,
+    screening_service,
 )
 
 
@@ -161,6 +191,56 @@ def _map_application_error(exc: Exception) -> HTTPException:
     )
 
 
+def _map_screening_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, ScreeningApplicationNotFoundError):
+        return _application_http_exception(
+            status.HTTP_404_NOT_FOUND,
+            "APPLICATION_NOT_FOUND",
+            "Application 不存在",
+        )
+    if isinstance(exc, ScreeningAlreadyRunningError):
+        return _application_http_exception(
+            status.HTTP_409_CONFLICT,
+            "SCREENING_ALREADY_RUNNING",
+            "该 Application 已有评分正在执行",
+        )
+    if isinstance(exc, ScreeningResumeRequiredError):
+        return _application_http_exception(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "APPLICATION_RESUME_REQUIRED",
+            "Application 尚未绑定可用简历",
+        )
+    if isinstance(exc, ScreeningJobNotOpenError):
+        return _application_http_exception(
+            status.HTTP_409_CONFLICT,
+            "JOB_NOT_OPEN_FOR_SCREENING",
+            "岗位当前不是 open 状态，不能启动新评分",
+        )
+    if isinstance(exc, ScreeningRubricInvalidError):
+        return _application_http_exception(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            "RUBRIC_CRITERIA_INVALID",
+            "当前岗位缺少合法的已发布 Rubric",
+        )
+    if isinstance(exc, ScreeningRubricStaleError):
+        return _application_http_exception(
+            status.HTTP_409_CONFLICT,
+            "RUBRIC_DRAFT_STALE",
+            "当前 Rubric 与岗位评分输入不一致，需由 HR 重新确认",
+        )
+    if isinstance(exc, ScreeningNotAllowedError):
+        return _application_http_exception(
+            status.HTTP_409_CONFLICT,
+            "SCREENING_NOT_ALLOWED",
+            "当前 Application、岗位、简历或 Rubric 状态不允许启动评分",
+        )
+    return _application_http_exception(
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+        "SCREENING_OPERATION_FAILED",
+        "评分操作失败，已保留 Application 和历史成功结果",
+    )
+
+
 @router.post(
     "/intake",
     response_model=ApplicationIntakeResponse,
@@ -189,6 +269,96 @@ async def intake_application(
             result.suspected_duplicate_candidate_ids
         ),
     )
+
+
+@router.get("", response_model=list[ApplicationRead])
+async def list_applications(
+    job_id: int | None = Query(default=None, ge=1),
+    recruitment_stage: RecruitmentStage | None = None,
+    ai_status: ApplicationAIStatus | None = None,
+    hr_decision: HRDecision | None = None,
+    lifecycle_status: ApplicationLifecycleStatus | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> list[ApplicationRead]:
+    try:
+        return await application_service.list_applications(
+            db,
+            job_id=job_id,
+            recruitment_stage=(
+                recruitment_stage.value if recruitment_stage is not None else None
+            ),
+            ai_status=ai_status.value if ai_status is not None else None,
+            hr_decision=hr_decision.value if hr_decision is not None else None,
+            lifecycle_status=(
+                lifecycle_status.value if lifecycle_status is not None else None
+            ),
+        )
+    except Exception as exc:
+        raise _map_application_error(exc) from exc
+
+
+@router.get("/{application_id}", response_model=ApplicationRead)
+async def get_application(
+    application_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> ApplicationRead:
+    try:
+        application = await application_service.get_application(db, application_id)
+    except Exception as exc:
+        raise _map_application_error(exc) from exc
+    if application is None:
+        raise _application_http_exception(
+            status.HTTP_404_NOT_FOUND,
+            "APPLICATION_NOT_FOUND",
+            "Application 不存在",
+        )
+    return application
+
+
+@router.post(
+    "/{application_id}/screenings",
+    response_model=ApplicationScreeningRunResponse,
+)
+async def run_application_screening(
+    application_id: int,
+    data: ScreeningRunRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ApplicationScreeningRunResponse:
+    try:
+        outcome = await screening_service.run(
+            db,
+            application_id,
+            data,
+            actor_type="hr",
+            actor_label="本地 HR（未认证）",
+        )
+    except Exception as exc:
+        raise _map_screening_error(exc) from exc
+    return ApplicationScreeningRunResponse(
+        result=outcome.result,
+        reused=outcome.reused,
+        model_called=outcome.model_called,
+    )
+
+
+@router.get(
+    "/{application_id}/screenings",
+    response_model=list[ApplicationScreeningResultSummaryRead],
+)
+async def list_application_screenings(
+    application_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> list[ApplicationScreeningResultSummaryRead]:
+    try:
+        application = await application_service.get_application(db, application_id)
+        if application is None:
+            raise ApplicationNotFoundError("Application 不存在")
+        return await screening_result_service.list_screening_results(
+            db,
+            application_id=application_id,
+        )
+    except Exception as exc:
+        raise _map_application_error(exc) from exc
 
 
 @router.post("/{application_id}/pass", response_model=ApplicationRead)

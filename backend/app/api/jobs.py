@@ -18,13 +18,13 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.adapters.rebuilt.screening_rubric_generation import (
+from app.adapters.screening_rubric_generation import (
     RubricGenerationAdapterError,
 )
 from app.core.database import get_db
-from app.models.rebuilt.job import Job
-from app.schemas.rebuilt.job import JobCreate, JobRead, JobStatus, JobUpdate
-from app.schemas.rebuilt.screening_rubric import (
+from app.models.job import Job
+from app.schemas.job import JobCreate, JobRead, JobStatus, JobUpdate
+from app.schemas.screening_rubric import (
     JobScreeningRubricRead,
     ScreeningRubricAbandonRequest,
     ScreeningRubricDraftUpdateRequest,
@@ -35,14 +35,18 @@ from app.schemas.rebuilt.screening_rubric import (
     ScreeningRubricReconfirmRequest,
     ScreeningRubricTemplateDraftRequest,
 )
-from app.services.rebuilt.job_service import (
+from app.schemas.screening_batch import (
+    ScreeningBatchRunRequest,
+    ScreeningBatchRunResponse,
+)
+from app.services.job_service import (
     InvalidJobStatusTransitionError,
     JobHasReferencesError,
     JobMustBeClosedBeforeDeleteError,
     JobOpenValidationError,
     job_service,
 )
-from app.services.rebuilt.screening_rubric_service import (
+from app.services.screening_rubric_service import (
     CurrentScreeningRubricNotFoundError,
     ScreeningRubricDraftAlreadyExistsError,
     ScreeningRubricDraftNotFoundError,
@@ -52,6 +56,13 @@ from app.services.rebuilt.screening_rubric_service import (
     ScreeningRubricPublishValidationError,
     ScreeningRubricStaleError,
     screening_rubric_service,
+)
+from app.services.screening_batch_service import (
+    ScreeningBatchApplicationsNotFoundError,
+    ScreeningBatchJobMismatchError,
+    ScreeningBatchJobNotFoundError,
+    ScreeningBatchJobNotOpenError,
+    screening_batch_service,
 )
 
 
@@ -74,6 +85,9 @@ _RUBRIC_UPDATE_PATH = re.compile(
     r"^(?:/api/v2)?/jobs/-?\d+/screening-rubric/"
     r"(?:draft(?:/from-template|/assist-item|/publish|/abandon)?|generate|reconfirm)/?$"
 )
+_SCREENING_BATCH_PATH = re.compile(
+    r"^(?:/api/v2)?/jobs/-?\d+/screenings/batch/?$"
+)
 _StatusAction = Callable[[AsyncSession, int], Awaitable[Job | None]]
 
 
@@ -85,6 +99,16 @@ async def _job_request_validation_handler(
     request: Request,
     exc: RequestValidationError,
 ):
+    if request.method == "POST" and _SCREENING_BATCH_PATH.fullmatch(request.url.path):
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={
+                "detail": {
+                    "code": "SCREENING_BATCH_INVALID",
+                    "message": "批量评分请求不合法，必须选择同岗位的 1—5 个 Application",
+                }
+            },
+        )
     if (
         request.method == "PUT"
         and _JOB_UPDATE_PATH.fullmatch(request.url.path)
@@ -132,6 +156,36 @@ def _operation_failed() -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         detail=JOB_OPERATION_FAILED,
+    )
+
+
+def _screening_batch_error(exc: Exception) -> HTTPException:
+    if isinstance(exc, ScreeningBatchJobNotFoundError):
+        return _not_found()
+    if isinstance(exc, ScreeningBatchJobNotOpenError):
+        return _job_http_exception(
+            status.HTTP_409_CONFLICT,
+            "JOB_NOT_OPEN_FOR_SCREENING",
+            "岗位当前不是 open 状态，不能启动批量评分",
+        )
+    if isinstance(exc, ScreeningBatchApplicationsNotFoundError):
+        return _job_http_exception(
+            status.HTTP_404_NOT_FOUND,
+            "BATCH_APPLICATIONS_NOT_FOUND",
+            "批次中存在找不到的 Application",
+            application_ids=list(exc.application_ids),
+        )
+    if isinstance(exc, ScreeningBatchJobMismatchError):
+        return _job_http_exception(
+            status.HTTP_409_CONFLICT,
+            "BATCH_APPLICATION_JOB_MISMATCH",
+            "批次中的 Application 不属于指定岗位",
+            application_ids=list(exc.application_ids),
+        )
+    return _job_http_exception(
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+        "SCREENING_BATCH_FAILED",
+        "批量评分启动失败，没有影响已独立保存的其他结果",
     )
 
 
@@ -203,6 +257,21 @@ async def get_job(
     if job is None:
         raise _not_found()
     return job
+
+
+@router.post(
+    "/{job_id}/screenings/batch",
+    response_model=ScreeningBatchRunResponse,
+)
+async def run_screening_batch(
+    job_id: int,
+    data: ScreeningBatchRunRequest,
+    db: AsyncSession = Depends(get_db),
+) -> ScreeningBatchRunResponse:
+    try:
+        return await screening_batch_service.run(db, job_id, data)
+    except Exception as exc:
+        raise _screening_batch_error(exc) from exc
 
 
 @router.put("/{job_id}", response_model=JobRead)

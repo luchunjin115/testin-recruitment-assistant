@@ -1,0 +1,61 @@
+/* Stage 3 resume list. */
+
+.recruitment-resume-panel {
+  margin-top: 16px;
+  overflow: hidden;
+}
+
+.recruitment-resume-toolbar {
+  display: flex;
+  min-height: 78px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #edf0f3;
+}
+
+.recruitment-resume-toolbar h3 {
+  margin: 0 0 3px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.recruitment-resume-table-columns {
+  grid-template-columns: 1.35fr 0.9fr 1fr 0.72fr 0.72fr 0.8fr;
+}
+
+.recruitment-resume-file-cell {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.recruitment-resume-file-cell > div,
+.recruitment-resume-secondary {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.recruitment-resume-file-cell strong,
+.recruitment-resume-secondary strong {
+  overflow: hidden;
+  color: #354052;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recruitment-resume-file-cell span:last-child,
+.recruitment-resume-secondary span {
+  margin-top: 3px;
+  color: #949cab;
+  font-size: 10px;
+}
+
+.recruitment-resume-empty {
+  min-height: 310px;
+}

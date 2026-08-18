@@ -17,16 +17,12 @@ logs/
 backend/logs/
 frontend/logs/
 uploads/
-backend/uploads/
-backend/uploads-test/
 backend/storage/
-!backend/uploads/.gitkeep
 uploads/*.pdf
 uploads/*.docx
 uploads/*.txt
 !uploads/.gitkeep
 data/
-backend/data/
 *.csv
 .DS_Store
 *.log

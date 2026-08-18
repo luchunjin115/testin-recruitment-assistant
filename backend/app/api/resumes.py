@@ -8,13 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models.rebuilt.resume import Resume
-from app.schemas.rebuilt.resume import ResumeCreate, ResumeRead, ResumeUpdate
-from app.schemas.rebuilt.resume_structure import (
+from app.models.resume import Resume
+from app.schemas.resume import ResumeCreate, ResumeRead, ResumeUpdate
+from app.schemas.resume_structure import (
     ResumeStructureRequest,
     ResumeStructureResponse,
 )
-from app.adapters.rebuilt.resume_structure import (
+from app.adapters.resume_structure import (
     ResumeStructureAdapterError,
     ResumeStructureAuthenticationError,
     ResumeStructureConfigurationError as ResumeStructureAdapterConfigurationError,
@@ -27,7 +27,7 @@ from app.adapters.rebuilt.resume_structure import (
     ResumeStructureTimeoutError,
     ResumeStructureUpstreamError,
 )
-from app.services.rebuilt.resume_service import (
+from app.services.resume_service import (
     ResumeAlreadyBoundError,
     ResumeCandidateNotFoundError,
     ResumeJobNotFoundError,
@@ -38,7 +38,7 @@ from app.services.rebuilt.resume_service import (
     UnsupportedResumeTextExtractionError,
     resume_service,
 )
-from app.services.rebuilt.resume_structure_service import (
+from app.services.resume_structure_service import (
     ResumeStructureConflictError,
     ResumeStructureConfigurationError,
     ResumeStructureDisabledError,
@@ -50,12 +50,12 @@ from app.services.rebuilt.resume_structure_service import (
     ResumeStructureUnexpectedError,
     resume_structure_service,
 )
-from app.services.rebuilt.resume_file_cleanup import (
+from app.services.resume_file_cleanup import (
     ResumeCleanupStorageError,
     ResumeCleanupValidationError,
     UnsupportedResumeCleanupError,
 )
-from app.services.rebuilt.resume_storage import (
+from app.services.resume_storage import (
     EmptyResumeFileError,
     InvalidResumeContentError,
     InvalidResumeFilenameError,
@@ -125,7 +125,7 @@ async def upload_resume(
             upload=file,
             candidate_id=candidate_id,
             job_id=job_id,
-            upload_root=Path(settings.V2_STORAGE_DIR),
+            upload_root=Path(settings.STORAGE_DIR),
             max_size_bytes=settings.MAX_FILE_SIZE_MB * 1024 * 1024,
         )
     except ResumeCandidateNotFoundError as exc:
@@ -167,7 +167,7 @@ async def extract_resume_text(
         resume = await resume_service.extract_text(
             db=db,
             resume_id=resume_id,
-            storage_root=Path(settings.V2_STORAGE_DIR),
+            storage_root=Path(settings.STORAGE_DIR),
         )
     except ResumeTextExtractionConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
@@ -320,7 +320,7 @@ async def get_resume_file(
         file_descriptor = await resume_service.get_resume_file(
             db=db,
             resume_id=resume_id,
-            storage_root=Path(settings.V2_STORAGE_DIR),
+            storage_root=Path(settings.STORAGE_DIR),
         )
     except UnsupportedResumeFileError as exc:
         raise HTTPException(
@@ -398,7 +398,7 @@ async def delete_resume(
         deleted = await resume_service.delete_resume(
             db,
             resume_id,
-            storage_root=Path(settings.V2_STORAGE_DIR),
+            storage_root=Path(settings.STORAGE_DIR),
         )
     except ResumeAlreadyBoundError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc

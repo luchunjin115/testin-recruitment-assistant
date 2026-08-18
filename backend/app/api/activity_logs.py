@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.rebuilt.activity_log import ActivityLog
-from app.schemas.rebuilt.activity_log import ActivityLogCreate, ActivityLogRead
-from app.services.rebuilt.activity_log_service import activity_log_service
+from app.models.activity_log import ActivityLog
+from app.schemas.activity_log import ActivityLogCreate, ActivityLogRead
+from app.services.activity_log_service import activity_log_service
 
 
 router = APIRouter(prefix="/activity-logs", tags=["activity-logs"])

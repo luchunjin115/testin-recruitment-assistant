@@ -15,7 +15,7 @@ import sqlalchemy as sa
 from pydantic import ValidationError
 from sqlalchemy.dialects import postgresql
 
-from app.schemas.rebuilt.job import JobRequirementsV1
+from app.schemas.job import JobRequirementsV1
 
 
 revision = "c8e1a6f4d205"

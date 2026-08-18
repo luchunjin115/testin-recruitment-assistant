@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $backendDir = Join-Path $projectRoot "backend"
 $frontendDir = Join-Path $projectRoot "frontend"
-$jobPageUrl = "http://localhost:5173/stage3/jobs"
+$jobPageUrl = "http://localhost:5173/app/jobs"
 $venvPython = Join-Path $projectRoot ".venv\Scripts\python.exe"
 
 function Assert-Command {

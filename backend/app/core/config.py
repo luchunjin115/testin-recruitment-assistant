@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from decimal import Decimal
 from urllib.parse import quote_plus
 from typing import List, Optional
 
@@ -80,16 +81,38 @@ class Settings(BaseSettings):
     RUBRIC_GENERATION_PROMPT_VERSION: str = "rubric_generation_v2"
     RUBRIC_ITEM_ASSIST_PROMPT_VERSION: str = "rubric_item_assist_v1"
     RUBRIC_GENERATION_SCHEMA_VERSION: str = "1.0"
+    SCREENING_MODEL_ENABLED: bool = True
+    SCREENING_MODEL_NAME: str = "deepseek-v4-flash"
+    SCREENING_MODEL_TIMEOUT_SECONDS: float = Field(default=90, gt=0, le=600)
+    SCREENING_MODEL_MAX_INPUT_CHARS: int = Field(
+        default=160_000,
+        ge=10_000,
+        le=1_000_000,
+    )
+    SCREENING_MODEL_MAX_OUTPUT_TOKENS: int = Field(
+        default=8_000,
+        ge=1_000,
+        le=384_000,
+    )
+    SCREENING_MODEL_PROMPT_VERSION: str = "screening_evaluation_v3"
+    SCREENING_MODEL_SCHEMA_VERSION: str = "1.0"
+    SCREENING_MODEL_INPUT_COST_PER_MILLION: Decimal | None = Field(
+        default=None,
+        ge=0,
+    )
+    SCREENING_MODEL_OUTPUT_COST_PER_MILLION: Decimal | None = Field(
+        default=None,
+        ge=0,
+    )
 
-    UPLOAD_DIR: str = str((BACKEND_DIR / "uploads").resolve())
-    V2_STORAGE_DIR: str = str((BACKEND_DIR / "storage").resolve())
+    STORAGE_DIR: str = str((BACKEND_DIR / "storage").resolve())
     MAX_FILE_SIZE_MB: int = 10
     RESUME_CLEANUP_ENABLED: bool = True
     RESUME_UNBOUND_RETENTION_HOURS: int = Field(default=24, ge=1, le=24 * 365)
     RESUME_CLEANUP_INTERVAL_MINUTES: int = Field(default=60, ge=1, le=24 * 60)
     RESUME_CLEANUP_BATCH_SIZE: int = Field(default=50, ge=1, le=1000)
 
-    @field_validator("UPLOAD_DIR", "V2_STORAGE_DIR")
+    @field_validator("STORAGE_DIR")
     @classmethod
     def normalize_storage_dir(cls, value: str) -> str:
         return _resolve_path(value)

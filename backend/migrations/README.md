@@ -1,6 +1,6 @@
 # Alembic Migrations
 
-This directory belongs to the rebuilt PostgreSQL architecture.
+This directory belongs to the PostgreSQL architecture.
 
 ## Naming convention
 

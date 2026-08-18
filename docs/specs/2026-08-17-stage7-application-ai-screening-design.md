@@ -2,13 +2,15 @@
 
 > 日期：2026-08-17
 >
-> 状态：小步骤 1—5 与评分方案修订小步骤 5A 已完成；下一步进入小步骤 6 DeepSeek 候选人语义评价 Adapter
+> 状态：小步骤 1—8 与评分方案修订小步骤 5A 已完成；小步骤 9 的后端支撑契约、前端类型/API 调用层、Application 工作队列、单人评分、同岗位最多 5 人批量评分、评分详情、逐项证据和评分历史交互已完成，下一步只做强制重跑确认，暂不进入 HR 决策交互
 >
 > 上游依据：`2026-07-15-hr-agent-platform-design.md`、`2026-08-14-post-stage5-product-roadmap.md`、`../implementation-plan.md`
 >
 > 外部参考：`../research/2026-08-15-github-recruiting-project-comparison.md`
 >
-> 前置门禁：阶段 6 已于 2026-08-17 获用户确认完成；Reqcore 式 Rubric 小步骤 5A 的需求、自动化、隔离 PostgreSQL 和真实 DeepSeek 验证均已完成，小步骤 6 门禁已开放
+> 退役决策：2026-08-18 用户确认旧代码与旧演示数据不再保留或迁移；本文原有 legacy 合同与旧数据迁移要求由 `2026-08-18-legacy-system-retirement-decision.md` 替代
+>
+> 前置门禁：阶段 6 已于 2026-08-17 获用户确认完成；Rubric 小步骤 5A、候选人语义评价小步骤 6、正式单 Application 工作流小步骤 7 和小批量 API 小步骤 8 的自动化与隔离 PostgreSQL 验证均已完成，步骤 6—7 另有少量真实 DeepSeek 验证；用户已确认开始小步骤 9，当前按教学协作规则逐段实现
 
 ## 1. 文档目的
 
@@ -38,19 +40,19 @@ HR 审核确认与版本化发布
 
 本次变更替代第 12 节原先“固定 13 个内部子项 + 六档语义换算”的长期方案。小步骤 1—5 已完成的 Application、状态机、Rubric 版本、五维权重、确定性规则、并发和审计能力继续保留；固定子项和六档换算代码将在新的“小步骤 5A”中按确认后的设计调整，不能把旧实现描述为最终方案。
 
-## 2. 当前事实与主要问题
+## 2. 阶段开始时的事实与主要问题（历史基线）
 
-当前已具备：
+阶段开始时已具备：
 
 - 阶段 5 已能安全上传 PDF/DOCX/TXT、提取 `Resume.raw_text`、生成严格结构化草稿，并由 HR 确认后创建 Candidate。
 - 阶段 6 已建立 `JobRequirements v1`、`draft/open/closed` 状态、真实岗位表单和开放岗位读取边界。
 - PostgreSQL 已有 Candidate、Job、Resume、ScreeningResult、Report 和 ActivityLog 等基础模型。
-- `/stage3/screening` 目前只能读取已有 ScreeningResult，不会启动新的 AI 评分。
-- 当前 ScreeningResult 使用 `candidate_id + job_id` 唯一约束，只能保留一条结果，无法支持重跑历史。
-- 当前 Candidate 使用 `applied_job_id` 和单一 `status` 表达岗位及流程，无法支持一个人独立申请多个岗位。
-- 阶段 6 验收时 PostgreSQL 有 30 条 Candidate、8 条 Job、0 条 Resume 和29条ScreeningResult，旧数据必须无损迁移。
+- `/stage3/screening` 当时只能读取已有 ScreeningResult，不会启动新的 AI 评分。
+- 当时 ScreeningResult 使用 `candidate_id + job_id` 唯一约束，只能保留一条结果，无法支持重跑历史。
+- 当时 Candidate 使用 `applied_job_id` 和单一 `status` 表达岗位及流程，无法支持一个人独立申请多个岗位。
+- 阶段 6 验收时 PostgreSQL 中的 30 条 Candidate、8 条 Job 和 29 条 ScreeningResult 来自旧演示链路；用户已确认不再保留，不能继续驱动新版 Schema。
 
-当前不足：
+阶段开始时不足：
 
 - 没有 Application 和 Application 阶段历史。
 - AI 处理状态、HR 决策和招聘阶段混在 Candidate 状态中。
@@ -58,7 +60,9 @@ HR 审核确认与版本化发布
 - 没有岗位级 Rubric、逐项证据、输入快照和版本。
 - 没有当前有效结果、过期结果和失败重跑的稳定语义。
 - 没有 HR 内部录入后的自动评分和正式通过/备选/淘汰动作。
-- 没有旧 Candidate/ScreeningResult 到 Application 的确定性迁移。
+- 新旧运行入口仍并存，阶段 7 Schema 中仍有待移除的 legacy 兼容分支。
+
+以上内容只记录阶段 7 启动时的基线，不代表当前实现状态。当前进度以本文顶部状态、第 22 节完成记录和 `PROJECT_STATE.md` 为准；现行前端路由为 `/app/*`，旧系统和 legacy 数据已完成退役。
 
 ## 3. 阶段目标与范围
 
@@ -76,9 +80,9 @@ HR 审核确认与版本化发布
 10. 同一开放岗位最多5个 Application 的小批量评分。
 11. HR 通过、备选、淘汰、撤销和原因审计。
 12. Application 作废、Candidate 归档和历史数据保护。
-13. 旧 30 条 Candidate、29 条 ScreeningResult 的迁移预览和无损迁移。
+13. 移除旧数据迁移合同，所有 Application 必须遵守统一的新版岗位、联系方式和当前 Resume 约束。
 14. 20份脱敏样本的真实 DeepSeek 质量评估。
-15. `/stage3/screening`、候选人列表、候选人详情和岗位表单的阶段 7 交互。
+15. `/app/screening`、候选人列表、候选人详情和岗位表单的阶段 7 交互。
 
 ### 3.2 本阶段不包含
 
@@ -128,8 +132,8 @@ Application.hr_decision == passed
 | `id` | PostgreSQL 主键 |
 | `candidate_id` | 必填，关联 Candidate |
 | `job_id` | 必填，关联 Job |
-| `current_resume_id` | 新记录必填；legacy 迁移允许为空 |
-| `source` | `hr_direct/hr_screening/public_apply/legacy_migration` |
+| `current_resume_id` | 必填，关联本次申请使用的当前 Resume |
+| `source` | `hr_direct/hr_screening/public_apply` |
 | `lifecycle_status` | `active/ended/voided` |
 | `recruitment_stage` | 当前招聘阶段 |
 | `ai_status` | 当前 AI 处理状态 |
@@ -137,7 +141,6 @@ Application.hr_decision == passed
 | `current_screening_result_id` | 当前最近成功结果，可空 |
 | `applied_at` | 带时区申请时间 |
 | `created_at/updated_at` | 服务端维护 |
-| `legacy_stage` | 旧数据原状态，可空，只读 |
 
 同一 Candidate、同一 Job 只能存在一个 `lifecycle_status=active` 且未作废的 Application。阶段 7 的 rejected 和 voided 会结束当前申请；阶段 9 增加 hired、withdrawn 等终态时同步扩展生命周期规则。
 
@@ -161,7 +164,7 @@ StageHistory 只追加、不更新、不删除，至少保存：
 - `job_id`
 - `version`
 - 五个维度权重
-- `source_type`：`system_default/template/ai_generated/hr_adjustment/legacy_migration`
+- `source_type`：`system_default/template/ai_generated/hr_adjustment`
 - `template_key`：`standard/technical/non_technical`，可空
 - `status`：`draft/active/superseded`
 - 岗位专用评分项列表及其维度、说明、评估方式、权重份额和评分锚点
@@ -312,7 +315,7 @@ applied -> hr_review -> screening_passed
                      -> rejected
 ```
 
-HR 直接新增可以在创建时直接进入 `screening_passed`，但必须记录 `hr_direct_entry` 历史。旧数据的面试、Offer 和 hired 阶段只读保留，阶段 9 再接入正式动作。
+HR 直接新增可以在创建时直接进入 `screening_passed`，但必须记录 `hr_direct_entry` 历史。阶段 7 不接收面试、Offer 和 hired 状态，阶段 9 再接入这些正式动作。
 
 ### 7.4 候选人页面与初筛中心
 
@@ -511,6 +514,8 @@ AI 超时、服务失败、非法数量、非法 Schema、重复计分、公平�
 
 DeepSeek 对每个已确认语义项返回 `0—10` 整数或 `unknown`，并必须返回 `confidence`、`evidence`、`reason`、`strengths` 和 `gaps`。不再使用 `full/strong/partial/weak/none` 六档作为最终语义合同。
 
+第一版 `confidence` 固定为 `low/medium/high`，避免没有业务依据的过度精确小数。每条 evidence 固定包含 `source/locator/quote`：来源只能是 HR 已确认资料、脱敏简历原文或脱敏结构化快照；`quote` 必须能在对应来源逐字定位，JSON 数组证据必须逐元素引用，不能由模型拼接或改写。数字 0 也属于明确评分，必须提供证据；没有证据时必须返回 `unknown + low` 并在 `gaps` 说明缺少材料。
+
 ```text
 语义项贡献分 = AI 原始分 / 10 × 该项在总分中的实际权重
 ```
@@ -628,54 +633,17 @@ Python 负责确定性规则得分、同维度占比归一化、五维加权、�
 - 最终隐私删除、匿名化和保留期限属于阶段 12。
 - 自动化和验收隔离数据可以由严格限定的测试清理逻辑删除。
 
-## 18. 旧数据迁移
+## 18. 旧版退役与新版数据基线
 
-### 18.1 只读预检
+阶段 7 不再把旧 Candidate、Job、ScreeningResult 或上传附件转换为 Application。旧数据只在删除前用于确认精确清理范围，不参与状态映射、HR 决策推断、评分历史构造或新版验收。
 
-正式 migration 前输出并保存：
+代码与数据库收口要求：
 
-- Candidate、Job、Resume、ScreeningResult 数量
-- Candidate 每种旧状态数量
-- Candidate.applied_job_id 与 ScreeningResult.job_id 关系
-- 缺少岗位、联系方式或 Resume 的数量
-- 预计生成 Application 数量
-- 预计进入候选人页、待审核、备选、淘汰和异常区数量
-- 冲突和未识别状态明细
-- 当前 Alembic revision 和关键关联哈希
-
-用户确认预览后才能向正式开发数据库升级。
-
-### 18.2 状态映射
-
-| 旧 Candidate.status | 新 HR 决策 | 新招聘阶段 | 候选人页面 |
-| --- | --- | --- | --- |
-| `new` | pending | applied | 否 |
-| `screening` | pending | hr_review | 否 |
-| `passed/active` | passed | screening_passed | 是 |
-| `interview_pending/interview_scheduled/interviewing/second_interview` | passed | 原阶段只读保留 | 是 |
-| `offer/hired` | passed | 原阶段只读保留 | 是 |
-| `backup` | backup | backup | 否 |
-| `rejected` | rejected | rejected | 否 |
-| `closed/未知` | pending 或迁移异常 | 人工核对 | 否 |
-
-旧 AI 分数或 `screening_status` 不能推断新的 HR 决策。
-
-### 18.3 Application 与旧结果
-
-- 根据 Candidate.applied_job_id 和 ScreeningResult 的 candidate/job 关系生成 legacy Application。
-- 同一 pair 只生成一条；冲突不静默选择，进入迁移异常。
-- 旧 ScreeningResult 绑定对应 Application，作为 attempt 1 历史结果。
-- 标记 `legacy_sqlite_import`、旧规则、证据不完整和历史输入。
-- 不伪装成新版 Rubric，不自动调用 DeepSeek。
-- legacy Application 允许 current_resume_id 为空；补齐/上传 Resume 后才允许新版评分。
-- Candidate 旧字段先保留作兼容桥，不在同一 migration 中激进删除。
-
-### 18.4 往返与保护
-
-- 在专用临时 PostgreSQL 执行 upgrade -> downgrade -> upgrade。
-- 核对数量、ID、时间、岗位关联、旧状态和原始结果 JSON。
-- 正式数据库只执行确认后的向前升级。
-- 旧 SQLite 和上传目录不修改、不清理。
+- 删除 `legacy_migration`、`legacy_stage` 和无当前 Resume 例外。
+- 删除旧 ScreeningResult 的新版兼容响应；新版结果必须关联 Application、Resume 和 Rubric。
+- 正式开发库升级阶段 7 前，先只读记录 revision 和旧演示数据数量，再按退役小步骤精确清理。
+- 清理后从空库升级 Alembic，并仅通过新版 Model/Service/API 或受控新版 seed 创建验收数据。
+- 数据库、附件和旧文件清理不得与运行入口切换混在同一步，具体边界见 `2026-08-18-legacy-system-retirement-decision.md`。
 
 ## 19. API 契约方向
 
@@ -857,21 +825,33 @@ Python 负责确定性规则得分、同维度占比归一化、五维加权、�
 - 单次调用、稳定错误、耗时/token/费用记录。
 - 使用 Mock/Fake 完成异常和格式测试，再使用少量脱敏样本验证。
 
+完成状态：✅ 2026-08-18 已新增严格 `ScreeningSemanticEvaluation` 合同、脱敏 `ScreeningInputService`、版本化 `ScreeningPromptBuilder` 和 `DeepSeekScreeningModelAdapter`。模型只接收无真实身份的 Application 引用、HR 已确认岗位相关资料、脱敏原文和去身份结构化快照；正常执行固定一次非流式 JSON 调用、90 秒有界超时、SDK 隐式重试关闭，并记录耗时、token 与可选费用估算。21 项新增步骤 6/配置测试、77 项 Rubric 联合测试和后端全量 566 项测试通过。真实 DeepSeek 首轮发现数组证据拼接、次轮发现无证据数字低分，严格校验均正确拒绝；Prompt 升级至 `screening_evaluation_v3` 后，证据充分虚构样本 6 项全部带可定位证据，稀疏样本 6 项全部返回 `unknown + low` 且无伪造证据。步骤 6 未新增 API、未保存 ScreeningResult、未修改前端或正式数据库。
+
 ### 小步骤 7：ScreeningService、版本和幂等
 
 - 组合规则与语义评价，计算总分。
 - 输入指纹、首次自动、重跑、当前结果、outdated 和失败保留。
 - 单 Application 真实 PostgreSQL + DeepSeek 链路。
 
+完成状态：✅ 2026-08-18 已新增纯 Python `ScreeningScoreService`，把确定性项和已发布岗位语义项放回五维外框，在每个维度内按建议占比归一化；空维度按其他有效维度重分配，`unknown` 不伪装为失败但降低证据覆盖率，Python 统一计算总分、推荐等级、硬性条件/低覆盖率封顶、优势、风险和待确认问题。新增事务化 `ScreeningService`，以 Application 行锁开始一次评分，先提交运行记录再调用 DeepSeek，结束时使用短事务保存不可变 `ScreeningResult`；支持 64 位输入指纹、同输入成功结果复用、二次确认的 force 重跑、递增 attempt、同 Application 单运行约束、输入变化 outdated、新成功切换当前结果、新失败保留旧成功结果，以及安全错误、快照、规则/Prompt/模型/Rubric/岗位版本、耗时、token 和费用元数据。只有 AI 结构化快照而无可读原文或 HR 已确认岗位资料时在模型前 blocked；启动时重新核对 Rubric 岗位指纹，不能只依赖 stale 标志。
+
+本步新增/扩展 16 项计分、编排与结果不可变保护测试，评分相关 57 项联合测试和后端全量 582 项测试通过，`compileall` 与 `git diff --check` 通过。随机临时 PostgreSQL 从空库迁移到 `e7b1c9d4a206` 后，以完全虚构 Application 完成真实 `deepseek-v4-flash` 验证：首次成功结果总分 86、证据覆盖率 100%、`strong_recommend`、1793/566 tokens；第二次相同指纹直接复用，真实模型调用总数仍为 1。修改 Resume 后用可控超时生成 failed attempt，旧成功结果继续作为当前结果并标记 outdated；PostgreSQL 部分唯一索引拒绝第二个并发 screening。真实模型曾有一次非法输出被严格校验拒绝并安全保存 failed，未放宽合同。临时数据库已删除，正式开发库仍停留在阶段 6 revision，未升级、未写入。
+
+本步只完成单 Application 内部 Service 链路，没有新增批量评分 API、没有接入前端，也没有把 DeepSeek 成功与 HR 通过/淘汰绑定。下一步小步骤 8 才实现同一开放岗位最多 5 份的小批量入口、逐项事务、部分失败、复用和仅重试失败项。
+
 ### 小步骤 8：小批量评分 API
 
 - 同岗位最多5项、逐项事务、部分失败、复用和仅重试失败项。
 - 不引入 Redis，不实现批量 HR 决策。
 
+完成状态：✅ 2026-08-18 已新增严格批量请求/逐项响应 Schema、`ScreeningBatchService` 和 `POST /api/v2/jobs/{job_id}/screenings/batch`。接口先整体拒绝关闭/不存在岗位、缺失 Application、跨岗位、重复项和超过 5 项，再按顺序复用单 Application 工作流；每项独立提交，异常只回滚当前项并继续，成功结果可复用，运行中/不允许项安全跳过，`retry_failed_only` 只执行当前 failed。新增 13 项测试，后端全量 595 项通过。随机临时 PostgreSQL 以虚构数据和可控模型验证 `completed/failed/blocked/reused/completed` 混合结果及仅重试第 2 项，审计历史逐项保留；临时库已删除，正式库未升级。本步未接前端、未调用真实 DeepSeek、未引入 Redis/后台队列，也未实现批量 HR 决策。
+
 ### 小步骤 9：前端 Application 与 AI 初筛中心
 
 - 录入、列表、状态、评分详情、证据、历史、批量和 HR 决策。
 - 覆盖 loading、空状态、失败、blocked、outdated 和关闭岗位历史。
+
+进行进度：🚧 已完成前六小段。前三段已交付 Application 查询/评分后端契约、TypeScript API Service 和真实 Application 工作队列；第四段完成单人评分、状态禁用边界、同步双击保护和结果刷新；第五段完成同岗位 1—5 人选择、异岗位/超额/不可运行项前端拦截、同步批量重复提交保护、逐项 `completed/failed/blocked/reused/skipped` 结果抽屉和“仅重试失败项”；第六段完成评分历史抽屉、当前/过期/失败/blocked/强制重跑记录标识，以及五维分数、硬性条件、Rubric 逐项 `0—10/unknown`、原因、置信度、可定位证据和运行版本的只读详情。第六段复用既有历史与详情 API，没有执行 HR 决策；Application Service、工作队列、单人评分、批量评分和详情共 5 组相关前端测试通过，生产构建转换 3118 个模块。正式 PostgreSQL 已在旧版退役步骤中重建为空库并升级到 `f8c2d0e5b317 (head)`；本段未真实调用 DeepSeek，也未使用真实阶段 7 数据完成浏览器点击和桌面/窄屏截图验收。下一小段只做强制重跑确认，暂不进入 HR 决策交互。
 
 ### 小步骤 10：候选人页面、详情和岗位 Rubric
 
@@ -880,11 +860,12 @@ Python 负责确定性规则得分、同维度占比归一化、五维加权、�
 - Candidate 详情聚合 Application。
 - 接入岗位 Rubric 编辑和版本提示。
 
-### 小步骤 11：旧数据正式迁移
+### 小步骤 11：旧版退役与新版数据基线
 
-- 先生成只读预览并等待用户确认。
-- 临时数据库往返通过后，正式数据库只向前升级。
-- 核对 30/8/0/29 基线或执行时最新实际基线，不硬编码假设。
+- 先切换前后端唯一运行入口并验证新版不依赖旧系统。
+- 移除 Application、ScreeningResult 和前端类型中的 legacy 合同。
+- 精确核对后清理旧演示数据库、导入数据和附件；从空库完成 Alembic 与新版主链验证。
+- 依据引用扫描删除无调用者的旧代码；命名收口另开小步骤。
 
 ### 小步骤 12：脱敏评估、全量回归与人工验收
 
@@ -953,12 +934,12 @@ Python 负责确定性规则得分、同维度占比归一化、五维加权、�
 - 结果详情、历史、失败、blocked、outdated 和确认文案。
 - TypeScript 严格检查、生产构建和窄屏布局。
 
-### 23.8 migration
+### 23.8 Alembic 与退役边界
 
-- 全部旧状态映射和未知状态隔离。
-- Candidate/Job/ScreeningResult 数量、ID、时间和关系不丢失。
-- 同 pair 去重、冲突、缺 Resume 和 legacy 结果。
-- upgrade -> downgrade -> upgrade。
+- 阶段 7 Schema 不包含 legacy Application、Rubric 或 ScreeningResult 例外。
+- 从空 PostgreSQL 执行 `upgrade -> downgrade -> upgrade`，新版表、约束和索引一致。
+- 对正式开发库先只读核对 revision 与旧演示数据范围，再执行独立、精确的清理步骤。
+- 清理后只使用新版 Model/Service/API 或受控新版 seed 创建验收数据。
 - `alembic check` 无待生成操作。
 
 ## 24. 脱敏样本评估
@@ -1014,7 +995,7 @@ HR 在运行 AI 前记录硬性条件、主要技能、优势、风险、大致�
 19. unknown 与 failed 分开展示，资料严重不足不生成虚假0分。
 20. 每个评分项可查看简历和岗位证据，敏感信息不进入模型调用。
 21. Application 作废与淘汰分开展示；已关联记录不能硬删除。
-22. 迁移预览获得确认后再执行；迁移前后旧记录、关系和 legacy 原始结果不丢失。
+22. 旧版入口、legacy Schema 分支和旧演示数据清理后，新版能从空库独立完成 Application 与评分主链。
 23. 1440 像素桌面和严格 390 像素窄屏完成新增、筛选、详情、历史、确认和错误状态检查，无整页横向溢出。
 
 ## 26. 阶段完成标准
@@ -1030,7 +1011,7 @@ HR 在运行 AI 前记录硬性条件、主要技能、优势、风险、大致�
 - 候选人页面只展示 HR 已通过 Application。
 - 重跑、当前结果、过期、失败、blocked 和历史版本语义稳定。
 - 5人小批量部分失败隔离可用。
-- 旧数据迁移预览、往返和正式向前升级通过，无数据丢失。
+- 旧版运行入口和 legacy 数据例外已移除；旧演示数据清理后，Alembic 空库升级和新版主链验证通过。
 - 20份脱敏样本达到第 24 节质量标准。
 - 自动化、真实 PostgreSQL、真实 DeepSeek、生产构建和浏览器人工验收全部通过。
 - 阶段 6 真实浏览器人工验收已经完成并获用户确认。
@@ -1080,5 +1061,5 @@ HR 在运行 AI 前记录硬性条件、主要技能、优势、风险、大致�
 10. 输入指纹如何防止重复调用和重复扣费？
 11. 为什么阶段 7 不使用 LangGraph 和 Redis？
 12. 如何证明敏感信息没有进入模型？
-13. 旧数据 migration 如何避免根据 AI 分数伪造 HR 决策？
+13. 为什么最终选择退役旧系统，而不是继续承担双轨兼容和旧数据迁移？
 14. 自动化测试、脱敏样本评估和真实浏览器验收分别能证明什么？

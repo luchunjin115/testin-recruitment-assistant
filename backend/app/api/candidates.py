@@ -2,14 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.rebuilt.candidate import Candidate
-from app.schemas.rebuilt.candidate import (
+from app.models.candidate import Candidate
+from app.schemas.candidate import (
     CandidateCreate,
     CandidateFromResumeCreate,
     CandidateRead,
     CandidateUpdate,
 )
-from app.services.rebuilt.candidate_service import (
+from app.services.candidate_service import (
     CandidateJobNotFoundError,
     CandidateResumeAlreadyBoundError,
     CandidateResumeJobConflictError,

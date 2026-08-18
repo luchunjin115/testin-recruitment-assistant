@@ -1,0 +1,591 @@
+/* Stage 3 candidate list and candidate detail. */
+
+.recruitment-detail-side-value .ant-btn {
+  align-self: flex-start;
+  margin-top: 10px;
+}
+
+.recruitment-detail-related-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.recruitment-candidate-list-panel {
+  margin-top: 16px;
+  overflow: hidden;
+}
+
+.recruitment-candidate-toolbar {
+  display: flex;
+  min-height: 78px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #edf0f3;
+}
+
+.recruitment-candidate-toolbar h3 {
+  margin: 0 0 3px;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.recruitment-candidate-toolbar p {
+  margin: 0;
+  color: var(--recruitment-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.recruitment-candidate-filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recruitment-candidate-filter-controls .ant-input-affix-wrapper {
+  width: 260px;
+  height: 36px;
+  border-radius: 8px;
+}
+
+.recruitment-candidate-filter-controls .ant-select {
+  width: 124px;
+}
+
+.recruitment-candidate-filter-controls .recruitment-candidate-status-select {
+  width: 156px;
+}
+
+.recruitment-candidate-filter-controls .ant-select-selector,
+.recruitment-candidate-filter-controls > .ant-btn {
+  height: 36px !important;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.recruitment-candidate-experience {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+}
+
+.recruitment-candidate-experience strong {
+  overflow: hidden;
+  color: #354052;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recruitment-candidate-experience span {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #949cab;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recruitment-candidate-empty {
+  min-height: 310px;
+}
+
+.recruitment-detail-hero {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 144px;
+  padding: 24px;
+  border: 1px solid var(--recruitment-border);
+  border-radius: 12px;
+  background: var(--recruitment-surface);
+}
+
+.recruitment-detail-hero > .ant-skeleton {
+  grid-column: 1 / -1;
+}
+
+.recruitment-detail-back {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-color: #e4e7ec;
+  border-radius: 9px;
+  color: #667085;
+  box-shadow: none;
+}
+
+.recruitment-detail-avatar {
+  color: #315fae;
+  background: #eaf0fb;
+  font-size: 20px;
+  font-weight: 650;
+}
+
+.recruitment-detail-identity {
+  min-width: 0;
+}
+
+.recruitment-detail-identity h2 {
+  margin: 4px 0 2px;
+  font-size: 23px;
+  font-weight: 650;
+  letter-spacing: -0.5px;
+}
+
+.recruitment-detail-identity p,
+.recruitment-detail-future-card p {
+  margin: 0;
+  color: var(--recruitment-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.recruitment-detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.recruitment-detail-tags .ant-tag {
+  margin: 0;
+  border-radius: 5px;
+  font-size: 10px;
+}
+
+.recruitment-detail-updated {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+}
+
+.recruitment-detail-updated span {
+  color: #949cab;
+  font-size: 10px;
+}
+
+.recruitment-detail-updated strong {
+  margin-top: 4px;
+  color: #4c5668;
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.recruitment-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(280px, 0.72fr);
+  align-items: start;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.recruitment-detail-main,
+.recruitment-detail-aside {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.recruitment-detail-aside {
+  position: sticky;
+  top: 94px;
+}
+
+.recruitment-detail-card {
+  overflow: hidden;
+  border: 1px solid var(--recruitment-border);
+  border-radius: 12px;
+  background: var(--recruitment-surface);
+}
+
+.recruitment-detail-card > .ant-skeleton {
+  padding: 24px;
+}
+
+.recruitment-detail-card-header {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #edf0f3;
+}
+
+.recruitment-detail-card-header > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.recruitment-detail-card-header .anticon {
+  color: var(--recruitment-primary);
+  font-size: 14px;
+}
+
+.recruitment-detail-card-header h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.recruitment-detail-card-header > span {
+  color: #949cab;
+  font-size: 10px;
+}
+
+.recruitment-detail-info-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  padding: 8px 20px 20px;
+}
+
+.recruitment-detail-info-item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 14px 12px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.recruitment-detail-info-item span {
+  color: #949cab;
+  font-size: 10px;
+}
+
+.recruitment-detail-info-item strong {
+  margin-top: 5px;
+  overflow: hidden;
+  color: #354052;
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recruitment-detail-empty {
+  padding: 32px 20px;
+}
+
+.recruitment-experience-list {
+  padding: 6px 20px 14px;
+}
+
+.recruitment-experience-item {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.recruitment-experience-item:last-child {
+  border-bottom: 0;
+}
+
+.recruitment-experience-mark {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--recruitment-primary);
+  background: #eef3ff;
+  font-size: 13px;
+}
+
+.recruitment-experience-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.recruitment-experience-title h4 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.recruitment-experience-title span {
+  flex: 0 0 auto;
+  color: #949cab;
+  font-size: 10px;
+}
+
+.recruitment-experience-item p {
+  margin: 5px 0 0;
+  color: #687386;
+  font-size: 11px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.recruitment-experience-item p.recruitment-experience-role {
+  color: #3f6fd9;
+  font-weight: 600;
+}
+
+.recruitment-detail-side-value,
+.recruitment-detail-check-list {
+  display: flex;
+  flex-direction: column;
+  padding: 18px 20px;
+}
+
+.recruitment-detail-side-value strong {
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.recruitment-detail-side-value span {
+  margin-top: 5px;
+  color: #949cab;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.recruitment-detail-check-list {
+  gap: 10px;
+}
+
+.recruitment-detail-check-list span {
+  position: relative;
+  padding-left: 18px;
+  color: #8b96a8;
+  font-size: 11px;
+}
+
+.recruitment-detail-check-list span::before {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d8dde5;
+  content: '';
+}
+
+.recruitment-detail-check-list span.is-ready {
+  color: #25705f;
+}
+
+.recruitment-detail-check-list span.is-ready::before {
+  background: #4aa58d;
+}
+
+.recruitment-resume-file-list {
+  display: grid;
+  gap: 10px;
+  margin: 0 20px 18px;
+  padding-top: 14px;
+  border-top: 1px solid #edf0f3;
+}
+
+.recruitment-resume-file-item {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e7eaee;
+  border-radius: 8px;
+  background: #fafbfc;
+}
+
+.recruitment-resume-file-meta {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.recruitment-resume-file-meta strong {
+  overflow: hidden;
+  color: #202630;
+  font-size: 13px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recruitment-resume-file-meta span,
+.recruitment-resume-file-empty {
+  color: #77808c;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.recruitment-resume-file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.recruitment-resume-file-empty {
+  margin: 0 20px 18px;
+  padding-top: 12px;
+  border-top: 1px solid #edf0f3;
+}
+
+.recruitment-detail-summary {
+  margin: 0;
+  padding: 18px 20px;
+  color: #687386;
+  font-size: 11px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.recruitment-detail-future-card {
+  border-color: #dbe5fa;
+  background: #f7f9ff;
+}
+
+.recruitment-detail-future-card > p {
+  padding: 18px 20px 0;
+}
+
+.recruitment-detail-future-card > .ant-btn {
+  width: calc(100% - 40px);
+  margin: 14px 20px 20px;
+  border-radius: 8px;
+}
+
+.recruitment-detail-not-found {
+  min-height: 520px;
+}
+
+.recruitment-detail-not-found .ant-result {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.recruitment-detail-not-found .ant-result-subtitle {
+  width: 100%;
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+.recruitment-candidate-create-note {
+  margin-bottom: 20px;
+}
+
+.recruitment-candidate-create-form .ant-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.recruitment-candidate-create-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 820px) {
+
+  .recruitment-candidate-filter-controls {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .recruitment-candidate-filter-controls .ant-input-affix-wrapper {
+    width: 100%;
+  }
+
+  .recruitment-candidate-filter-controls .ant-select {
+    min-width: 132px;
+    flex: 1;
+  }
+
+  .recruitment-candidate-table-columns {
+    min-width: 980px;
+  }
+
+  .recruitment-detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .recruitment-detail-aside {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .recruitment-detail-info-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+
+  .recruitment-candidate-create-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .recruitment-detail-hero {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    padding: 20px;
+  }
+
+  .recruitment-detail-back {
+    grid-column: 1;
+  }
+
+  .recruitment-detail-avatar {
+    grid-column: 1;
+  }
+
+  .recruitment-detail-identity {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .recruitment-detail-updated {
+    grid-column: 1 / -1;
+    align-items: flex-start;
+    padding-top: 8px;
+    border-top: 1px solid #edf0f3;
+  }
+
+  .recruitment-detail-aside,
+  .recruitment-detail-info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .recruitment-detail-card-header,
+  .recruitment-experience-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .recruitment-detail-not-found {
+    min-height: 480px;
+    padding: 20px 12px;
+    overflow: hidden;
+  }
+
+  .recruitment-detail-not-found .ant-result {
+    width: 100%;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .recruitment-detail-not-found .ant-result-image {
+    width: min(250px, 100%);
+  }
+}

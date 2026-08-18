@@ -1,496 +1,285 @@
-# Testin云测招聘助手
+# HR Agent 招聘提效平台
 
-基于 AI 技术的智能招聘管理系统，解决 HR 手动录入、数据失真、跟进遗漏等痛点，实现招聘数据的自动化记录与智能化跟踪。
+一个面向公司内部 HR 团队的 AI 招聘工作台。项目使用 React、FastAPI 和 PostgreSQL 构建招聘业务主链，并在简历结构化、岗位评分标准和候选人初筛中接入可审计的 AI 能力。
 
-> 当前仓库同时保留旧版 SQLite 演示系统和正在重建的 PostgreSQL `/api/v2` 新架构。阶段 5 后的新产品路线是“完整招聘链路 + 首页综合 Agent + 公司知识库 RAG”，详见 `docs/specs/2026-08-14-post-stage5-product-roadmap.md`；当前开发进度见 `PROJECT_STATE.md`。每个新阶段开始前会先讨论并确认业务需求和完成标准。
+> 当前状态：阶段 4—6 已完成，阶段 7 正在进行前端交互收口。旧 React + FastAPI + SQLite + Mock LLM 演示系统及其演示数据已于 2026-08-18 完成退役，不再维护、启动或迁移。
 
-详细使用方式请查看《使用说明.md》
+## 当前能做什么
 
-## 核心功能
+| 能力 | 当前状态 | 说明 |
+| --- | --- | --- |
+| 岗位管理 | 可用 | 创建、编辑、开放、关闭、重新开放和安全删除 |
+| 候选人管理 | 可用 | 列表、创建、详情和基础资料维护 |
+| 简历处理 | 可用 | PDF、DOCX、TXT 私有上传、原文提取、AI 结构化、人工核对后绑定候选人 |
+| Application 申请合同 | 后端可用 | 录入、身份解析、状态、历史和 HR 决策 API 已实现 |
+| 岗位 Rubric | 后端可用 | 模板、AI 草稿、人工辅助、发布、版本和过期控制 |
+| AI 初筛 | 部分前端可用 | 工作队列、单人评分、同岗位最多 5 人批量评分和失败项重试已接入 |
+| Dashboard | 可用 | 读取 PostgreSQL 中的岗位、候选人和初筛真实统计，不填充演示数据 |
+| 报告中心 | 只读 | 查看已有 Report；报告生成工作流尚未开放 |
+| 公开投递 | 页面预览 | `/apply` 可读取开放岗位，提交按钮尚未开放 |
+| 权限、面试、Offer、Agent、RAG | 未完成 | 属于后续阶段，不在当前完成范围内 |
 
-- **智能简历解析**：上传 PDF/DOCX/TXT 简历，AI 自动提取 11 个标准化字段
-- **AI 候选人摘要**：一键生成 2-3 句专业候选人概况
-- **自动标签分类**：多维度自动打标（学历/经验/技能/岗位/特殊标记）
-- **AI 批量初筛中心**：基于岗位要求对候选人批量生成岗位匹配度、推荐等级、初筛建议、风险提示，并支持按匹配度、投递时间排序和按投递时间范围筛选
-- **真实招聘漏斗流转**：新投递候选人先进入 AI 初筛中心；只有 HR 点击“通过初筛”后，才进入候选人列表正式流程
-- **AI 初筛入口处理池**：AI 初筛中心默认只展示待初筛候选人，并支持通过初筛、初筛淘汰、重新初筛、查看详情
-- **统一统计口径**：Dashboard 区分总投递、待初筛、通过初筛、正式流程备选、初筛淘汰和正式流程候选人数；候选人列表默认人数不等于总投递人数
-- **智能跟进建议**：基于招聘阶段生成具体行动建议 + 超时预警
-- **面试反馈 AI 总结**：HR 输入面试反馈后，AI 整理技术能力、沟通表达、岗位匹配度、风险点、推荐结论和下一步建议
-- **超时未跟进提醒**：按招聘阶段自动识别长期未处理候选人，在 Dashboard、候选人列表和详情页提醒 HR
-- **HR Copilot**：自然语言对话查询招聘数据和获取建议
-- **HR 决策操作**：候选人详情页支持安排面试、进入复试、发放 Offer、确认入职、淘汰等业务化动作，自动更新阶段、保存结构化信息并写入日志
-- **招聘看板**：漏斗图、渠道饼图、统计卡片、最近新增候选人、跟进预警
-- **招聘岗位管理**：HR 后台统一维护岗位库和岗位要求，支持新增、修改、启用/停用，投递端只展示当前启用岗位
-- **候选人组合筛选**：候选人列表支持按应聘岗位、招聘阶段、来源渠道、今日新增和关键词组合筛选，岗位选项从真实数据动态生成
-- **最近新增候选人高亮**：今日新增显示“今日新增”，最近 3 天新增显示“新投递”；列表默认按投递时间倒序，并显示投递时间、来源渠道和今日新增标识
-- **丰富演示数据**：内置更多在线投递候选人简历信息，默认岗位包含岗位描述、任职要求和 AI 初筛标准
-- **候选人批量处理**：候选人列表支持批量标记备选、批量标记待约面、批量淘汰确认、批量导出 CSV、批量生成 AI 跟进建议
-- **三级去重**：手机号 → 邮箱 → 姓名+学校+岗位，防止重复录入
-- **HR 统一新增候选人**：后台统一使用 `/form` 完成手动录入 + 可选简历上传，AI 只补全空字段
-- **投递者在线填写**：独立页面（/apply），投递者自助填写信息+上传简历，岗位下拉实时读取开放岗位并自动入库
-- **数据同步**：支持 CSV 导出，预留腾讯文档 API 接口
+AI 结论只用于辅助 HR，不会自动通过或淘汰候选人。
 
 ## 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| 前端 | React 18 + TypeScript + Ant Design 5 + Vite + Recharts |
-| 后端 | FastAPI + SQLAlchemy + Pydantic |
-| 数据库 | SQLite（零运维，可迁移 PostgreSQL） |
-| AI | Mock LLM（内置）/ OpenAI / DeepSeek / 智谱（可选） |
-| 部署 | Docker Compose + nginx |
+- 前端：React 18、TypeScript、Ant Design 5、Vite、Axios
+- 后端：FastAPI、SQLAlchemy 2.0 Async、Pydantic v2、Alembic
+- 数据：PostgreSQL 16、Redis 7、Chroma
+- AI：DeepSeek/OpenAI 兼容接口，Prompt 与输出 Schema 版本化
+- 基础设施：Docker Compose
+- 测试：Python `unittest`、Node/Vite 模块测试、TypeScript 生产构建
+
+## 当前架构
+
+```text
+React 页面
+  -> /api/v2
+FastAPI Router
+  -> Pydantic Schema
+  -> Application Service
+  -> SQLAlchemy Model
+  -> PostgreSQL
+
+AI 子链路
+  -> Prompt Builder
+  -> Provider Adapter
+  -> DeepSeek JSON Output
+  -> 确定性规则 + 语义评价
+  -> 可审计 ScreeningResult
+```
+
+Redis 和 Chroma 已完成基础设施接入，但综合 Agent 与 RAG 业务仍属于后续阶段。
 
 ## 环境要求
 
-- Python 3.9+（推荐 3.10 或 3.11）
-- Node.js 18+ 和 npm
-- Windows 可直接使用根目录 `start_backend.bat`、`start_frontend.bat`
-- 默认使用 Mock LLM，不需要真实 API Key；如需接入真实模型，请复制 `.env.example` 为 `.env` 并填写自己的 Key，`.env` 不应提交到 GitHub
+- Windows 10/11
+- Python 3.11（项目当前验证版本）
+- Node.js 18 或更高版本
+- Docker Desktop 与 Docker Compose
+- Git
 
 ## 快速启动
 
-### 当前新版 PostgreSQL 主链路：一键启动（推荐）
+### 1. 可选：准备环境变量
 
-Windows 直接双击项目根目录：
+如果只查看不需要 AI 调用的页面，可以直接使用默认配置启动。需要验证真实简历结构化、Rubric 生成或候选人语义评分时，复制环境变量模板并配置自己的 DeepSeek Key：
+
+```powershell
+Copy-Item .env.example .env
+```
+
+在 `.env` 中配置：
+
+```dotenv
+DEEPSEEK_API_KEY=你的密钥
+```
+
+`.env` 不得提交到 Git。
+
+### 2. Windows 一键启动（推荐）
+
+双击：
 
 ```text
 launch\start_project.bat
 ```
 
-脚本会按顺序启动 PostgreSQL、Redis、Chroma，执行最新版 Alembic migration，再分别打开后端和前端服务窗口，最后自动打开：
+脚本会依次：
 
-```text
-http://localhost:5173/stage3/jobs
-```
+1. 检查 Docker、Python、Node 和 npm。
+2. 启动 PostgreSQL、Redis、Chroma。
+3. 安装缺失的后端依赖。
+4. 执行 `alembic upgrade head`。
+5. 安装缺失的前端依赖。
+6. 启动 FastAPI 与 Vite。
+7. 打开 `http://localhost:5173/app/jobs`。
 
-后端接口文档仍为 `http://localhost:8000/docs`。两个服务窗口需要保持打开；停止时分别在窗口中按 `Ctrl+C`。第一次使用前需要安装并启动 Docker Desktop，同时本机需要 Python、Node.js 和 npm。
-
-也可以在项目根目录使用命令启动，或只检查环境而不启动服务：
+只检查环境、不启动服务：
 
 ```powershell
-.\launch\start_project.bat
-powershell.exe -ExecutionPolicy Bypass -File .\scripts\start_project.ps1 -CheckOnly
+launch\start_project.bat -CheckOnly
 ```
 
-原有 `start_backend.bat`、`start_frontend.bat` 和下面的整套 Docker 方式继续保留给旧版 SQLite 演示兼容。它们不能单独证明新版 PostgreSQL `/api/v2` 主链路已经启动。
+启动但不自动打开浏览器：
 
-### 方式一：旧版整套 Docker 演示（保留）
-
-```bash
-docker-compose up --build
+```powershell
+launch\start_project.bat -NoBrowser
 ```
 
-- 前端：http://localhost:3000
-- 后端 API 文档：http://localhost:8000/docs
+### 3. 手动启动
 
-### 方式二：手动启动
+首次准备 Python 虚拟环境：
 
-```bash
-# 后端
-cd backend
-pip install -r requirements.txt
-cp ../.env.example ../.env
-python run.py
-# → http://localhost:8000/docs
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+```
 
-# 前端（新终端）
-cd frontend
+启动基础设施：
+
+```powershell
+docker compose up -d postgres redis chroma
+```
+
+升级数据库并启动后端：
+
+```powershell
+Set-Location backend
+..\.venv\Scripts\python.exe -m alembic upgrade head
+..\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+另开一个 PowerShell 启动前端：
+
+```powershell
+Set-Location frontend
 npm install
-npm run dev
-# → http://localhost:5173
+npm run dev -- --host 127.0.0.1
 ```
 
-系统启动后会自动创建数据库表、上传目录和默认岗位，**无需任何 API Key**。如果候选人表为空，后端会自动生成约 30 条完整演示候选人和简历附件；如果已有候选人，则不会重复初始化或清空数据。默认岗位不会重复创建，可在 HR 后台“岗位管理”页面新增或修改。
+## 本地地址
 
-## 新电脑打开方式
+| 地址 | 用途 |
+| --- | --- |
+| `http://localhost:5173/` | 自动进入 HR 工作台 |
+| `http://localhost:5173/app/dashboard` | Dashboard |
+| `http://localhost:5173/app/resumes` | 简历管理 |
+| `http://localhost:5173/app/candidates` | 候选人管理 |
+| `http://localhost:5173/app/candidates/new` | 新增候选人和简历智能识别 |
+| `http://localhost:5173/app/jobs` | 岗位管理 |
+| `http://localhost:5173/app/screening` | AI 初筛中心 |
+| `http://localhost:5173/app/reports` | 初筛报告中心 |
+| `http://localhost:5173/apply` | 公开投递页预览 |
+| `http://localhost:8000/docs` | FastAPI Swagger 文档 |
+| `http://localhost:8000/api/health` | 后端健康检查 |
 
-解压项目压缩包后，必须使用 Vite 开发服务器启动前端。不要使用 `python -m http.server` 或 Python `http.server` 打开 `frontend` 静态文件；静态服务器无法代理 `/api` 请求到后端，页面会看不到候选人、Dashboard、AI 初筛等演示数据。
+## 初始数据状态
 
-### 方式一：双击新版一键脚本（推荐）
+项目不会自动创建候选人、岗位、简历或初筛演示数据。一个新数据库启动后，业务表为空是正常现象。
 
-双击项目 `launch` 目录中的 `start_project.bat`，等待出现“Project is ready”，浏览器会自动打开新版岗位管理页。这个入口会同时处理 PostgreSQL 和数据库 migration。
+- 不存在 SQLite 运行数据库。
+- 不存在自动 seed 或重置演示数据脚本。
+- 简历文件使用 `STORAGE_DIR` 指向的私有目录。
+- 文件不会通过 `/uploads` 静态公开。
+- 数据库结构由 Alembic 管理。
 
-### 方式二：分别启动旧版兼容脚本
+请通过当前 UI 或 `/docs` 中的 `/api/v2` 接口创建自己的开发数据。
 
-第一步：双击项目根目录的 `start_backend.bat`
+## AI 配置说明
 
-第二步：双击项目根目录的 `start_frontend.bat`
+`.env.example` 中的主要 AI 开关包括：
 
-第三步：打开浏览器访问：
+- `RESUME_STRUCTURE_*`：简历结构化
+- `RUBRIC_GENERATION_*`：岗位评分标准生成
+- `SCREENING_MODEL_*`：候选人语义评价
 
-```bash
-http://localhost:5173
+平台可以在没有 Key 的情况下启动，但真实 AI 请求需要有效的 DeepSeek 配置。配置缺失或模型调用失败时，相关业务接口会返回明确错误，不应把失败结果当作真实 AI 结论。
+
+`LLM_PROVIDER=mock` 是通用 LLM 配置，不代表阶段 5/7 的专用结构化与评分链路一定会生成模拟成功结果。
+
+## 项目目录
+
+```text
+backend/
+  app/
+    adapters/       # 外部模型适配器
+    agents/         # 后续 Agent 骨架
+    api/            # FastAPI Router
+    core/           # 配置、数据库、Redis、LLM
+    models/         # SQLAlchemy PostgreSQL Model
+    prompts/        # 版本化 Prompt Builder
+    rag/            # 后续 RAG 骨架
+    schemas/        # Pydantic v2 合同
+    services/       # 招聘业务与 AI 编排
+  migrations/       # Alembic 历史
+  tests/            # 后端自动化测试
+
+frontend/
+  src/
+    features/recruitment/  # 招聘工作台功能模块
+    services/http.ts       # API 客户端
+    theme/                 # Ant Design 主题
+  tests/                   # 前端模块与边界测试
+
+docs/
+  implementation-plan.md
+  specs/
+
+launch/             # Windows 启动入口
+sample_data/        # 受控 Prompt/测试样例，不是运行时 seed
+scripts/            # 当前项目启动脚本
 ```
 
-后端接口文档：
+## 验证命令
 
-```bash
-http://localhost:8000/docs
+后端全量测试：
+
+```powershell
+Set-Location backend
+..\.venv\Scripts\python.exe -m unittest discover -s tests
 ```
 
-### 方式三：手动启动
+前端全部测试脚本：
 
-```bash
-# 终端 1：后端
-cd backend
-pip install -r requirements.txt
-python run.py
-
-# 终端 2：前端，必须使用 Vite
-cd frontend
-npm install
-npm run dev
-```
-
-访问：
-
-```bash
-http://localhost:5173
-```
-
-如果 PowerShell 执行 `npm` 有权限问题，可以改用：
-
-```bash
-npm.cmd install
-npm.cmd run dev
-```
-
-首次启动后端时，如果数据库为空，系统会自动生成完整演示数据：Dashboard 有统计，AI 初筛中心有待初筛候选人，候选人列表有正式流程候选人，岗位管理和 `/apply` 岗位下拉都有岗位数据。数据库默认位置为 `backend/recruit.db`，上传附件默认目录为 `backend/uploads`；如果数据库文件或上传目录不存在，后端会自动创建。
-
-前端 Vite 代理配置在 `frontend/vite.config.ts`：
-
-```ts
-server: {
-  proxy: {
-    '/api': {
-      target: 'http://localhost:8000',
-      changeOrigin: true,
-    },
-  },
+```powershell
+Set-Location frontend
+$package = Get-Content -Raw package.json | ConvertFrom-Json
+$tests = $package.scripts.PSObject.Properties | Where-Object { $_.Name -like 'test:*' }
+foreach ($test in $tests) {
+    npm run $($test.Name)
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 ```
 
-## 重置演示数据
+前端生产构建：
 
-Demo 前可运行脚本恢复一套干净、岗位一致的演示环境：
-
-```bash
-python scripts/reset_demo_data.py
+```powershell
+Set-Location frontend
+npm run build
 ```
 
-该脚本会清空当前候选人测试数据、候选人日志和旧上传简历附件，但会保留岗位管理数据；如果岗位库缺少示例岗位，会初始化或补齐 active 岗位及岗位要求配置。脚本会重新生成约 30 条候选人数据，所有候选人的 `job_id` 和 `target_role` 都来自岗位管理范围。新投递/待初筛候选人会进入 AI 初筛中心，通过初筛候选人才会进入候选人列表；备选候选人只从已通过初筛的正式流程候选人中生成，适合 Demo 前恢复招聘漏斗数据。
+数据库一致性：
 
-## 线上部署说明
-
-当前项目支持前后端分开部署：前端部署到 Vercel，后端部署到 Render。前端请求地址通过 `VITE_API_BASE_URL` 控制，本地开发时可以留空，线上部署时填写 Render 后端地址。
-
-### 前端部署到 Vercel
-
-1. 将项目推送到 GitHub。
-2. 登录 Vercel，选择 `New Project`，导入该 GitHub 仓库。
-3. Vercel 项目配置建议如下：
-   - Framework Preset：`Vite`
-   - Root Directory：`frontend`
-   - Build Command：`npm run build`
-   - Output Directory：`dist`
-4. 在 Vercel 环境变量中添加：
-
-```bash
-VITE_API_BASE_URL=https://your-backend.onrender.com
+```powershell
+Set-Location backend
+..\.venv\Scripts\python.exe -m alembic current
+..\.venv\Scripts\python.exe -m alembic check
 ```
 
-这里填写后端 Render 服务的公开地址，不要在末尾添加 `/api`。前端代码会自动请求：
+当前验证基线：后端 595 项测试、前端 14 个测试脚本、Vite 生产构建 3116 个模块、Alembic revision `f8c2d0e5b317`。
 
-```bash
-https://your-backend.onrender.com/api/...
+## 停止服务
+
+在后端和前端窗口分别按 `Ctrl+C`。如需停止基础设施容器：
+
+```powershell
+docker compose stop postgres redis chroma
 ```
 
-如果本地开发不配置 `VITE_API_BASE_URL`，前端会使用空字符串作为默认值，请求 `/api/...`，再由 Vite 本地代理转发到 `http://localhost:8000`。
-
-### 后端部署到 Render
-
-1. 登录 Render，选择 `New Web Service`。
-2. 连接同一个 GitHub 仓库。
-3. 如果使用普通 Web Service，建议配置：
-   - Root Directory：`backend`
-   - Build Command：`pip install -r requirements.txt`
-   - Start Command：`uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. 如果使用 Docker 部署，`backend/Dockerfile` 已支持读取云平台注入的 `PORT`，默认本地端口为 `8000`。
-5. 在 Render 环境变量中配置前端允许来源，二选一或同时配置均可：
-
-```bash
-FRONTEND_ORIGIN=https://your-frontend.vercel.app
-```
-
-或：
-
-```bash
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000,https://your-frontend.vercel.app
-```
-
-后端默认始终允许本地开发地址 `http://localhost:5173` 和 `http://localhost:3000`。线上部署后，把 Vercel 前端地址填入 `FRONTEND_ORIGIN` 或追加到 `CORS_ORIGINS`，浏览器才能正常跨域访问后端 API。
-
-### 线上环境变量汇总
-
-前端 Vercel：
-
-```bash
-VITE_API_BASE_URL=https://your-backend.onrender.com
-```
-
-后端 Render：
-
-```bash
-FRONTEND_ORIGIN=https://your-frontend.vercel.app
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000,https://your-frontend.vercel.app
-LLM_PROVIDER=mock
-DATABASE_URL=sqlite:///./recruit.db
-UPLOAD_DIR=./uploads
-```
-
-`FRONTEND_ORIGIN` 和 `CORS_ORIGINS` 可以只配置一个。演示环境默认使用 `LLM_PROVIDER=mock`，不需要真实 API Key。如需接入 DeepSeek，可改为：
-
-```bash
-LLM_PROVIDER=deepseek
-LLM_ENABLE_MOCK_FALLBACK=false
-DEEPSEEK_API_KEY=你的DeepSeek API Key
-DEEPSEEK_BASE_URL=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-chat
-```
-
-`LLM_ENABLE_MOCK_FALLBACK=false` 适合 Prompt 实战训练：真实模型调用失败时会直接暴露错误，避免误把 Mock 输出当成 DeepSeek 输出。
-
-### 演示数据与数据库说明
-
-后端启动时会自动执行按需初始化：
-
-- 如果数据库或表不存在，会自动创建。
-- 如果岗位库为空，会自动初始化默认岗位。
-- 如果候选人表为空，会自动生成演示候选人。
-- 如果候选人表已有数据，不会在每次重启时清空或重复生成。
-
-手动重置演示数据仍然使用：
-
-```bash
-python scripts/reset_demo_data.py
-```
-
-默认 SQLite 数据库路径为 `backend/recruit.db`；部署到 Render 时，如果需要长期保存数据，建议后续接入 Render Disk 或迁移到 PostgreSQL。当前 Demo 的路径解析已统一由 `DATABASE_URL` 控制，相对路径会解析到后端目录。
-
-## 主要页面
-
-- `http://localhost:5173/` 或 `/dashboard`：Dashboard 数据看板，含今日新增、最近 3 天新增和今日新增候选人列表
-- `http://localhost:5173/form`：HR 后台“新增候选人”统一入口，支持手动录入 + 可选简历上传
-- `http://localhost:5173/jobs`：HR 岗位管理，维护投递者可选择的岗位库
-- `http://localhost:5173/upload`：兼容旧地址，会自动跳转到 `/form`
-- `http://localhost:5173/ai-screening`：AI 初筛中心，默认只展示待初筛候选人，支持批量初筛、通过初筛、初筛淘汰、单人重新初筛、推荐等级筛选、投递时间筛选、匹配度排序、投递时间排序和“匹配依据”查看
-- `http://localhost:5173/candidates`：候选人管理，范围筛选只保留正式流程候选人、备选候选人、淘汰候选人；新投递和待初筛候选人请在 AI 初筛中心处理。正式流程阶段筛选保留待约面、已约面、面试中、复试、offer、入职
-- `http://localhost:5173/candidates/:id`：候选人详情，含更完整的简历信息、投递与 AI 初筛信息、面试反馈 AI 总结
-- `http://localhost:5173/apply`：投递者公开填写页，继续保留
-
-## 项目结构
-
-```
-testin云测面试题/
-├── backend/                 # FastAPI 后端
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── run.py              # 启动入口
-│   └── app/
-│       ├── main.py          # FastAPI app
-│       ├── config.py        # 配置管理
-│       ├── database.py      # 数据库连接
-│       ├── seed_data.py     # 种子数据
-│       ├── models/          # ORM 模型
-│       ├── schemas/         # Pydantic 模型
-│       ├── routers/         # API 路由（含候选人、岗位、简历、AI、初筛、看板、同步、投递）
-│       ├── services/        # 业务服务（7个）
-│       └── prompts/         # Prompt 模板（5个）
-├── frontend/                # React 前端
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   ├── package.json
-│   └── src/
-│       ├── pages/           # 页面
-│       ├── components/      # 组件（9个）
-│       ├── api/             # API 封装
-│       └── types/           # TypeScript 类型
-├── docs/                    # 项目文档
-│   ├── 业务方案.md
-│   ├── Prompt工程与效果验证.md
-│   ├── 系统架构说明.md
-│   ├── 演示脚本.md
-│   └── 答辩讲稿.md
-├── prompts/                 # Prompt 设计文档
-├── scripts/                 # 工具脚本
-│   ├── init_db.py           # 数据库初始化
-│   ├── ensure_demo_data.py  # 启动时按需补齐演示数据
-│   ├── reset_demo_data.py   # 手动重置演示数据
-│   └── export_csv.py        # CSV 导出
-├── sample_data/             # 示例数据
-├── start_backend.bat        # Windows 后端一键启动
-├── start_frontend.bat       # Windows 前端 Vite 一键启动
-├── launch/start_project.bat # 当前新版 PostgreSQL 主链路一键启动入口
-├── scripts/start_project.ps1 # 基础设施、migration、前后端和浏览器编排
-├── docker-compose.yml
-├── .env.example
-└── README.md
-```
-
-## 环境变量
-
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| LLM_PROVIDER | mock | LLM 模式：mock / openai / deepseek / zhipu |
-| LLM_ENABLE_MOCK_FALLBACK | true | 真实 LLM 失败时是否回退到 Mock；Prompt 实战建议设为 false |
-| OPENAI_API_KEY | - | OpenAI API Key（mock 模式不需要） |
-| OPENAI_BASE_URL | https://api.openai.com/v1 | OpenAI 兼容 API 地址 |
-| OPENAI_MODEL | gpt-4o-mini | OpenAI 模型名称 |
-| DEEPSEEK_API_KEY | - | DeepSeek API Key |
-| DEEPSEEK_BASE_URL | https://api.deepseek.com | DeepSeek OpenAI 兼容 API 地址 |
-| DEEPSEEK_MODEL | deepseek-chat | DeepSeek 模型名称，可按官方控制台/文档调整 |
-| DATABASE_URL | sqlite:///./recruit.db | 数据库连接；相对路径会解析到 `backend/`，默认实际文件为 `backend/recruit.db` |
-| PORT | - | 云平台注入端口；存在时优先于 `BACKEND_PORT` |
-| CORS_ORIGINS | http://localhost:5173,http://localhost:3000 | 跨域白名单 |
-| FRONTEND_ORIGIN | - | 单个线上前端地址，例如 Vercel 域名；会与 `CORS_ORIGINS` 合并 |
-| VITE_API_BASE_URL | - | 前端构建变量；线上填写后端域名，本地可留空使用 Vite 代理 |
-| UPLOAD_DIR | ./uploads | 上传目录；相对路径会解析到 `backend/`，默认实际目录为 `backend/uploads` |
-
-## 工具脚本
-
-```bash
-# 初始化数据库（独立于服务启动）
-python scripts/init_db.py
-
-# 按需补齐演示数据：候选人表为空才生成，不会重复清库
-python scripts/ensure_demo_data.py
-
-# 导出候选人数据为 CSV
-python scripts/export_csv.py [output_path]
-```
-
-## AI 初筛接口
-
-- `POST /api/screening/run`：对当前筛选范围内的候选人执行批量 AI 初筛；支持 `target_role`、`priority_level`、`screening_status=screened|unscreened`、`date_range`、`start_date`、`end_date`，已初筛候选人会重新生成结果
-- `POST /api/screening/run/{candidate_id}`：对单个候选人重新执行 AI 初筛
-- `GET /api/screening/results`：获取初筛结果，支持 `target_role`、`priority_level`、`screening_status=screened|unscreened`、`date_range=today|this_week|last_7_days|last_30_days`、`start_date`、`end_date`、`sort_by=score_desc|score_asc|updated_desc|created_at`、`sort_order=desc|asc`
-
-AI 初筛结果仅作为 HR 辅助参考，不会自动淘汰候选人。
-
-AI 初筛中心列表的“投递时间”来自候选人真实创建时间 `created_at`。默认按最新投递优先展示；选择时间筛选后，批量初筛会处理当前筛选结果中的候选人，已初筛候选人会重新生成结果。
-
-AI 初筛统计口径与 Dashboard 候选人总数一致：当前项目没有归档字段，因此以 `candidates` 主表全部记录作为有效候选人总数。高优先级 + 中优先级 + 低优先级 + 尚未初筛 = 总候选人数。缺少 `target_role`、缺少 `job_id`、没有简历附件或尚未生成 AI 初筛结果的候选人不会从总数中排除，会计入“尚未初筛”或当前筛选结果。
-
-AI 初筛中心的“当前筛选结果”统计直接由当前表格数据计算，因此表格右侧“当前 X 人”、蓝色统计框、批量初筛提示使用同一份候选人列表。筛选条件包括岗位搜索、推荐等级、初筛状态、投递时间范围和排序方式。
-
-## 候选人筛选接口
-
-- `GET /api/candidates/`：支持 `target_role`、`stage`、`channel`、`is_today_new`、`keyword` 组合筛选；也兼容 `recruiting_stage`、`source_channel`
-- `GET /api/candidates/filter-options`：从岗位库和当前候选人历史数据动态返回岗位和来源筛选选项
-
-关键词搜索覆盖姓名、学校、专业、技能关键词、邮箱、手机号和应聘岗位。
-
-候选人列表默认按 `created_at` 投递时间倒序返回。后端统一计算最近新增标记：
-
-- `is_today_new=true`：投递日期为系统今天，前端显示“今日新增”
-- `is_recent_3_days_new=true`：投递时间在今天、昨天、前天 3 个自然日内
-- `new_candidate_label`：今日返回“今日新增”；最近 3 天但非今日返回“新投递”；更早为空
-
-Dashboard `/api/dashboard/stats` 同步返回 `new_today`、`new_last_3_days` 和 `today_new_candidates`，其中今日新增候选人列表最多 5 条。
-
-## 岗位管理接口
-
-- `GET /api/jobs`：获取岗位列表，支持 `status=active|inactive`
-- `GET /api/jobs/active`：获取投递者页面可选择的启用岗位
-- `POST /api/jobs`：新增岗位，避免重复岗位名称
-- `PUT /api/jobs/{job_id}`：修改岗位名称、部门、描述、要求和状态
-- `PATCH /api/jobs/{job_id}/status`：启用或停用岗位
-- `DELETE /api/jobs/{job_id}`：无候选人时删除；已有候选人时自动停用以保留历史数据
-
-候选人提交时会同时保存 `job_id` 和当时选择的岗位名称 `target_role`。岗位改名或停用不会回写历史候选人的 `target_role`，Dashboard 岗位分布和候选人列表筛选仍基于真实历史岗位数据展示。
-
-岗位库还支持维护 AI 初筛使用的筛选标准：
-
-- `required_skills`：必备技能，逗号/顿号/标签分隔
-- `bonus_skills`：加分技能
-- `education_requirement`：学历要求
-- `experience_requirement`：经验要求
-- `job_keywords`：岗位关键词
-- `risk_keywords`：风险提示关键词
-- `description` / `requirements`：岗位描述和岗位要求
-
-AI 初筛会优先读取候选人 `job_id` 对应岗位要求；历史候选人如果没有 `job_id`，会按 `target_role` 与岗位标题尝试匹配。评分会参考必备技能命中率、加分技能、学历/经验要求、岗位关键词和风险关键词，不使用性别、年龄、民族、婚育等敏感信息。
-
-## 候选人批量接口
-
-- `POST /api/candidates/batch/status`：批量修改候选人阶段，支持批量标记待约面、批量淘汰；正式流程候选人可在列表页批量标记备选
-- `POST /api/candidates/batch/followup`：批量生成 AI 跟进建议并写入操作日志
-- `POST /api/candidates/batch/export`：只导出选中候选人的 CSV
-
-批量阶段操作会写入阶段变更日志和操作日志，Dashboard 阶段统计和最近操作日志会同步更新。
-
-## HR 决策操作
-
-候选人详情页的 HR 决策按钮按当前阶段动态启用：
-
-- 新投递 / 待筛选：通过筛选、淘汰
-- 待约面：安排面试、淘汰
-- 已约面 / 面试中：进入复试、淘汰，也支持直接发放 Offer
-- 复试：发放 Offer、淘汰
-- offer：确认入职、淘汰
-- 入职 / 淘汰：流程推进按钮禁用，仅保留阶段人工修正和日志查看
-
-动作提交后会调用 `POST /api/candidates/{candidate_id}/hr-action/{action_name}`，更新候选人阶段和对应业务字段，写入阶段变更日志与 HR 操作日志，并同步 Dashboard 统计、最近操作日志和本地 CSV 数据。
-
-关键动作字段：
-
-- 安排面试：面试时间（必填）、面试方式、面试官、面试备注
-- 进入复试：复试原因 / 一面反馈、复试时间、复试面试官
-- 发放 Offer：Offer 岗位、薪资范围、预计入职时间、Offer 备注
-- 确认入职：实际入职时间、入职备注
-- 淘汰：淘汰原因（必填）、淘汰备注
-
-## 面试反馈 AI 总结
-
-候选人详情页提供“面试反馈 AI 总结”区域，HR 可输入：
-
-- `interview_feedback_text`：面试原始反馈，必填
-- `interviewer`：面试官，可选
-- `interview_round`：面试轮次，可选，例如一面 / 复试
-- `feedback_time`：反馈时间
-
-点击“生成 AI 面试总结”会调用 `POST /api/ai/interview-summary/{candidate_id}`。系统会基于候选人已有信息和 HR 输入反馈生成：
-
-- 技术能力总结
-- 沟通表达总结
-- 岗位匹配度判断
-- 风险点
-- 推荐结论：建议复试 / 建议 offer / 待定 / 不建议继续
-- 下一步建议
-
-AI 总结仅作为辅助参考，不会自动改变候选人阶段，也不会自动淘汰候选人。生成结果保存到候选人记录字段中，包括 `interview_feedback_text`、`interview_round`、`feedback_time`、`interview_ai_technical_summary`、`interview_ai_communication_summary`、`interview_ai_job_match`、`interview_ai_risk_points`、`interview_ai_recommendation`、`interview_ai_next_step`、`interview_ai_generated_at`。生成后会写入 `ai_interview_summary` 操作日志。
-
-## 超时未跟进规则
-
-系统会根据候选人当前阶段和最近动作时间自动计算超时状态，返回 `is_overdue`、`overdue_days`、`overdue_reason`、`followup_priority`、`last_action_at` 等字段，并在 Dashboard、候选人列表和候选人详情页展示。
-
-当前规则：
-
-- 新投递超过 1 天未处理：请尽快完成初筛
-- 待筛选超过 1 天未处理：请尽快完成筛选判断
-- 待约面超过 2 天未安排面试：请尽快联系候选人安排面试
-- 已约面 / 面试中且面试时间已过超过 1 天未录入反馈：请尽快录入面试反馈
-- 复试超过 2 天未处理：请尽快确认复试结果
-- offer 超过 3 天未确认：请跟进 offer 接受情况
-- 入职 / 淘汰：流程已结束，不再提醒
-
-Dashboard 会展示超时未跟进人数、今日待跟进人数、高优先级跟进人数和最需要处理的候选人列表。候选人列表会展示超时标签、超时天数和优先级；候选人详情页会展示当前超时原因和系统跟进建议。
-
-## 文档
-
-- [业务方案](docs/业务方案.md) — 痛点分析与解决方案
-- [Prompt 工程与效果验证](docs/Prompt工程与效果验证.md) — Prompt 设计与双模架构
-- [系统架构说明](docs/系统架构说明.md) — 技术栈、数据库、API 路由
-- [演示脚本](docs/演示脚本.md) — 5 分钟演示流程
-- [答辩讲稿](docs/答辩讲稿.md) — 5 分钟答辩结构与 Q&A 预案
+该命令不会删除 Docker volume。
+
+## 当前开发边界
+
+以下能力尚未完成，不应在演示或简历中描述为已交付：
+
+- 公开投递表单正式提交
+- Rubric 的完整前端编辑与发布交互
+- 初筛详情、证据、历史和 HR 决策完整前端交互
+- 面试、Offer、录取闭环
+- 登录、角色与权限
+- 综合 Agent 与 RAG 知识库
+- 经过验收的生产部署
+
+当前进度、下一小步和验证证据以 [PROJECT_STATE.md](PROJECT_STATE.md) 为准。
+
+## 权威文档
+
+- [项目状态](PROJECT_STATE.md)
+- [实施计划](docs/implementation-plan.md)
+- [总体设计](docs/specs/2026-07-15-hr-agent-platform-design.md)
+- [阶段 5 后路线图](docs/specs/2026-08-14-post-stage5-product-roadmap.md)
+- [阶段 7 设计](docs/specs/2026-08-17-stage7-application-ai-screening-design.md)
+- [旧系统退役决策](docs/specs/2026-08-18-legacy-system-retirement-decision.md)
+- [最终命名与交付计划](docs/specs/2026-08-18-final-naming-and-delivery-closure-plan.md)
+- [旧系统退役总修改说明](docs/2026-08-18-legacy-retirement-summary.md)

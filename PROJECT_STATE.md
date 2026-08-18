@@ -1,8 +1,8 @@
 # 项目进度状态
 
-> 最新更新：2026-08-17（阶段 7 小步骤 1—5 与 Rubric 修订小步骤 5A 已完成；下一步进入小步骤 6 DeepSeek 候选人语义评价 Adapter；正式开发库仍停留在阶段 6 revision，尚未升级）
+> 最新更新：2026-08-18（阶段 7 评分详情、逐项证据与评分历史前端交互已完成；下一小步是强制重跑确认交互，暂不进入 HR 决策）
 
-## 当前总状态：🚧 新架构重建已启动，旧版演示系统作为迁移资产保留
+## 当前总状态：🚧 新版主链建设中，旧版演示系统已完成退役
 
 ### 权威依据
 
@@ -10,9 +10,120 @@
 - 权威设计文档：`docs/specs/2026-07-15-hr-agent-platform-design.md`
 - 阶段 5 后路线基线：`docs/specs/2026-08-14-post-stage5-product-roadmap.md`
 - 阶段 7 专项设计与执行计划：`docs/specs/2026-08-17-stage7-application-ai-screening-design.md`
+- 旧版系统退役决策：`docs/specs/2026-08-18-legacy-system-retirement-decision.md`
 - 实施计划：`docs/implementation-plan.md`
-- 迁移清单：`docs/migration-inventory.md`
+- 历史迁移清单：`docs/migration-inventory.md`（已停止执行，由旧版退役决策替代）
 - 阶段 5 历史实现与回归排查资料：`docs/handoff/2026-08-12-stage5-development-handoff.md`（阶段 6 日常开发无需读取）
+
+### 2026-08-18 提交前文档一致性收口（已完成）
+
+- 已把 `CLAUDE.md`、总体设计、阶段 5 后路线、实施计划和阶段 7 专项设计的当前口径统一为：评分详情、逐项证据与评分历史交互已完成，下一小步只做强制重跑确认，暂不进入 HR 决策前端交互。
+- 当前唯一主链目录已统一为 `frontend/src/features/recruitment/` 和后端各正式 package，现行工作台路由为 `/app/*`；`stage3/`、`rebuilt/` 和 `/stage3/*` 只可作为历史记录出现，不得再被描述为当前入口。
+- 正式开发库已重建为空库并升级到 `f8c2d0e5b317 (head)`；阶段 7 早期小步骤中的“当时未升级”保留为历史验证记录，不代表现状。
+- 本次只修正文档当前事实和历史标注，没有修改前端、API、Schema、Service、Model、Alembic 或 PostgreSQL 数据。
+
+### 2026-08-18 旧版退役决策
+
+- 用户明确确认不再保留或维护旧 React + FastAPI + SQLite + Mock LLM 演示代码，也不再保留或迁移旧演示数据。
+- 项目方式由“新旧并行、逐步迁移”改为“新版直接替代旧版”；Git 历史负责旧实现追溯，旧系统不再作为运行资产。
+- 阶段 7 取消旧 30 条 Candidate、29 条 ScreeningResult 的无损迁移要求；`legacy_migration`、`legacy_stage`、无 Resume 例外和旧结果兼容响应已在第 3A 步移除。
+- `frontend/src/stage3/` 和后端 `rebuilt/` 当前是新版主链，不能因名称误删；是否改为最终命名放在业务退役完成后单独处理。
+- 第 1 步文档门禁、第 2 步运行入口切换、第 3 步 Schema/数据收口、第 4 步旧文件删除和第 5 步命名/交付收口均已完成；旧 SQLite、旧备份、旧演示附件、PostgreSQL 旧业务数据及 70 个旧代码/工具/说明文件已清理。新版数据库为空且位于 `f8c2d0e5b317`，旧系统不再是后续开发事项。
+
+### 2026-08-18 旧版退役第 5A 步：最终命名与交付盘点（已完成）
+
+- 已新增 `docs/specs/2026-08-18-final-naming-and-delivery-closure-plan.md`，只读核对 `stage3`、`rebuilt`、`/api/v2`、`V2_STORAGE_DIR`、四份根目录交付文档和启动脚本，没有移动运行代码或改变路由。
+- 推荐把浏览器工作台 `/stage3/*` 改为 `/app/*`、公开投递直接使用 `/apply`，把 `frontend/src/stage3/` 改为 `frontend/src/features/recruitment/` 并移除 `Stage3*` 组件前缀。
+- 推荐把后端各层 `rebuilt/` 内容移到对应父 package，并把 `V2_STORAGE_DIR` 改为 `STORAGE_DIR`；正式版本化业务接口 `/api/v2` 与 `v2Http` 继续保留。
+- README、使用说明、HANDOFF、TODO 共 2391 行，仍包含已删除旧路径和演示数据脚本；推荐在命名完成后重写 README/使用说明并删除旧 HANDOFF/TODO，启动脚本本身继续保留。
+- 下一小步是等待用户确认上述命名，再单独执行第 5B 步前端最终命名；本步未修改数据库、业务数据、API 合同、Schema、Service、Model 或现有测试。
+
+### 2026-08-18 旧版退役第 5B 步：前端最终命名（已完成）
+
+- `frontend/src/stage3/` 的 40 个文件已整体移动到 `frontend/src/features/recruitment/`；10 个页面/Layout 文件、组件符号、相关 TypeScript 类型和 Service 方法从 `Stage3*` 统一改为 `Recruitment*`。
+- 浏览器内部 HR 工作台从 `/stage3/*` 改为 `/app/*`，公开投递页 `/apply` 直接加载投递表单；不保留 `/stage3/*` 兼容入口，根路径和未知路径统一进入 `/app/dashboard`。
+- 9 个阶段命名测试文件及 npm scripts 已改为 `recruitment-*`；样式中 1446 处 `s3-`/`--s3` 前缀改为 `recruitment-`/`--recruitment`，运行源码中 `stage3`、`Stage3`、`s3-` 扫描结果均为 0。
+- `frontend/tests/new-runtime-entry.test.mjs` 新增物理目录和路由防回流保护：`frontend/src/stage3/` 必须不存在，`App.tsx` 不得重新包含 `/stage3`，并验证 `/app` 与直接 `/apply` 入口。
+- 验证结果：前端 14 个测试脚本全部通过；`tsc && vite build` 成功转换 3116 个模块。首次测试准确发现移动目录后 9 个 Service 到公共 `services/http.ts` 的相对路径少一级，修正后从头全量重跑通过。
+- 本步只改变前端文件/import/符号/CSS 类名和浏览器 URL，不修改 `/api/v2` 请求、后端 API、Schema、Service、Model、Alembic 或 PostgreSQL 数据。下一小步是第 5C 步后端最终命名，必须单独移动并做后端全量回归。
+
+### 2026-08-18 旧版退役第 5C 步：后端最终命名（已完成）
+
+- 已移除 `backend/app/` 下 Adapter、Model、Prompt、Schema、Service 的 5 个 `rebuilt/` 目录，以及 `backend/tests/` 下 Adapter、API、Model、Schema、Service 的 5 个对应测试目录。
+- 63 个正式源码文件与 55 个测试文件共 118 个文件已移动到对应父 package；129 个 Python 文件的 `app.*.rebuilt`、`tests.*.rebuilt` import 完成更新，正式 package 的 `__init__.py` 导出已经合并。
+- `app/main.py` 已使用正式 Router 模块名，不再保留 `rebuilt_*` 临时别名；`V2_STORAGE_DIR` 已在 `.env.example`、Docker Compose、Settings、Resume API 和 lifespan 测试中统一改为 `STORAGE_DIR`。扫描确认无运行调用者的旧 `UPLOAD_DIR` 也已删除。
+- `/api/v2` 作为正式版本化业务接口继续保留；PostgreSQL 表名、字段、约束、Alembic revision 和私有文件内部 `v2/resumes` 命名空间没有修改。
+- 旧代码防回流测试新增两层语义：10 个 `rebuilt/` 目录不得重新出现；7 个与旧文件同名但被新版复用的最终路径必须包含 PostgreSQL Base、Pydantic v2 `ConfigDict` 或异步 `AsyncSession` 标记，而不能再用“文件必须不存在”判断。
+- 验证结果：后端全量 595 项测试通过；OpenAPI 共 46 个 path，全部只属于 `/api/health` 或 `/api/v2/*`；`alembic current` 为 `f8c2d0e5b317 (head)`，`alembic check` 无结构差异。
+- 数据边界复核：PostgreSQL 12 张业务表全部 0 行，Redis 0 个键、Chroma 0 个 collection、`backend/storage` 0 个文件，`sample_data/` 4 个受控样例保留。本步未改变数据库和业务数据。
+- 本步完成 `API -> Schema -> Service -> Model -> PostgreSQL` 中间四层的 Python package 最终命名，但没有改变层间职责或 HTTP 合同。下一小步是第 5D 步重写现行 README/使用说明并处理旧 HANDOFF/TODO。
+
+### 2026-08-18 旧版退役第 5D 步：交付文档收口（已完成）
+
+- 已从当前代码重新编写根目录 `README.md` 和 `使用说明.md`：启动入口、页面地址、真实能力、AI 配置、空数据状态、当前工作流和未完成边界均以新版为准，不再把旧 SQLite、演示 seed、旧页面或已删除脚本写成现行功能。
+- 已删除过时的 `HANDOFF.md` 和 `TODO_NEXT.md`；现行交接继续由本文件、`docs/implementation-plan.md` 与阶段专项设计承担，历史内容仍可通过 Git 追溯。
+- `scripts/start_project.ps1` 默认打开地址已从失效的施工期岗位页改为 `http://localhost:5173/app/jobs`；`/api/v2` 作为正式版本化 API 保留。
+- 新增 `docs/2026-08-18-legacy-retirement-summary.md`，集中记录五步退役范围、70 个旧文件与 23 个旧数据文件的处理、前后端最终命名、验证证据、不可恢复边界和简历/面试表达。
+- 第 5D 步只修改交付材料和启动脚本默认页面，没有新增业务功能、修改 API/Schema/Service/Model、执行 migration、写入业务数据或删除 Docker volume。
+- 启动环境检查、当前交付文档路径/链接与遗留引用扫描、Docker Compose 解析和 `git diff --check` 均通过；前端 14 个测试脚本已按 README 中的命令重新全量执行并通过。整次退役同时使用后端 595 项、3116 模块生产构建、OpenAPI 46 个 path 与 Alembic `f8c2d0e5b317` 的既有全量验证基线。
+- 旧系统退役至此全部完成。下一小步回到阶段 7，只接入评分详情、逐项证据与历史交互，不提前扩展公开投递、权限、面试、Agent 或 RAG。
+
+### 2026-08-18 旧版退役第 3A 步：Schema 合同收口（已完成）
+
+- Application 的 `source` 只保留 `hr_direct`、`hr_screening`、`public_apply`；`current_resume_id` 在前端类型、Pydantic Schema、SQLAlchemy Model 和尚未部署的阶段 7 Alembic migration 中统一改为必填，`legacy_stage` 及旧 Resume 例外已删除。
+- ScreeningResult 现在必须同时关联 Application 与 Resume。`GET /api/v2/screening-results` 和详情接口只返回阶段 7 Application 筛选结果；旧通用 `ScreeningResultCreate/Update/Read`、Service 增删改能力及 `POST/PUT/DELETE /api/v2/screening-results` 已移除。正式结果仍只能由 Application 筛选流程产生并作为审计历史保留。
+- Rubric 和 StageHistory 中仅服务于旧数据迁移的枚举及数据库允许值已移除；新版前端映射、Dashboard、报告中心和初筛中心统一消费 Application ScreeningResult 合同，不再兼容无 Application 的结果。
+- 本步没有执行 Alembic 升级、没有清空开发数据库、没有删除附件，也没有删除旧文件。第 3B-1 步随后确认实际 PostgreSQL 已执行到 `e7b1c9d4a206`，因此保留 `e7` 为不可改写历史，并新增待部署的 `f8c2d0e5b317` 收口 migration；现有旧数据会在第 3B-2 步按精确目标单独处理。
+- 验证结果：直接相关的 32 项后端测试通过；后端全量 599 项测试通过；前端全部 14 个测试脚本通过；`tsc && vite build` 成功转换 3116 个模块；新版运行代码和待部署 `f8` 中没有 legacy 合同，已执行的 `e7` 只保留历史建库职责，负向 Schema 测试仍明确验证旧 source/字段会被拒绝。
+- 本步位于 `前端类型/映射 -> FastAPI 只读结果 API -> Pydantic Schema -> Service 查询边界 -> SQLAlchemy Model -> 待部署 f8 PostgreSQL migration`。它证明代码合同不再接受或暴露 legacy 数据，但不能证明既存数据库和附件已经清理、Alembic 能在空库完整升级或真实 PostgreSQL 主链已经通过；这些属于第 3B-2 步及其后续验证。
+
+### 2026-08-18 旧版退役第 3B-1 步：旧数据只读盘点（已完成）
+
+- 实际 PostgreSQL 数据库为 `recruitment_assistant`，Alembic revision 是已部署的 `e7b1c9d4a206`，不是旧文档所写的“尚未进入阶段 7”。现有表结构仍允许 `legacy_migration`、`legacy_stage` 和空 Application/Resume 关联，因此不能改写 `e7`；已新增后续 `f8c2d0e5b317` migration，只有旧行清理后才允许升级，并用前置检查阻止带 legacy 行误升级。
+- PostgreSQL 当前只有旧演示业务数据：Candidate 30 行（ID 1-30）、Education 30 行（ID 1-30）、WorkExperience 30 行（ID 1-30）、Job 8 行（ID 1-8）、ScreeningResult 29 行（ID 1-29，全部 `application_id` 与 `resume_id` 为空）、随 `e7` 生成的 JobScreeningRubric 8 行（ID 1-8）。Application、Resume、ProjectExperience、Report、StageHistory、ActivityLog 均为 0 行。
+- 旧 SQLite `backend/recruit.db` 为 155,648 字节，包含 Candidate 30 行、Job 8 行、ActivityLog 77 行、StageChangeLog 26 行；`backend/data/recovery-backups/recruit-before-first-start-20260804-095513.db` 为 139,264 字节。两者均被 `.gitignore` 忽略，不可通过当前 Git 工作树恢复。
+- `backend/uploads/` 下共有 21 个 `demo_resume_*` TXT 文件，总计 9,128 字节，恰好对应 SQLite Candidate 1-21 的旧绝对路径记录；这些文件被 `.gitignore` 忽略。新版 `backend/storage` 当前为 0 个文件，Docker 中也未创建 `resume-data` volume。
+- Redis 当前为 0 个键，Chroma 当前为 0 个 collection；两者无需数据清理。受版本控制的 `sample_data/` 共 4 个文件、5,112 字节，仍被 Prompt 效果验证和演示文档引用，属于受控测试样例而不是运行时旧数据库，本轮保留。
+- 第 3B-2 步建议精确执行：删除两个忽略的 SQLite 文件和 21 个旧上传附件；重建 PostgreSQL 中唯一的 `recruitment_assistant` 数据库并升级到 `f8c2d0e5b317`，以同时清除上述旧行、重置序列并完成真实空库 Alembic 验证。保留 Redis/Chroma volume、受控 `sample_data/`、空的新版私有存储和 Git 历史。
+- 本步只有只读 SQL、SQLite `mode=ro`、文件枚举和 Docker 状态查询；没有执行 DELETE、TRUNCATE、DROP、Alembic upgrade、文件删除、容器停止或 volume 删除。
+
+### 2026-08-18 旧版退役第 3B-2 步：旧数据清理与空库迁移（已完成）
+
+- 删除前再次确认 PostgreSQL 仍位于 `e7b1c9d4a206`，Candidate 30 行、ScreeningResult 29 行、Application/Resume 0 行；两个 SQLite 文件和 21 份附件的数量、大小与盘点完全一致，且 `backend/uploads/` 没有混入非 `demo_resume_*.txt` 文件，backend 容器未运行。
+- 已永久删除被 Git 忽略的 `backend/recruit.db`、`backend/data/recovery-backups/recruit-before-first-start-20260804-095513.db` 和 `backend/uploads/` 下全部 21 份旧演示附件，共 23 个文件。`backend/uploads/` 与 recovery-backups 目录保留为空，等待第 4 步随旧代码边界统一判断；这些数据不能通过 Git 恢复。
+- 已只删除并重建 PostgreSQL 中唯一的 `recruitment_assistant` 业务数据库，没有删除 PostgreSQL 容器或 `postgres-data` volume；随后从真正空库依次执行全部 Alembic migration，并成功从基础 revision 经 `e7b1c9d4a206` 升级到 `f8c2d0e5b317`。
+- 迁移后全部 12 张业务表均为 0 行，没有自动生成 seed 或演示数据；`applications.current_resume_id`、`screening_results.application_id`、`screening_results.resume_id` 均为数据库级 NOT NULL，`legacy_stage` 列不存在，Application/Rubric/StageHistory 的允许值中不再包含 legacy 或 migration 专用入口。
+- `sample_data/` 的 4 个受控测试文件、空的新版 `backend/storage`、Redis/Chroma 数据卷和 Git 历史均按计划保留；Redis 仍为 0 个键，Chroma 仍为 0 个 collection，本步没有删除任何 Docker volume。
+- 验证结果：`alembic current` 为 `f8c2d0e5b317 (head)`；`alembic check` 返回 `No new upgrade operations detected`，证明当前 SQLAlchemy Model 与真实 PostgreSQL Schema 一致；后端全量 600 项测试通过；`git diff --check` 通过。前端代码在本步未修改，继续沿用第 3A 步已经通过的 14 个脚本和 3116 模块生产构建结果。
+- 本步位于 `旧运行数据 -> PostgreSQL 空库 -> Alembic 全历史 -> f8 最终约束 -> Model/Schema/API`。它证明旧演示数据已从当前运行环境清除、空库可完整升级且最终结构与代码一致；它不包含旧 Router、Model、Service、脚本、历史文档等代码文件删除，这属于第 4 步。
+
+### 2026-08-18 旧版退役第 4A 步：旧代码只读引用扫描（已完成）
+
+- 已从唯一前端入口 `App.tsx`、唯一后端入口 `app/main.py`、当前启动脚本和全量测试反向扫描调用链，确认旧前端与旧后端形成自包含旧系统簇，新版主链没有导入它们。
+- 已形成 `docs/specs/2026-08-18-legacy-code-deletion-inventory.md`：第 4B 步待删除 70 个文件，其中旧后端运行模块 36 个、旧脚本/测试 7 个、旧前端 22 个、只描述旧 Prompt 系统的说明 5 个。
+- 新版替代关系已经核对：旧 `file_parser.py` 由新版 TXT/PDF/DOCX extractor 与私有存储链替代；旧 `dedup_service.py` 由 Application intake 的身份解析与冲突语义替代；旧 `ai_service.py`、`mock_llm.py`、`screening.txt` 由新版 Rubric、输入快照、真实模型适配器和评分 Service 替代；一次性旧候选人导入在旧数据放弃后没有职责。
+- `scripts/start_project.ps1`、三个 `launch/*.bat`、新版 live validation、`sample_data/`、全部 migration 和 `rebuilt` 主链均有当前职责，明确保留。父 package `models/__init__.py`、`schemas/__init__.py`、`services/__init__.py` 也必须保留，不能随旧同级文件误删。
+- 本步只新增删除清单和更新状态文档，没有删除或修改运行代码、数据库、附件、Docker volume 或测试；下一小步是按清单执行第 4B 步，并同步移除旧前端专属依赖和增加“旧文件不得重新出现”的回归测试。
+
+### 2026-08-18 旧版退役第 4B 步：旧代码物理删除（已完成）
+
+- 已严格按 `docs/specs/2026-08-18-legacy-code-deletion-inventory.md` 删除全部 70 个目标：旧后端运行模块 36 个、旧脚本/测试 7 个、旧前端 22 个、旧 Prompt 说明 5 个；旧空目录和遗留 Python 字节码缓存也已清理，新版主链和 Git 历史保留。
+- 已从前端直接依赖中移除仅由旧页面使用的 `dayjs` 和 `recharts` 并更新 lockfile；`dayjs` 仍可作为 Ant Design 的传递依赖存在，但不再是本项目直接声明。`.gitignore` 已移除只服务于旧 backend uploads/recovery data 的规则，继续保留新版 `backend/storage/` 和通用本地产物规则。
+- 新增 `backend/tests/test_legacy_code_retirement.py`，固定 48 个旧后端、工具和 Prompt 路径不得重新出现；扩展 `frontend/tests/new-runtime-entry.test.mjs`，固定 22 个旧前端路径不得重新出现，并继续验证入口、Vite 和 Nginx 不暴露旧路由/上传目录。
+- 验证结果：后端全量 593 项测试通过；前端 14 个测试脚本全部通过；`tsc && vite build` 成功转换 3116 个模块；OpenAPI 共 46 个 path，全部仅位于 `/api/health` 或 `/api/v2/*`；`alembic current` 为 `f8c2d0e5b317 (head)`，`alembic check` 无新结构差异。
+- 数据边界复核：PostgreSQL 12 张业务表全部 0 行，Redis 0 个键、Chroma 0 个 collection、`backend/storage` 0 个文件；`sample_data/` 的 4 个受控样例保留。本步未删除数据库、Docker volume、新版存储或受控样例。
+- 本步位于 `前端入口/API 调用 -> FastAPI API -> 新版 Schema -> 新版 Service -> rebuilt Model -> PostgreSQL` 整条链路之外的遗留旁路清理；全量验证证明主链不依赖已删文件，但不等同于已经完成第 5 步 `/stage3`、`rebuilt`、`/api/v2` 命名决策和最终 README/使用说明改写。
+
+### 2026-08-18 旧版退役第 2 步：运行入口切换（已完成）
+
+- 前端 `App.tsx` 已停止导入旧 `AppLayout`、旧 `pages/` 页面和 `/stage3-preview`；根路径及未知路径进入 `/stage3/dashboard`，旧 `/apply` 只跳转到新版 `/stage3/apply`。旧前端文件仍在工作树中，等待第 4 步删除。
+- FastAPI `main.py` 已停止导入和挂载旧 `app.routers`，不再调用 `ensure_demo_data()`，不再公开挂载旧 `/uploads`；健康检查改由新版 `app.api.health` 提供，全部业务 API 只保留在 `/api/v2`。
+- `app.models` 父包不再隐式导入旧 SQLite Model，因此导入新版 `app.models.rebuilt` 不会顺带创建旧同步 SQLite engine。旧 Model 文件尚未删除。
+- 本地 `backend/run.py`、`.env.example`、Docker Compose 和 Dockerfile 已切到新版 `core.config`、PostgreSQL 与私有 `V2_STORAGE_DIR`；Vite 和 Nginx 已停止代理旧 `/uploads`。Compose 不再挂载旧 SQLite data volume 或旧上传目录，但本步没有删除宿主机文件或既存 Docker volume。
+- 新增前端运行入口回归测试，固定“入口不得导入旧页面、旧投递地址只跳转新版、开发与容器代理不得公开旧上传目录”。
+- 验证结果：后端全量 610 项测试通过；独立进程导入 FastAPI 后共有 73 个 `/api` 路由项，只有 `/api/health` 与 `/api/v2/*`，旧 Router、旧配置、旧 SQLite Model 均未加载；健康检查返回 200，旧 `/api/jobs` 与 `/uploads/*` 返回 404。
+- 前端新增入口测试及既有 13 组回归测试全部通过；`tsc && vite build` 成功转换 3116 个模块，旧页面不再进入生产构建。Docker Compose 解析检查确认使用 PostgreSQL 与私有 `resume-data`，不再包含 SQLite、`recruit-data` 或 `/app/uploads`。
+- 本步位于 `前端入口 -> FastAPI 路由入口 -> 新版 API/Service/Model -> PostgreSQL 配置`。它证明正常启动与生产构建不再加载旧系统，但不能证明 legacy Schema 已移除、旧演示数据已清理、Docker 镜像已真实重建运行或浏览器跳转视觉效果；这些属于后续小步骤。
 
 ### 阶段 0 已完成事项
 
@@ -755,7 +866,7 @@
 - 阶段 6 的自动化、真实 PostgreSQL 和真实 API 技术集成验收已经通过；用户于 2026-08-17 明确确认阶段 6 已完成，阶段 7 前置门禁据此关闭。此前 Codex 受控浏览器没有可用实例的事实仍保留在上方记录中，本次用户确认不伪装成新增的 Codex 截图证据。
 - 阶段 6 由 HR 直接填写结构化岗位表单，不把 AI 解析 JD 作为必经步骤，也不在本阶段调用 DeepSeek。综合 Agent 后续可以按 HR 明确要求生成 JD 草稿，并在 HR 确认后保存。
 - 阶段 6 业务方案、专项设计、技术集成验收和用户最终确认均已完成，已允许进入阶段 7。
-- 阶段 7 小步骤 1—5 已按原专项设计完成。用户随后明确选择 Reqcore 式“预设模板 + AI 根据岗位生成评分项”，并已逐项确认小步骤 5A 的修订设计；评分子方案门禁现已关闭，下一步执行小步骤 5A，完成前不直接进入 DeepSeek 候选人评价 Adapter。
+- 阶段 7 小步骤 1—8、Rubric 修订小步骤 5A，以及步骤 9 的后端支撑契约、前端类型/API 调用层、Application 工作队列、单人评分、同岗位最多 5 人批量评分、评分详情、逐项证据和评分历史交互已完成。当前已具备 Application、HR 决策后端能力、版本化岗位 Rubric、确定性规则、脱敏候选人输入、DeepSeek 逐项语义评价、单 Application 正式评分、同岗位最多 5 项的批量 API，以及可查看真实状态、安全发起评分并追溯证据和历史的初筛中心；下一步只做强制重跑确认，暂不进入 HR 决策前端交互。
 - 后续路线暂定为：阶段 7 Application 与 AI 初筛底座；阶段 8 公开投递和自动初筛；阶段 9 面试、Offer、录取和报告；阶段 10 首页综合 Agent；阶段 11 知识库 RAG 与语义搜索；阶段 12 质量、权限、部署和交付。
 - 已新增 `docs/research/2026-08-15-github-recruiting-project-comparison.md`，对比 Reqcore、SAP Recruiting Agent、HackerRank Hiring Agent、Resume Screening RAG Pipeline 和 MCP Resume Screening，记录当前差距、借鉴原因和明确不借鉴项。
 - Reqcore 只用于校准 Application、招聘 Pipeline、公开/后台接口、私有简历和数据保留；不切换其 Nuxt/Vue 技术栈，不直接复制 AGPL 代码，也不提前建设多租户和计费。
@@ -763,7 +874,7 @@
 - 阶段 10 借鉴 SAP Recruiting Agent 的职责分工，固定方向为 `Agent -> Tool -> Service -> PostgreSQL/Chroma`；Tools 必须强类型、可测试、可授权和可审计，MCP 仅作为未来外部调用适配，不是当前 MVP 必选项。
 - 阶段 11 使用 `Resume.raw_text` 和 `Resume.parsed_snapshot` 生成带来源元数据的检索片段，支持查询分类、结构化过滤、Small-to-Big、去重重排和引用；RAG 负责召回，不替代正式初筛评分，也不生成 `.md` 文件。
 
-### 阶段 7：Application 与 AI 初筛底座（进行中：小步骤 1—5、5A 已完成）
+### 阶段 7：Application 与 AI 初筛底座（进行中：步骤 9 批量评分交互已完成）
 
 #### 已确认的业务边界
 
@@ -788,7 +899,7 @@
 
 - 使用 20 份脱敏样本覆盖高匹配 4、中匹配 4、低匹配 4、硬性失败 3、信息未知 3、资料冲突 2；敏感信息隔离率和确定性规则正确率必须 100%，Schema 成功率至少 95%，证据可定位率至少 90%，推荐方向与 HR 复核一致率至少 80%，关键事实幻觉为 0。
 - 完成 Schema、Model/migration、Application Service/API、HR 决策、Rubric、DeepSeek Adapter、ScreeningService、小批量、前端、旧数据迁移和综合验收共 12 个小步骤；每次只推进一个可理解、可验证的小步骤。
-- 阶段 6 已获用户最终确认；阶段 7 Application/状态部分门禁继续有效。用户已逐项确认小步骤 5A 的内部占比、AI 权重建议、空维度、岗位变更、失败语义、草稿发布、AI 辅助和验收场景，评分子方案门禁已关闭，可以修改 Rubric 业务代码；小步骤 5A 验证完成前仍不能进入步骤 6。
+- 阶段 6 已获用户最终确认；阶段 7 Application/状态和 Rubric 业务门禁继续有效。用户已理解步骤 8 的范围并确认开始步骤 9；步骤 9 的后端支撑契约、前端类型/API 调用层、Application 工作队列、单人/小批量评分，以及评分详情、逐项证据与运行历史交互均已完成。下一段只做强制重跑确认，暂不进入 HR 决策交互。
 
 #### 小步骤 1：Application、StageHistory 与 Rubric Schema（已完成）
 
@@ -907,6 +1018,80 @@
 - Prompt v2 下真实 DeepSeek `deepseek-v4-flash` 验证通过：脱敏技术岗位生成 6 项、非技术岗位生成 7 项，均在默认 5—8 项范围并通过严格 Schema/公平性校验；单项辅助保留名称、维度和占比并返回合法锚点。本次三次成功调用共 3355 input tokens、2392 output tokens，只使用虚构岗位，不包含候选人或联系方式。
 - 最终后端全量 545 项测试和 269 组子场景通过，`compileall`、`git diff --check` 和 migration 4 项定向测试通过。正式开发库只读确认仍为 `c8e1a6f4d205`，没有升级或写入；临时数据库已精确删除，存在计数为 0。
 - 小步骤 5A 至此完成：岗位级 Rubric 已具备模板、AI 整份生成、HR 单项辅助、严格校验、草稿/发布/放弃、版本、岗位过期、失败保护、Fake 异常、真实 PostgreSQL 和真实 DeepSeek 证据。下一步进入小步骤 6，只评价候选人材料，不再改变 Rubric 生成合同。
+
+#### 小步骤 6：DeepSeek 候选人语义评价 Adapter（已完成）
+
+- 新增 `backend/app/schemas/rebuilt/screening_evaluation.py`，固定候选人模型输入和 `ScreeningSemanticEvaluation v1` 输出合同。每个已发布语义项按原顺序恰好返回一次，分数只能是严格整数 `0—10` 或 `unknown`；置信度固定为 `low/medium/high`，每项返回 evidence、reason、strengths 和 gaps。数字分必须有证据，`unknown` 必须无证据、置信度为 low 并说明缺少材料；重复、漏项、额外项、越界/浮点/字符串分数和额外字段均拒绝。
+- evidence 固定为 `source/locator/quote`，来源只能是 `confirmed_profile/resume_text/structured_resume`。`validate_against` 会核对 Rubric key 的完整顺序，并要求每条 quote 能在对应脱敏来源中逐字定位；模型拼接数组、改写或虚构证据不能进入后续计分。
+- 新增纯 `ScreeningInputService`，只输出无真实身份的 `application-*` 引用和岗位相关字段。姓名、手机号、邮箱、性别、年龄、出生/民族/婚姻/地址/证件/照片/个人链接等字段不进入结构化模型输入；原文中的身份标签行、已知身份值、邮箱、手机号、身份证和 URL 在后端确定性移除。学校名称不进入结构化评分材料；脱敏后只剩身份信息时在模型调用前判定材料不足。
+- 新增 `ScreeningPromptBuilder` 和 `screening_evaluation_v3`。Prompt 把岗位白名单、4—10 个已发布语义项和三类脱敏候选人来源分区注入，禁止岗位/简历指令注入、未配置亮点、总体分数、推荐等级和 HR 决策。HR 已确认资料优先于原文，原文优先于 AI 结构化快照；数组证据必须逐元素引用，0 分也必须有明确负面证据，无证据必须返回 unknown。
+- 新增 `DeepSeekScreeningModelAdapter` 和独立客户端工厂，固定一次非流式 JSON Output、90 秒有界超时、SDK 隐式重试关闭、输入/输出长度上限，并把认证、余额、限流、超时、连接、服务异常、空响应和截断响应映射为不泄露岗位、简历或上游正文的稳定错误。成功结果记录模型、完成原因、耗时、input/output token；部署方配置每百万 token 单价时才计算费用，未配置时明确为 unknown，不伪造为 0。
+- 新增步骤 6 Schema/Prompt/Input Service/Adapter 与配置测试；本步新增 21 项测试、Rubric 联合 77 项、后端全量 566 项测试均通过，`compileall` 和 `git diff --check` 通过。测试覆盖 PII 脱敏、只含身份信息阻断、严格分数、unknown、证据定位、公平性、一次调用、输入上限、Prompt/Schema 版本漂移、超时、鉴权、余额、限流、连接、5xx、空响应、截断和可选费用估算。
+- 真实 DeepSeek `deepseek-v4-flash` 首次证据充分样本把技能数组拼成新字符串，证据定位校验正确拒绝；Prompt v2 明确逐元素引用后，第二次又发现模型对无材料项返回无证据数字低分，严格 Schema 再次拒绝。Prompt v3 增加机械自检后验证通过：证据充分虚构样本返回 6 项分数 `[8,8,7,8,8,6]`、6 条可定位证据，2047/893 tokens、约 5.4 秒；证据稀疏虚构样本 6 项全部 `unknown + low`、0 条证据，1830/506 tokens、约 3.5 秒。所有样本均为虚构材料，联系方式在调用前自动移除。
+- 本步位于 `Schema/ScreeningInputService -> Prompt -> ScreeningModelAdapter -> DeepSeek`，没有新增 API、没有编排确定性规则和语义结果、没有创建或保存 ScreeningResult、没有改变 Application AI 状态、没有修改前端，也没有升级正式开发库。下一步小步骤 7 才实现 `ScreeningService`、输入指纹、首次/重跑、结果版本、失败保留和当前结果切换。
+
+#### 小步骤 7：ScreeningService、结果版本和幂等（已完成）
+
+- 新增 `backend/app/schemas/rebuilt/screening_score.py` 与纯 Python `ScreeningScoreService`。确定性规则和岗位专用语义项在五维内部按建议占比归一化，空维度按其他有效维度重分配；`unknown` 不等于 failed，但降低证据覆盖率。Python 统一计算总分、推荐等级、硬性条件/低覆盖率封顶、优势、风险和待确认问题，DeepSeek 不接管总分。
+- 新增事务化 `ScreeningService`。开始时锁定 Application，核对 active、开放岗位、当前 Resume、唯一 active Rubric、stale 和岗位指纹；生成只含脱敏数据的 64 位输入指纹与快照，创建并提交 `screening` attempt 后才调用模型，结束时用短事务写回。支持相同成功指纹复用、二次确认 force 重跑、attempt 递增、同 Application 单运行、输入变化 outdated、新成功切换当前结果和新失败保留旧成功结果；AI 结构化快照不能单独满足最低输入。
+- 每条结果保存 Application/Resume/Rubric 绑定、规则/计分/Prompt/Schema/模型版本、脱敏候选人快照、岗位要求与 Rubric 快照、硬性检查、逐项证据、维度分、总分、覆盖率、推荐、耗时、token、可选费用和稳定错误。模型非法输出只保存安全错误，不保存未校验原文；任何结果都不改变 HR 决策。
+- 新增可重复执行的 `backend/scripts/validate_screening_service_live.py`。本步新增/扩展 16 项计分、编排与结果不可变保护测试，评分相关 57 项联合测试、后端全量 582 项、`compileall` 和 `git diff --check` 均通过。
+- 随机临时 PostgreSQL 从空库迁移到 `e7b1c9d4a206` 后，以完全虚构 Application 完成真实 `deepseek-v4-flash` 链路：首次结果 86 分、证据覆盖率 100%、`strong_recommend`、1793/566 tokens；相同输入第二次复用，真实模型调用仍为 1。修改 Resume 后模拟超时，新 attempt 为 failed，旧成功结果继续作为当前结果并标记 outdated；数据库唯一索引拒绝第二个并发 screening。真实模型另有一次非法输出被严格校验拒绝并安全保存 failed，未放宽 Schema。
+- 验证用临时数据库 `recruitment_step7_a0288aed` 已精确删除；正式开发库仍停留在阶段 6 revision，没有升级或写入。本步没有新增批量 API、没有接前端、没有自动改变 HR 决策。下一步小步骤 8 实现同岗位最多 5 份的小批量评分、逐项事务、部分失败、复用和仅重试失败项。
+
+#### 小步骤 8：最多 5 人的小批量评分 API（已完成）
+
+- 新增严格 `ScreeningBatchRunRequest/Response`：一次只能提交 1—5 个不重复 Application，支持普通执行、带二次确认和原因的 force 重跑，以及 `retry_failed_only`；仅重试失败项不能与 force 同时使用。逐项响应固定为 `completed/failed/blocked/reused/skipped`，并返回结果 ID、attempt、是否调用模型、安全错误和批次汇总。
+- 新增 `ScreeningBatchService` 与 `POST /api/v2/jobs/{job_id}/screenings/batch`。执行前整体校验岗位存在且 open、全部 Application 存在且属于路径岗位；随后按请求顺序复用步骤 7 的 `ScreeningService`。每项由单人工作流独立提交，单项异常只回滚该项当前事务并继续下一项；相同成功结果复用，正在运行和不允许启动的项安全跳过，批量操作不改变 HR 决策。
+- `retry_failed_only=true` 只执行当前 `ai_status=failed` 的 Application，completed、blocked、not_started 和 screening 均不被误重跑。blocked 必须先补资料后再发起普通评分；本步未引入 Redis、后台队列或批量 HR 通过/淘汰。
+- 新增 13 项 Schema、Service 和 API 测试；批量/单人评分/岗位 API 联合 37 项与后端全量 595 项测试通过，`compileall`、OpenAPI 路由导入和 `git diff --check` 通过。
+- 随机临时 PostgreSQL `recruitment_step8_6f91c2` 从空库迁移到 `e7b1c9d4a206`，使用完全虚构数据和可控模型适配器验证 5 项依次得到 `completed/failed/blocked/reused/completed`；随后仅第 2 个 failed 被重试并完成，数据库审计历史为 `[completed] / [failed, completed] / [blocked] / [completed] / [completed]`，证明前项成功未被后项失败回滚且复用项未新增 attempt。临时库已删除并确认计数为 0，正式开发库仍未升级、未写入；本次未调用真实 DeepSeek，不产生模型费用。
+- 本步位于 `前端（尚未接入） -> Batch API -> Batch Schema -> ScreeningBatchService -> ScreeningService -> Model -> PostgreSQL`。下一步小步骤 9 接入 Application 录入、列表、状态、评分详情/历史/证据、批量操作和 HR 决策前端；开始前先向用户解释本步范围并等待确认。
+
+#### 小步骤 9 第一小段：前端所需 Application 查询与单人评分契约（已完成）
+
+- 新增只读 `ApplicationService`，提供 Application 列表和详情；列表支持岗位、招聘阶段、AI 状态、HR 决策和生命周期筛选，并按申请时间与 ID 稳定倒序。
+- `GET /api/v2/applications`、`GET /api/v2/applications/{id}`、`POST /api/v2/applications/{id}/screenings` 和 `GET /api/v2/applications/{id}/screenings` 已接入正式 FastAPI 路由。单人评分复用步骤 7 的 `ScreeningService`，记录“本地 HR（未认证）”，不会复制评分逻辑。
+- 新版结果响应分为轻量摘要和完整详情：摘要供列表/历史读取 Application、attempt、状态、分数、推荐、覆盖率、错误和 outdated；`GET /api/v2/screening-results/{id}` 对 Application 结果额外返回硬性检查、维度分、证据、待确认问题、脱敏快照、版本、耗时、token 和费用字段。旧 legacy ScreeningResult 继续使用兼容响应，不要求一次迁移全部旧字段。
+- 单人评分稳定区分 `APPLICATION_NOT_FOUND`、`SCREENING_ALREADY_RUNNING`、`APPLICATION_RESUME_REQUIRED`、`JOB_NOT_OPEN_FOR_SCREENING`、`RUBRIC_CRITERIA_INVALID`、`RUBRIC_DRAFT_STALE` 和通用不允许/未知失败；响应不回传 Service 私有异常、数据库地址或调用栈。
+- 新增 13 项 Schema、Application 查询 Service 与 API 测试；相关 59 项定向测试、后端全量 608 项、全量 Python 编译、正式 OpenAPI 路由检查和 `git diff --check` 通过。正式开发库仍停留在阶段 6 revision，本段未升级 PostgreSQL、未调用真实 DeepSeek、未修改 React 页面。
+- 本段位于 `前端（下一段接入） -> API -> Schema -> ApplicationService/ScreeningService -> Model -> PostgreSQL`。它证明页面已有稳定可调用的后端合同，但不能证明前端交互、真实阶段 7 数据库或浏览器视觉效果；下一段只新增前端类型与 API 调用函数。
+
+#### 小步骤 9 第二小段：前端类型与 API 调用层（已完成）
+
+- 新增 `frontend/src/stage3/types/applicationScreening.ts`，用 TypeScript 表达 Application、AI 状态、HR 决策、评分摘要/详情、批量结果、阶段历史和全部写操作输入；前端领域对象统一使用 camelCase，并保留只在网络边界出现的 snake_case 原始响应类型。
+- 新增 `frontend/src/stage3/services/applications.ts`，集中封装 Application 录入/查询、单人评分、评分历史/详情、同岗位批量评分、通过/备选/淘汰/撤销/作废和阶段历史调用。Service 负责 URL、查询参数、请求体、字段映射、Decimal 字符串转数值和稳定错误解析，后续页面不需要直接拼接后端路径。
+- 新增 1 项阶段 7 前端 Service 测试，覆盖筛选参数、请求方法/路径/载荷、响应映射、证据详情、批量、5 种 HR 动作、阶段历史与错误详情；本项和 9 项既有前端回归测试全部通过。`tsc && vite build` 成功构建 3922 个模块，`git diff --check` 通过。
+- 本段位于 `前端页面（下一段接入） -> TypeScript API Service -> FastAPI -> Schema -> Service -> Model -> PostgreSQL`。它证明前端调用契约可编译且请求/映射稳定，但尚不能证明页面交互、真实阶段 7 数据库、浏览器视觉效果或真实 DeepSeek 调用；下一段只建设页面数据读取与 loading/空/失败/blocked/outdated 等状态骨架。
+
+#### 小步骤 9 第三小段：Application 只读工作队列与状态骨架（已完成）
+
+- `/stage3/screening` 已从 legacy ScreeningResult 历史页改为阶段 7 Application 工作队列。新增前端聚合读取同时取得 Application、候选人、全部岗位和新版评分摘要，只把 `current_screening_result_id` 指向的当前结果拼入列表；旧 legacy 结果通过运行时类型守卫排除，不会误当 Application 评分。
+- 页面新增可点击的招聘阶段轨道，以及岗位、AI 状态、HR 决策和生命周期筛选；展示候选人/岗位、关闭岗位、AI 状态、当前分数、attempt、推荐方向、HR 决策、未绑定简历、failed、blocked 和 outdated。覆盖首次 loading、API 失败与重试、数据库空状态、筛选无结果和清除筛选；页面明确保持只读，没有提前发起评分或修改 HR 决策。
+- 新增 1 项聚合 Service/页面状态测试；与阶段 7 API Service 测试及 9 项既有前端回归合计 11 组全部通过。`tsc && vite build` 成功构建 3923 个模块，`git diff --check` 通过。当前环境没有可连接的受控浏览器实例，因此未完成真实点击、1440 像素桌面和 390 像素窄屏截图验收，源码响应式检查不能冒充视觉验收。
+- 本段位于 `React 只读页面 -> 前端聚合 Service/API Service -> FastAPI -> Schema -> Service -> Model -> PostgreSQL`。它证明页面已接入阶段 7 的真实读取合同并能区分关键状态，但正式开发库尚未升级，不能证明真实阶段 7 数据展示、浏览器视觉效果或 DeepSeek 调用；下一段只接入单 Application 评分、运行中保护和完成后的队列刷新。
+
+#### 小步骤 9 第四小段：单 Application 评分交互（已完成）
+
+- 初筛中心每条 Application 已按真实状态显示单人操作：`not_started` 可开始、`failed` 可重新尝试、当前成功结果 outdated 可更新；本地或服务端 `screening`、ended/voided、岗位关闭/未知、缺简历、blocked 和最新成功结果均禁用，并在按钮下直接说明原因。AI 评分结果不会自动改变 HR 决策。
+- 页面复用 `runStage7ApplicationScreening` 调用正式单人评分 API。同步 `Set` 守卫在 React 重新渲染前就登记 Application ID，连续双击只允许第一请求进入；不同 Application 仍各自独立。completed/reused、blocked/failed 和 HTTP 稳定错误分别反馈，成功或服务端已运行时重新读取工作队列。
+- 新增纯状态策略、同步重复提交守卫、错误指引和页面接线测试；与阶段 7 既有 2 组及阶段 3—5 的 9 组前端回归合计 12 组全部通过。`tsc && vite build` 成功构建 3924 个模块，`git diff --check` 通过。
+- 本段位于 `React 单人操作 -> applications.ts -> POST /applications/{id}/screenings -> Schema -> ScreeningService -> Model -> PostgreSQL/DeepSeek`。它证明前端会按状态安全发起一次请求、解释失败并刷新结果，但正式开发库未升级、本次测试没有真实调用 DeepSeek，且当前无受控浏览器实例，不能证明真实数据点击和视觉效果；下一段只接入同岗位选择 1—5 人、批量结果汇总和仅重试失败项。
+
+#### 小步骤 9 第五小段：同岗位最多 5 人批量评分交互（已完成）
+
+- `/app/screening` 已支持按行选择同一岗位的 1—5 个 Application。首个选择会锁定批次岗位；异岗位、第 6 人、非 active、关闭岗位、缺简历、blocked 和正在运行的申请会在前端禁用并解释原因，已有最新成功结果仍允许选择并由后端安全复用。
+- 批量操作调用 `runStage7ScreeningBatch`，同步守卫阻止双击产生重复 POST；运行期间锁定筛选器和相关行操作。结果抽屉逐项展示 `completed/failed/blocked/reused/skipped`、attempt 和安全错误信息，汇总各状态数量，并可仅把 failed Application 重新提交。批量评分不会自动通过、备选或淘汰候选人。
+- 新增 `screeningBatchAction.ts` 纯策略/同步守卫和 1 组批量 UI 测试；阶段 7 的 4 组与简历、岗位相关 9 组前端回归合计 13 组全部通过。`tsc && vite build` 成功构建 3925 个模块。
+- 本段位于 `React 批量交互 -> applications.ts -> POST /jobs/{job_id}/screenings/batch -> Batch Schema -> ScreeningBatchService -> ScreeningService -> Model -> PostgreSQL/DeepSeek`。它证明前端选择边界、请求接线、逐项反馈和失败项重试可编译且受自动化保护，但正式开发库未升级、本次没有真实调用 DeepSeek，且当前无受控浏览器实例，不能证明真实数据库点击和视觉效果；下一段只接入评分详情、逐项证据和运行历史。
+
+#### 小步骤 9 第六小段：评分详情、逐项证据与评分历史交互（已完成）
+
+- `/app/screening` 每条 Application 新增“评分记录”入口，详情抽屉左侧按 attempt 展示全部不可变评分历史，并标识当前、已过期、失败、资料不足和强制重跑记录；打开时优先选中 Application 当前结果，没有当前结果时选中最近一次运行。
+- 抽屉右侧复用现有评分详情接口，展示总分、推荐方向、证据覆盖率、五维分数、确定性硬性条件、Rubric 语义逐项 `0—10/unknown`、原因、置信度、可定位证据、优势/缺口，以及 Rubric/规则/Prompt/模型版本、耗时和 token。新增纯 TypeScript 转换层安全读取后端 JSON 快照，并在逐项证据缺失时回退到已保存的扁平证据，不伪造分数或证据。
+- 历史列表和详情分别覆盖 loading、空、失败与重新读取；请求版本守卫会忽略切换记录后迟到的旧响应。该抽屉保持只读，没有新增强制重跑、HR 通过/备选/淘汰、公开投递或其他阶段功能。
+- 新增 1 组详情 UI/数据转换测试；Application Service、工作队列、单人评分、批量评分和详情共 5 组阶段 7 相关测试全部通过。`tsc && vite build` 成功转换 3118 个模块，`git diff --check` 通过。当前没有使用真实阶段 7 数据执行浏览器点击或截图，因此不能把源码响应式检查和生产构建当作视觉验收。
+- 本段位于 `React 只读详情 -> applications.ts -> GET /applications/{id}/screenings 与 GET /screening-results/{id} -> 既有 Schema -> ApplicationService/ScreeningResultService -> ScreeningResult Model -> PostgreSQL`。本次没有修改 API、Schema、后端 Service、Model、Alembic 或 PostgreSQL；下一小步只做已有评分接口的强制重跑确认交互，继续不进入 HR 决策。
 
 ### 重要说明
 

@@ -3,7 +3,7 @@ from pathlib import Path
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-from app.prompts.rebuilt.screening_rubric_templates import get_rubric_template
+from app.prompts.screening_rubric_templates import get_rubric_template
 
 
 MIGRATION_PATH = (
@@ -104,4 +104,3 @@ class Stage7ApplicationFoundationMigrationTest(TestCase):
         semantic_items = rubric_statement.compile().params["semantic_items"]
         self.assertIn("responsibility_alignment", semantic_items)
         self.assertNotIn(":10", rubric_insert)
-

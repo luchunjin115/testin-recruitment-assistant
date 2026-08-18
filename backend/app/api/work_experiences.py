@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.rebuilt.work_experience import WorkExperience
-from app.schemas.rebuilt.work_experience import (
+from app.models.work_experience import WorkExperience
+from app.schemas.work_experience import (
     WorkExperienceCreate,
     WorkExperienceRead,
     WorkExperienceUpdate,
 )
-from app.services.rebuilt.work_experience_service import work_experience_service
+from app.services.work_experience_service import work_experience_service
 
 
 router = APIRouter(prefix="/work-experiences", tags=["work-experiences"])

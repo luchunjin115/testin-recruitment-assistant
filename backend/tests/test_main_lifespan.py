@@ -3,14 +3,16 @@ from pathlib import Path
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import Mock, patch
 
-from app.main import lifespan
+from fastapi.testclient import TestClient
+
+from app.main import app, lifespan
 
 
 class MainLifespanTest(IsolatedAsyncioTestCase):
     async def test_lifespan_starts_configured_cleanup_and_cancels_it(self) -> None:
         settings = Mock(
             RESUME_CLEANUP_ENABLED=True,
-            V2_STORAGE_DIR="C:/private-storage",
+            STORAGE_DIR="C:/private-storage",
             RESUME_UNBOUND_RETENTION_HOURS=24,
             RESUME_CLEANUP_INTERVAL_MINUTES=60,
             RESUME_CLEANUP_BATCH_SIZE=50,
@@ -27,11 +29,10 @@ class MainLifespanTest(IsolatedAsyncioTestCase):
             await asyncio.Event().wait()
 
         with (
-            patch("scripts.ensure_demo_data.ensure_demo_data") as ensure_demo,
-            patch("app.core.config.get_settings", return_value=settings),
+            patch("app.main.settings", settings),
             patch("app.core.database.get_sessionmaker", return_value=session_factory),
             patch(
-                "app.services.rebuilt.resume_retention_service.run_resume_retention_loop",
+                "app.services.resume_retention_service.run_resume_retention_loop",
                 side_effect=fake_loop,
             ) as cleanup_loop,
         ):
@@ -40,7 +41,6 @@ class MainLifespanTest(IsolatedAsyncioTestCase):
                 self.assertIsNotNone(captured_task)
                 self.assertFalse(captured_task.done())
 
-        ensure_demo.assert_called_once_with()
         cleanup_loop.assert_called_once_with(
             session_factory=session_factory,
             storage_root=Path("C:/private-storage"),
@@ -55,11 +55,10 @@ class MainLifespanTest(IsolatedAsyncioTestCase):
         settings = Mock(RESUME_CLEANUP_ENABLED=False)
 
         with (
-            patch("scripts.ensure_demo_data.ensure_demo_data"),
-            patch("app.core.config.get_settings", return_value=settings),
+            patch("app.main.settings", settings),
             patch("app.core.database.get_sessionmaker") as sessionmaker,
             patch(
-                "app.services.rebuilt.resume_retention_service.run_resume_retention_loop",
+                "app.services.resume_retention_service.run_resume_retention_loop",
             ) as cleanup_loop,
         ):
             async with lifespan(Mock()):
@@ -67,3 +66,30 @@ class MainLifespanTest(IsolatedAsyncioTestCase):
 
         sessionmaker.assert_not_called()
         cleanup_loop.assert_not_called()
+
+    def test_main_registers_only_versioned_business_routes(self) -> None:
+        api_paths = {
+            route.path
+            for route in app.routes
+            if getattr(route, "path", "").startswith("/api")
+        }
+
+        self.assertIn("/api/health", api_paths)
+        self.assertTrue(
+            all(
+                path == "/api/health" or path.startswith("/api/v2/")
+                for path in api_paths
+            )
+        )
+        self.assertNotIn("/uploads", {route.path for route in app.routes})
+
+    def test_health_works_and_retired_routes_are_unavailable(self) -> None:
+        with TestClient(app) as client:
+            health = client.get("/api/health")
+            old_jobs = client.get("/api/jobs")
+            old_upload = client.get("/uploads/retired.txt")
+
+        self.assertEqual(health.status_code, 200)
+        self.assertEqual(health.json()["service"], "hr-agent-platform")
+        self.assertEqual(old_jobs.status_code, 404)
+        self.assertEqual(old_upload.status_code, 404)

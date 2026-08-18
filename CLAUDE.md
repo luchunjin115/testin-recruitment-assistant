@@ -11,14 +11,15 @@ HR Agent 招聘提效平台 — 面向公司内部 HR 团队的 AI 招聘助手�
 
 **GitHub 招聘项目对比与借鉴决策**: `docs/research/2026-08-15-github-recruiting-project-comparison.md`
 
+**旧版系统退役决策**: `docs/specs/2026-08-18-legacy-system-retirement-decision.md`
+
 **新 agent 必须先读设计文档和路线基线，再开始任何工作。**
 
 ## 当前状态
 
-项目处于**架构重建阶段**。现有代码是旧版本（React + FastAPI + SQLite + Mock LLM），
-新版本将升级为: React + Ant Design 5 定制主题 + FastAPI + PostgreSQL + Chroma + Redis + DeepSeek API；LangGraph 只在后续确有多步骤编排价值的工作流中使用，不作为所有 AI 能力的强制包装。
+项目处于**新版主链建设与旧版退役阶段**。用户已于 2026-08-18 明确放弃旧 React + FastAPI + SQLite + Mock LLM 演示代码及演示数据，不再执行旧系统业务迁移；当前目标是把新版 React + Ant Design 5 + FastAPI + PostgreSQL + DeepSeek 主链切为唯一运行入口。Chroma、Redis 和 LangGraph 仍按后续阶段的真实需要接入，不作为当前能力的强制包装。
 
-阶段 4“简历上传与文件解析”、阶段 5“大模型简历结构化提取与表单辅助填写”和阶段 6“结构化岗位管理”已经完成。阶段 7“Application 与 AI 初筛底座”进行中，小步骤 1—5 已完成；2026-08-17 Rubric 方案改为“预设模板 + AI 根据岗位生成待确认评分项”，步骤 6 暂停，必须先确认阶段 7 专项设计修订。后续日常开发无需阅读阶段 5 专项文档；只有修改阶段 5 功能或排查其回归时才重新读取。
+阶段 4“简历上传与文件解析”、阶段 5“大模型简历结构化提取与表单辅助填写”和阶段 6“结构化岗位管理”已经完成。阶段 7“Application 与 AI 初筛底座”进行中，小步骤 1—8、Rubric 修订步骤 5A，以及步骤 9 的后端支撑契约、前端类型/API 调用层、Application 工作队列、单人评分、同岗位最多 5 人批量评分、评分详情、逐项证据和评分历史交互已完成；下一步只做强制重跑确认，暂不进入 HR 通过/备选/淘汰决策交互。后续日常开发无需阅读阶段 5 专项文档；只有修改阶段 5 功能或排查其回归时才重新读取。
 
 阶段 5 后的当前产品方向是：先完成结构化岗位、Application 与 AI 初筛底座，再打通公开投递、自动初筛、HR 决策、面试、Offer 和录取；随后建设首页综合 Agent、公司知识库 RAG、权限与交付能力。详细边界见阶段 5 后路线基线。
 
@@ -26,7 +27,7 @@ HR Agent 招聘提效平台 — 面向公司内部 HR 团队的 AI 招聘助手�
 
 1. **先读总体设计和路线基线**，理解全局架构与当前阶段顺序
 2. 按实施计划顺序推进，但每个阶段开始前必须先完成业务需求、范围和验收标准讨论，并获得用户明确确认
-3. 迁移现有代码时，参考设计文档第 9 节的迁移指南
+3. 旧系统不再迁移或维护；退役范围、数据边界和清理顺序以 `docs/specs/2026-08-18-legacy-system-retirement-decision.md` 为准
 4. 每完成一个模块，先测试再继续
 5. 完成工作后同步更新 PROJECT_STATE.md
 6. 采用小步骤协作：每次操作前说明要做什么、技术上如何做以及为什么这样做；操作后说明验证方法和结果，并同时使用大白话与必要的技术术语
@@ -86,18 +87,23 @@ backend/app/
 3. **report_gen** — 报告生成: 汇总数据 → 摘要 → 分析 → 结论 → 格式化
 4. **smart_assistant** — 智能助手: 意图识别 → 路由到对应工作流
 
-## 现有代码关键文件索引（迁移参考）
+## 运行代码边界（旧版已退役）
 
 ```
-可复用:
-  backend/app/prompts/*.md          5 个 Prompt 模板
-  backend/app/services/file_parser.py   文件解析
-  backend/app/services/dedup_service.py 去重逻辑
-  frontend/src/pages/ApplyForm.tsx      候选人投递页
+已删除的旧版:
+  frontend/src/pages/                 旧 React 页面
+  backend/app/routers/                旧 /api 业务路由
+  backend/app/services/mock_llm.py    旧 Mock 评分
+  backend/app/services/ai_service.py  旧 AI 服务层
 
-参考但需重写:
-  backend/app/services/mock_llm.py      规则引擎（577行，含评分逻辑）
-  backend/app/services/ai_service.py    AI 服务层
+当前唯一主链:
+  frontend/src/features/recruitment/  React 招聘工作台
+  backend/app/api/                    FastAPI /api/v2 路由
+  backend/app/models/                 SQLAlchemy Model
+  backend/app/schemas/                Pydantic Schema
+  backend/app/services/               业务与 AI Service
+  backend/app/prompts/                版本化 Prompt
+  backend/app/adapters/               DeepSeek Adapter
 ```
 
 ## 关键约束

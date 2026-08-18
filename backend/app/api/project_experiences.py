@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.rebuilt.project_experience import ProjectExperience
-from app.schemas.rebuilt.project_experience import (
+from app.models.project_experience import ProjectExperience
+from app.schemas.project_experience import (
     ProjectExperienceCreate,
     ProjectExperienceRead,
     ProjectExperienceUpdate,
 )
-from app.services.rebuilt.project_experience_service import project_experience_service
+from app.services.project_experience_service import project_experience_service
 
 
 router = APIRouter(prefix="/project-experiences", tags=["project-experiences"])

@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.rebuilt.education import Education
-from app.schemas.rebuilt.education import EducationCreate, EducationRead, EducationUpdate
-from app.services.rebuilt.education_service import education_service
+from app.models.education import Education
+from app.schemas.education import EducationCreate, EducationRead, EducationUpdate
+from app.services.education_service import education_service
 
 
 router = APIRouter(prefix="/education", tags=["education"])
