@@ -2,11 +2,11 @@
 
 > 日期：2026-08-15
 >
-> 状态：业务方案与专项设计已获用户确认；小步骤 1—6 已完成，下一步为最终集成与人工验收
+> 状态：✅ 阶段 6 已于 2026-08-17 获用户确认完成；技术集成验收已通过，受控浏览器当时无可用实例的证据边界保留在同阶段验收记录中
 >
-> 上游依据：`2026-07-15-hr-agent-platform-design.md`、`2026-08-14-post-stage5-product-roadmap.md`、`../implementation-plan.md`
+> 上游依据：`../../architecture/2026-07-15-hr-agent-platform-design.md`、`../../planning/2026-08-14-post-stage5-product-roadmap.md`、`../../planning/implementation-plan.md`
 >
-> 当前进度：新版 Job 的严格 Schema、迁移、Service、API、真实管理表单和下游开放岗位读取边界已完成；最终集成与人工验收尚未完成
+> 当前进度：新版 Job 的严格 Schema、迁移、Service、API、真实管理表单和下游开放岗位读取边界已完成；详细验收证据见同目录 `2026-08-17-stage6-acceptance.md`
 
 ## 1. 文档目的
 

@@ -73,6 +73,29 @@ class ApplicationIntakeRequestTest(TestCase):
         with self.assertRaises(ValidationError):
             ApplicationIntakeRequest.model_validate(payload)
 
+    def test_resume_profile_accepts_job_material_but_forbids_identity_override(self) -> None:
+        payload = self.valid_payload()
+        payload["resume_profile"] = {
+            "current_company": "示例科技",
+            "skills": ["Python", "FastAPI"],
+            "education_records": [{"school": "示例大学", "degree": "本科"}],
+        }
+
+        request = ApplicationIntakeRequest.model_validate(payload)
+
+        self.assertEqual(request.resume_profile.current_company, "示例科技")
+        self.assertEqual(request.resume_profile.skills, ["Python", "FastAPI"])
+        self.assertEqual(request.resume_profile.education_records[0].school, "示例大学")
+
+        payload["resume_profile"]["phone"] = "13900139000"
+        with self.assertRaises(ValidationError):
+            ApplicationIntakeRequest.model_validate(payload)
+
+        payload = self.valid_payload()
+        payload["candidate_profile"] = {"skills": ["Python"]}
+        with self.assertRaises(ValidationError):
+            ApplicationIntakeRequest.model_validate(payload)
+
     def test_unknown_fields_non_strict_ids_and_unknown_sources_are_rejected(self) -> None:
         invalid_payloads = []
         for field, value in (

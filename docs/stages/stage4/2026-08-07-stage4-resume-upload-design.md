@@ -2,8 +2,8 @@
 
 > **日期**: 2026-08-07
 > **状态**: 设计确认，待实施
-> **对应实施计划**: `docs/implementation-plan.md` 阶段 4
-> **权威设计文档**: `docs/specs/2026-07-15-hr-agent-platform-design.md`
+> **对应实施计划**: `docs/planning/implementation-plan.md` 阶段 4
+> **权威设计文档**: `docs/architecture/2026-07-15-hr-agent-platform-design.md`
 
 ---
 

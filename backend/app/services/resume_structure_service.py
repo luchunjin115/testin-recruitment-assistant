@@ -20,6 +20,7 @@ from app.adapters.resume_structure import (
 from app.core.config import Settings, get_settings
 from app.models.resume import Resume
 from app.prompts.resume_structure import RESUME_STRUCTURE_PROMPT_VERSION
+from app.schemas.application import ApplicationResumeProfile
 from app.schemas.resume_parse import (
     RESUME_PARSE_SCHEMA_VERSION,
     ResumeParseDraft,
@@ -88,6 +89,7 @@ class ResumeStructureSnapshot(BaseModel):
 
     draft: ResumeParseDraft
     metadata: ResumeStructureSnapshotMetadata
+    confirmed_profile: ApplicationResumeProfile | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -261,6 +263,11 @@ class ResumeStructureService:
                     input_tokens=adapter_result.input_tokens,
                     output_tokens=adapter_result.output_tokens,
                     attempt_id=attempt_id,
+                ),
+                confirmed_profile=(
+                    cached_snapshot.confirmed_profile
+                    if cached_snapshot is not None
+                    else None
                 ),
             )
         except ResumeStructureServiceError as exc:

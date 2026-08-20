@@ -72,6 +72,41 @@ class DecisionRequestSchemaTest(TestCase):
         )
         self.assertEqual(request.reason_detail, "收到新的岗位相关证明")
 
+    def test_decision_reason_rejects_fairness_prohibited_content(self) -> None:
+        invalid_requests = (
+            lambda: PassApplicationRequest(
+                reason_code="manual_override",
+                reason_detail="候选人年龄更合适",
+            ),
+            lambda: BackupApplicationRequest(
+                reason_code="waiting_for_comparison",
+                reason_detail="婚姻情况待确认",
+            ),
+            lambda: RejectApplicationRequest(
+                reason_code="role_mismatch",
+                reason_detail="gender 不符合团队偏好",
+                confirmed=True,
+            ),
+            lambda: ReverseDecisionRequest(
+                reason_code="hr_reassessment",
+                reason_detail="学校属于 985",
+            ),
+            lambda: VoidApplicationRequest(
+                reason_code="entry_error",
+                reason_detail="民族信息录错",
+                confirmed=True,
+            ),
+        )
+        for make_request in invalid_requests:
+            with self.subTest(make_request=make_request), self.assertRaises(ValidationError):
+                make_request()
+
+        valid = PassApplicationRequest(
+            reason_code="manual_override",
+            reason_detail="HR reviewed managed service delivery evidence",
+        )
+        self.assertIn("managed", valid.reason_detail)
+
 
 class StageHistorySchemaTest(TestCase):
     def valid_payload(self) -> dict:

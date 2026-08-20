@@ -62,6 +62,22 @@ const candidates = [{
   updated_at: '2026-08-15T09:00:00Z',
 }];
 
+const passedApplications = [{
+  id: 12,
+  candidate_id: 5,
+  job_id: 2,
+  current_resume_id: 6,
+  source: 'hr_direct',
+  lifecycle_status: 'active',
+  recruitment_stage: 'screening_passed',
+  ai_status: 'completed',
+  hr_decision: 'passed',
+  current_screening_result_id: 9,
+  applied_at: '2026-08-15T08:00:00Z',
+  created_at: '2026-08-15T08:00:00Z',
+  updated_at: '2026-08-15T09:00:00Z',
+}];
+
 const screeningResults = [{
   id: 9,
   candidate_id: 5,
@@ -107,6 +123,7 @@ try {
     let data = [];
     if (config.url === '/jobs') data = config.params?.status === 'open' ? [jobs[0]] : jobs;
     if (config.url === '/candidates') data = candidates;
+    if (config.url === '/applications') data = passedApplications;
     if (config.url === '/screening-results') data = screeningResults;
     return { config, data, headers: {}, status: 200, statusText: 'OK' };
   };
@@ -120,7 +137,8 @@ try {
   assert.deepEqual(candidateJobs.map(job => job.id), [1]);
 
   const candidateSnapshot = await candidate.getRecruitmentCandidates();
-  assert.equal(candidateSnapshot.items[0].appliedJobTitle, '历史关闭岗位');
+  assert.equal(candidateSnapshot.items[0].jobTitle, '历史关闭岗位');
+  assert.equal(candidateSnapshot.items[0].applicationId, 12);
 
   const dashboardSnapshot = await dashboard.getRecruitmentDashboardSnapshot();
   assert.equal(dashboardSnapshot.openJobs, 1);

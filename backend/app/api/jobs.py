@@ -33,6 +33,8 @@ from app.schemas.screening_rubric import (
     ScreeningRubricItemAssistResponse,
     ScreeningRubricPublishRequest,
     ScreeningRubricReconfirmRequest,
+    ScreeningRubricShareOptimizationRequest,
+    ScreeningRubricShareOptimizationResponse,
     ScreeningRubricTemplateDraftRequest,
 )
 from app.schemas.screening_batch import (
@@ -83,7 +85,7 @@ JOB_UPDATE_EMPTY = {
 _JOB_UPDATE_PATH = re.compile(r"^(?:/api/v2)?/jobs/-?\d+/?$")
 _RUBRIC_UPDATE_PATH = re.compile(
     r"^(?:/api/v2)?/jobs/-?\d+/screening-rubric/"
-    r"(?:draft(?:/from-template|/assist-item|/publish|/abandon)?|generate|reconfirm)/?$"
+    r"(?:draft(?:/from-template|/assist-item|/optimize-shares|/publish|/abandon)?|generate|reconfirm)/?$"
 )
 _SCREENING_BATCH_PATH = re.compile(
     r"^(?:/api/v2)?/jobs/-?\d+/screenings/batch/?$"
@@ -429,6 +431,21 @@ async def assist_screening_rubric_item(
 ):
     try:
         return await screening_rubric_service.assist_manual_item(db, job_id, data)
+    except Exception as exc:
+        raise _rubric_expected_exception(exc) from exc
+
+
+@router.post(
+    "/{job_id}/screening-rubric/draft/optimize-shares",
+    response_model=ScreeningRubricShareOptimizationResponse,
+)
+async def optimize_screening_rubric_shares(
+    job_id: int,
+    data: ScreeningRubricShareOptimizationRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        return await screening_rubric_service.optimize_draft_shares(db, job_id, data)
     except Exception as exc:
         raise _rubric_expected_exception(exc) from exc
 

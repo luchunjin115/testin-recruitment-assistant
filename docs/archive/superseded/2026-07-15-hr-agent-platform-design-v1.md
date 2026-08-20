@@ -1,4 +1,6 @@
-# HR Agent 招聘提效平台 — 设计文档
+# HR Agent 招聘提效平台 — 总体设计 v1 归档
+
+> 本文件是 2026-08-20 精简前的详细总体设计快照。现行总体架构见 `../../architecture/2026-07-15-hr-agent-platform-design.md`；正文中的旧路径、API、SQL、目录和阶段 7 示例仅用于历史追溯。
 
 > **版本**: v1.0
 >
@@ -9,7 +11,7 @@
 > **设计变更**: 2026-08-12 正式将阶段 5 从多节点 LangGraph 调整为单次 DeepSeek 结构化提取 Service；详见 `2026-08-12-stage5-resume-structure-design.md`
 > **路线变更**: 2026-08-14 将阶段 5 后目标收敛为“完整招聘链路 + 首页综合 Agent + 公司知识库 RAG”，并建立逐阶段需求确认门禁；详见 `2026-08-14-post-stage5-product-roadmap.md`
 > **参考决策**: 2026-08-15 完成 GitHub 招聘项目对比，确认 Application、评分证据、Agent Tools、RAG 召回和 MCP 边界；详见 `../research/2026-08-15-github-recruiting-project-comparison.md`
-> **阶段 7 评分变更**: 2026-08-17 用户决定采用“预设 Rubric 模板 + AI 根据岗位默认生成 5—8 个待确认语义评分项，允许 4—10 个”；Python 确定性规则不计入该数量，并保留五维外框、HR 确认、版本和证据边界；详见 `2026-08-17-stage7-application-ai-screening-design.md`
+> **阶段 7 评分变更**: 2026-08-20 用户废弃旧 Rubric、五维权重、确定性评分、`unknown` 和多报告历史，改用 JD 驱动的 AI 综合评价；当前设计见 `2026-08-20-stage7-jd-driven-ai-screening-redesign.md`，旧方案归档于 `../archive/specs/2026-08-17-stage7-application-ai-screening-design.md`
 > **旧版退役变更**: 2026-08-18 用户明确放弃旧代码与旧演示数据；项目由“迁移旧系统”改为“新版直接替代旧版”；详见 `2026-08-18-legacy-system-retirement-decision.md`
 
 ---
@@ -558,13 +560,12 @@ Collection: resumes
 **AI 筛选中心**:
 - 顶部: 选择岗位 + 开始筛选按钮
 - 主体: 候选人按匹配度排序，显示分数 + 推荐等级 + 关键理由
-- 侧栏/弹窗: 各维度得分、优劣势分析
-- 底部: 批量生成初筛报告
+- 详情: 完整 AI 初筛报告、JD 基础事项逐项评价、候选人额外亮点、证据和面试重点
+- 底部: 单人或受限小批量重新评估
 
 **初筛报告页**:
-- Markdown 渲染展示
-- 导出 PDF / Word
-- 发送给面试官
+- 阶段 7 使用 React 按严格结构化 JSON 渲染当前完整报告
+- PDF / Word 导出和发送给面试官留在后续报告阶段
 
 ---
 
@@ -745,9 +746,9 @@ data: {"type": "action", "content": {"action": "show_candidates", "ids": [1, 2, 
 | 旧版处置 | 新版直接替代，旧代码与演示数据退役 | 避免长期维护双路由、双数据库和 legacy 业务例外 |
 | 交互模式 | 混合（助手 + 页面） | 兼顾效率和灵活性 |
 | 阶段 6 岗位录入 | HR 直接填写结构化表单 | 避免把 AI 解析变成无必要的创建前置步骤 |
-| 阶段 7 Rubric 来源 | 自动 standard 默认模板 + 可选技术/非技术模板 + AI 根据岗位生成建议 | HR 不必从空白创建；AI 生成失败不阻塞岗位，建议经 HR 确认后才生效 |
-| 阶段 7 规则入口 | 结构化 JobRequirements 生成 Python 规则 + Rubric 编辑器新增语义项 | Python 只执行字段比较，不解析自由文本；手动语义项发布后才注入 DeepSeek |
-| 阶段 7 语义评分 | 已确认岗位评分项逐项 `0—10/unknown`，Python 加权 | 保留模型语义判断自由度，同时要求证据、原因、置信度并避免模型直接决定总分 |
+| 阶段 7 JD 评价事项 | DeepSeek 拆解完整 JD + 程序补齐结构化 JobRequirements | 同一 JD 版本下稳定、可追溯；HR 只维护 JD，不维护第二套 Rubric |
+| 阶段 7 单项评分 | 基础事项逐项 `0—10`，额外亮点只输出有证据的 7—10 分正向事项 | 不使用 `unknown`；0 分只表示当前简历未体现，证据约束幻觉但不计算覆盖率 |
+| 阶段 7 综合评分 | DeepSeek 直接给出 `0—100` AI 岗位匹配建议分，React 渲染结构化完整报告 | 不使用固定权重和 Python 加权；AI 不生成通过或淘汰决定 |
 | 招聘流程主对象 | Candidate 与 Application 分离 | 同一候选人可拥有多个岗位独立投递和流程状态 |
 | 公开投递处理 | 可靠保存后异步自动初筛 | 支持大批量投递，正常简历不要求 HR 逐份确认 |
 | 综合 Agent | 受控工具 + 分级确认 + 审计 | 自然语言复用真实业务能力，同时保护高风险操作 |

@@ -20,7 +20,6 @@ from app.adapters.screening_model import (
 )
 from app.core.config import Settings, get_settings
 from app.models.application import Application
-from app.models.candidate import Candidate
 from app.models.job import Job
 from app.models.job_screening_rubric import JobScreeningRubric
 from app.models.screening_result import ScreeningResult
@@ -101,7 +100,6 @@ class ScreeningRunOutcome:
 @dataclass(slots=True)
 class _StartedScreening:
     application: Application
-    candidate: Candidate
     job: Job
     resume: Any
     rubric: JobScreeningRubric
@@ -273,11 +271,13 @@ class ScreeningService:
                 "当前已发布 Rubric 不包含 4—10 个语义评分项"
             )
 
-        candidate_profile = self._candidate_profile(application.candidate)
+        resume_profile = self._resume_confirmed_profile(
+            application.current_resume.parsed_snapshot
+        )
         try:
             material = self.input_service.build_candidate_material(
                 application_ref=f"application-{application.id}",
-                confirmed_profile=candidate_profile,
+                confirmed_profile=resume_profile,
                 resume_raw_text=application.current_resume.raw_text,
                 resume_snapshot=application.current_resume.parsed_snapshot,
             )
@@ -393,7 +393,6 @@ class ScreeningService:
         return (
             _StartedScreening(
                 application=application,
-                candidate=application.candidate,
                 job=application.job,
                 resume=application.current_resume,
                 rubric=rubric,
@@ -415,7 +414,11 @@ class ScreeningService:
         material = started.candidate_material
         if material is None:  # pragma: no cover - 调用方已阻止
             raise ValueError("缺少候选人材料")
-        profile = material.confirmed_profile
+        profile = (
+            material.confirmed_profile
+            if material.confirmed_profile.has_job_related_content()
+            else material.structured_resume
+        )
         facts = DeterministicCandidateFacts(
             work_years=profile.work_years,
             education_level=profile.education_level,
@@ -669,15 +672,6 @@ class ScreeningService:
                 selectinload(Application.current_resume),
                 selectinload(Application.current_screening_result),
                 selectinload(Application.job).selectinload(Job.screening_rubrics),
-                selectinload(Application.candidate).selectinload(
-                    Candidate.education_records
-                ),
-                selectinload(Application.candidate).selectinload(
-                    Candidate.work_experiences
-                ),
-                selectinload(Application.candidate).selectinload(
-                    Candidate.project_experiences
-                ),
             )
             .where(Application.id == application_id)
             .with_for_update()
@@ -701,61 +695,11 @@ class ScreeningService:
         return rubric
 
     @staticmethod
-    def _candidate_profile(candidate: Candidate) -> dict[str, Any]:
-        envelope = candidate.parsed_data if isinstance(candidate.parsed_data, Mapping) else {}
-        draft = envelope.get("draft") if isinstance(envelope.get("draft"), Mapping) else envelope
-        profile = dict(draft)
-        profile.update(
-            {
-                "name": candidate.name,
-                "phone": candidate.phone,
-                "email": candidate.email,
-                "gender": candidate.gender,
-                "age": candidate.age,
-                "location": candidate.location,
-            }
-        )
-        for key in ("current_title", "work_years", "education_level"):
-            value = getattr(candidate, key)
-            if value is not None:
-                profile[key] = value
-        if candidate.education_records:
-            profile["education_records"] = [
-                    {
-                        "school": item.school,
-                        "degree": item.degree,
-                        "major": item.major,
-                        "start_date": item.start_date,
-                        "end_date": item.end_date,
-                    }
-                    for item in candidate.education_records
-                ]
-        if candidate.work_experiences:
-            profile["work_experiences"] = [
-                    {
-                        "company": item.company,
-                        "title": item.title,
-                        "start_date": item.start_date,
-                        "end_date": item.end_date,
-                        "description": item.description,
-                        "tech_stack": item.tech_stack or [],
-                    }
-                    for item in candidate.work_experiences
-                ]
-        if candidate.project_experiences:
-            profile["project_experiences"] = [
-                    {
-                        "project_name": item.project_name,
-                        "role": item.role,
-                        "start_date": item.start_date,
-                        "end_date": item.end_date,
-                        "description": item.description,
-                        "tech_stack": item.tech_stack or [],
-                        "achievements": item.achievements,
-                    }
-                    for item in candidate.project_experiences
-                ]
-        return profile
+    def _resume_confirmed_profile(snapshot: Any) -> Mapping[str, Any]:
+        if not isinstance(snapshot, Mapping):
+            return {}
+        profile = snapshot.get("confirmed_profile")
+        return profile if isinstance(profile, Mapping) else {}
 
     def _input_fingerprint(
         self,

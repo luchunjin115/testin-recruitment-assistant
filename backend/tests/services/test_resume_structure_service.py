@@ -157,7 +157,13 @@ class ResumeStructureServiceTest(IsolatedAsyncioTestCase):
             structure_status="failed",
             structure_error="最近一次重新识别失败",
             structure_schema_version="1.0",
-            parsed_snapshot=snapshot_payload(),
+            parsed_snapshot={
+                **snapshot_payload(),
+                "confirmed_profile": {
+                    "current_title": "后端工程师",
+                    "skills": ["Python"],
+                },
+            },
         )
         db = make_session(resume)
 
@@ -281,11 +287,16 @@ class ResumeStructureServiceTest(IsolatedAsyncioTestCase):
         adapter.extract.assert_not_awaited()
 
     async def test_force_true_replaces_valid_cached_draft_once(self) -> None:
+        previous_snapshot = snapshot_payload()
+        previous_snapshot["confirmed_profile"] = {
+            "current_title": "HR 已确认职级",
+            "skills": ["Python"],
+        }
         resume = make_resume(
             structure_status="succeeded",
             structure_attempt_id=ATTEMPT_ID,
             structure_schema_version="1.0",
-            parsed_snapshot=snapshot_payload(),
+            parsed_snapshot=previous_snapshot,
             structured_at=NOW - timedelta(days=1),
         )
         db = make_session(resume, resume)
@@ -295,6 +306,10 @@ class ResumeStructureServiceTest(IsolatedAsyncioTestCase):
 
         self.assertFalse(result.from_cache)
         self.assertTrue(result.has_previous_draft)
+        self.assertEqual(
+            resume.parsed_snapshot["confirmed_profile"]["current_title"],
+            "HR 已确认职级",
+        )
         adapter.extract.assert_awaited_once()
         self.assertEqual(db.commit.await_count, 2)
 

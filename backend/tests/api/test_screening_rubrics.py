@@ -306,6 +306,57 @@ class ScreeningRubricApiTest(TestCase):
         self.assertEqual(response.json()["suggestion"]["name"], "问题解决能力")
         assist_mock.assert_awaited_once()
 
+        semantic_items = [
+            item.model_dump(mode="json")
+            for item in get_rubric_template("technical").semantic_items
+        ]
+        optimize_mock = AsyncMock(return_value={
+            "job_fingerprint": "a" * 64,
+            "suggestion": {
+                "schema_version": "1.0",
+                "rationale": "突出岗位核心职责与可验证成果",
+                "items": [
+                    {
+                        "key": item["key"],
+                        "suggested_share": item["suggested_share"],
+                        "reason": "保持当前相对重要程度",
+                    }
+                    for item in semantic_items
+                ],
+            },
+            "metadata": {
+                "model": "fake-rubric-model",
+                "prompt_version": "rubric_share_optimization_v1",
+                "schema_version": "1.0",
+                "input_tokens": 20,
+                "output_tokens": 30,
+            },
+        })
+        with patch.object(
+            screening_rubric_service,
+            "optimize_draft_shares",
+            optimize_mock,
+        ):
+            response = self.client.post(
+                "/jobs/1/screening-rubric/draft/optimize-shares",
+                json={
+                    "expected_draft_id": 12,
+                    "expected_job_fingerprint": "a" * 64,
+                    "weights": {
+                        "must_have_requirements": 40,
+                        "work_experience_relevance": 25,
+                        "projects_and_capability": 20,
+                        "preferred_qualifications": 10,
+                        "keywords_and_additional": 5,
+                    },
+                    "semantic_items": semantic_items,
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["suggestion"]["schema_version"], "1.0")
+        optimize_mock.assert_awaited_once()
+
     def test_generation_failures_have_safe_stable_codes(self) -> None:
         cases = (
             (
@@ -399,9 +450,10 @@ class ScreeningRubricApiTest(TestCase):
             ("POST", "/jobs/{job_id}/screening-rubric/draft/from-template"),
             ("POST", "/jobs/{job_id}/screening-rubric/generate"),
             ("POST", "/jobs/{job_id}/screening-rubric/draft/assist-item"),
+            ("POST", "/jobs/{job_id}/screening-rubric/draft/optimize-shares"),
             ("PUT", "/jobs/{job_id}/screening-rubric/draft"),
             ("POST", "/jobs/{job_id}/screening-rubric/draft/publish"),
             ("POST", "/jobs/{job_id}/screening-rubric/draft/abandon"),
             ("POST", "/jobs/{job_id}/screening-rubric/reconfirm"),
         })
-        self.assertEqual(len(matching), 9)
+        self.assertEqual(len(matching), 10)

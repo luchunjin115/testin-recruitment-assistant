@@ -1,20 +1,40 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  CheckCircleOutlined,
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   FileSearchOutlined,
   HistoryOutlined,
+  InboxOutlined,
+  PauseCircleOutlined,
+  PlusOutlined,
   ReloadOutlined,
   RobotOutlined,
   SafetyCertificateOutlined,
+  StopOutlined,
+  UndoOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Checkbox, Drawer, Empty, message, Select, Skeleton, Tag, Tooltip } from 'antd';
+import { Alert, Button, Checkbox, Drawer, Empty, Form, Input, message, Modal, Radio, Select, Skeleton, Tag, Tooltip, Upload } from 'antd';
 import { Link } from 'react-router-dom';
 import {
+  backupStage7Application,
   getStage7ApplicationApiError,
+  intakeStage7Application,
+  passStage7Application,
+  rejectStage7Application,
   runStage7ApplicationScreening,
   runStage7ScreeningBatch,
+  undoStage7ApplicationRejection,
 } from './services/applications';
+import {
+  abandonRecruitmentResume,
+  extractRecruitmentResumeText,
+  getRecruitmentResumes,
+  type RecruitmentResumeDetail,
+  type ResumeListSnapshot,
+  uploadRecruitmentResume,
+} from './services/resumes';
 import {
   getStage7ScreeningCenter,
   type Stage7ScreeningCenterItem,
@@ -22,6 +42,7 @@ import {
 } from './services/screening';
 import {
   beginStage7SingleScreening,
+  buildStage7ForceRerunInput,
   finishStage7SingleScreening,
   getStage7SingleScreeningAction,
   getStage7SingleScreeningErrorMessage,
@@ -32,6 +53,22 @@ import {
   getStage7BatchSelectionState,
   getStage7FailedBatchApplicationIds,
 } from './screeningBatchAction';
+import {
+  buildStage7DecisionSubmission,
+  getStage7DecisionEntry,
+  getStage7DecisionErrorMessage,
+  getStage7DecisionKinds,
+  getStage7PassPolicy,
+  STAGE7_BACKUP_REASON_OPTIONS,
+  STAGE7_REJECT_REASON_OPTIONS,
+  STAGE7_REVERSAL_REASON_OPTIONS,
+  type Stage7DecisionKind,
+} from './screeningDecisionAction';
+import {
+  buildStage7ScreeningIntakeInput,
+  getStage7ScreeningIntakeErrorMessage,
+  isStage7IntakeResumeFileSupported,
+} from './screeningIntakeAction';
 import RecruitmentScreeningDetailDrawer from './RecruitmentScreeningDetailDrawer';
 import type {
   Stage7ApplicationAIStatus,
@@ -40,6 +77,7 @@ import type {
   Stage7RecruitmentStage,
   Stage7ScreeningBatchItemStatus,
   Stage7ScreeningBatchOutcome,
+  Stage7ScreeningRunInput,
 } from './types/applicationScreening';
 
 type LoadState =
@@ -53,6 +91,21 @@ type BatchResultView = {
   outcome: Stage7ScreeningBatchOutcome;
   candidateLabels: Record<number, string>;
 };
+
+type IntakeResumeLoadState =
+  | { status: 'idle' | 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; data: ResumeListSnapshot };
+
+type IntakeFormValues = {
+  name: string;
+  phone: string;
+  email: string;
+  jobId: number;
+  resumeId?: number;
+};
+
+type IntakeProgress = 'idle' | 'uploading' | 'extracting' | 'saving' | 'screening';
 
 const AI_STATUS_META: Record<Stage7ApplicationAIStatus, StatusMeta> = {
   not_started: { label: '等待初筛', tone: 'neutral' },
@@ -110,6 +163,38 @@ const SOURCE_LABELS = {
   public_apply: '公开投递',
 } as const;
 
+const DECISION_KIND_META: Record<Stage7DecisionKind, {
+  label: string;
+  note: string;
+  icon: React.ReactNode;
+  tone: 'success' | 'warning' | 'danger' | 'neutral';
+}> = {
+  pass: {
+    label: '通过初筛',
+    note: '进入候选人业务视图',
+    icon: <CheckCircleOutlined />,
+    tone: 'success',
+  },
+  backup: {
+    label: '进入备选',
+    note: '保留在初筛中心继续比较',
+    icon: <PauseCircleOutlined />,
+    tone: 'warning',
+  },
+  reject: {
+    label: '淘汰申请',
+    note: '结束本岗位申请但保留历史',
+    icon: <StopOutlined />,
+    tone: 'danger',
+  },
+  undo_rejection: {
+    label: '撤销淘汰',
+    note: '恢复为 HR 待审核',
+    icon: <UndoOutlined />,
+    tone: 'neutral',
+  },
+};
+
 const formatDateTime = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '时间未记录';
@@ -132,7 +217,14 @@ const getStatusMessage = (item: Stage7ScreeningCenterItem) => {
   return currentResult?.recommendation || 'AI 初筛已完成，等待 HR 查看。';
 };
 
+const getResumeOperationErrorMessage = (error: unknown, fallback: string) => {
+  const detail = (error as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+  if (typeof detail === 'string' && detail.trim()) return detail;
+  return error instanceof Error && error.message ? error.message : fallback;
+};
+
 const RecruitmentScreeningCenter: React.FC = () => {
+  const [intakeForm] = Form.useForm<IntakeFormValues>();
   const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
   const [jobFilter, setJobFilter] = useState<number | 'all'>('all');
   const [stageFilter, setStageFilter] = useState<Stage7RecruitmentStage | 'all'>('all');
@@ -148,6 +240,23 @@ const RecruitmentScreeningCenter: React.FC = () => {
   const [batchError, setBatchError] = useState<string | null>(null);
   const [batchResult, setBatchResult] = useState<BatchResultView | null>(null);
   const [detailItem, setDetailItem] = useState<Stage7ScreeningCenterItem | null>(null);
+  const [forceRerunItem, setForceRerunItem] = useState<Stage7ScreeningCenterItem | null>(null);
+  const [forceRerunReason, setForceRerunReason] = useState('');
+  const decisionGuardRef = useRef({ pending: false });
+  const [decisionItem, setDecisionItem] = useState<Stage7ScreeningCenterItem | null>(null);
+  const [decisionKind, setDecisionKind] = useState<Stage7DecisionKind | null>(null);
+  const [decisionReasonCode, setDecisionReasonCode] = useState<string | null>(null);
+  const [decisionReasonDetail, setDecisionReasonDetail] = useState('');
+  const [decisionPending, setDecisionPending] = useState(false);
+  const [decisionError, setDecisionError] = useState<string | null>(null);
+  const intakeGuardRef = useRef({ pending: false });
+  const [intakeOpen, setIntakeOpen] = useState(false);
+  const [intakeResumeMode, setIntakeResumeMode] = useState<'existing' | 'upload'>('upload');
+  const [intakeResumeLoad, setIntakeResumeLoad] = useState<IntakeResumeLoadState>({ status: 'idle' });
+  const [intakeFile, setIntakeFile] = useState<File | null>(null);
+  const [preparedResume, setPreparedResume] = useState<RecruitmentResumeDetail | null>(null);
+  const [intakeProgress, setIntakeProgress] = useState<IntakeProgress>('idle');
+  const [intakeError, setIntakeError] = useState<string | null>(null);
 
   const apiFilters = useMemo(() => ({
     jobId: jobFilter === 'all' ? undefined : jobFilter,
@@ -189,9 +298,214 @@ const RecruitmentScreeningCenter: React.FC = () => {
     setLifecycleFilter('all');
   };
 
-  const runSingleScreening = async (item: Stage7ScreeningCenterItem) => {
+  const loadIntakeResumeOptions = async () => {
+    setIntakeResumeLoad({ status: 'loading' });
+    try {
+      setIntakeResumeLoad({ status: 'ready', data: await getRecruitmentResumes() });
+    } catch (error) {
+      setIntakeResumeLoad({
+        status: 'error',
+        message: getResumeOperationErrorMessage(error, '无法读取现有简历'),
+      });
+    }
+  };
+
+  const resetIntakeDialog = () => {
+    intakeForm.resetFields();
+    setIntakeOpen(false);
+    setIntakeResumeMode('upload');
+    setIntakeResumeLoad({ status: 'idle' });
+    setIntakeFile(null);
+    setPreparedResume(null);
+    setIntakeProgress('idle');
+    setIntakeError(null);
+  };
+
+  const openIntakeDialog = () => {
+    const selectedOpenJob = loadState.status === 'ready'
+      && typeof jobFilter === 'number'
+      && loadState.data.jobs.some(job => job.id === jobFilter && job.status === 'open')
+      ? jobFilter
+      : undefined;
+    intakeForm.resetFields();
+    intakeForm.setFieldsValue({ jobId: selectedOpenJob });
+    setIntakeOpen(true);
+    setIntakeResumeMode('upload');
+    setIntakeFile(null);
+    setPreparedResume(null);
+    setIntakeProgress('idle');
+    setIntakeError(null);
+    void loadIntakeResumeOptions();
+  };
+
+  const closeIntakeDialog = async () => {
+    if (intakeGuardRef.current.pending) return;
+    const unboundResume = preparedResume;
+    resetIntakeDialog();
+    if (unboundResume) {
+      try {
+        await abandonRecruitmentResume(unboundResume.id);
+      } catch {
+        message.warning(`未绑定简历 #${unboundResume.id} 没有自动清理，可前往简历管理手动处理。`);
+      }
+    }
+  };
+
+  const changeIntakeResumeMode = async (mode: 'existing' | 'upload') => {
+    if (mode === intakeResumeMode || intakeGuardRef.current.pending) return;
+    const unboundResume = preparedResume;
+    setIntakeResumeMode(mode);
+    setIntakeFile(null);
+    setPreparedResume(null);
+    setIntakeError(null);
+    intakeForm.setFieldValue('resumeId', undefined);
+    if (unboundResume) {
+      try {
+        await abandonRecruitmentResume(unboundResume.id);
+      } catch {
+        message.warning(`未绑定简历 #${unboundResume.id} 没有自动清理，可前往简历管理手动处理。`);
+      }
+    }
+  };
+
+  const selectIntakeFile = async (file: File) => {
+    if (!isStage7IntakeResumeFileSupported(file.name)) {
+      setIntakeError('只支持 PDF、DOCX 和 TXT 简历。');
+      return false;
+    }
+    const unboundResume = preparedResume;
+    setIntakeFile(file);
+    setPreparedResume(null);
+    setIntakeError(null);
+    if (unboundResume) {
+      try {
+        await abandonRecruitmentResume(unboundResume.id);
+      } catch {
+        message.warning(`未绑定简历 #${unboundResume.id} 没有自动清理，可前往简历管理手动处理。`);
+      }
+    }
+    return false;
+  };
+
+  const submitIntake = async () => {
+    if (intakeGuardRef.current.pending) return;
+    let values: IntakeFormValues;
+    try {
+      values = await intakeForm.validateFields();
+    } catch {
+      return;
+    }
+
+    intakeGuardRef.current.pending = true;
+    setIntakeError(null);
+    let resumeForSubmission = preparedResume;
+    let operation: IntakeProgress = 'idle';
+    try {
+      if (intakeResumeMode === 'upload') {
+        if (!resumeForSubmission && !intakeFile) {
+          setIntakeError('请先选择一份 PDF、DOCX 或 TXT 简历。');
+          return;
+        }
+        if (!resumeForSubmission && intakeFile) {
+          operation = 'uploading';
+          setIntakeProgress('uploading');
+          resumeForSubmission = await uploadRecruitmentResume(intakeFile);
+          setPreparedResume(resumeForSubmission);
+        }
+        if (resumeForSubmission?.parseStatus !== 'parsed') {
+          operation = 'extracting';
+          setIntakeProgress('extracting');
+          resumeForSubmission = await extractRecruitmentResumeText(resumeForSubmission!.id);
+          setPreparedResume(resumeForSubmission);
+        }
+      }
+
+      const buildResult = buildStage7ScreeningIntakeInput({
+        name: values.name,
+        phone: values.phone,
+        email: values.email,
+        jobId: values.jobId,
+        resumeId: intakeResumeMode === 'existing' ? (values.resumeId ?? null) : resumeForSubmission?.id ?? null,
+      });
+      if (!buildResult.valid) {
+        setIntakeError(buildResult.message);
+        return;
+      }
+
+      operation = 'saving';
+      setIntakeProgress('saving');
+      const intakeOutcome = await intakeStage7Application(buildResult.input);
+      const applicationId = intakeOutcome.application.id;
+      let screeningMessage: string | null = null;
+
+      if (intakeOutcome.existingApplicationReused) {
+        if (resumeForSubmission && intakeResumeMode === 'upload') {
+          try {
+            await abandonRecruitmentResume(resumeForSubmission.id);
+          } catch {
+            message.warning(`重复申请已复用，但新上传的简历 #${resumeForSubmission.id} 未能自动清理。`);
+          }
+        }
+        message.info(`已找到同岗位的有效 Application #${applicationId}，没有重复创建或重复评分。`);
+      } else {
+        setPreparedResume(null);
+        operation = 'screening';
+        setIntakeProgress('screening');
+        try {
+          const screeningOutcome = await runStage7ApplicationScreening(applicationId);
+          if (screeningOutcome.result.executionStatus === 'completed') {
+            message.success('新申请已保存，AI 初筛已完成，等待 HR 决策。');
+          } else {
+            screeningMessage = screeningOutcome.result.errorMessage
+              || (screeningOutcome.result.executionStatus === 'blocked'
+                ? '新申请已保存，但资料不足，AI 暂时无法形成结论。'
+                : '新申请已保存，但首次 AI 初筛没有完成。');
+            message.warning(screeningMessage);
+          }
+        } catch (error) {
+          const apiError = getStage7ApplicationApiError(error);
+          screeningMessage = `申请已保存，但 AI 初筛未启动：${apiError.message}`;
+          message.warning(screeningMessage);
+        }
+      }
+
+      if (screeningMessage) {
+        setScreeningErrors(current => ({ ...current, [applicationId]: screeningMessage! }));
+      }
+      if (intakeOutcome.suspectedDuplicateCandidateIds.length) {
+        message.warning(`系统发现可能重复的候选人 ${intakeOutcome.suspectedDuplicateCandidateIds.map(id => `#${id}`).join('、')}，请后续人工核对。`);
+      } else if (!intakeOutcome.existingApplicationReused) {
+        message.info(intakeOutcome.candidateResolution === 'created'
+          ? '已创建新的 Candidate，并与本次 Application 关联。'
+          : '已按手机号和邮箱复用现有 Candidate。');
+      }
+
+      clearFilters();
+      await loadScreeningCenter(false);
+      resetIntakeDialog();
+    } catch (error) {
+      if (operation === 'uploading' || operation === 'extracting') {
+        setIntakeError(getResumeOperationErrorMessage(error, '简历上传或原文提取失败，请重试。'));
+      } else {
+        const apiError = getStage7ApplicationApiError(error);
+        setIntakeError(getStage7ScreeningIntakeErrorMessage(
+          apiError.code,
+          apiError.message,
+          apiError.candidateIds,
+        ));
+      }
+    } finally {
+      intakeGuardRef.current.pending = false;
+      setIntakeProgress('idle');
+    }
+  };
+
+  const runSingleScreening = async (
+    item: Stage7ScreeningCenterItem,
+    input: Stage7ScreeningRunInput = {},
+  ) => {
     const applicationId = item.application.id;
-    if (!beginStage7SingleScreening(pendingScreeningIdsRef.current, applicationId)) return;
+    if (!beginStage7SingleScreening(pendingScreeningIdsRef.current, applicationId)) return false;
     setPendingScreeningIds(new Set(pendingScreeningIdsRef.current));
     setScreeningErrors(current => {
       const next = { ...current };
@@ -200,9 +514,11 @@ const RecruitmentScreeningCenter: React.FC = () => {
     });
 
     try {
-      const outcome = await runStage7ApplicationScreening(applicationId);
+      const outcome = await runStage7ApplicationScreening(applicationId, input);
       if (outcome.result.executionStatus === 'completed') {
-        message.success(outcome.reused ? '已读取现有初筛结果' : 'AI 初筛已完成');
+        message.success(input.force
+          ? '强制重跑已完成，原评分仍保留在历史中'
+          : (outcome.reused ? '已读取现有初筛结果' : 'AI 初筛已完成'));
       } else {
         const resultMessage = outcome.result.errorMessage
           || (outcome.result.executionStatus === 'blocked'
@@ -212,15 +528,114 @@ const RecruitmentScreeningCenter: React.FC = () => {
         message.warning(resultMessage);
       }
       await loadScreeningCenter(false);
+      return true;
     } catch (error) {
       const apiError = getStage7ApplicationApiError(error);
       const errorMessage = getStage7SingleScreeningErrorMessage(apiError.code, apiError.message);
       setScreeningErrors(current => ({ ...current, [applicationId]: errorMessage }));
       message.error('AI 初筛没有启动，请查看该申请的提示。');
       if (apiError.code === 'SCREENING_ALREADY_RUNNING') await loadScreeningCenter(false);
+      return false;
     } finally {
       finishStage7SingleScreening(pendingScreeningIdsRef.current, applicationId);
       setPendingScreeningIds(new Set(pendingScreeningIdsRef.current));
+    }
+  };
+
+  const openForceRerunConfirmation = (item: Stage7ScreeningCenterItem) => {
+    setForceRerunItem(item);
+    setForceRerunReason('');
+  };
+
+  const closeForceRerunConfirmation = () => {
+    if (forceRerunItem && pendingScreeningIds.has(forceRerunItem.application.id)) return;
+    setForceRerunItem(null);
+    setForceRerunReason('');
+  };
+
+  const confirmForceRerun = async () => {
+    if (!forceRerunItem) return;
+    const input = buildStage7ForceRerunInput(forceRerunReason);
+    if (!input) return;
+    const submitted = await runSingleScreening(forceRerunItem, input);
+    if (submitted) {
+      setForceRerunItem(null);
+      setForceRerunReason('');
+    }
+  };
+
+  const openDecisionDialog = (item: Stage7ScreeningCenterItem) => {
+    const kinds = getStage7DecisionKinds(item);
+    setDecisionItem(item);
+    setDecisionKind(kinds.length === 1 ? kinds[0] : null);
+    setDecisionReasonCode(null);
+    setDecisionReasonDetail('');
+    setDecisionError(null);
+  };
+
+  const closeDecisionDialog = () => {
+    if (decisionGuardRef.current.pending) return;
+    setDecisionItem(null);
+    setDecisionKind(null);
+    setDecisionReasonCode(null);
+    setDecisionReasonDetail('');
+    setDecisionError(null);
+  };
+
+  const selectDecisionKind = (kind: Stage7DecisionKind) => {
+    setDecisionKind(kind);
+    setDecisionReasonCode(null);
+    setDecisionReasonDetail('');
+    setDecisionError(null);
+  };
+
+  const submitHRDecision = async () => {
+    if (!decisionItem || decisionGuardRef.current.pending) return;
+    const buildResult = buildStage7DecisionSubmission(
+      decisionItem,
+      decisionKind,
+      decisionReasonCode,
+      decisionReasonDetail,
+    );
+    if (!buildResult.valid) {
+      setDecisionError(buildResult.message);
+      return;
+    }
+
+    decisionGuardRef.current.pending = true;
+    setDecisionPending(true);
+    setDecisionError(null);
+    let succeeded = false;
+    try {
+      const { action, input } = buildResult.submission;
+      if (action === 'pass') await passStage7Application(decisionItem.application.id, input);
+      else if (action === 'backup') await backupStage7Application(decisionItem.application.id, input);
+      else if (action === 'reject') await rejectStage7Application(decisionItem.application.id, input);
+      else await undoStage7ApplicationRejection(decisionItem.application.id, input);
+
+      const successMessages: Record<Stage7DecisionKind, string> = {
+        pass: '已通过初筛，Application 将进入候选人业务视图',
+        backup: '已进入备选，Application 继续保留在初筛中心',
+        reject: '已淘汰本岗位申请，记录和历史均已保留',
+        undo_rejection: '已撤销淘汰，Application 回到 HR 待审核',
+      };
+      message.success(successMessages[action]);
+      await loadScreeningCenter(false);
+      succeeded = true;
+    } catch (error) {
+      const apiError = getStage7ApplicationApiError(error);
+      setDecisionError(getStage7DecisionErrorMessage(apiError.code, apiError.message));
+      if (apiError.code === 'INVALID_APPLICATION_TRANSITION') await loadScreeningCenter(false);
+    } finally {
+      decisionGuardRef.current.pending = false;
+      setDecisionPending(false);
+      if (succeeded) {
+        setDecisionItem(null);
+        setDecisionKind(null);
+        setDecisionReasonCode(null);
+        setDecisionReasonDetail('');
+        setDecisionError(null);
+      }
     }
   };
 
@@ -260,6 +675,16 @@ const RecruitmentScreeningCenter: React.FC = () => {
   }
 
   const { data } = loadState;
+  const openJobs = data.jobs.filter(job => job.status === 'open');
+  const parsedIntakeResumes = intakeResumeLoad.status === 'ready'
+    ? intakeResumeLoad.data.items.filter(resume => resume.parseStatus === 'parsed')
+    : [];
+  const intakeProgressLabel: Record<Exclude<IntakeProgress, 'idle'>, string> = {
+    uploading: '正在安全上传简历文件…',
+    extracting: '正在提取简历原文…',
+    saving: '正在保存 Candidate 与 Application…',
+    screening: '申请已保存，正在运行首次 AI 初筛…',
+  };
   const visibleItems = stageFilter === 'all'
     ? data.items
     : data.items.filter(item => item.application.recruitmentStage === stageFilter);
@@ -291,6 +716,30 @@ const RecruitmentScreeningCenter: React.FC = () => {
     || aiFilter !== 'all'
     || hrFilter !== 'all'
     || lifecycleFilter !== 'all';
+  const availableDecisionKinds = decisionItem ? getStage7DecisionKinds(decisionItem) : [];
+  const decisionBuildResult = decisionItem
+    ? buildStage7DecisionSubmission(
+      decisionItem,
+      decisionKind,
+      decisionReasonCode,
+      decisionReasonDetail,
+    )
+    : null;
+  const passPolicy = decisionItem && decisionKind === 'pass'
+    ? getStage7PassPolicy(decisionItem)
+    : null;
+  const decisionReasonOptions: Array<{ value: string; label: string }> = decisionKind === 'backup'
+    ? STAGE7_BACKUP_REASON_OPTIONS
+    : decisionKind === 'reject'
+      ? STAGE7_REJECT_REASON_OPTIONS
+      : decisionKind === 'undo_rejection'
+        ? STAGE7_REVERSAL_REASON_OPTIONS
+        : [];
+  const decisionDetailRequired = Boolean(
+    decisionKind === 'undo_rejection'
+    || passPolicy?.detailRequired
+    || (decisionItem && decisionItem.application.hrDecision !== 'pending'),
+  );
   const selectedBatchItems = data.items.filter(item => selectedBatchIds.has(item.application.id));
   const selectedBatchJobId = selectedBatchItems[0]?.application.jobId ?? null;
   const selectedBatchJobTitle = selectedBatchItems[0]?.jobTitle ?? null;
@@ -376,17 +825,26 @@ const RecruitmentScreeningCenter: React.FC = () => {
           <h2>AI 初筛中心</h2>
           <p>查看每份申请停在哪里，并为符合条件的单个申请启动 AI 初筛；AI 结论不会自动改变 HR 决策。</p>
         </div>
-        <Tooltip title={selectedBatchIds.size ? `为已选择的 ${selectedBatchIds.size} 人开始评分` : '先在申请队列中勾选同岗位的 1—5 人'}>
+        <div className="recruitment-screening-heading-actions">
           <Button
-            disabled={!selectedBatchIds.size || batchPending || pendingScreeningIds.size > 0}
-            icon={<RobotOutlined />}
-            loading={batchPending}
-            onClick={runSelectedBatch}
+            disabled={batchPending || pendingScreeningIds.size > 0 || decisionPending}
+            icon={<PlusOutlined />}
+            onClick={openIntakeDialog}
             type="primary"
           >
-            开始批量初筛{selectedBatchIds.size ? ` · ${selectedBatchIds.size}` : ''}
+            录入新申请
           </Button>
-        </Tooltip>
+          <Tooltip title={selectedBatchIds.size ? `为已选择的 ${selectedBatchIds.size} 人开始评分` : '先在申请队列中勾选同岗位的 1—5 人'}>
+            <Button
+              disabled={!selectedBatchIds.size || batchPending || pendingScreeningIds.size > 0 || intakeOpen}
+              icon={<RobotOutlined />}
+              loading={batchPending}
+              onClick={runSelectedBatch}
+            >
+              开始批量初筛{selectedBatchIds.size ? ` · ${selectedBatchIds.size}` : ''}
+            </Button>
+          </Tooltip>
+        </div>
       </section>
 
       <section aria-label="招聘阶段筛选" className="recruitment-application-funnel">
@@ -509,20 +967,29 @@ const RecruitmentScreeningCenter: React.FC = () => {
                 || application.aiStatus === 'blocked'
                 || Boolean(currentResult?.isOutdated);
               const screeningPending = pendingScreeningIds.has(application.id);
+              const rowDecisionPending = decisionPending
+                && decisionItem?.application.id === application.id;
               const batchSelected = selectedBatchIds.has(application.id);
               const batchSelection = getStage7BatchSelectionState(item, {
                 selected: batchSelected,
                 selectedCount: selectedBatchIds.size,
                 selectedJobId: selectedBatchJobId,
                 batchPending,
-                singlePending: screeningPending,
+                singlePending: screeningPending || rowDecisionPending,
               });
               const selectedBatchPending = batchPending && batchSelected;
-              const action = getStage7SingleScreeningAction(item, screeningPending || selectedBatchPending);
+              const action = getStage7SingleScreeningAction(
+                item,
+                screeningPending || selectedBatchPending || rowDecisionPending,
+              );
+              const decisionEntry = getStage7DecisionEntry(
+                item,
+                rowDecisionPending || screeningPending || selectedBatchPending,
+              );
               return (
                 <article
-                  aria-busy={screeningPending || selectedBatchPending}
-                  className={`recruitment-application-row${attention ? ' needs-attention' : ''}${screeningPending || selectedBatchPending ? ' is-running' : ''}${batchSelected ? ' is-selected' : ''}`}
+                  aria-busy={screeningPending || selectedBatchPending || rowDecisionPending}
+                  className={`recruitment-application-row${attention ? ' needs-attention' : ''}${screeningPending || selectedBatchPending || rowDecisionPending ? ' is-running' : ''}${batchSelected ? ' is-selected' : ''}`}
                   key={application.id}
                   role="listitem"
                 >
@@ -568,6 +1035,16 @@ const RecruitmentScreeningCenter: React.FC = () => {
                   </div>
                   <div className="recruitment-application-action">
                     <Button
+                      className={decisionEntry.allowed ? 'recruitment-decision-entry is-ready' : 'recruitment-decision-entry'}
+                      disabled={!decisionEntry.allowed}
+                      icon={<SafetyCertificateOutlined />}
+                      loading={rowDecisionPending}
+                      onClick={() => openDecisionDialog(item)}
+                      size="small"
+                    >
+                      {decisionEntry.label}
+                    </Button>
+                    <Button
                       icon={<HistoryOutlined />}
                       onClick={() => setDetailItem(item)}
                       size="small"
@@ -577,13 +1054,16 @@ const RecruitmentScreeningCenter: React.FC = () => {
                     <Button
                       disabled={!action.allowed}
                       loading={screeningPending}
-                      onClick={() => void runSingleScreening(item)}
+                      onClick={() => {
+                        if (action.requiresForceConfirmation) openForceRerunConfirmation(item);
+                        else void runSingleScreening(item);
+                      }}
                       size="small"
-                      type={action.allowed ? 'primary' : 'default'}
+                      type={action.allowed && !action.requiresForceConfirmation ? 'primary' : 'default'}
                     >
                       {action.label}
                     </Button>
-                    <span>{action.reason}</span>
+                    <span>{decisionEntry.allowed ? decisionEntry.reason : action.reason}</span>
                     {screeningErrors[application.id] && (
                       <em role="alert">{screeningErrors[application.id]}</em>
                     )}
@@ -594,6 +1074,166 @@ const RecruitmentScreeningCenter: React.FC = () => {
           </div>
         )}
       </section>
+
+      <Modal
+        cancelButtonProps={{ disabled: intakeGuardRef.current.pending }}
+        cancelText="取消录入"
+        className="recruitment-intake-modal"
+        closable={!intakeGuardRef.current.pending}
+        confirmLoading={intakeGuardRef.current.pending}
+        destroyOnClose
+        maskClosable={!intakeGuardRef.current.pending}
+        okButtonProps={{ disabled: !openJobs.length }}
+        okText="保存并开始 AI 初筛"
+        onCancel={() => void closeIntakeDialog()}
+        onOk={() => void submitIntake()}
+        open={intakeOpen}
+        title="录入新申请"
+        width={760}
+      >
+        <div className="recruitment-intake-sheet">
+          <header>
+            <span>内部初筛入口 · source=hr_screening</span>
+            <strong>先保存申请，再由 AI 提供证据</strong>
+            <p>本入口不会让候选人直接通过；评分结束后仍须由 HR 作出决定。</p>
+          </header>
+
+          <ol aria-label="新申请处理流程" className="recruitment-intake-rail">
+            <li className={intakeProgress === 'uploading' || intakeProgress === 'extracting' || intakeProgress === 'saving' || intakeProgress === 'screening' ? 'is-active' : ''}>
+              <b>1</b><span><strong>保存申请</strong><small>校验联系方式、岗位和简历</small></span>
+            </li>
+            <li className={intakeProgress === 'screening' ? 'is-active' : ''}>
+              <b>2</b><span><strong>AI 初筛</strong><small>失败不会删除已保存申请</small></span>
+            </li>
+            <li>
+              <b>3</b><span><strong>HR 决策</strong><small>通过后才进入候选人页面</small></span>
+            </li>
+          </ol>
+
+          {!openJobs.length && (
+            <Alert
+              description="请先在岗位管理中创建或重新开放岗位，关闭岗位不能接收新申请。"
+              message="目前没有可录入申请的开放岗位"
+              showIcon
+              type="warning"
+            />
+          )}
+
+          <Form form={intakeForm} layout="vertical" requiredMark="optional">
+            <div className="recruitment-intake-contact-grid">
+              <Form.Item
+                label="候选人姓名"
+                name="name"
+                rules={[{ required: true, message: '请填写候选人姓名' }, { max: 100, message: '姓名不能超过 100 个字符' }]}
+              >
+                <Input autoComplete="name" maxLength={100} placeholder="例如：张三" />
+              </Form.Item>
+              <Form.Item
+                label="开放岗位"
+                name="jobId"
+                rules={[{ required: true, message: '请选择开放岗位' }]}
+              >
+                <Select
+                  disabled={!openJobs.length}
+                  optionFilterProp="label"
+                  options={openJobs.map(job => ({
+                    value: job.id,
+                    label: `${job.title}${job.department ? ` · ${job.department}` : ''}`,
+                  }))}
+                  placeholder="选择本次申请的岗位"
+                  showSearch
+                />
+              </Form.Item>
+              <Form.Item
+                label="手机号码"
+                name="phone"
+                rules={[{ required: true, message: '请填写有效手机号' }]}
+              >
+                <Input autoComplete="tel" placeholder="支持国家区号，例如 +86 13800138000" />
+              </Form.Item>
+              <Form.Item
+                label="电子邮箱"
+                name="email"
+                rules={[{ required: true, message: '请填写有效邮箱' }, { type: 'email', message: '邮箱格式无效' }]}
+              >
+                <Input autoComplete="email" placeholder="candidate@example.com" />
+              </Form.Item>
+            </div>
+
+            <section className="recruitment-intake-resume-section">
+              <div className="recruitment-intake-section-heading">
+                <div><strong>本次申请使用的简历</strong><span>必须有可提取的原文，才能完成 AI 初筛</span></div>
+                <Radio.Group
+                  buttonStyle="solid"
+                  disabled={intakeGuardRef.current.pending}
+                  onChange={event => void changeIntakeResumeMode(event.target.value)}
+                  optionType="button"
+                  options={[
+                    { label: '上传新简历', value: 'upload' },
+                    { label: '选择已有简历', value: 'existing' },
+                  ]}
+                  value={intakeResumeMode}
+                />
+              </div>
+
+              {intakeResumeMode === 'upload' ? (
+                <Upload.Dragger
+                  accept=".pdf,.docx,.txt"
+                  beforeUpload={file => selectIntakeFile(file)}
+                  disabled={intakeGuardRef.current.pending}
+                  maxCount={1}
+                  multiple={false}
+                  showUploadList={false}
+                >
+                  <p className="ant-upload-drag-icon"><InboxOutlined /></p>
+                  <p className="ant-upload-text">{intakeFile ? intakeFile.name : '点击或拖入候选人简历'}</p>
+                  <p className="ant-upload-hint">支持 PDF、DOCX、TXT；提交时上传并提取原文</p>
+                  {preparedResume && <Tag color="green">已准备 Resume #{preparedResume.id}</Tag>}
+                </Upload.Dragger>
+              ) : (
+                <Form.Item
+                  className="recruitment-intake-existing-resume"
+                  name="resumeId"
+                  rules={[{ required: true, message: '请选择一份已解析简历' }]}
+                >
+                  <Select
+                    disabled={intakeResumeLoad.status === 'loading'}
+                    loading={intakeResumeLoad.status === 'loading'}
+                    notFoundContent={intakeResumeLoad.status === 'error'
+                      ? '简历列表加载失败'
+                      : '没有可用的已解析简历'}
+                    optionFilterProp="label"
+                    options={parsedIntakeResumes.map(resume => ({
+                      value: resume.id,
+                      label: `${resume.filename} · ${resume.candidateName} · Resume #${resume.id}`,
+                    }))}
+                    placeholder="按文件名或候选人搜索"
+                    showSearch
+                  />
+                </Form.Item>
+              )}
+
+              {intakeResumeMode === 'existing' && intakeResumeLoad.status === 'error' && (
+                <Alert
+                  action={<Button onClick={() => void loadIntakeResumeOptions()} size="small">重新加载</Button>}
+                  message={intakeResumeLoad.message}
+                  showIcon
+                  type="error"
+                />
+              )}
+            </section>
+          </Form>
+
+          {intakeProgress !== 'idle' && (
+            <div aria-live="polite" className="recruitment-intake-progress">
+              <UploadOutlined />
+              <span><strong>{intakeProgressLabel[intakeProgress]}</strong><small>请不要关闭窗口或重复提交</small></span>
+            </div>
+          )}
+          {intakeError && <Alert message={intakeError} role="alert" showIcon type="error" />}
+          <footer>联系方式用于安全复用 Candidate；系统不会把手机号、邮箱等敏感资料交给评分模型。</footer>
+        </div>
+      </Modal>
 
       <Drawer
         className="recruitment-screening-batch-drawer"
@@ -656,6 +1296,181 @@ const RecruitmentScreeningCenter: React.FC = () => {
         item={detailItem}
         onClose={() => setDetailItem(null)}
       />
+
+      <Modal
+        cancelButtonProps={{
+          disabled: Boolean(forceRerunItem && pendingScreeningIds.has(forceRerunItem.application.id)),
+        }}
+        cancelText="取消"
+        className="recruitment-force-rerun-modal"
+        closable={!(forceRerunItem && pendingScreeningIds.has(forceRerunItem.application.id))}
+        confirmLoading={Boolean(forceRerunItem && pendingScreeningIds.has(forceRerunItem.application.id))}
+        destroyOnClose
+        maskClosable={!(forceRerunItem && pendingScreeningIds.has(forceRerunItem.application.id))}
+        okButtonProps={{ danger: true, disabled: !forceRerunReason.trim() }}
+        okText="确认强制重跑"
+        onCancel={closeForceRerunConfirmation}
+        onOk={() => void confirmForceRerun()}
+        open={forceRerunItem !== null}
+        title="确认强制重跑 AI 初筛？"
+      >
+        {forceRerunItem && (
+          <div className="recruitment-force-rerun-content">
+            <Alert
+              description="系统会真正重新调用一次 DeepSeek，并新增一条不可变评分记录。如果本次运行失败，当前成功结果仍会保留。"
+              message="这不是普通重试，可能产生新的模型调用耗时和费用"
+              showIcon
+              type="warning"
+            />
+            <dl className="recruitment-force-rerun-context">
+              <div><dt>候选人</dt><dd>{forceRerunItem.candidateName}</dd></div>
+              <div><dt>岗位</dt><dd>{forceRerunItem.jobTitle}</dd></div>
+              <div>
+                <dt>当前评分</dt>
+                <dd>
+                  {forceRerunItem.currentResult?.overallScore ?? '—'} 分
+                  {forceRerunItem.currentResult
+                    ? ` · 第 ${forceRerunItem.currentResult.attemptNumber} 次`
+                    : ''}
+                </dd>
+              </div>
+            </dl>
+            <label htmlFor="stage7-force-rerun-reason">重跑原因</label>
+            <Input.TextArea
+              autoFocus
+              id="stage7-force-rerun-reason"
+              maxLength={1000}
+              onChange={event => setForceRerunReason(event.target.value)}
+              placeholder="例如：需要对同一份材料进行人工抽查，重新复核模型判断"
+              rows={4}
+              showCount
+              value={forceRerunReason}
+            />
+            <p>原因会随本次操作进入审计记录；AI 结果不会自动改变 HR 决策。</p>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        cancelButtonProps={{ disabled: decisionPending }}
+        cancelText="取消"
+        className="recruitment-decision-modal"
+        closable={!decisionPending}
+        confirmLoading={decisionPending}
+        destroyOnClose
+        maskClosable={!decisionPending}
+        okButtonProps={{
+          danger: decisionKind === 'reject',
+          disabled: !decisionBuildResult?.valid,
+        }}
+        okText={decisionKind ? `确认${DECISION_KIND_META[decisionKind].label}` : '确认决定'}
+        onCancel={closeDecisionDialog}
+        onOk={() => void submitHRDecision()}
+        open={decisionItem !== null}
+        title="HR 初筛决策单"
+        width={720}
+      >
+        {decisionItem && (
+          <div className="recruitment-decision-sheet">
+            <header className="recruitment-decision-sheet-header">
+              <div>
+                <span>Application #{decisionItem.application.id}</span>
+                <strong>{decisionItem.candidateName}</strong>
+                <p>{decisionItem.jobTitle}</p>
+              </div>
+              <div aria-label="HR 决策状态变化" className="recruitment-decision-transition">
+                <span>{HR_DECISION_META[decisionItem.application.hrDecision].label}</span>
+                <b>→</b>
+                <strong>{decisionKind ? DECISION_KIND_META[decisionKind].label : '请选择去向'}</strong>
+              </div>
+            </header>
+
+            <div aria-label="可执行的 HR 决策" className="recruitment-decision-options" role="group">
+              {availableDecisionKinds.map(kind => {
+                const meta = DECISION_KIND_META[kind];
+                return (
+                  <button
+                    aria-pressed={decisionKind === kind}
+                    className={`is-${meta.tone}${decisionKind === kind ? ' is-selected' : ''}`}
+                    key={kind}
+                    onClick={() => selectDecisionKind(kind)}
+                    type="button"
+                  >
+                    {meta.icon}
+                    <span><strong>{meta.label}</strong><small>{meta.note}</small></span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {decisionKind === 'reject' && (
+              <Alert
+                description="确认后本岗位申请将结束，但 Candidate、Application、简历、评分和阶段历史都不会删除。"
+                message="淘汰是高风险决定，请只使用岗位相关依据"
+                showIcon
+                type="error"
+              />
+            )}
+            {decisionKind === 'undo_rejection' && (
+              <Alert
+                description="撤销后只回到 HR 待审核，不会自动通过，也不会自动重新运行 AI 评分。"
+                message="本次操作会形成一条新的决定反转历史"
+                showIcon
+                type="info"
+              />
+            )}
+            {passPolicy && (
+              <Alert
+                description={passPolicy.note}
+                message={passPolicy.label}
+                showIcon
+                type={passPolicy.reasonCode === 'manual_override' ? 'warning' : 'success'}
+              />
+            )}
+
+            {decisionKind && decisionKind !== 'pass' && (
+              <label className="recruitment-decision-field" htmlFor="stage7-decision-reason-code">
+                <span>业务原因 <b>*</b></span>
+                <Select
+                  id="stage7-decision-reason-code"
+                  onChange={value => {
+                    setDecisionReasonCode(value);
+                    setDecisionError(null);
+                  }}
+                  options={decisionReasonOptions}
+                  placeholder="请选择岗位相关原因"
+                  value={decisionReasonCode}
+                />
+              </label>
+            )}
+
+            {decisionKind && (
+              <label className="recruitment-decision-field" htmlFor="stage7-decision-reason-detail">
+                <span>
+                  具体说明 {decisionDetailRequired ? <b>*</b> : <small>选填</small>}
+                </span>
+                <Input.TextArea
+                  id="stage7-decision-reason-detail"
+                  maxLength={1000}
+                  onChange={event => {
+                    setDecisionReasonDetail(event.target.value);
+                    setDecisionError(null);
+                  }}
+                  placeholder="只记录与岗位要求、候选人证据或决定修正有关的事实，不填写性别、年龄、民族、婚姻等敏感依据"
+                  rows={4}
+                  showCount
+                  value={decisionReasonDetail}
+                />
+              </label>
+            )}
+
+            {decisionError && <Alert message={decisionError} role="alert" showIcon type="error" />}
+            <footer>
+              AI 评分只提供证据和建议；本次决定由 HR 作出，并写入阶段历史与操作日志。
+            </footer>
+          </div>
+        )}
+      </Modal>
     </main>
   );
 };

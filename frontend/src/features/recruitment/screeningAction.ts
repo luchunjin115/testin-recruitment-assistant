@@ -1,9 +1,11 @@
 import type { Stage7ScreeningCenterItem } from './services/screening';
+import type { Stage7ScreeningRunInput } from './types/applicationScreening';
 
 export type Stage7SingleScreeningAction = {
   allowed: boolean;
   label: string;
   reason: string;
+  requiresForceConfirmation?: boolean;
 };
 
 export const getStage7SingleScreeningAction = (
@@ -40,7 +42,25 @@ export const getStage7SingleScreeningAction = (
   if (application.aiStatus === 'not_started') {
     return { allowed: true, label: '开始初筛', reason: '使用当前简历和已发布评分标准。' };
   }
+  if (application.aiStatus === 'completed' && currentResult) {
+    return {
+      allowed: true,
+      label: '强制重跑',
+      reason: '当前结果已最新；如需重新调用模型，必须确认并填写原因。',
+      requiresForceConfirmation: true,
+    };
+  }
   return { allowed: false, label: '结果已最新', reason: '当前输入已经有可复用的成功结果。' };
+};
+
+export const buildStage7ForceRerunInput = (reason: string): Stage7ScreeningRunInput | null => {
+  const normalizedReason = reason.trim();
+  if (!normalizedReason) return null;
+  return {
+    force: true,
+    confirm_force: true,
+    reason: normalizedReason,
+  };
 };
 
 export const beginStage7SingleScreening = (pendingIds: Set<number>, applicationId: number) => {

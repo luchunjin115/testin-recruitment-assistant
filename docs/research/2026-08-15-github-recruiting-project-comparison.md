@@ -6,7 +6,7 @@
 >
 > 状态：已完成讨论，作为阶段 6—12 的外部参考基线；具体字段、状态和验收标准仍须在每个阶段开始前单独确认
 >
-> 上游路线：`../specs/2026-08-14-post-stage5-product-roadmap.md`
+> 上游路线：`../planning/2026-08-14-post-stage5-product-roadmap.md`
 
 ## 1. 文档目的
 

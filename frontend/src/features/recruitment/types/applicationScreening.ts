@@ -74,6 +74,45 @@ export type Stage7ApplicationIntakeInput = {
   current_resume_id: number;
   source: 'hr_direct' | 'hr_screening';
   confirm_hr_pass: boolean;
+  resume_profile?: Stage7ApplicationResumeProfileInput | null;
+};
+
+export type Stage7ApplicationResumeProfileInput = {
+  gender: string | null;
+  age: number | null;
+  location: string | null;
+  current_company: string | null;
+  current_title: string | null;
+  work_years: number | null;
+  education_level: string | null;
+  source: string | null;
+  skills: string[] | null;
+  education_records: Array<{
+    school: string | null;
+    degree: string | null;
+    major: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    is_985: boolean;
+    is_211: boolean;
+  }>;
+  work_experiences: Array<{
+    company: string | null;
+    title: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    description: string | null;
+    tech_stack: string[] | null;
+  }>;
+  project_experiences: Array<{
+    project_name: string | null;
+    role: string | null;
+    start_date: string | null;
+    end_date: string | null;
+    description: string | null;
+    tech_stack: string[] | null;
+    achievements: string | null;
+  }>;
 };
 
 export type Stage7ApplicationIntakeApiResponse = {

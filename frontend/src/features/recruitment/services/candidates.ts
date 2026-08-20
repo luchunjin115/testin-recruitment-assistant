@@ -1,20 +1,36 @@
 import { v2Http } from '../../../services/http';
+import type {
+  Stage7ApplicationAIStatus,
+  Stage7ApplicationSource,
+  Stage7RecruitmentStage,
+  Stage7ScreeningResultSummaryApiResponse,
+} from '../types/applicationScreening';
+import {
+  intakeStage7Application,
+  listStage7Applications,
+  mapStage7ScreeningSummary,
+  runStage7ApplicationScreening,
+} from './applications';
 import type { JobStatus } from './jobs';
 
 export type CandidateListItem = {
-  id: number;
+  applicationId: number;
+  candidateId: number;
   name: string;
   email: string | null;
   phone: string | null;
   currentCompany: string | null;
   currentTitle: string | null;
-  workYears: number | null;
-  educationLevel: string | null;
-  source: string | null;
-  status: string;
-  appliedJobId: number | null;
-  appliedJobTitle: string;
-  hasResume: boolean;
+  candidateSource: string | null;
+  jobId: number;
+  jobTitle: string;
+  jobDepartment: string | null;
+  applicationSource: Stage7ApplicationSource;
+  recruitmentStage: Stage7RecruitmentStage;
+  aiStatus: Stage7ApplicationAIStatus;
+  currentScore: number | null;
+  currentRecommendation: string | null;
+  currentResultIsOutdated: boolean;
   updatedAt: string;
 };
 
@@ -40,6 +56,7 @@ export type RecruitmentCandidateCreateInput = {
   educationRecords?: RecruitmentEducationInput[];
   workExperiences?: RecruitmentWorkExperienceInput[];
   projectExperiences?: RecruitmentProjectExperienceInput[];
+  confirmHrPass?: boolean;
 };
 
 export type RecruitmentEducationInput = {
@@ -99,54 +116,93 @@ type CandidateResponse = {
 type JobResponse = {
   id: number;
   title: string;
+  department: string | null;
   status: JobStatus;
+};
+
+export type RecruitmentHrDirectOutcome = {
+  applicationId: number;
+  candidateId: number;
+  candidateResolution: 'created' | 'reused';
+  existingApplicationReused: boolean;
+  suspectedDuplicateCandidateIds: number[];
+  screeningStatus: 'screening' | 'completed' | 'blocked' | 'failed' | 'already_available' | 'start_failed';
+  screeningError?: unknown;
 };
 
 export type CandidateListSnapshot = {
   items: CandidateListItem[];
   jobs: CandidateJobOption[];
   total: number;
-  newCount: number;
+  uniqueCandidateCount: number;
   linkedJobCount: number;
-  withResumeCount: number;
+  needsAttentionCount: number;
 };
 
 export const getRecruitmentCandidates = async (): Promise<CandidateListSnapshot> => {
-  const [candidatesResponse, jobsResponse] = await Promise.all([
+  const [applications, candidatesResponse, jobsResponse, screeningResultsResponse] = await Promise.all([
+    listStage7Applications({ hrDecision: 'passed' }),
     v2Http.get<CandidateResponse[]>('/candidates'),
     v2Http.get<JobResponse[]>('/jobs'),
+    v2Http.get<Stage7ScreeningResultSummaryApiResponse[]>('/screening-results'),
   ]);
 
-  const jobs = jobsResponse.data.map(job => ({ id: job.id, title: job.title }));
-  const jobTitles = new Map(jobs.map(job => [job.id, job.title]));
-  const items = [...candidatesResponse.data]
-    .sort((left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at))
-    .map(candidate => ({
-      id: candidate.id,
-      name: candidate.name,
-      email: candidate.email,
-      phone: candidate.phone,
-      currentCompany: candidate.current_company,
-      currentTitle: candidate.current_title,
-      workYears: candidate.work_years,
-      educationLevel: candidate.education_level,
-      source: candidate.source,
-      status: candidate.status,
-      appliedJobId: candidate.applied_job_id,
-      appliedJobTitle:
-        (candidate.applied_job_id ? jobTitles.get(candidate.applied_job_id) : undefined)
-        || '未关联岗位',
-      hasResume: Boolean(candidate.resume_file_path),
-      updatedAt: candidate.updated_at || candidate.created_at,
-    }));
+  const candidates = new Map(candidatesResponse.data.map(candidate => [candidate.id, candidate]));
+  const jobRecords = new Map(jobsResponse.data.map(job => [job.id, job]));
+  const screeningResults = new Map(
+    screeningResultsResponse.data
+      .map(mapStage7ScreeningSummary)
+      .map(result => [result.id, result]),
+  );
+  const items = applications
+    .map(application => {
+      const candidate = candidates.get(application.candidateId);
+      const job = jobRecords.get(application.jobId);
+      const currentResult = application.currentScreeningResultId === null
+        ? null
+        : screeningResults.get(application.currentScreeningResultId) || null;
+      return {
+        applicationId: application.id,
+        candidateId: application.candidateId,
+        name: candidate?.name || `候选人 #${application.candidateId}`,
+        email: candidate?.email || null,
+        phone: candidate?.phone || null,
+        currentCompany: candidate?.current_company || null,
+        currentTitle: candidate?.current_title || null,
+        candidateSource: candidate?.source || null,
+        jobId: application.jobId,
+        jobTitle: job?.title || `岗位 #${application.jobId}`,
+        jobDepartment: job?.department || null,
+        applicationSource: application.source,
+        recruitmentStage: application.recruitmentStage,
+        aiStatus: application.aiStatus,
+        currentScore: currentResult?.overallScore ?? null,
+        currentRecommendation: currentResult?.recommendation || null,
+        currentResultIsOutdated: currentResult?.isOutdated || false,
+        updatedAt: application.updatedAt,
+      };
+    })
+    .sort((left, right) => (
+      Date.parse(right.updatedAt) - Date.parse(left.updatedAt)
+      || right.applicationId - left.applicationId
+    ));
+  const visibleJobIds = new Set(items.map(item => item.jobId));
+  const jobs = jobsResponse.data
+    .filter(job => visibleJobIds.has(job.id))
+    .map(job => ({ id: job.id, title: job.title }))
+    .sort((left, right) => left.id - right.id);
 
   return {
     items,
     jobs,
     total: items.length,
-    newCount: items.filter(item => item.status.toLowerCase() === 'new').length,
-    linkedJobCount: items.filter(item => item.appliedJobId !== null).length,
-    withResumeCount: items.filter(item => item.hasResume).length,
+    uniqueCandidateCount: new Set(items.map(item => item.candidateId)).size,
+    linkedJobCount: visibleJobIds.size,
+    needsAttentionCount: items.filter(item => (
+      item.aiStatus !== 'completed'
+      || item.currentResultIsOutdated
+      || item.currentScore === null
+    )).length,
   };
 };
 
@@ -165,7 +221,7 @@ const cleanKeywordList = (values?: string[]) => {
   return items?.length ? Array.from(new Set(items)) : null;
 };
 
-const buildCandidatePayload = (input: RecruitmentCandidateCreateInput) => {
+export const buildRecruitmentCandidatePayload = (input: RecruitmentCandidateCreateInput) => {
   const educationRecords = (input.educationRecords || []).filter(record => (
     Boolean(
       record.school?.trim()
@@ -248,7 +304,7 @@ export const createRecruitmentCandidate = async (
 ): Promise<RecruitmentCandidateCreated> => {
   const response = await v2Http.post<CandidateResponse>(
     '/candidates',
-    buildCandidatePayload(input),
+    buildRecruitmentCandidatePayload(input),
   );
 
   return {
@@ -263,13 +319,80 @@ export const createRecruitmentCandidateFromResume = async (
 ): Promise<RecruitmentCandidateCreated> => {
   const response = await v2Http.post<CandidateResponse>('/candidates/from-resume', {
     resume_id: resumeId,
-    candidate: buildCandidatePayload(input),
+    candidate: buildRecruitmentCandidatePayload(input),
   });
 
   return {
     id: response.data.id,
     name: response.data.name,
   };
+};
+
+export const createRecruitmentHrDirectApplication = async (
+  resumeId: number,
+  input: RecruitmentCandidateCreateInput,
+): Promise<RecruitmentHrDirectOutcome> => {
+  const candidate = buildRecruitmentCandidatePayload(input);
+  if (!candidate.phone || !candidate.email || !candidate.applied_job_id) {
+    throw new Error('HR 人工直通必须填写手机号、邮箱并选择开放岗位');
+  }
+
+  const intake = await intakeStage7Application({
+    name: candidate.name,
+    phone: candidate.phone,
+    email: candidate.email,
+    job_id: candidate.applied_job_id,
+    current_resume_id: resumeId,
+    source: 'hr_direct',
+    confirm_hr_pass: true,
+    resume_profile: {
+      gender: candidate.gender,
+      age: candidate.age,
+      location: candidate.location,
+      current_company: candidate.current_company,
+      current_title: candidate.current_title,
+      work_years: candidate.work_years,
+      education_level: candidate.education_level,
+      source: candidate.source,
+      skills: candidate.tags,
+      education_records: candidate.education_records,
+      work_experiences: candidate.work_experiences,
+      project_experiences: candidate.project_experiences,
+    },
+  });
+
+  if (intake.application.aiStatus !== 'not_started') {
+    return {
+      applicationId: intake.application.id,
+      candidateId: intake.application.candidateId,
+      candidateResolution: intake.candidateResolution,
+      existingApplicationReused: intake.existingApplicationReused,
+      suspectedDuplicateCandidateIds: intake.suspectedDuplicateCandidateIds,
+      screeningStatus: 'already_available',
+    };
+  }
+
+  try {
+    const screening = await runStage7ApplicationScreening(intake.application.id);
+    return {
+      applicationId: intake.application.id,
+      candidateId: intake.application.candidateId,
+      candidateResolution: intake.candidateResolution,
+      existingApplicationReused: intake.existingApplicationReused,
+      suspectedDuplicateCandidateIds: intake.suspectedDuplicateCandidateIds,
+      screeningStatus: screening.result.executionStatus,
+    };
+  } catch (screeningError) {
+    return {
+      applicationId: intake.application.id,
+      candidateId: intake.application.candidateId,
+      candidateResolution: intake.candidateResolution,
+      existingApplicationReused: intake.existingApplicationReused,
+      suspectedDuplicateCandidateIds: intake.suspectedDuplicateCandidateIds,
+      screeningStatus: 'start_failed',
+      screeningError,
+    };
+  }
 };
 
 export const getRecruitmentCandidateJobs = async (): Promise<CandidateJobOption[]> => {

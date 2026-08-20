@@ -2,16 +2,22 @@
 
 ## 开始工作前
 
-每个新对话在修改代码前，必须先阅读：
+每个新对话先阅读：
 
 1. `CLAUDE.md`
 2. `PROJECT_STATE.md`
-3. `docs/implementation-plan.md`
-4. `docs/specs/2026-07-15-hr-agent-platform-design.md`
-5. `docs/specs/2026-08-14-post-stage5-product-roadmap.md`
-6. 阶段 5 已于 2026-08-14 完成。后续阶段不要求常规阅读阶段 5 专项设计或交接手册；只有修改简历上传、原文提取、结构化识别、辅助填表，或排查阶段 5 回归问题时，才额外阅读 `docs/specs/2026-08-12-stage5-resume-structure-design.md` 与 `docs/handoff/2026-08-12-stage5-development-handoff.md`
 
-以这些文件确认当前进度、下一小步和架构边界，不依赖旧对话记忆。
+然后查看 `docs/DOCUMENT_INDEX.md`，根据当前任务按需补充阅读：
+
+- 修改当前阶段业务代码、测试、数据库或验收材料前，必须完整阅读 `PROJECT_STATE.md` 指向的当前阶段专项设计。
+- 调整跨阶段顺序或总体实施计划时，阅读 `docs/planning/implementation-plan.md`。
+- 修改总体架构、模块职责或全局数据流时，阅读 `docs/architecture/2026-07-15-hr-agent-platform-design.md`。
+- 讨论阶段边界、后续产品路线或启动新阶段时，阅读 `docs/planning/2026-08-14-post-stage5-product-roadmap.md`。
+- 只有修改简历上传、原文提取、结构化识别、辅助填表，或排查阶段 5 回归问题时，才阅读阶段 5 专项设计与交接手册。
+- 只有盘点、删除旧 Rubric 或追溯旧阶段 7 实现时，才阅读 `docs/archive/superseded/2026-08-17-stage7-application-ai-screening-design.md`。
+- `docs/archive/` 下的其他历史资料不作为常规实现依据。
+
+修改前还必须检查 `git status` 和相关差异，保护工作区内已有修改。以当前专项设计确认业务合同，以 `PROJECT_STATE.md` 确认当前进度和下一小步，不依赖旧对话记忆。
 
 ## 教学式协作模式（长期有效）
 

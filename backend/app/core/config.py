@@ -80,6 +80,7 @@ class Settings(BaseSettings):
     )
     RUBRIC_GENERATION_PROMPT_VERSION: str = "rubric_generation_v2"
     RUBRIC_ITEM_ASSIST_PROMPT_VERSION: str = "rubric_item_assist_v1"
+    RUBRIC_SHARE_OPTIMIZATION_PROMPT_VERSION: str = "rubric_share_optimization_v1"
     RUBRIC_GENERATION_SCHEMA_VERSION: str = "1.0"
     SCREENING_MODEL_ENABLED: bool = True
     SCREENING_MODEL_NAME: str = "deepseek-v4-flash"

@@ -5,6 +5,7 @@ from pydantic import ValidationError
 from app.prompts.screening_rubric import (
     RUBRIC_GENERATION_PROMPT_VERSION,
     RUBRIC_ITEM_ASSIST_PROMPT_VERSION,
+    RUBRIC_SHARE_OPTIMIZATION_PROMPT_VERSION,
     ScreeningRubricPromptBuilder,
 )
 from app.schemas.screening_rubric import (
@@ -16,6 +17,7 @@ from app.schemas.screening_rubric import (
     RubricTemplateKey,
     ScreeningRubricDraftContent,
     ScreeningRubricPublishContent,
+    ScreeningRubricWeights,
     SemanticRubricCriterion,
 )
 from app.prompts.screening_rubric_templates import (
@@ -227,3 +229,32 @@ class RubricTemplateAndPromptTest(TestCase):
         self.assertEqual(RUBRIC_ITEM_ASSIST_PROMPT_VERSION, "rubric_item_assist_v1")
         self.assertIn("不得返回 key、source", messages[0]["content"])
         self.assertIn("复杂问题解决", messages[1]["content"])
+
+    def test_share_optimization_prompt_preserves_weights_and_item_identity(self) -> None:
+        items = [
+            make_item(key=f"criterion_{index}", name=f"评分项 {index}")
+            for index in range(1, 5)
+        ]
+        messages = ScreeningRubricPromptBuilder.build_share_optimization_messages(
+            {"title": "高级后端工程师", "requirements": {"required_skills": ["Python"]}},
+            ScreeningRubricWeights(
+                must_have_requirements=40,
+                work_experience_relevance=25,
+                projects_and_capability=20,
+                preferred_qualifications=10,
+                keywords_and_additional=5,
+            ),
+            items,
+        )
+
+        self.assertEqual(
+            RUBRIC_SHARE_OPTIMIZATION_PROMPT_VERSION,
+            "rubric_share_optimization_v1",
+        )
+        system = messages[0]["content"]
+        user = messages[1]["content"]
+        self.assertIn("不得修改五个大维度总权重", system)
+        self.assertIn("不得新增、删除、重命名", system)
+        self.assertIn("不要求所有评分项合计为 100", system)
+        self.assertIn('"key":"criterion_1"', user)
+        self.assertIn('"must_have_requirements":40', user)

@@ -38,11 +38,12 @@ import type { UploadProps } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import {
   CandidateJobOption,
-  createRecruitmentCandidate,
-  createRecruitmentCandidateFromResume,
+  createRecruitmentHrDirectApplication,
   getRecruitmentCandidateJobs,
   RecruitmentCandidateCreateInput,
 } from './services/candidates';
+import { getStage7ApplicationApiError } from './services/applications';
+import { getStage7ScreeningIntakeErrorMessage } from './screeningIntakeAction';
 import {
   abandonRecruitmentResume,
   extractRecruitmentResumeText,
@@ -839,16 +840,43 @@ const RecruitmentCandidateCreate: React.FC = () => {
       messageApi.warning('请等待简历上传、原文提取和 AI 识别结束');
       return;
     }
+    if (!attachedResume) {
+      messageApi.error('HR 人工直通必须上传并完成一份简历的原文提取');
+      return;
+    }
 
     setSubmitting(true);
     try {
-      const candidate = attachedResume
-        ? await createRecruitmentCandidateFromResume(attachedResume.id, values)
-        : await createRecruitmentCandidate(values);
-      messageApi.success(`${candidate.name} 已创建`);
-      navigate(`/app/candidates/${candidate.id}`);
+      const outcome = await createRecruitmentHrDirectApplication(attachedResume.id, values);
+      const reuseNotice = outcome.candidateResolution === 'reused'
+        ? ` 已复用 Candidate #${outcome.candidateId}，没有静默覆盖其既有正式资料。`
+        : '';
+      const duplicateNotice = outcome.suspectedDuplicateCandidateIds.length > 0
+        ? ` 另有同名候选人 #${outcome.suspectedDuplicateCandidateIds.join('、')}，后续请人工核对。`
+        : '';
+      const screeningCopy = {
+        completed: 'AI 岗位评分已完成。',
+        blocked: 'AI 因资料不足暂未给分，可稍后补充材料。',
+        failed: 'AI 评分本次失败，可在 AI 初筛中心重试。',
+        screening: 'AI 评分已经启动，请在 AI 初筛中心查看进度。',
+        already_available: '该岗位申请已有评分状态，本次没有重复调用模型。',
+        start_failed: '申请已安全保存，但 AI 评分没有成功启动，可在 AI 初筛中心重试。',
+      }[outcome.screeningStatus];
+      await messageApi.open({
+        content: `${values.name.trim()} 已由 HR 人工通过。${screeningCopy}${reuseNotice}${duplicateNotice}`,
+        duration: 2.5,
+        type: outcome.screeningStatus === 'completed' || outcome.screeningStatus === 'already_available'
+          ? 'success'
+          : 'warning',
+      });
+      navigate('/app/candidates');
     } catch (error) {
-      messageApi.error(getRequestErrorMessage(error, '候选人创建失败，请稍后重试'));
+      const apiError = getStage7ApplicationApiError(error);
+      messageApi.error(getStage7ScreeningIntakeErrorMessage(
+        apiError.code,
+        apiError.message || getRequestErrorMessage(error, 'HR 人工直通创建失败，请稍后重试'),
+        apiError.candidateIds,
+      ));
     } finally {
       setSubmitting(false);
     }
@@ -868,7 +896,7 @@ const RecruitmentCandidateCreate: React.FC = () => {
       <main className="recruitment-main recruitment-candidate-create-page">
         <section className="recruitment-page-heading recruitment-candidate-create-heading">
           <div>
-            <span className="recruitment-section-kicker">阶段 5 · 简历智能识别</span>
+            <span className="recruitment-section-kicker">阶段 7 · HR 人工直通</span>
             <h2>新增候选人</h2>
             <p>开放岗位加载成功后，才能为新候选人建立岗位关联。</p>
           </div>
@@ -902,9 +930,9 @@ const RecruitmentCandidateCreate: React.FC = () => {
               type="text"
             />
             <div>
-              <span className="recruitment-section-kicker">阶段 5 · 简历智能识别</span>
+              <span className="recruitment-section-kicker">阶段 7 · HR 人工直通</span>
               <h2>新增候选人</h2>
-              <p>可以纯手动填写，也可以上传简历自动识别并补充表单，核对后一次性创建并绑定。</p>
+              <p>选择岗位并核对简历后，明确人工通过；系统保存完整申请并立即尝试一次 AI 岗位评分。</p>
             </div>
           </div>
           <Tag bordered={false} color="blue">真实写入 /api/v2</Tag>
@@ -912,8 +940,8 @@ const RecruitmentCandidateCreate: React.FC = () => {
 
         <Alert
           className="recruitment-candidate-create-boundary"
-          description="上传后会自动识别候选人信息。普通字段只补当前空值；教育、工作、项目经历和技能必须由 HR 明确选择后才进入可编辑表单。人工已有内容不会被覆盖。"
-          message="识别结果只补空字段，人工内容始终优先"
+          description="AI 识别只帮助补全资料，最终通过决定由 HR 作出。AI 评分是岗位匹配参考，即使低分、资料不足或执行失败，也不会撤销这次人工通过。"
+          message="这是人工通过入口，不是 AI 自动录用"
           showIcon
           type="info"
         />
@@ -921,7 +949,7 @@ const RecruitmentCandidateCreate: React.FC = () => {
         <Form<RecruitmentCandidateCreateInput>
           autoComplete="off"
           form={form}
-          initialValues={{ source: 'HR手动录入', tags: [], educationRecords: [], workExperiences: [], projectExperiences: [] }}
+          initialValues={{ confirmHrPass: false, source: 'HR手动录入', tags: [], educationRecords: [], workExperiences: [], projectExperiences: [] }}
           layout="vertical"
           onFinish={values => void handleSubmit(values)}
           onValuesChange={handleFormValuesChange}
@@ -946,14 +974,14 @@ const RecruitmentCandidateCreate: React.FC = () => {
                   >
                     <Input disabled={submitting} maxLength={100} placeholder="例如：张三" />
                   </Form.Item>
-                  <Form.Item extra={renderBasicFieldConflict('phone')} label={renderBasicFieldLabel('phone', '手机号码')} name="phone" rules={[{ max: 20 }]}>
+                  <Form.Item extra={renderBasicFieldConflict('phone')} label={renderBasicFieldLabel('phone', '手机号码')} name="phone" rules={[{ required: true, whitespace: true, message: '请输入手机号码' }, { max: 20 }]}>
                     <Input disabled={submitting} maxLength={20} placeholder="常用联系电话" />
                   </Form.Item>
                   <Form.Item
                     extra={renderBasicFieldConflict('email')}
                     label={renderBasicFieldLabel('email', '电子邮箱')}
                     name="email"
-                    rules={[{ type: 'email', message: '请输入有效邮箱地址' }, { max: 100 }]}
+                    rules={[{ required: true, whitespace: true, message: '请输入电子邮箱' }, { type: 'email', message: '请输入有效邮箱地址' }, { max: 100 }]}
                   >
                     <Input disabled={submitting} maxLength={100} placeholder="name@example.com" />
                   </Form.Item>
@@ -980,7 +1008,7 @@ const RecruitmentCandidateCreate: React.FC = () => {
                   <div><h3>求职与当前经历</h3><p>岗位将同时写入 Candidate 和关联 Resume</p></div>
                 </div>
                 <div className="recruitment-candidate-form-grid">
-                  <Form.Item label="应聘岗位" name="appliedJobId">
+                  <Form.Item label="应聘岗位" name="appliedJobId" rules={[{ required: true, message: '请选择开放岗位' }]}>
                     <Select
                       allowClear
                       disabled={submitting}
@@ -1024,7 +1052,7 @@ const RecruitmentCandidateCreate: React.FC = () => {
                 </div>
                 <div className="recruitment-candidate-skill-form">
                   <Form.Item
-                    extra="输入技能后按 Enter；创建候选人时会保存到 Candidate.tags。"
+                    extra="输入技能后按 Enter；提交后只保存到本次岗位使用的简历资料。"
                     label={(
                       <span className="recruitment-candidate-field-label">
                         <span>已确认技能</span>
@@ -1408,20 +1436,37 @@ const RecruitmentCandidateCreate: React.FC = () => {
               </section>
 
               <section className="recruitment-candidate-confirm-card">
-                <h3>确认创建</h3>
-                <p>{attachedResume
-                  ? '将使用单事务创建候选人、经历记录并绑定当前 Resume。'
-                  : '未上传简历，将创建一条纯手工候选人记录。'}</p>
+                <div className="recruitment-candidate-direct-mark">
+                  <SafetyCertificateOutlined />
+                  <span><strong>人工通过</strong><small>AI 只提供补充参考</small></span>
+                </div>
+                <h3>确认进入候选人页面</h3>
+                <p>姓名、手机号、邮箱、开放岗位和简历会与 Application、首次阶段历史一起保存；随后立即尝试一次 AI 岗位评分。</p>
+                <Form.Item
+                  className="recruitment-candidate-pass-confirmation"
+                  name="confirmHrPass"
+                  rules={[{
+                    validator: (_, checked) => checked
+                      ? Promise.resolve()
+                      : Promise.reject(new Error('请确认这是 HR 的人工通过决定')),
+                  }]}
+                  valuePropName="checked"
+                >
+                  <Checkbox disabled={submitting}>
+                    我已核对岗位和候选人资料，并确认 HR 人工通过
+                  </Checkbox>
+                </Form.Item>
                 <Button
                   block
-                  disabled={resumeBusy || abandoning}
+                  disabled={resumeBusy || abandoning || !attachedResume}
                   htmlType="submit"
                   loading={submitting}
                   size="large"
                   type="primary"
                 >
-                  {attachedResume ? '确认创建并绑定简历' : '创建候选人'}
+                  确认人工通过并启动 AI 评分
                 </Button>
+                {!attachedResume && <span className="recruitment-candidate-resume-required">请先上传并完成一份简历的原文提取</span>}
                 <Button
                   block
                   disabled={resumeBusy || submitting || abandoning}

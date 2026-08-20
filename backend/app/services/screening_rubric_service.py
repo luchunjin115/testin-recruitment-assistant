@@ -22,12 +22,14 @@ from app.schemas.screening_rubric import (
     RUBRIC_FAIRNESS_RULES_VERSION,
     RUBRIC_GENERATION_OUTPUT_SCHEMA_VERSION,
     RUBRIC_RECOMMENDATION_THRESHOLDS_VERSION,
+    RUBRIC_SHARE_OPTIMIZATION_SCHEMA_VERSION,
     RUBRIC_SUBCRITERIA_VERSION,
     SCREENING_RUBRIC_SCHEMA_VERSION,
     RubricChangeReasonCode,
     RubricLifecycleStatus,
     RubricGenerationSuggestion,
     RubricModelMetadata,
+    RubricShareOptimizationSuggestion,
     RubricSource,
     RubricTemplateKey,
     ScreeningRubricAbandonRequest,
@@ -35,6 +37,8 @@ from app.schemas.screening_rubric import (
     ScreeningRubricGenerateRequest,
     ScreeningRubricItemAssistRequest,
     ScreeningRubricItemAssistResponse,
+    ScreeningRubricShareOptimizationRequest,
+    ScreeningRubricShareOptimizationResponse,
     ScreeningRubricPublishContent,
     ScreeningRubricPublishRequest,
     ScreeningRubricReconfirmRequest,
@@ -42,10 +46,12 @@ from app.schemas.screening_rubric import (
     ScreeningRubricUpdateRequest,
     ScreeningRubricWeights,
     ManualSemanticCriterionInput,
+    SemanticRubricCriterion,
 )
 from app.prompts.screening_rubric import (
     RUBRIC_GENERATION_PROMPT_VERSION,
     RUBRIC_ITEM_ASSIST_PROMPT_VERSION,
+    RUBRIC_SHARE_OPTIMIZATION_PROMPT_VERSION,
 )
 from app.prompts.screening_rubric_templates import get_rubric_template
 
@@ -100,6 +106,13 @@ class RubricGenerationAdapter(Protocol):
         self,
         job_context: Mapping[str, Any],
         item: ManualSemanticCriterionInput,
+    ) -> RubricGenerationAdapterResult: ...
+
+    async def optimize_shares(
+        self,
+        job_context: Mapping[str, Any],
+        weights: ScreeningRubricWeights,
+        semantic_items: list[SemanticRubricCriterion],
     ) -> RubricGenerationAdapterResult: ...
 
 
@@ -291,6 +304,80 @@ class ScreeningRubricService:
         if rubric is None:
             raise CurrentScreeningRubricNotFoundError("岗位缺少当前 Rubric")
         return rubric
+
+    async def optimize_draft_shares(
+        self,
+        db: AsyncSession,
+        job_id: int,
+        data: ScreeningRubricShareOptimizationRequest,
+        *,
+        adapter: RubricGenerationAdapter | None = None,
+    ) -> ScreeningRubricShareOptimizationResponse:
+        try:
+            job = await db.get(Job, job_id)
+            if job is None:
+                raise ScreeningRubricJobNotFoundError("岗位不存在")
+            draft = await self._get_draft_rubric(db, job_id, for_update=False)
+            if draft is None:
+                raise ScreeningRubricDraftNotFoundError(
+                    "请先创建 Rubric 草稿，再使用 AI 优化当前占比"
+                )
+            if draft.id != data.expected_draft_id:
+                raise ScreeningRubricStaleError("Rubric 草稿已经被替换，请刷新后重试")
+            job_context = self._generation_job_context(job)
+            initial_fingerprint = self.build_job_fingerprint(job_context)
+            self._ensure_fingerprint(
+                draft,
+                expected=data.expected_job_fingerprint,
+                current=initial_fingerprint,
+            )
+        except Exception:
+            await db.rollback()
+            raise
+
+        await db.rollback()
+        resolved_adapter = adapter or self._build_generation_adapter()
+        result = await resolved_adapter.optimize_shares(
+            job_context,
+            data.weights,
+            data.semantic_items,
+        )
+        suggestion = self._parse_share_optimization(
+            result.content,
+            expected_keys=[item.key for item in data.semantic_items],
+        )
+
+        try:
+            locked_job = await self._get_job_for_update(db, job_id)
+            if locked_job is None:
+                raise ScreeningRubricJobNotFoundError("岗位不存在")
+            draft = await self._get_draft_rubric(db, job_id, for_update=True)
+            if draft is None or draft.id != data.expected_draft_id:
+                raise ScreeningRubricStaleError("Rubric 草稿已经被替换，请刷新后重试")
+            current_fingerprint = self.build_job_fingerprint(
+                self._generation_job_context(locked_job)
+            )
+            self._ensure_fingerprint(
+                draft,
+                expected=initial_fingerprint,
+                current=current_fingerprint,
+            )
+            response = ScreeningRubricShareOptimizationResponse(
+                job_fingerprint=current_fingerprint,
+                suggestion=suggestion,
+                metadata=RubricModelMetadata(
+                    model=result.model,
+                    prompt_version=RUBRIC_SHARE_OPTIMIZATION_PROMPT_VERSION,
+                    schema_version=RUBRIC_SHARE_OPTIMIZATION_SCHEMA_VERSION,
+                    input_tokens=result.input_tokens,
+                    output_tokens=result.output_tokens,
+                ),
+            )
+            await db.rollback()
+            return response
+        except Exception:
+            await db.rollback()
+            raise
 
     async def get_draft_rubric(
         self,
@@ -803,6 +890,27 @@ class ScreeningRubricService:
             raise ScreeningRubricGenerationInvalidOutputError(
                 "AI 返回的单项评分建议不符合合同"
             ) from exc
+
+    @staticmethod
+    def _parse_share_optimization(
+        content: str,
+        *,
+        expected_keys: list[str],
+    ) -> RubricShareOptimizationSuggestion:
+        try:
+            suggestion = RubricShareOptimizationSuggestion.model_validate(
+                json.loads(content)
+            )
+        except (json.JSONDecodeError, TypeError, ValidationError) as exc:
+            raise ScreeningRubricGenerationInvalidOutputError(
+                "AI 返回的占比建议不符合合同"
+            ) from exc
+        actual_keys = [item.key for item in suggestion.items]
+        if len(actual_keys) != len(expected_keys) or set(actual_keys) != set(expected_keys):
+            raise ScreeningRubricGenerationInvalidOutputError(
+                "AI 返回的占比建议与当前评分项不一致"
+            )
+        return suggestion
 
     @staticmethod
     def _job_values(job: Job) -> dict[str, Any]:

@@ -17,6 +17,10 @@ from pydantic import (
     model_validator,
 )
 
+from app.schemas.education import EducationCreate
+from app.schemas.project_experience import ProjectExperienceCreate
+from app.schemas.work_experience import WorkExperienceCreate
+
 
 class ApplicationSource(str, Enum):
     HR_DIRECT = "hr_direct"
@@ -105,6 +109,23 @@ def normalize_application_email(value: Any) -> Any:
     return normalized
 
 
+class ApplicationResumeProfile(BaseModel):
+    gender: str | None = Field(default=None, max_length=10)
+    age: int | None = Field(default=None, ge=0)
+    location: str | None = Field(default=None, max_length=100)
+    current_company: str | None = Field(default=None, max_length=200)
+    current_title: str | None = Field(default=None, max_length=200)
+    work_years: int | None = Field(default=None, ge=0)
+    education_level: str | None = Field(default=None, max_length=50)
+    source: str | None = Field(default=None, max_length=50)
+    skills: list[str] | None = None
+    education_records: list[EducationCreate] = Field(default_factory=list)
+    work_experiences: list[WorkExperienceCreate] = Field(default_factory=list)
+    project_experiences: list[ProjectExperienceCreate] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class ApplicationIntakeRequest(BaseModel):
     candidate_id: PositiveId | None = None
     name: PersonName
@@ -114,6 +135,7 @@ class ApplicationIntakeRequest(BaseModel):
     current_resume_id: PositiveId
     source: Literal[ApplicationSource.HR_DIRECT, ApplicationSource.HR_SCREENING]
     confirm_hr_pass: StrictBool = False
+    resume_profile: ApplicationResumeProfile | None = None
 
     model_config = ConfigDict(extra="forbid")
 
@@ -230,6 +252,7 @@ class ScreeningRunRequest(BaseModel):
 
 
 __all__ = [
+    "ApplicationResumeProfile",
     "ApplicationAIStatus",
     "ApplicationCreate",
     "ApplicationIntakeRequest",

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import re
 from enum import Enum
 from typing import Annotated
 
 from pydantic import (
     AwareDatetime,
+    AfterValidator,
     BaseModel,
     ConfigDict,
     Field,
@@ -14,6 +16,7 @@ from pydantic import (
 )
 
 from app.schemas.application import HRDecision, PositiveId, RecruitmentStage
+from app.schemas.screening_rubric import FAIRNESS_PROHIBITED_TERMS
 
 
 class StageHistoryActorType(str, Enum):
@@ -83,13 +86,31 @@ class VoidReasonCode(str, Enum):
     ENTRY_ERROR = "entry_error"
 
 
+def _reject_fairness_prohibited_reason(value: str) -> str:
+    normalized = value.casefold()
+    for term in FAIRNESS_PROHIBITED_TERMS:
+        normalized_term = term.casefold()
+        if normalized_term.isascii():
+            prohibited = re.search(
+                rf"(?<![a-z]){re.escape(normalized_term)}(?![a-z])",
+                normalized,
+            )
+        else:
+            prohibited = normalized_term in normalized
+        if prohibited:
+            raise ValueError("HR 决策说明包含公平性禁止内容")
+    return value
+
+
 RequiredReasonDetail = Annotated[
     str,
     StringConstraints(strip_whitespace=True, strict=True, min_length=1, max_length=1_000),
+    AfterValidator(_reject_fairness_prohibited_reason),
 ]
 OptionalReasonDetail = Annotated[
     str,
     StringConstraints(strip_whitespace=True, strict=True, min_length=1, max_length=1_000),
+    AfterValidator(_reject_fairness_prohibited_reason),
 ]
 ActorLabel = Annotated[
     str,

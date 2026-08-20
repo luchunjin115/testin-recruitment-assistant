@@ -24,6 +24,7 @@ RUBRIC_RECOMMENDATION_THRESHOLDS_VERSION = "1.0"
 RUBRIC_FAIRNESS_RULES_VERSION = "1.0"
 RUBRIC_ITEMS_SCHEMA_VERSION = "2.0"
 RUBRIC_GENERATION_OUTPUT_SCHEMA_VERSION = "1.0"
+RUBRIC_SHARE_OPTIMIZATION_SCHEMA_VERSION = "1.0"
 
 
 FAIRNESS_PROHIBITED_TERMS = (
@@ -131,6 +132,10 @@ CriterionDescription = Annotated[
 CriterionAnchor = Annotated[
     str,
     StringConstraints(strip_whitespace=True, strict=True, min_length=1, max_length=1_000),
+]
+OptimizationReason = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, strict=True, min_length=1, max_length=500),
 ]
 SuggestedShare = Annotated[StrictInt, Field(ge=1, le=100)]
 JobFingerprint = Annotated[
@@ -305,6 +310,51 @@ class ScreeningRubricItemAssistResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class RubricShareOptimizationItem(BaseModel):
+    key: CriterionKey
+    suggested_share: SuggestedShare
+    reason: OptimizationReason
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class RubricShareOptimizationSuggestion(BaseModel):
+    schema_version: Literal["1.0"] = RUBRIC_SHARE_OPTIMIZATION_SCHEMA_VERSION
+    rationale: OptimizationReason
+    items: list[RubricShareOptimizationItem] = Field(min_length=4, max_length=10)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def reject_duplicate_keys(self) -> RubricShareOptimizationSuggestion:
+        keys = [item.key.casefold() for item in self.items]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Rubric 占比建议 key 不能重复")
+        return self
+
+
+class ScreeningRubricShareOptimizationRequest(BaseModel):
+    expected_draft_id: PositiveId
+    expected_job_fingerprint: JobFingerprint
+    weights: ScreeningRubricWeights
+    semantic_items: list[SemanticRubricCriterion] = Field(min_length=4, max_length=10)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def reject_duplicate_items(self) -> ScreeningRubricShareOptimizationRequest:
+        _reject_duplicate_criteria(self.semantic_items)
+        return self
+
+
+class ScreeningRubricShareOptimizationResponse(BaseModel):
+    job_fingerprint: JobFingerprint
+    suggestion: RubricShareOptimizationSuggestion
+    metadata: RubricModelMetadata
+
+    model_config = ConfigDict(extra="forbid")
+
+
 class ScreeningRubricDraftUpdateRequest(BaseModel):
     expected_job_fingerprint: JobFingerprint
     weights: ScreeningRubricWeights | None = None
@@ -463,6 +513,7 @@ __all__ = [
     "RUBRIC_GENERATION_OUTPUT_SCHEMA_VERSION",
     "RUBRIC_ITEMS_SCHEMA_VERSION",
     "RUBRIC_RECOMMENDATION_THRESHOLDS_VERSION",
+    "RUBRIC_SHARE_OPTIMIZATION_SCHEMA_VERSION",
     "RUBRIC_SUBCRITERIA_VERSION",
     "RubricChangeReasonCode",
     "RubricCriterionSource",
@@ -470,6 +521,8 @@ __all__ = [
     "RubricGenerationSuggestion",
     "RubricLifecycleStatus",
     "RubricModelMetadata",
+    "RubricShareOptimizationItem",
+    "RubricShareOptimizationSuggestion",
     "RubricSource",
     "RubricTemplateKey",
     "SCREENING_RUBRIC_SCHEMA_VERSION",
@@ -478,6 +531,8 @@ __all__ = [
     "ScreeningRubricGenerateRequest",
     "ScreeningRubricItemAssistRequest",
     "ScreeningRubricItemAssistResponse",
+    "ScreeningRubricShareOptimizationRequest",
+    "ScreeningRubricShareOptimizationResponse",
     "ScreeningRubricAbandonRequest",
     "ScreeningRubricPublishContent",
     "ScreeningRubricPublishRequest",

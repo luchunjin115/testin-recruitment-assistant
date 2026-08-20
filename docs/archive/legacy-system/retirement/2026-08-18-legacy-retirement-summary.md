@@ -1,5 +1,7 @@
 # 旧系统退役总修改说明
 
+> 归档位置说明：旧系统退役已经完成，本文现归入 `docs/archive/legacy-system/retirement/`，只用于退役范围和验证追溯。
+
 > 日期：2026-08-18
 >
 > 结论：旧 React + FastAPI + SQLite + Mock LLM 演示系统及其演示数据已经退役；当前仓库只维护 React + FastAPI + PostgreSQL + DeepSeek 新版主链。

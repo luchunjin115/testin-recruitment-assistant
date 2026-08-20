@@ -276,6 +276,12 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(application.current_screening_result_id, outcome.result.id)
         self.assertEqual(outcome.result.model_name, "deepseek-test")
         self.assertEqual(outcome.result.total_tokens, 150)
+        hard_statuses = {
+            item["criterion"]: item["status"]
+            for item in outcome.result.hard_requirement_checks
+        }
+        self.assertEqual(hard_statuses["minimum_work_years"], "passed")
+        self.assertEqual(hard_statuses["education_requirement"], "passed")
         self.assertNotIn("测试候选人", json.dumps(outcome.result.candidate_input_snapshot, ensure_ascii=False))
         self.assertEqual(session.commit_count, 2)
 
@@ -287,7 +293,9 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             application=application,
             material=service.input_service.build_candidate_material(
                 application_ref="application-50",
-                confirmed_profile=service._candidate_profile(application.candidate),
+                confirmed_profile=service._resume_confirmed_profile(
+                    application.current_resume.parsed_snapshot
+                ),
                 resume_raw_text=application.current_resume.raw_text,
                 resume_snapshot=application.current_resume.parsed_snapshot,
             ),
@@ -320,6 +328,57 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         self.assertFalse(outcome.model_called)
         self.assertEqual(adapter.calls, 0)
         self.assertEqual(application.current_screening_result_id, reusable.id)
+
+    async def test_candidate_global_profile_cannot_change_current_resume_input_or_fingerprint(self) -> None:
+        application, rubric = make_graph()
+        service = ScreeningService(model_adapter=FakeAdapter(), settings=settings())
+        requirements = JobRequirementsV1.model_validate(application.job.requirements)
+        weights = ScreeningRubricWeights.model_validate(rubric.weights)
+        items = [
+            SemanticRubricCriterion.model_validate(item)
+            for item in rubric.semantic_items
+        ]
+
+        def current_material():
+            return service.input_service.build_candidate_material(
+                application_ref="application-50",
+                confirmed_profile=service._resume_confirmed_profile(
+                    application.current_resume.parsed_snapshot
+                ),
+                resume_raw_text=application.current_resume.raw_text,
+                resume_snapshot=application.current_resume.parsed_snapshot,
+            )
+
+        before = current_material()
+        before_fingerprint = service._input_fingerprint(
+            application=application,
+            material=before,
+            requirements=requirements,
+            rubric=rubric,
+            weights=weights,
+            semantic_items=items,
+        )
+
+        application.candidate.work_years = 99
+        application.candidate.education_level = "博士"
+        application.candidate.tags = ["与当前简历无关的技能"]
+        application.candidate.parsed_data = {
+            "draft": {"skills": ["另一岗位专用技能"]}
+        }
+
+        after = current_material()
+        after_fingerprint = service._input_fingerprint(
+            application=application,
+            material=after,
+            requirements=requirements,
+            rubric=rubric,
+            weights=weights,
+            semantic_items=items,
+        )
+
+        self.assertEqual(after, before)
+        self.assertEqual(after_fingerprint, before_fingerprint)
+        self.assertEqual(after.structured_resume.skills, ["Python", "FastAPI", "Docker"])
 
     async def test_provider_failure_preserves_old_success(self) -> None:
         old = ScreeningResult(
@@ -362,7 +421,9 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         service = ScreeningService(model_adapter=adapter, settings=settings())
         material = service.input_service.build_candidate_material(
             application_ref="application-50",
-            confirmed_profile=service._candidate_profile(application.candidate),
+            confirmed_profile=service._resume_confirmed_profile(
+                application.current_resume.parsed_snapshot
+            ),
             resume_raw_text=application.current_resume.raw_text,
             resume_snapshot=application.current_resume.parsed_snapshot,
         )

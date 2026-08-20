@@ -1011,6 +1011,61 @@
   padding: 20px;
 }
 
+.recruitment-candidate-direct-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 11px 12px;
+  border: 1px solid #b8e3d0;
+  border-radius: 10px;
+  color: #177b57;
+  background: #f1fbf6;
+}
+
+.recruitment-candidate-direct-mark > .anticon {
+  font-size: 20px;
+}
+
+.recruitment-candidate-direct-mark span {
+  display: grid;
+  gap: 2px;
+}
+
+.recruitment-candidate-direct-mark strong,
+.recruitment-candidate-direct-mark small {
+  line-height: 1.35;
+}
+
+.recruitment-candidate-direct-mark small {
+  color: #5b8b77;
+  font-size: 9px;
+}
+
+.recruitment-candidate-pass-confirmation {
+  margin: 0 0 8px;
+  padding: 10px 11px;
+  border: 1px solid #e4e9ef;
+  border-radius: 8px;
+  background: #fafbfc;
+}
+
+.recruitment-candidate-pass-confirmation .ant-checkbox-wrapper {
+  align-items: flex-start;
+  color: #4d5868;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.recruitment-candidate-resume-required {
+  display: block;
+  margin-top: 8px;
+  color: #b56a29;
+  font-size: 9px;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .recruitment-candidate-confirm-card p {
   margin: 7px 0 16px;
 }

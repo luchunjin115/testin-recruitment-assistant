@@ -17,12 +17,15 @@ from app.core.llm import get_rubric_generation_llm_client
 from app.prompts.screening_rubric import (
     RUBRIC_GENERATION_PROMPT_VERSION,
     RUBRIC_ITEM_ASSIST_PROMPT_VERSION,
+    RUBRIC_SHARE_OPTIMIZATION_PROMPT_VERSION,
     ScreeningRubricPromptBuilder,
 )
 from app.schemas.screening_rubric import (
     RUBRIC_GENERATION_OUTPUT_SCHEMA_VERSION,
     ManualSemanticCriterionInput,
     RubricTemplateKey,
+    ScreeningRubricWeights,
+    SemanticRubricCriterion,
 )
 
 
@@ -116,6 +119,19 @@ class DeepSeekRubricGenerationAdapter:
         )
         return await self._complete(messages)
 
+    async def optimize_shares(
+        self,
+        job_context: Mapping[str, Any],
+        weights: ScreeningRubricWeights,
+        semantic_items: list[SemanticRubricCriterion],
+    ) -> RubricGenerationAdapterResult:
+        messages = ScreeningRubricPromptBuilder.build_share_optimization_messages(
+            job_context,
+            weights,
+            semantic_items,
+        )
+        return await self._complete(messages)
+
     def _validate_versions(self) -> None:
         if (
             self.settings.RUBRIC_GENERATION_PROMPT_VERSION
@@ -127,6 +143,11 @@ class DeepSeekRubricGenerationAdapter:
             != RUBRIC_ITEM_ASSIST_PROMPT_VERSION
         ):
             raise RubricGenerationConfigurationError("Rubric 单项辅助 Prompt 版本不一致")
+        if (
+            self.settings.RUBRIC_SHARE_OPTIMIZATION_PROMPT_VERSION
+            != RUBRIC_SHARE_OPTIMIZATION_PROMPT_VERSION
+        ):
+            raise RubricGenerationConfigurationError("Rubric 占比优化 Prompt 版本不一致")
         if (
             self.settings.RUBRIC_GENERATION_SCHEMA_VERSION
             != RUBRIC_GENERATION_OUTPUT_SCHEMA_VERSION

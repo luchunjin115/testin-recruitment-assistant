@@ -45,10 +45,10 @@ git log --oneline -5
 1. `AGENTS.md`
 2. `CLAUDE.md`
 3. `PROJECT_STATE.md`
-4. `docs/implementation-plan.md`
-5. `docs/specs/2026-07-15-hr-agent-platform-design.md`
-6. `docs/specs/2026-08-12-stage5-resume-structure-design.md`
-7. `docs/specs/2026-08-12-stage5-resume-draft-field-mapping.md`
+4. `docs/planning/implementation-plan.md`
+5. `docs/architecture/2026-07-15-hr-agent-platform-design.md`
+6. `docs/stages/stage5/2026-08-12-stage5-resume-structure-design.md`
+7. `docs/stages/stage5/2026-08-12-stage5-resume-draft-field-mapping.md`
 8. 本文件
 
 然后执行只读检查：
@@ -264,7 +264,7 @@ end_date
 
 ### 4.6 字段映射
 
-详细映射见 `docs/specs/2026-08-12-stage5-resume-draft-field-mapping.md`。核心规则：
+详细映射见 `docs/stages/stage5/2026-08-12-stage5-resume-draft-field-mapping.md`。核心规则：
 
 - `basic_info` 对应 `CandidateCreate` 的同义基础字段。
 - `education_records` 对应 `EducationCreate`。
@@ -767,9 +767,9 @@ Test-Path backend/migrations/versions/f5a7c9e2d104_add_resume_structure_state.py
 Test-Path backend/tests/schemas/rebuilt/test_resume_parse.py
 Test-Path backend/tests/models/rebuilt/test_resume_structure_state.py
 Test-Path backend/tests/migrations/test_resume_structure_state_migration.py
-Test-Path docs/specs/2026-08-12-stage5-resume-structure-design.md
-Test-Path docs/specs/2026-08-12-stage5-resume-draft-field-mapping.md
-Test-Path docs/handoff/2026-08-12-stage5-development-handoff.md
+Test-Path docs/stages/stage5/2026-08-12-stage5-resume-structure-design.md
+Test-Path docs/stages/stage5/2026-08-12-stage5-resume-draft-field-mapping.md
+Test-Path docs/stages/stage5/2026-08-12-stage5-development-handoff.md
 ```
 
 ### 16.2 检查 Git

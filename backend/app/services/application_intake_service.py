@@ -87,7 +87,7 @@ class ApplicationIntakeService:
             if resume is None:
                 raise ApplicationResumeNotFoundError("当前简历不存在")
 
-            resolved = await self._resolve_candidate(db, data, resume)
+            resolved = await self._resolve_candidate(db, data)
             candidate = resolved.candidate
             candidate_resolution = resolved.resolution
             suspected_duplicate_candidate_ids = resolved.suspected_duplicate_candidate_ids
@@ -104,6 +104,7 @@ class ApplicationIntakeService:
                 job.id,
             )
             if existing is not None:
+                await self._confirm_hr_direct_entry_if_needed(db, existing, data.source)
                 await db.commit()
                 return ApplicationIntakeResult(
                     application=existing,
@@ -112,6 +113,7 @@ class ApplicationIntakeService:
                     suspected_duplicate_candidate_ids=suspected_duplicate_candidate_ids,
                 )
 
+            self._store_resume_profile(resume, data)
             if resume.candidate_id is None:
                 resume.candidate_id = candidate.id
 
@@ -140,6 +142,7 @@ class ApplicationIntakeService:
                     data.job_id,
                 )
                 if existing is not None:
+                    await self._confirm_hr_direct_entry_if_needed(db, existing, data.source)
                     await db.commit()
                     return ApplicationIntakeResult(
                         application=existing,
@@ -156,7 +159,6 @@ class ApplicationIntakeService:
         self,
         db: AsyncSession,
         data: ApplicationIntakeRequest,
-        resume: Resume,
     ) -> _CandidateResolutionResult:
         matching_candidates = await self._find_contact_matches(db, data.phone, data.email)
         matching_ids = tuple(sorted({candidate.id for candidate in matching_candidates}))
@@ -203,11 +205,7 @@ class ApplicationIntakeService:
             phone=data.phone,
             email=data.email,
             source=data.source.value,
-            status=("passed" if data.source is ApplicationSource.HR_DIRECT else "new"),
-            applied_job_id=data.job_id,
-            resume_file_path=resume.file_path,
-            resume_text=resume.raw_text,
-            parsed_data=resume.parsed_snapshot,
+            status="new",
         )
         db.add(candidate)
         await db.flush()
@@ -216,6 +214,48 @@ class ApplicationIntakeService:
             resolution=CandidateResolution.CREATED,
             suspected_duplicate_candidate_ids=suspected_ids,
         )
+
+    @staticmethod
+    def _store_resume_profile(resume: Resume, data: ApplicationIntakeRequest) -> None:
+        if data.resume_profile is None:
+            return
+
+        snapshot = dict(resume.parsed_snapshot or {})
+        snapshot["confirmed_profile"] = data.resume_profile.model_dump(
+            mode="json",
+            exclude_none=True,
+        )
+        resume.parsed_snapshot = snapshot
+
+    @staticmethod
+    async def _confirm_hr_direct_entry_if_needed(
+        db: AsyncSession,
+        application: Application,
+        source: ApplicationSource,
+    ) -> None:
+        if source is not ApplicationSource.HR_DIRECT or application.hr_decision == "passed":
+            return
+
+        previous_stage = application.recruitment_stage
+        previous_decision = application.hr_decision
+        application.recruitment_stage = "screening_passed"
+        application.hr_decision = "passed"
+        db.add(
+            StageHistory(
+                application_id=application.id,
+                from_recruitment_stage=previous_stage,
+                to_recruitment_stage=application.recruitment_stage,
+                from_hr_decision=previous_decision,
+                to_hr_decision=application.hr_decision,
+                reason_code=StageHistoryReasonCode.HR_DIRECT_ENTRY.value,
+                actor_type="hr",
+                actor_id=None,
+                actor_label=LOCAL_HR_ACTOR_LABEL,
+                screening_result_id=application.current_screening_result_id,
+                overrides_ai_recommendation=False,
+            )
+        )
+        await db.flush()
 
     @staticmethod
     async def _lock_contact_identity(

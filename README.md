@@ -203,8 +203,12 @@ frontend/
   tests/                   # 前端模块与边界测试
 
 docs/
-  implementation-plan.md
-  specs/
+  DOCUMENT_INDEX.md  # 文档总入口
+  planning/          # 路线与实施顺序
+  architecture/      # 总体架构
+  stages/            # 阶段 4—7 专项设计与验收
+  research/          # 外部项目研究
+  archive/           # 历史、旧系统与被替代方案
 
 launch/             # Windows 启动入口
 sample_data/        # 受控 Prompt/测试样例，不是运行时 seed
@@ -264,8 +268,8 @@ docker compose stop postgres redis chroma
 以下能力尚未完成，不应在演示或简历中描述为已交付：
 
 - 公开投递表单正式提交
-- Rubric 的完整前端编辑与发布交互
-- 初筛详情、证据、历史和 HR 决策完整前端交互
+- 阶段 7 旧 Rubric 体系尚待盘点和删除
+- JD 评价计划、新 AI 初筛报告和重新评估链路尚未实现
 - 面试、Offer、录取闭环
 - 登录、角色与权限
 - 综合 Agent 与 RAG 知识库
@@ -276,10 +280,11 @@ docker compose stop postgres redis chroma
 ## 权威文档
 
 - [项目状态](PROJECT_STATE.md)
-- [实施计划](docs/implementation-plan.md)
-- [总体设计](docs/specs/2026-07-15-hr-agent-platform-design.md)
-- [阶段 5 后路线图](docs/specs/2026-08-14-post-stage5-product-roadmap.md)
-- [阶段 7 设计](docs/specs/2026-08-17-stage7-application-ai-screening-design.md)
-- [旧系统退役决策](docs/specs/2026-08-18-legacy-system-retirement-decision.md)
-- [最终命名与交付计划](docs/specs/2026-08-18-final-naming-and-delivery-closure-plan.md)
-- [旧系统退役总修改说明](docs/2026-08-18-legacy-retirement-summary.md)
+- [实施计划](docs/planning/implementation-plan.md)
+- [总体设计](docs/architecture/2026-07-15-hr-agent-platform-design.md)
+- [阶段 5 后路线图](docs/planning/2026-08-14-post-stage5-product-roadmap.md)
+- [阶段 7 当前设计](docs/stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md)
+- [项目文档索引](docs/DOCUMENT_INDEX.md)
+- [旧系统退役决策](docs/archive/legacy-system/retirement/2026-08-18-legacy-system-retirement-decision.md)
+- [最终命名与交付计划](docs/archive/legacy-system/retirement/2026-08-18-final-naming-and-delivery-closure-plan.md)
+- [旧系统退役总修改说明](docs/archive/legacy-system/retirement/2026-08-18-legacy-retirement-summary.md)

@@ -1,8 +1,10 @@
 # 阶段 7：Application 与 AI 初筛专项设计及执行计划
 
+> **归档说明：本文原位于 `docs/specs/`，现归入 `docs/archive/superseded/`。其中的 Rubric、五维权重、确定性评分、`unknown`、证据覆盖率、评分历史和旧报告方案已被 `../../stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md` 替代。正文中的旧路径保留当时语境。本文只用于旧 Rubric 盘点和历史追溯，不得作为新增业务代码依据。**
+
 > 日期：2026-08-17
 >
-> 状态：小步骤 1—8 与评分方案修订小步骤 5A 已完成；小步骤 9 的后端支撑契约、前端类型/API 调用层、Application 工作队列、单人评分、同岗位最多 5 人批量评分、评分详情、逐项证据和评分历史交互已完成，下一步只做强制重跑确认，暂不进入 HR 决策交互
+> 状态：小步骤 1—9、评分方案修订小步骤 5A，以及小步骤 10 的候选人列表、HR 直接新增、首次自动评分、不同岗位简历评分隔离、当前 Rubric 只读展示、模板/AI 草稿起草、既有语义项编辑保存、语义项新增/删除、五维权重受限调整、单个 HR 手动评分项 AI 辅助和 AI 优化当前占比已完成；下一小步只接“放弃草稿并保留当前正式版本”
 >
 > 上游依据：`2026-07-15-hr-agent-platform-design.md`、`2026-08-14-post-stage5-product-roadmap.md`、`../implementation-plan.md`
 >
@@ -82,7 +84,7 @@ HR 审核确认与版本化发布
 12. Application 作废、Candidate 归档和历史数据保护。
 13. 移除旧数据迁移合同，所有 Application 必须遵守统一的新版岗位、联系方式和当前 Resume 约束。
 14. 20份脱敏样本的真实 DeepSeek 质量评估。
-15. `/app/screening`、候选人列表、候选人详情和岗位表单的阶段 7 交互。
+15. `/app/screening`、按 Application 展示的候选人列表、评分结果详情和岗位表单的阶段 7 交互。
 
 ### 3.2 本阶段不包含
 
@@ -113,7 +115,9 @@ Application 一次岗位申请
 
 ### 4.1 Candidate
 
-Candidate 保存相对稳定的人员资料。Candidate 可以在数据库中早于 HR 通过存在，但候选人页面不展示全部 Candidate。
+Candidate 只承担“这是同一个人”的稳定身份与去重职责，核心字段为姓名及标准化联系方式。不同岗位使用的工作经历、项目、技能、学历和简历版本不属于 Candidate 的唯一全局真相，不能因为新 Application 创建而合并或覆盖。现有 Candidate 上的职业画像字段在阶段 7 只作为过渡展示数据，不再作为跨岗位评分依据。
+
+Candidate 可以在数据库中早于 HR 通过存在，但候选人页面不展示全部 Candidate。
 
 候选人页面的业务展示条件是：
 
@@ -121,7 +125,7 @@ Candidate 保存相对稳定的人员资料。Candidate 可以在数据库中早
 Application.hr_decision == passed
 ```
 
-页面每一行对应一个已通过的 Application。同一个 Candidate 通过两个岗位时显示两行；Candidate 详情页再按人聚合全部申请。
+页面每一行对应一个已通过的 Application。同一个 Candidate 通过两个岗位时显示两行，每一行只处理自己的岗位、Resume、评分、HR 决策和招聘阶段；页面不按 Candidate 身份聚合或展示其他岗位申请。
 
 ### 4.2 Application
 
@@ -132,7 +136,7 @@ Application.hr_decision == passed
 | `id` | PostgreSQL 主键 |
 | `candidate_id` | 必填，关联 Candidate |
 | `job_id` | 必填，关联 Job |
-| `current_resume_id` | 必填，关联本次申请使用的当前 Resume |
+| `current_resume_id` | 必填，关联本次申请使用的当前 Resume；该 Resume 是本次岗位评分材料的唯一人员侧来源 |
 | `source` | `hr_direct/hr_screening/public_apply` |
 | `lifecycle_status` | `active/ended/voided` |
 | `recruitment_stage` | 当前招聘阶段 |
@@ -192,7 +196,7 @@ ScreeningResult 从“候选人 + 岗位唯一结果”改为“Application 的�
 - 五个维度及子项得分
 - 优势、风险、理由和待确认问题
 - 简历证据与岗位证据
-- Candidate 脱敏输入快照
+- 当前 Application/Resume 的脱敏人员材料快照
 - Resume、JobRequirements 和 Rubric 快照
 - 规则、Prompt、模型、Job Schema、Resume Schema 版本
 - 稳定错误码和安全错误说明
@@ -210,9 +214,9 @@ ScreeningResult 从“候选人 + 岗位唯一结果”改为“Application 的�
 ```text
 选择开放岗位
 → 上传并识别简历
-→ HR 检查和修改资料
+→ HR 检查和修改本次简历资料
 → HR 明确确认人工通过
-→ 保存 Candidate + Resume + Application + StageHistory
+→ 保存 Candidate 身份 + 本次 Resume 确认资料 + Application + StageHistory
 → 立即进入候选人页面
 → 自动启动一次 AI 岗位评分
 ```
@@ -246,9 +250,11 @@ ScreeningResult 从“候选人 + 岗位唯一结果”改为“Application 的�
 - 初始 `recruitment_stage=applied`
 - AI 执行结束后进入 `hr_review`
 
-### 5.3 已有候选人发起新岗位申请
+### 5.3 已有身份再次发起新岗位申请
 
-候选人详情允许为已有 Candidate 选择另一个开放岗位，并选择已有简历或上传新简历。新 Application 必须重新评分和重新作出岗位级 HR 决策，不能继承其他岗位的通过状态。
+HR 可继续通过候选人页面“新增候选人”或初筛中心“录入新申请”提交另一个开放岗位和一份当前简历。手机、邮箱共同命中时后台复用已有 Candidate 身份，但界面不跳转或展示该身份的其他岗位记录。新 Application 必须重新评分和重新作出岗位级 HR 决策，不能继承其他岗位的通过状态。
+
+同一个 Candidate 针对不同岗位提交不同简历属于正常场景。每个 Application 独立绑定自己的当前 Resume；工作经历、项目、技能、学历及其他岗位材料不在不同简历之间比较、合并或回写为 Candidate 全局资料。只有 Candidate 身份识别冲突、Resume 归属冲突或同 Candidate/Job 的 active Application 重复才进入人工核对。
 
 ### 5.4 强制联系方式和岗位
 
@@ -262,7 +268,7 @@ ScreeningResult 从“候选人 + 岗位唯一结果”改为“Application 的�
 
 缺少任一项不得创建正式 Application。阶段 4 的未绑定临时 Resume 可以暂存，取消或超时后继续按既有清理规则处理。
 
-## 6. Candidate 去重与资料冲突
+## 6. Candidate 身份去重与冲突
 
 手机号统一去除空格、短横线和格式差异；邮箱去除首尾空白并使用不区分大小写的标准化值。
 
@@ -275,7 +281,7 @@ ScreeningResult 从“候选人 + 岗位唯一结果”改为“Application 的�
 | 手机和邮箱分别匹配不同 Candidate | 禁止自动合并，人工核对 |
 | 只有姓名相同 | 只提示疑似重复，不自动合并 |
 
-复用 Candidate 时，新简历识别结果不能静默覆盖已有正式资料。前端展示差异，由 HR 逐项选择保留旧值、采用新值或暂不更新。
+复用 Candidate 时只复用人员身份，不合并不同 Resume 的岗位资料，也不要求 HR 对不同岗位简历做差异确认。姓名、手机号和邮箱用于身份识别；简历中的经历、技能、学历和项目继续保留在各自 Resume/Application 上。
 
 如果同一 Candidate、同一 Job 已有未结束 Application，不创建重复记录；重复提交直接返回现有 Application，上一条结束后才允许创建新申请。手机号和邮箱已经共同识别到同一 Candidate 时，阶段 7 不允许强制另建重复人员。Candidate 合并不进入阶段 7。
 
@@ -346,13 +352,13 @@ HR 决策不会因更换简历自动撤销。
 评分输入使用：
 
 ```text
-HR 已确认 Candidate 结构化资料
-+ 本次 Resume 原文和结构化快照
+当前 Application 的 Resume：HR 确认资料
++ 当前 Application 的 Resume：原文和 AI 结构化快照
 + JobRequirements
 + 当前 JobScreeningRubric
 ```
 
-信息优先级为 HR 已确认资料、简历原文证据、AI 结构化草稿。出现冲突时不得静默选择，结果必须列入待确认问题。
+人员侧评分资料不得从 Candidate 的其他岗位历史简历或全局职业画像补入。当前 Resume 内部的信息优先级为 HR 对本简历的确认资料、该简历原文证据、该简历 AI 结构化草稿；同一份 Resume 内部出现冲突时不得静默选择，结果必须列入待确认问题。Candidate 的姓名和联系方式只用于身份、归属与脱敏，不参与岗位评分。
 
 ### 8.3 最低输入
 
@@ -475,7 +481,7 @@ HR 可主动要求 DeepSeek 读取岗位标题、职责、必备/加分技能、
 
 AI 只能生成语义项。必备技能、明确工作年限、最低学历层级、明确加分技能和关键词等可确定内容，由系统从 JobRequirements 自动生成确定性规则项，不能被 AI 删除、改写或降级为主观判断。
 
-Rubric 编辑器提供“AI 生成评分项”和“AI 优化当前占比”两个明确动作。AI 可以根据当前岗位建议语义项及其内部占比，也可以建议确定性规则与语义项之间的相对重要程度并返回理由，但建议只能更新草稿；Service 必须重新执行总和、范围、重复计分和公平性校验，HR 可以全部接受、逐项修改或拒绝，只有发布后的版本才能参与候选人评分。
+Rubric 编辑器提供“AI 生成评分项”和“AI 优化当前占比”两个明确动作。占比优化只允许根据当前岗位建议现有语义项在各自大维度内部的相对占比并返回逐项理由；不得改变五个大维度总权重、Python 确定性规则、评分项 key/名称/维度/内容，也不得新增或删除评分项。建议只返回前端供 HR 对比和明确应用，应用后仍是未保存表单；只有正常保存草稿并在后续发布后才会参与候选人评分。
 
 确定性规则不接受 HR 在 Rubric 编辑器中输入一段自然语言后交给 Python 猜测。HR 必须在结构化 JobRequirements 表单填写明确字段，Service 再编译为包含 `source_field`、`operator`、`expected_value` 和 `on_missing` 的可执行规则。例如最低 3 年工作经验编译为 `total_work_months >= 36`，最低本科学历编译为学历等级比较，必备技能编译为规范化技能集合包含判断。候选人材料缺少可比较值时返回 `unknown`，不能伪装为 `failed`。
 
@@ -576,7 +582,7 @@ Python 负责确定性规则得分、同维度占比归一化、五维加权、�
 
 ### 14.3 输入指纹
 
-指纹至少覆盖 Application、Resume、Candidate 脱敏输入、JobRequirements、Rubric 五维权重、已确认评分项与锚点、规则、Prompt 和模型配置版本。
+指纹至少覆盖 Application、当前 Resume 脱敏输入、JobRequirements、Rubric 五维权重、已确认评分项与锚点、规则、Prompt 和模型配置版本；不得因同一 Candidate 的其他岗位简历变化而使本 Application 结果过期。
 
 相同输入已有成功结果时默认复用，不调用 DeepSeek。强制重跑必须二次确认并记录原因。同一 Application 同时只能有一个执行中的评分。
 
@@ -671,6 +677,8 @@ Python 负责确定性规则得分、同维度占比归一化、五维加权、�
 | `POST /api/v2/jobs/{id}/screening-rubric/drafts/{draft_id}/publish` | HR 确认并发布新版本 |
 | `DELETE /api/v2/jobs/{id}/screening-rubric/drafts/{draft_id}` | 放弃未发布草稿，不影响当前版本 |
 
+`applications/intake` 已接收可选 `resume_profile`，表示“本次 Resume 的 HR 确认结构化资料”，不再使用 `candidate_profile` 表示 Candidate 全局职业画像。姓名、手机和邮箱仍由顶层字段完成 Candidate 身份识别；经历、学历、技能和项目写入当前 Resume 的 `parsed_snapshot.confirmed_profile`。已有 active Application 经 `hr_direct + confirm_hr_pass=true` 再次确认时复用原 Application，并在同一事务转为 `passed/screening_passed`、追加 `hr_direct_entry` 历史；复用路径不会用本次未采用的 Resume 资料覆盖原申请。
+
 正式 ScreeningResult 创建、更新和删除不能继续暴露为普通客户端 CRUD。
 
 ### 19.1 关键错误语义
@@ -701,7 +709,7 @@ Python 负责确定性规则得分、同维度占比归一化、五维加权、�
 
 建议职责拆分：
 
-- `ApplicationIntakeService`：联系方式校验、Candidate 去重、差异确认、Resume 绑定、Application 原子创建。
+- `ApplicationIntakeService`：联系方式校验、Candidate 身份去重、当前 Resume 确认资料保存、Resume 绑定和 Application 原子创建；不合并跨岗位简历。
 - `ApplicationService`：查询、状态迁移、作废、当前 Resume 和生命周期。
 - `ScreeningInputService`：生成脱敏输入、快照和指纹。
 - `ScreeningRuleService`：把结构化 JobRequirements 编译为字段比较规则，执行年限、学历层级、技能规范化、明确关键词和硬性检查；不解析 HR 自由文本。
@@ -744,13 +752,13 @@ Python 负责确定性规则得分、同维度占比归一化、五维加权、�
 - 同一 Candidate 多岗位通过时允许多行。
 - AI 新结果不能自动移出候选人。
 
-### 21.3 新增与详情
+### 21.3 新增与岗位级查看
 
 - 候选人页面保留“新增候选人”，明确为 HR 人工直通。
 - 初筛中心提供“录入新申请”，明确为先 AI 后 HR 决策。
 - 手机、邮箱、开放岗位和简历前后端双重必填。
-- Candidate 去重和资料差异必须由 HR 确认。
-- Candidate 详情聚合全部 Application，并允许发起新岗位申请。
+- Candidate 身份冲突必须由 HR 确认；不同岗位简历内容不同不属于冲突，不展示合并界面。
+- 候选人列表始终按 Application 分行；不提供跨岗位 Candidate 聚合详情，新岗位申请继续使用两个既有录入入口。
 
 ### 21.4 岗位 Rubric
 
@@ -851,14 +859,18 @@ Python 负责确定性规则得分、同维度占比归一化、五维加权、�
 - 录入、列表、状态、评分详情、证据、历史、批量和 HR 决策。
 - 覆盖 loading、空状态、失败、blocked、outdated 和关闭岗位历史。
 
-进行进度：🚧 已完成前六小段。前三段已交付 Application 查询/评分后端契约、TypeScript API Service 和真实 Application 工作队列；第四段完成单人评分、状态禁用边界、同步双击保护和结果刷新；第五段完成同岗位 1—5 人选择、异岗位/超额/不可运行项前端拦截、同步批量重复提交保护、逐项 `completed/failed/blocked/reused/skipped` 结果抽屉和“仅重试失败项”；第六段完成评分历史抽屉、当前/过期/失败/blocked/强制重跑记录标识，以及五维分数、硬性条件、Rubric 逐项 `0—10/unknown`、原因、置信度、可定位证据和运行版本的只读详情。第六段复用既有历史与详情 API，没有执行 HR 决策；Application Service、工作队列、单人评分、批量评分和详情共 5 组相关前端测试通过，生产构建转换 3118 个模块。正式 PostgreSQL 已在旧版退役步骤中重建为空库并升级到 `f8c2d0e5b317 (head)`；本段未真实调用 DeepSeek，也未使用真实阶段 7 数据完成浏览器点击和桌面/窄屏截图验收。下一小段只做强制重跑确认，暂不进入 HR 决策交互。
+完成进度：✅ 已完成九个小段。前八段交付 Application 查询/评分契约、TypeScript API Service、真实工作队列、单人/最多 5 人批量评分、评分详情/证据/历史、强制重跑和 HR 决策；第九段新增“录入新申请”任务单，支持选择开放岗位、填写姓名/手机/邮箱、上传并提取 PDF/DOCX/TXT 原文或选择已有已解析简历。请求固定为 `source=hr_screening`、`confirm_hr_pass=false`，Application 成功保存后才自动尝试首次评分；评分 `failed/blocked` 或启动失败不会回滚申请，重复有效申请会复用且不重复评分，联系方式冲突和简历归属冲突保留后端稳定提示，未绑定的新上传文件在取消或切换时尝试清理。17 组前端测试、31 项 intake 后端定向测试、25 项 HR 决策后端定向测试和 3120 模块生产构建通过。正式 PostgreSQL 已升级到 `f8c2d0e5b317 (head)`；本段复用既有后端合同，没有新增迁移，且当前没有可用浏览器实例，未完成真实点击、真实 PostgreSQL 申请写入、真实 DeepSeek 调用和桌面/窄屏截图验收。下一步进入小步骤 10，先改造候选人页面只展示 HR 已通过的 Application。
 
-### 小步骤 10：候选人页面、详情和岗位 Rubric
+### 小步骤 10：候选人页面和岗位 Rubric
 
 - 候选人页面按已通过 Application 展示。
 - 升级 HR 直接新增并自动评分。
-- Candidate 详情聚合 Application。
+- 不建设跨岗位 Candidate 详情聚合；岗位级证据和历史继续使用 Application/ScreeningResult 视图。
 - 接入岗位 Rubric 编辑和版本提示。
+
+进行进度：🚧 候选人列表、HR 直接新增、首次自动评分、不同岗位简历评分隔离、当前 Rubric 只读展示、模板/AI 草稿起草、既有语义项编辑保存、语义项新增/删除、五维权重受限调整、单个 HR 手动评分项 AI 辅助和 AI 优化当前占比已完成。占比优化发送当前未保存的完整语义项，后端严格校验返回 key 集合完全一致；前端先展示当前值、建议值和理由，HR 应用后只改表单中的 `suggested_share`，不自动保存或发布。下一小步只实现“放弃草稿并保留当前正式版本”，暂不接发布或重新确认。
+
+需求修订检查点（✅ 用户于 2026-08-19 明确确认并已实现）：同一 Candidate 投递不同岗位时使用不同简历是正常场景，不比较或合并简历中的经历、技能、学历和项目，也不建设资料差异合并界面。`Application.current_resume_id` 负责选定本次材料；intake 将 `resume_profile` 写入该 Resume，`ScreeningService` 从同一快照读取 HR 确认资料，并在没有确认资料时回退到该 Resume 的 AI 结构化草稿。Candidate 全局职业字段和其他 Resume 已从 Python 规则、DeepSeek 输入、快照和指纹链路移除；同一 Resume 重新结构化时保留自身的 HR 确认资料，不进行跨 Resume 合并。后端全量 601 项、前端 19 组测试与 3120 模块生产构建通过；真实 PostgreSQL 事务回滚验证确认 Resume JSONB 成功保存 `confirmed_profile` 且 Candidate 职业字段保持为空。未执行真实 DeepSeek 调用和浏览器人工验收。
 
 ### 小步骤 11：旧版退役与新版数据基线
 
@@ -889,6 +901,7 @@ Python 负责确定性规则得分、同维度占比归一化、五维加权、�
 - 所有联系方式匹配与冲突组合。
 - 同岗位有效 Application 并发拦截。
 - Resume 所属关系。
+- 同一 Candidate 的不同岗位 Resume 独立保存，不比较、不合并、不互相覆盖。
 - hr_direct/hr_screening 初始状态。
 - Candidate/Resume/Application/History 原子 rollback。
 - void、归档和删除保护。
@@ -918,6 +931,7 @@ Python 负责确定性规则得分、同维度占比归一化、五维加权、�
 - 相同指纹复用、force 重跑和并发幂等。
 - 新成功切换当前结果；新失败保留旧成功。
 - Job/Resume/Rubric 变化使旧结果过期。
+- 确定性规则、模型输入、快照和指纹只读取当前 Application 的 Resume；同一 Candidate 的其他 Resume 或全局职业画像不能改变本次评分。
 
 ### 23.6 批量
 
@@ -930,7 +944,7 @@ Python 负责确定性规则得分、同维度占比归一化、五维加权、�
 
 - 路由唯一、响应 Schema、稳定业务 code 和安全错误。
 - 页面数据来源真实，不生成演示分数。
-- HR 直接新增、AI 录入、候选人页过滤、详情聚合。
+- HR 直接新增、AI 录入、候选人页按 Application 过滤和岗位级详情跳转。
 - 结果详情、历史、失败、blocked、outdated 和确认文案。
 - TypeScript 严格检查、生产构建和窄屏布局。
 
@@ -979,9 +993,9 @@ HR 在运行 AI 前记录硬性条件、主要技能、优势、风险、大致�
 3. 初筛中心录入：自动评分后仍不进入候选人页；HR 通过后才进入。
 4. HR 备选不进入候选人页；改为通过后进入。
 5. HR 淘汰需要确认和原因，进入历史但数据不删除；撤销后回到审核。
-6. 手机/邮箱匹配同一 Candidate 时复用；任一冲突进入人工核对。
+6. 手机/邮箱匹配同一 Candidate 时只复用人员身份；不同岗位简历内容不同不提示合并，身份匹配冲突才进入人工核对。
 7. 同 Candidate 同 Job 有有效 Application 时拒绝重复创建。
-8. 同 Candidate 通过两个岗位时，候选人页出现两行，详情聚合两次申请。
+8. 同 Candidate 使用两份不同简历通过两个岗位时，候选人页出现两行且不展示跨岗位聚合入口；两次评分分别只使用各自 Application 的当前 Resume。
 9. 更换 Resume 后旧结果过期，重跑成功后保留两版结果。
 10. 修改 JobRequirements/Rubric 后旧结果过期，不自动重跑或改变 HR 决策。
 11. 新建岗位自动获得 standard Rubric，不调用模型；HR 可切换技术/非技术模板并先预览后发布。

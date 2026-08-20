@@ -65,6 +65,23 @@ try {
     ...baseItem,
     application: { ...baseItem.application, currentResumeId: null },
   }, false).label, '缺少简历');
+  assert.deepEqual(actions.getStage7SingleScreeningAction({
+    ...baseItem,
+    application: { ...baseItem.application, aiStatus: 'completed', currentScreeningResultId: 91 },
+    currentResult: { isOutdated: false },
+  }, false), {
+    allowed: true,
+    label: '强制重跑',
+    reason: '当前结果已最新；如需重新调用模型，必须确认并填写原因。',
+    requiresForceConfirmation: true,
+  });
+
+  assert.equal(actions.buildStage7ForceRerunInput('   '), null);
+  assert.deepEqual(actions.buildStage7ForceRerunInput('  HR 主动复核模型判断  '), {
+    force: true,
+    confirm_force: true,
+    reason: 'HR 主动复核模型判断',
+  });
 
   const pendingIds = new Set();
   assert.equal(actions.beginStage7SingleScreening(pendingIds, 31), true);
@@ -89,9 +106,21 @@ try {
     'AI 初筛已完成',
     'SCREENING_ALREADY_RUNNING',
     '开始批量初筛',
+    'openForceRerunConfirmation',
+    'buildStage7ForceRerunInput',
+    '确认强制重跑 AI 初筛？',
+    '这不是普通重试',
+    '原评分仍保留在历史中',
   ]) {
     assert.ok(pageSource.includes(text), `单人评分页面缺少交互保护：${text}`);
   }
+
+  const styles = await readFile(
+    new URL('../src/features/recruitment/styles/screening.css', import.meta.url),
+    'utf8',
+  );
+  assert.match(styles, /\.recruitment-force-rerun-context\s*\{/s);
+  assert.match(styles, /@media\s*\(max-width:\s*560px\)[\s\S]*?\.recruitment-force-rerun-context\s*\{/s);
 
   console.log('STAGE7_SINGLE_SCREENING_UI_TEST_OK');
 } finally {

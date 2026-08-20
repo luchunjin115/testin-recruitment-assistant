@@ -12,7 +12,7 @@ const styles = await readFile(
 );
 
 for (const expectedText of [
-  '阶段 5 · 简历智能识别',
+  '阶段 7 · HR 人工直通',
   '简历智能识别',
   '文件已上传',
   '内容已读取',

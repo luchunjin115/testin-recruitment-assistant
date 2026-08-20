@@ -10,6 +10,7 @@ from app.prompts.screening_rubric_templates import get_rubric_template
 from app.schemas.screening_rubric import (
     ScreeningRubricGenerateRequest,
     ScreeningRubricItemAssistRequest,
+    ScreeningRubricShareOptimizationRequest,
 )
 from app.services.screening_rubric_service import (
     ScreeningRubricDraftAlreadyExistsError,
@@ -60,6 +61,7 @@ def make_adapter(*, content: str | None = None, error: Exception | None = None) 
         side_effect=error,
     )
     adapter.assist_item = AsyncMock()
+    adapter.optimize_shares = AsyncMock()
     return adapter
 
 
@@ -209,3 +211,82 @@ class ScreeningRubricGenerationServiceTest(IsolatedAsyncioTestCase):
         self.db.add_all.assert_not_called()
         self.db.commit.assert_not_awaited()
         self.assertEqual(self.db.rollback.await_count, 2)
+
+    async def test_share_optimization_returns_exact_item_suggestions_without_writing(self) -> None:
+        fingerprint = self.service.build_job_fingerprint(
+            self.service._generation_job_context(self.job)
+        )
+        draft = make_rubric(rubric_id=12, version=2, is_current=False)
+        draft.status = "draft"
+        draft.job_fingerprint = fingerprint
+        semantic_items = list(get_rubric_template("technical").semantic_items)
+        suggestions = [
+            {
+                "key": item.key,
+                "suggested_share": min(100, item.suggested_share + 1),
+                "reason": f"结合岗位职责校准 {item.name} 的相对重要程度",
+            }
+            for item in semantic_items
+        ]
+        adapter = make_adapter()
+        adapter.optimize_shares.return_value = adapter_result(json.dumps({
+            "schema_version": "1.0",
+            "rationale": "优先突出核心职责与可验证的项目证据",
+            "items": suggestions,
+        }, ensure_ascii=False))
+        self.db.get.return_value = self.job
+        self.db.scalar.side_effect = [draft, self.job, draft]
+
+        response = await self.service.optimize_draft_shares(
+            self.db,
+            1,
+            ScreeningRubricShareOptimizationRequest(
+                expected_draft_id=draft.id,
+                expected_job_fingerprint=fingerprint,
+                weights={
+                    "must_have_requirements": 40,
+                    "work_experience_relevance": 25,
+                    "projects_and_capability": 20,
+                    "preferred_qualifications": 10,
+                    "keywords_and_additional": 5,
+                },
+                semantic_items=semantic_items,
+            ),
+            adapter=adapter,
+        )
+
+        self.assertEqual(response.suggestion.rationale, "优先突出核心职责与可验证的项目证据")
+        self.assertEqual(
+            {item.key for item in response.suggestion.items},
+            {item.key for item in semantic_items},
+        )
+        adapter.optimize_shares.assert_awaited_once()
+        self.db.add_all.assert_not_called()
+        self.db.commit.assert_not_awaited()
+        self.assertEqual(self.db.rollback.await_count, 2)
+
+    def test_share_optimization_rejects_missing_or_new_item_keys(self) -> None:
+        semantic_items = list(get_rubric_template("technical").semantic_items)
+        invalid_items = [
+            {
+                "key": item.key,
+                "suggested_share": item.suggested_share,
+                "reason": "保持当前相对重要程度",
+            }
+            for item in semantic_items[:-1]
+        ]
+        invalid_items.append({
+            "key": "invented_by_model",
+            "suggested_share": 20,
+            "reason": "模型不应新增评分项",
+        })
+
+        with self.assertRaises(ScreeningRubricGenerationInvalidOutputError):
+            self.service._parse_share_optimization(
+                json.dumps({
+                    "schema_version": "1.0",
+                    "rationale": "错误建议",
+                    "items": invalid_items,
+                }, ensure_ascii=False),
+                expected_keys=[item.key for item in semantic_items],
+            )
