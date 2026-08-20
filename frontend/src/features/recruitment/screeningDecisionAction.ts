@@ -10,19 +10,12 @@ import type {
 } from './types/applicationScreening';
 
 export type Stage7DecisionKind = 'pass' | 'backup' | 'reject' | 'undo_rejection';
-
-export type Stage7DecisionEntry = {
-  allowed: boolean;
-  label: string;
-  reason: string;
-};
-
+export type Stage7DecisionEntry = { allowed: boolean; label: string; reason: string };
 export type Stage7DecisionSubmission =
   | { action: 'pass'; input: Stage7PassApplicationInput }
   | { action: 'backup'; input: Stage7BackupApplicationInput }
   | { action: 'reject'; input: Stage7RejectApplicationInput }
   | { action: 'undo_rejection'; input: Stage7ReverseDecisionInput };
-
 export type Stage7DecisionBuildResult =
   | { valid: true; submission: Stage7DecisionSubmission }
   | { valid: false; message: string };
@@ -33,10 +26,7 @@ export const STAGE7_DECISION_FAIRNESS_PROHIBITED_TERMS = [
   'marital', 'married', 'pregnancy', 'birthplace', 'prestigious university',
 ] as const;
 
-export const STAGE7_BACKUP_REASON_OPTIONS: Array<{
-  value: Stage7BackupReasonCode;
-  label: string;
-}> = [
+export const STAGE7_BACKUP_REASON_OPTIONS: Array<{ value: Stage7BackupReasonCode; label: string }> = [
   { value: 'minor_capability_gap', label: '存在少量能力差距' },
   { value: 'waiting_for_comparison', label: '等待与其他候选人比较' },
   { value: 'limited_headcount', label: '当前招聘名额有限' },
@@ -45,10 +35,7 @@ export const STAGE7_BACKUP_REASON_OPTIONS: Array<{
   { value: 'availability_pending', label: '到岗时间待确认' },
 ];
 
-export const STAGE7_REJECT_REASON_OPTIONS: Array<{
-  value: Stage7RejectReasonCode;
-  label: string;
-}> = [
+export const STAGE7_REJECT_REASON_OPTIONS: Array<{ value: Stage7RejectReasonCode; label: string }> = [
   { value: 'required_skill_missing', label: '缺少岗位必备技能' },
   { value: 'work_experience_insufficient', label: '相关工作年限不足' },
   { value: 'education_requirement_not_met', label: '学历层级未达到岗位要求' },
@@ -72,10 +59,7 @@ export const getStage7DecisionEntry = (
   pending: boolean,
 ): Stage7DecisionEntry => {
   const { application } = item;
-  if (pending) return { allowed: false, label: '正在处理', reason: '这份申请已有操作正在提交，请勿重复操作。' };
-  if (application.aiStatus === 'screening') {
-    return { allowed: false, label: '等待评分', reason: 'AI 评分执行中不能修改 HR 决策。' };
-  }
+  if (pending) return { allowed: false, label: '正在处理', reason: '这份申请正在提交，请勿重复操作。' };
   if (application.lifecycleStatus === 'voided') {
     return { allowed: false, label: '申请已作废', reason: '作废申请不能继续执行 HR 决策。' };
   }
@@ -91,25 +75,14 @@ export const getStage7DecisionEntry = (
   if (application.lifecycleStatus !== 'active') {
     return { allowed: false, label: '流程已结束', reason: '只有有效申请可以执行 HR 决策。' };
   }
-  if (application.hrDecision === 'pending') {
-    const ready = application.recruitmentStage === 'hr_review'
-      && ['completed', 'blocked', 'failed'].includes(application.aiStatus);
-    return {
-      allowed: ready,
-      label: ready ? '作出 HR 决策' : '等待 AI 终态',
-      reason: ready ? '结合评分证据决定通过、备选或淘汰。' : 'AI 进入完成、失败或资料不足后才能决策。',
-    };
-  }
   return {
     allowed: true,
-    label: '调整 HR 决策',
-    reason: '改变已有决定必须填写原因并保留历史。',
+    label: application.hrDecision === 'pending' ? '作出 HR 决策' : '调整 HR 决策',
+    reason: 'HR 可以独立决定通过、备选或淘汰，改变已有决定时需说明原因。',
   };
 };
 
-export const getStage7DecisionKinds = (
-  item: Stage7ScreeningCenterItem,
-): Stage7DecisionKind[] => {
+export const getStage7DecisionKinds = (item: Stage7ScreeningCenterItem): Stage7DecisionKind[] => {
   switch (item.application.hrDecision) {
     case 'pending': return ['pass', 'backup', 'reject'];
     case 'passed': return ['backup', 'reject'];
@@ -119,27 +92,17 @@ export const getStage7DecisionKinds = (
 };
 
 export const getStage7PassPolicy = (item: Stage7ScreeningCenterItem) => {
-  const { application, currentResult } = item;
-  const modelSupportsPass = currentResult?.executionStatus === 'completed'
-    && !currentResult.isOutdated
-    && currentResult.hardPass === true
-    && currentResult.evidenceCoverageRate !== null
-    && currentResult.evidenceCoverageRate >= 0.6
-    && ['strong_recommend', 'recommend'].includes(currentResult.recommendation || '');
-  const isReversal = application.hrDecision !== 'pending';
+  const isReversal = item.application.hrDecision !== 'pending';
   return {
-    reasonCode: modelSupportsPass ? 'meets_requirements' as const : 'manual_override' as const,
-    detailRequired: !modelSupportsPass || isReversal,
-    label: modelSupportsPass ? '符合岗位要求' : '人工覆盖 AI 建议或资料状态',
-    note: modelSupportsPass
-      ? (isReversal ? 'AI 证据支持通过，但从备选改为通过仍必须说明原因。' : '当前 AI 结论、硬性条件和证据覆盖率支持通过。')
-      : '当前 AI 结论不足以直接支持通过，HR 仍可决定通过，但必须说明岗位相关依据。',
+    reasonCode: 'meets_requirements' as const,
+    detailRequired: isReversal,
+    label: '符合岗位要求',
+    note: isReversal ? '改变已有决定必须填写岗位相关说明。' : 'HR 根据岗位要求和候选人材料独立判断。',
   };
 };
 
 const normalizeDetail = (value: string) => value.trim() || null;
-
-const findStage7FairnessProhibitedTerm = (value: string) => {
+const findProhibitedTerm = (value: string) => {
   const normalized = value.toLocaleLowerCase();
   return STAGE7_DECISION_FAIRNESS_PROHIBITED_TERMS.find(term => {
     const normalizedTerm = term.toLocaleLowerCase();
@@ -161,76 +124,34 @@ export const buildStage7DecisionSubmission = (
   }
   const detail = normalizeDetail(reasonDetail);
   const isReversal = item.application.hrDecision !== 'pending';
-  if (detail) {
-    const prohibitedTerm = findStage7FairnessProhibitedTerm(detail);
-    if (prohibitedTerm) {
-      return {
-        valid: false,
-        message: `决定说明不能使用“${prohibitedTerm}”等与岗位能力无关的敏感依据。`,
-      };
-    }
+  const prohibitedTerm = detail ? findProhibitedTerm(detail) : null;
+  if (prohibitedTerm) {
+    return { valid: false, message: `决定说明不能使用“${prohibitedTerm}”等与岗位能力无关的敏感依据。` };
   }
 
   if (kind === 'pass') {
-    const policy = getStage7PassPolicy(item);
-    if (policy.detailRequired && !detail) {
-      return { valid: false, message: '这次通过属于人工覆盖或决定反转，必须填写岗位相关说明。' };
-    }
-    return {
-      valid: true,
-      submission: {
-        action: 'pass',
-        input: { reason_code: policy.reasonCode, reason_detail: detail },
-      },
-    };
+    if (isReversal && !detail) return { valid: false, message: '改变已有决定必须填写岗位相关说明。' };
+    return { valid: true, submission: { action: 'pass', input: { reason_code: 'meets_requirements', reason_detail: detail } } };
   }
-
   if (kind === 'backup') {
-    const validCode = STAGE7_BACKUP_REASON_OPTIONS.some(option => option.value === reasonCode);
-    if (!validCode) return { valid: false, message: '请选择进入备选的岗位相关原因。' };
+    if (!STAGE7_BACKUP_REASON_OPTIONS.some(option => option.value === reasonCode)) {
+      return { valid: false, message: '请选择进入备选的岗位相关原因。' };
+    }
     if (isReversal && !detail) return { valid: false, message: '改变已有决定必须填写说明。' };
-    return {
-      valid: true,
-      submission: {
-        action: 'backup',
-        input: {
-          reason_code: reasonCode as Stage7BackupReasonCode,
-          reason_detail: detail,
-        },
-      },
-    };
+    return { valid: true, submission: { action: 'backup', input: { reason_code: reasonCode as Stage7BackupReasonCode, reason_detail: detail } } };
   }
-
   if (kind === 'reject') {
-    const validCode = STAGE7_REJECT_REASON_OPTIONS.some(option => option.value === reasonCode);
-    if (!validCode) return { valid: false, message: '请选择淘汰的岗位相关原因。' };
+    if (!STAGE7_REJECT_REASON_OPTIONS.some(option => option.value === reasonCode)) {
+      return { valid: false, message: '请选择淘汰的岗位相关原因。' };
+    }
     if (isReversal && !detail) return { valid: false, message: '改变已有决定必须填写说明。' };
-    return {
-      valid: true,
-      submission: {
-        action: 'reject',
-        input: {
-          reason_code: reasonCode as Stage7RejectReasonCode,
-          reason_detail: detail,
-          confirmed: true,
-        },
-      },
-    };
+    return { valid: true, submission: { action: 'reject', input: { reason_code: reasonCode as Stage7RejectReasonCode, reason_detail: detail, confirmed: true } } };
   }
-
-  const validCode = STAGE7_REVERSAL_REASON_OPTIONS.some(option => option.value === reasonCode);
-  if (!validCode) return { valid: false, message: '请选择撤销淘汰的原因。' };
+  if (!STAGE7_REVERSAL_REASON_OPTIONS.some(option => option.value === reasonCode)) {
+    return { valid: false, message: '请选择撤销淘汰的原因。' };
+  }
   if (!detail) return { valid: false, message: '撤销淘汰必须填写具体说明。' };
-  return {
-    valid: true,
-    submission: {
-      action: 'undo_rejection',
-      input: {
-        reason_code: reasonCode as Stage7DecisionReversalReasonCode,
-        reason_detail: detail,
-      },
-    },
-  };
+  return { valid: true, submission: { action: 'undo_rejection', input: { reason_code: reasonCode as Stage7DecisionReversalReasonCode, reason_detail: detail } } };
 };
 
 export const getStage7DecisionErrorMessage = (code: string | null, message: string) => {

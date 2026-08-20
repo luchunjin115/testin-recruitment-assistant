@@ -16,7 +16,7 @@ from pydantic import (
 )
 
 from app.schemas.application import HRDecision, PositiveId, RecruitmentStage
-from app.schemas.screening_rubric import FAIRNESS_PROHIBITED_TERMS
+from app.schemas.fairness import FAIRNESS_PROHIBITED_TERMS
 
 
 class StageHistoryActorType(str, Enum):
@@ -28,7 +28,6 @@ class StageHistoryReasonCode(str, Enum):
     APPLICATION_CREATED = "application_created"
     HR_DIRECT_ENTRY = "hr_direct_entry"
     MEETS_REQUIREMENTS = "meets_requirements"
-    MANUAL_OVERRIDE = "manual_override"
     MINOR_CAPABILITY_GAP = "minor_capability_gap"
     WAITING_FOR_COMPARISON = "waiting_for_comparison"
     LIMITED_HEADCOUNT = "limited_headcount"
@@ -52,7 +51,6 @@ class StageHistoryReasonCode(str, Enum):
 
 class PassReasonCode(str, Enum):
     MEETS_REQUIREMENTS = "meets_requirements"
-    MANUAL_OVERRIDE = "manual_override"
 
 
 class BackupReasonCode(str, Enum):
@@ -124,13 +122,6 @@ class PassApplicationRequest(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    @model_validator(mode="after")
-    def require_manual_override_detail(self) -> PassApplicationRequest:
-        if self.reason_code is PassReasonCode.MANUAL_OVERRIDE and self.reason_detail is None:
-            raise ValueError("人工覆盖 AI 建议时必须填写说明")
-        return self
-
-
 class BackupApplicationRequest(BaseModel):
     reason_code: BackupReasonCode
     reason_detail: OptionalReasonDetail | None = None
@@ -184,9 +175,6 @@ class StageHistoryCreate(BaseModel):
     actor_type: StageHistoryActorType
     actor_id: str | None = Field(default=None, max_length=100)
     actor_label: ActorLabel
-    screening_result_id: PositiveId | None = None
-    overrides_ai_recommendation: StrictBool = False
-
     model_config = ConfigDict(extra="forbid")
 
 

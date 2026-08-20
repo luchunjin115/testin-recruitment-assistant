@@ -1,6 +1,5 @@
 from functools import lru_cache
 from pathlib import Path
-from decimal import Decimal
 from urllib.parse import quote_plus
 from typing import List, Optional
 
@@ -70,42 +69,6 @@ class Settings(BaseSettings):
         min_length=1,
         max_length=20,
     )
-    RUBRIC_GENERATION_ENABLED: bool = True
-    RUBRIC_GENERATION_MODEL: str = "deepseek-v4-flash"
-    RUBRIC_GENERATION_TIMEOUT_SECONDS: float = Field(default=90, gt=0, le=600)
-    RUBRIC_GENERATION_MAX_OUTPUT_TOKENS: int = Field(
-        default=8_000,
-        ge=1_000,
-        le=384_000,
-    )
-    RUBRIC_GENERATION_PROMPT_VERSION: str = "rubric_generation_v2"
-    RUBRIC_ITEM_ASSIST_PROMPT_VERSION: str = "rubric_item_assist_v1"
-    RUBRIC_SHARE_OPTIMIZATION_PROMPT_VERSION: str = "rubric_share_optimization_v1"
-    RUBRIC_GENERATION_SCHEMA_VERSION: str = "1.0"
-    SCREENING_MODEL_ENABLED: bool = True
-    SCREENING_MODEL_NAME: str = "deepseek-v4-flash"
-    SCREENING_MODEL_TIMEOUT_SECONDS: float = Field(default=90, gt=0, le=600)
-    SCREENING_MODEL_MAX_INPUT_CHARS: int = Field(
-        default=160_000,
-        ge=10_000,
-        le=1_000_000,
-    )
-    SCREENING_MODEL_MAX_OUTPUT_TOKENS: int = Field(
-        default=8_000,
-        ge=1_000,
-        le=384_000,
-    )
-    SCREENING_MODEL_PROMPT_VERSION: str = "screening_evaluation_v3"
-    SCREENING_MODEL_SCHEMA_VERSION: str = "1.0"
-    SCREENING_MODEL_INPUT_COST_PER_MILLION: Decimal | None = Field(
-        default=None,
-        ge=0,
-    )
-    SCREENING_MODEL_OUTPUT_COST_PER_MILLION: Decimal | None = Field(
-        default=None,
-        ge=0,
-    )
-
     STORAGE_DIR: str = str((BACKEND_DIR / "storage").resolve())
     MAX_FILE_SIZE_MB: int = 10
     RESUME_CLEANUP_ENABLED: bool = True

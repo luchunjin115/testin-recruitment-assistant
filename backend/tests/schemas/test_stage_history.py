@@ -17,18 +17,13 @@ from app.schemas import (
 
 
 class DecisionRequestSchemaTest(TestCase):
-    def test_pass_reason_is_fixed_and_manual_override_needs_detail(self) -> None:
+    def test_pass_reason_is_fixed(self) -> None:
         request = PassApplicationRequest(reason_code="meets_requirements")
         self.assertEqual(request.reason_code.value, "meets_requirements")
 
         with self.assertRaises(ValidationError):
             PassApplicationRequest(reason_code="manual_override")
 
-        override = PassApplicationRequest(
-            reason_code="manual_override",
-            reason_detail="  HR 已核对补充证明材料  ",
-        )
-        self.assertEqual(override.reason_detail, "HR 已核对补充证明材料")
 
     def test_backup_and_reject_only_accept_job_related_reason_codes(self) -> None:
         backup = BackupApplicationRequest(reason_code="limited_headcount")
@@ -75,7 +70,7 @@ class DecisionRequestSchemaTest(TestCase):
     def test_decision_reason_rejects_fairness_prohibited_content(self) -> None:
         invalid_requests = (
             lambda: PassApplicationRequest(
-                reason_code="manual_override",
+                reason_code="meets_requirements",
                 reason_detail="候选人年龄更合适",
             ),
             lambda: BackupApplicationRequest(
@@ -102,7 +97,7 @@ class DecisionRequestSchemaTest(TestCase):
                 make_request()
 
         valid = PassApplicationRequest(
-            reason_code="manual_override",
+            reason_code="meets_requirements",
             reason_detail="HR reviewed managed service delivery evidence",
         )
         self.assertIn("managed", valid.reason_detail)
@@ -121,8 +116,6 @@ class StageHistorySchemaTest(TestCase):
             "actor_type": "hr",
             "actor_id": None,
             "actor_label": "本地 HR（未认证）",
-            "screening_result_id": 2,
-            "overrides_ai_recommendation": False,
         }
 
     def test_create_uses_stable_stage_decision_actor_and_reason_enums(self) -> None:
@@ -141,7 +134,6 @@ class StageHistorySchemaTest(TestCase):
                 "from_hr_decision": None,
                 "to_hr_decision": "pending",
                 "reason_code": "application_created",
-                "screening_result_id": None,
             }
         )
 
@@ -156,7 +148,6 @@ class StageHistorySchemaTest(TestCase):
             ("to_hr_decision", "approved"),
             ("reason_code", "free_text_reason"),
             ("actor_type", "ai"),
-            ("overrides_ai_recommendation", 1),
         ):
             payload = self.valid_payload()
             payload[field] = value

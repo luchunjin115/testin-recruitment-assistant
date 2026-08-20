@@ -14,7 +14,6 @@ from .api import jobs
 from .api import project_experiences
 from .api import reports
 from .api import resumes
-from .api import screening_results
 from .api import work_experiences
 from .core.config import get_settings
 
@@ -78,5 +77,4 @@ app.include_router(jobs.router, prefix="/api/v2")
 app.include_router(project_experiences.router, prefix="/api/v2")
 app.include_router(reports.router, prefix="/api/v2")
 app.include_router(resumes.router, prefix="/api/v2")
-app.include_router(screening_results.router, prefix="/api/v2")
 app.include_router(work_experiences.router, prefix="/api/v2")

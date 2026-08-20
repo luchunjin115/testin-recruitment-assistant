@@ -27,7 +27,6 @@ def make_application(
     *,
     lifecycle_status: str = "active",
     recruitment_stage: str = "hr_review",
-    ai_status: str = "completed",
     hr_decision: str = "pending",
 ) -> Application:
     return Application(
@@ -38,9 +37,7 @@ def make_application(
         source="hr_screening",
         lifecycle_status=lifecycle_status,
         recruitment_stage=recruitment_stage,
-        ai_status=ai_status,
         hr_decision=hr_decision,
-        current_screening_result_id=9,
         applied_at=TEST_TIME,
         created_at=TEST_TIME,
         updated_at=TEST_TIME,
@@ -87,8 +84,6 @@ class ApplicationDecisionServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(history.from_recruitment_stage, "hr_review")
         self.assertEqual(history.to_recruitment_stage, "screening_passed")
         self.assertEqual(history.reason_code, "meets_requirements")
-        self.assertEqual(history.screening_result_id, 9)
-        self.assertFalse(history.overrides_ai_recommendation)
         self.assertIsInstance(activity, ActivityLog)
         self.assertEqual(activity.action, "application_passed")
         self.assertEqual(activity.target_type, "application")
@@ -98,23 +93,6 @@ class ApplicationDecisionServiceTest(IsolatedAsyncioTestCase):
         self.db.commit.assert_awaited_once()
         self.db.refresh.assert_awaited_once_with(application)
         self.db.rollback.assert_not_awaited()
-
-    async def test_manual_override_is_explicitly_recorded(self) -> None:
-        application = make_application()
-        self.db.scalar.return_value = application
-
-        await self.service.pass_application(
-            self.db,
-            1,
-            PassApplicationRequest(
-                reason_code="manual_override",
-                reason_detail="HR 根据补充作品集确认通过",
-            ),
-        )
-
-        history, activity = self.db.add_all.call_args.args[0]
-        self.assertTrue(history.overrides_ai_recommendation)
-        self.assertTrue(activity.detail["overrides_ai_recommendation"])
 
     async def test_backup_and_reject_use_fixed_target_states(self) -> None:
         backup_application = make_application()
@@ -193,7 +171,6 @@ class ApplicationDecisionServiceTest(IsolatedAsyncioTestCase):
         application = make_application(
             lifecycle_status="ended",
             recruitment_stage="rejected",
-            ai_status="failed",
             hr_decision="rejected",
         )
         self.db.scalar.side_effect = [application, None]
@@ -263,8 +240,6 @@ class ApplicationDecisionServiceTest(IsolatedAsyncioTestCase):
     async def test_missing_and_invalid_transitions_roll_back_without_audit(self) -> None:
         cases = (
             None,
-            make_application(ai_status="screening"),
-            make_application(recruitment_stage="applied", ai_status="not_started"),
             make_application(
                 recruitment_stage="screening_passed",
                 hr_decision="passed",

@@ -12,7 +12,6 @@ from app.core.database import Base
 if TYPE_CHECKING:
     from app.models.candidate import Candidate
     from app.models.job import Job
-    from app.models.screening_result import ScreeningResult
 
 
 class Report(Base):
@@ -21,13 +20,12 @@ class Report(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     candidate_id: Mapped[int] = mapped_column(ForeignKey("candidates.id"), index=True)
     job_id: Mapped[int] = mapped_column(ForeignKey("jobs.id"), index=True)
-    screening_id: Mapped[int | None] = mapped_column(ForeignKey("screening_results.id"), index=True)
     title: Mapped[str | None] = mapped_column(String(200))
     content: Mapped[str] = mapped_column(Text, nullable=False)
     report_type: Mapped[str] = mapped_column(
         String(20),
-        default="screening",
-        server_default="screening",
+        default="general",
+        server_default="general",
         index=True,
     )
     format: Mapped[str] = mapped_column(
@@ -45,4 +43,3 @@ class Report(Base):
 
     candidate: Mapped["Candidate"] = relationship(back_populates="reports")
     job: Mapped["Job"] = relationship(back_populates="reports")
-    screening_result: Mapped["ScreeningResult | None"] = relationship(back_populates="reports")

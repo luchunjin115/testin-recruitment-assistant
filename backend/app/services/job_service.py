@@ -4,22 +4,20 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from pydantic import ValidationError
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.candidate import Candidate
+from app.models.application import Application
 from app.models.job import Job
-from app.models.job_screening_rubric import JobScreeningRubric
 from app.models.report import Report
 from app.models.resume import Resume
-from app.models.screening_result import ScreeningResult
 from app.schemas.job import (
     JobCreate,
     JobRequirementsV1,
     JobStatus,
     JobUpdate,
 )
-from app.services.screening_rubric_service import ScreeningRubricService
 
 
 class JobServiceError(Exception):
@@ -48,18 +46,18 @@ class JobMustBeClosedBeforeDeleteError(JobServiceError):
 class JobReferenceCounts:
     candidates: int
     resumes: int
-    screening_results: int
+    applications: int
     reports: int
 
     @property
     def total(self) -> int:
-        return self.candidates + self.resumes + self.screening_results + self.reports
+        return self.candidates + self.resumes + self.applications + self.reports
 
     def as_dict(self) -> dict[str, int]:
         return {
             "candidates": self.candidates,
             "resumes": self.resumes,
-            "screening_results": self.screening_results,
+            "applications": self.applications,
             "reports": self.reports,
         }
 
@@ -90,13 +88,6 @@ class JobService:
 
             job = Job(**payload)
             db.add(job)
-            await db.flush()
-            db.add(
-                ScreeningRubricService.build_default_rubric(
-                    job_id=job.id,
-                    job_fingerprint=ScreeningRubricService.build_job_fingerprint(payload),
-                )
-            )
             await db.commit()
             await db.refresh(job)
             return job
@@ -133,9 +124,6 @@ class JobService:
 
             changes = data.model_dump(exclude_unset=True, mode="json")
             current_values = self._job_values(job)
-            old_fingerprint = ScreeningRubricService.build_job_fingerprint(
-                current_values
-            )
             prospective = dict(current_values)
             prospective.update(changes)
             if self._status_value(job.status) == JobStatus.OPEN.value:
@@ -143,18 +131,6 @@ class JobService:
 
             for field, value in changes.items():
                 setattr(job, field, value)
-
-            new_fingerprint = ScreeningRubricService.build_job_fingerprint(
-                prospective
-            )
-            if new_fingerprint != old_fingerprint:
-                await ScreeningRubricService().mark_current_stale(
-                    db,
-                    job_id=job_id,
-                    old_fingerprint=old_fingerprint,
-                    new_fingerprint=new_fingerprint,
-                    reason="岗位评分相关内容已修改，需要 HR 重新确认评分标准",
-                )
 
             await db.commit()
             await db.refresh(job)
@@ -207,10 +183,10 @@ class JobService:
             .where(Resume.job_id == job_id)
             .scalar_subquery()
             .label("resumes"),
-            select(func.count(ScreeningResult.id))
-            .where(ScreeningResult.job_id == job_id)
+            select(func.count(Application.id))
+            .where(Application.job_id == job_id)
             .scalar_subquery()
-            .label("screening_results"),
+            .label("applications"),
             select(func.count(Report.id))
             .where(Report.job_id == job_id)
             .scalar_subquery()
@@ -220,7 +196,7 @@ class JobService:
         return JobReferenceCounts(
             candidates=int(row.candidates or 0),
             resumes=int(row.resumes or 0),
-            screening_results=int(row.screening_results or 0),
+            applications=int(row.applications or 0),
             reports=int(row.reports or 0),
         )
 
@@ -240,11 +216,6 @@ class JobService:
             if references.total:
                 raise JobHasReferencesError(references)
 
-            await db.execute(
-                delete(JobScreeningRubric).where(
-                    JobScreeningRubric.job_id == job_id
-                )
-            )
             await db.delete(job)
             await db.commit()
             return True

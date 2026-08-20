@@ -1,11 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ArrowRightOutlined,
   ExportOutlined,
   EyeOutlined,
   FileAddOutlined,
   FileTextOutlined,
-  LinkOutlined,
   ReloadOutlined,
   SearchOutlined,
   SolutionOutlined,
@@ -100,7 +98,7 @@ const RecruitmentReportCenter: React.FC = () => {
 
   if (loadState.status === 'loading') {
     return (
-      <main aria-busy="true" aria-label="初筛报告加载中" className="recruitment-main">
+      <main aria-busy="true" aria-label="通用报告加载中" className="recruitment-main">
         <section className="recruitment-page-heading"><Skeleton active paragraph={{ rows: 2 }} /></section>
         <section className="recruitment-stat-grid">
           {[0, 1, 2, 3].map(item => <article className="recruitment-stat-card" key={item}><Skeleton active paragraph={false} /></article>)}
@@ -114,13 +112,13 @@ const RecruitmentReportCenter: React.FC = () => {
     return (
       <main className="recruitment-main">
         <section className="recruitment-page-heading">
-          <div><span className="recruitment-section-kicker">新版报告库 · 只读</span><h2>初筛报告</h2><p>集中查看已经保存的报告，不在本页生成新内容。</p></div>
+          <div><span className="recruitment-section-kicker">通用报告库 · 只读</span><h2>报告</h2><p>集中查看已经保存的通用报告，不在本页生成新内容。</p></div>
         </section>
         <Alert
           action={<Button icon={<ReloadOutlined />} onClick={() => void loadReports()}>重新加载</Button>}
           className="recruitment-dashboard-alert recruitment-section-gap"
-          description={`请确认 FastAPI 已启动，且 /api/v2/reports、/api/v2/candidates、/api/v2/jobs 与 /api/v2/screening-results 可访问。技术信息：${loadState.message}`}
-          message="新版初筛报告数据加载失败"
+          description={`请确认 FastAPI 已启动，且 /api/v2/reports、/api/v2/candidates 与 /api/v2/jobs 可访问。技术信息：${loadState.message}`}
+          message="通用报告数据加载失败"
           showIcon
           type="error"
         />
@@ -129,12 +127,10 @@ const RecruitmentReportCenter: React.FC = () => {
   }
 
   const { data } = loadState;
-  const linkedScreeningCount = data.items.filter(item => item.screeningId !== null).length;
   const coveredCandidateCount = new Set(data.items.map(item => item.candidateId)).size;
   const coveredJobCount = new Set(data.items.map(item => item.jobId)).size;
   const stats = [
-    { label: '初筛报告', value: data.totalReports, note: '新版 reports 表真实记录', icon: <FileTextOutlined />, tone: 'blue' },
-    { label: '已关联初筛', value: linkedScreeningCount, note: `已有初筛结果 ${data.totalScreeningResults} 条`, icon: <LinkOutlined />, tone: 'green' },
+    { label: '通用报告', value: data.totalReports, note: 'reports 表真实记录', icon: <FileTextOutlined />, tone: 'blue' },
     { label: '覆盖候选人', value: coveredCandidateCount, note: `候选人库共 ${data.totalCandidates} 人`, icon: <TeamOutlined />, tone: 'orange' },
     { label: '覆盖岗位', value: coveredJobCount, note: `岗位库共 ${data.totalJobs} 个`, icon: <SolutionOutlined />, tone: 'red' },
   ];
@@ -144,15 +140,15 @@ const RecruitmentReportCenter: React.FC = () => {
       <section className="recruitment-page-heading">
         <div>
           <span className="recruitment-section-kicker">新版报告库 · 数据来源 /api/v2 · 只读</span>
-          <h2>初筛报告</h2>
-          <p>查看已保存的报告正文和业务关联；本页不会生成报告、调用 LLM 或导出文件。</p>
+          <h2>报告</h2>
+          <p>查看已保存的通用报告正文和业务关联；本页不会生成报告、调用 LLM 或导出文件。</p>
         </div>
         <Tooltip title="报告生成属于后续 report_gen 工作流，本步不开放">
           <Button disabled icon={<FileAddOutlined />} type="primary">生成报告 · 后续</Button>
         </Tooltip>
       </section>
 
-      <section aria-label="初筛报告统计" className="recruitment-stat-grid">
+      <section aria-label="通用报告统计" className="recruitment-stat-grid">
         {stats.map(stat => (
           <article className="recruitment-stat-card" key={stat.label}>
             <div className={`recruitment-stat-icon is-${stat.tone}`}>{stat.icon}</div>
@@ -170,7 +166,7 @@ const RecruitmentReportCenter: React.FC = () => {
           <div className="recruitment-report-filter-controls">
             <Input
               allowClear
-              aria-label="搜索初筛报告"
+              aria-label="搜索通用报告"
               onChange={event => setKeyword(event.target.value)}
               placeholder="搜索报告、候选人或岗位"
               prefix={<SearchOutlined />}
@@ -193,7 +189,7 @@ const RecruitmentReportCenter: React.FC = () => {
               options={typeOptions}
               value={typeFilter}
             />
-            <Button aria-label="刷新初筛报告" icon={<ReloadOutlined />} onClick={() => void loadReports()} />
+            <Button aria-label="刷新通用报告" icon={<ReloadOutlined />} onClick={() => void loadReports()} />
           </div>
         </div>
 
@@ -202,16 +198,14 @@ const RecruitmentReportCenter: React.FC = () => {
             className="recruitment-panel-empty recruitment-report-empty"
             description={(
               <div className="recruitment-empty-copy">
-                <strong>新版报告库目前没有初筛报告</strong>
-                <span>页面已连接 /api/v2/reports；筛选结果与报告是不同记录，当前不会自动把结果转换成报告。</span>
+                <strong>通用报告库目前没有记录</strong>
+                <span>页面已连接 /api/v2/reports；新版 AI 初筛报告将在后续步骤使用独立模型实现。</span>
               </div>
             )}
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           >
-            <div className="recruitment-report-data-boundary" aria-label="初筛结果和报告数量对比">
-              <span>已有初筛结果 <strong>{data.totalScreeningResults}</strong> 条</span>
-              <ArrowRightOutlined />
-              <span>已生成报告 <strong>{data.totalReports}</strong> 条</span>
+            <div className="recruitment-report-data-boundary" aria-label="通用报告数量">
+              <span>已保存报告 <strong>{data.totalReports}</strong> 条</span>
             </div>
             <Button disabled icon={<FileAddOutlined />}>报告生成能力 · 后续</Button>
           </Empty>
@@ -229,7 +223,7 @@ const RecruitmentReportCenter: React.FC = () => {
             <Button onClick={resetFilters}>清除筛选</Button>
           </Empty>
         ) : (
-          <div aria-label="新版初筛报告列表" className="recruitment-report-list" role="list">
+          <div aria-label="通用报告列表" className="recruitment-report-list" role="list">
             {filteredItems.map(item => (
               <article className="recruitment-report-item" key={item.id} role="listitem">
                 <div className="recruitment-report-item-main">
@@ -252,9 +246,7 @@ const RecruitmentReportCenter: React.FC = () => {
                 <div className="recruitment-report-preview">
                   <p>{item.content}</p>
                   <div>
-                    <span>{item.screeningId === null ? '未关联筛选结果' : `关联筛选结果 #${item.screeningId}`}</span>
-                    <span>匹配分 {item.screeningScore ?? '—'}</span>
-                    <span>{item.screeningRecommendation || '推荐结果未记录'}</span>
+                    <span>通用业务报告</span>
                     <span>生成于 {formatDateTime(item.generatedAt)}</span>
                   </div>
                 </div>
@@ -274,7 +266,7 @@ const RecruitmentReportCenter: React.FC = () => {
         )}
         onClose={() => setSelectedReport(null)}
         open={selectedReport !== null}
-        title={selectedReport?.title || '初筛报告'}
+        title={selectedReport?.title || '报告'}
         width="min(720px, 100vw)"
       >
         {selectedReport && (
@@ -290,7 +282,6 @@ const RecruitmentReportCenter: React.FC = () => {
               <div><span>应聘岗位</span><strong>{selectedReport.jobTitle}</strong></div>
               <div><span>报告类型</span><strong>{getReportTypeLabel(selectedReport.reportType)}</strong></div>
               <div><span>存储格式</span><strong>{getFormatLabel(selectedReport.format)}</strong></div>
-              <div><span>关联筛选</span><strong>{selectedReport.screeningId === null ? '未关联' : `#${selectedReport.screeningId}`}</strong></div>
               <div><span>更新时间</span><strong>{formatDateTime(selectedReport.updatedAt)}</strong></div>
             </div>
             <article className="recruitment-report-content">

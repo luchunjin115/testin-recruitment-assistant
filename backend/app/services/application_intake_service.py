@@ -251,8 +251,6 @@ class ApplicationIntakeService:
                 actor_type="hr",
                 actor_id=None,
                 actor_label=LOCAL_HR_ACTOR_LABEL,
-                screening_result_id=application.current_screening_result_id,
-                overrides_ai_recommendation=False,
             )
         )
         await db.flush()
@@ -361,7 +359,6 @@ class ApplicationIntakeService:
             source=data.source.value,
             lifecycle_status="active",
             recruitment_stage=recruitment_stage,
-            ai_status="not_started",
             hr_decision=hr_decision,
         )
 
@@ -385,8 +382,6 @@ class ApplicationIntakeService:
             actor_type="hr",
             actor_id=None,
             actor_label=LOCAL_HR_ACTOR_LABEL,
-            screening_result_id=None,
-            overrides_ai_recommendation=False,
         )
 
     @staticmethod

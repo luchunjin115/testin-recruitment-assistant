@@ -6,18 +6,15 @@ from app.models.report import Report
 from app.schemas.report import ReportCreate, ReportRead, ReportUpdate
 from app.services.report_service import (
     ReportDependencyNotFoundError,
-    ReportScreeningMismatchError,
     report_service,
 )
 
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 REPORT_NOT_FOUND = "报告不存在"
-REPORT_SCREENING_MISMATCH = "筛选结果与报告的候选人或岗位不一致"
 DEPENDENCY_NOT_FOUND = {
     "candidate": "候选人不存在",
     "job": "岗位不存在",
-    "screening_result": "筛选结果不存在",
 }
 
 
@@ -27,10 +24,7 @@ def raise_report_dependency_error(exc: Exception) -> None:
             status_code=status.HTTP_404_NOT_FOUND,
             detail=DEPENDENCY_NOT_FOUND[exc.resource],
         ) from exc
-    raise HTTPException(
-        status_code=status.HTTP_409_CONFLICT,
-        detail=REPORT_SCREENING_MISMATCH,
-    ) from exc
+    raise exc
 
 
 @router.post("", response_model=ReportRead, status_code=status.HTTP_201_CREATED)
@@ -40,7 +34,7 @@ async def create_report(
 ) -> Report:
     try:
         return await report_service.create_report(db, data)
-    except (ReportDependencyNotFoundError, ReportScreeningMismatchError) as exc:
+    except ReportDependencyNotFoundError as exc:
         raise_report_dependency_error(exc)
 
 
@@ -48,10 +42,9 @@ async def create_report(
 async def list_reports(
     candidate_id: int | None = Query(default=None, ge=1),
     job_id: int | None = Query(default=None, ge=1),
-    screening_id: int | None = Query(default=None, ge=1),
     db: AsyncSession = Depends(get_db),
 ) -> list[Report]:
-    return await report_service.list_reports(db, candidate_id, job_id, screening_id)
+    return await report_service.list_reports(db, candidate_id, job_id)
 
 
 @router.get("/{report_id}", response_model=ReportRead)
@@ -76,7 +69,7 @@ async def update_report(
 ) -> Report:
     try:
         report = await report_service.update_report(db, report_id, data)
-    except (ReportDependencyNotFoundError, ReportScreeningMismatchError) as exc:
+    except ReportDependencyNotFoundError as exc:
         raise_report_dependency_error(exc)
     if report is None:
         raise HTTPException(

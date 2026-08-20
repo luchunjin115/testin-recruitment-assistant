@@ -1,8 +1,8 @@
 # HR Agent 招聘提效平台
 
-一个面向公司内部 HR 团队的 AI 招聘工作台。项目使用 React、FastAPI 和 PostgreSQL 构建招聘业务主链，并在简历结构化、岗位评分标准和候选人初筛中接入可审计的 AI 能力。
+一个面向公司内部 HR 团队的 AI 招聘工作台。项目使用 React、FastAPI 和 PostgreSQL 构建招聘业务主链，并在简历结构化中接入可审计的 AI 能力。JD 驱动的新版 AI 初筛正在按阶段 7 设计重建。
 
-> 当前状态：阶段 4—6 已完成，阶段 7 正在进行前端交互收口。旧 React + FastAPI + SQLite + Mock LLM 演示系统及其演示数据已于 2026-08-18 完成退役，不再维护、启动或迁移。
+> 当前状态：阶段 4—6 已完成；阶段 7 的旧 Rubric、权重评分和 ScreeningResult 体系已删除，下一步实现新版 JobEvaluationPlan。旧 React + FastAPI + SQLite + Mock LLM 演示系统及其演示数据已于 2026-08-18 完成退役。
 
 ## 当前能做什么
 
@@ -11,11 +11,10 @@
 | 岗位管理 | 可用 | 创建、编辑、开放、关闭、重新开放和安全删除 |
 | 候选人管理 | 可用 | 列表、创建、详情和基础资料维护 |
 | 简历处理 | 可用 | PDF、DOCX、TXT 私有上传、原文提取、AI 结构化、人工核对后绑定候选人 |
-| Application 申请合同 | 后端可用 | 录入、身份解析、状态、历史和 HR 决策 API 已实现 |
-| 岗位 Rubric | 后端可用 | 模板、AI 草稿、人工辅助、发布、版本和过期控制 |
-| AI 初筛 | 部分前端可用 | 工作队列、单人评分、同岗位最多 5 人批量评分和失败项重试已接入 |
-| Dashboard | 可用 | 读取 PostgreSQL 中的岗位、候选人和初筛真实统计，不填充演示数据 |
-| 报告中心 | 只读 | 查看已有 Report；报告生成工作流尚未开放 |
+| Application 申请合同 | 可用 | 录入、身份解析、简历隔离、状态、历史和独立 HR 决策 |
+| AI 初筛 | 重建中 | 当前保留 Application 工作台；旧 Rubric 与旧评分已删除，新版 JD 驱动报告尚未实现 |
+| Dashboard | 可用 | 读取 PostgreSQL 中的岗位、候选人和待处理 Application 统计 |
+| 报告中心 | 只读 | 查看通用 Report；新版 AI 初筛报告生成尚未开放 |
 | 公开投递 | 页面预览 | `/apply` 可读取开放岗位，提交按钮尚未开放 |
 | 权限、面试、Offer、Agent、RAG | 未完成 | 属于后续阶段，不在当前完成范围内 |
 
@@ -41,12 +40,12 @@ FastAPI Router
   -> SQLAlchemy Model
   -> PostgreSQL
 
-AI 子链路
+当前 AI 子链路
   -> Prompt Builder
   -> Provider Adapter
   -> DeepSeek JSON Output
-  -> 确定性规则 + 语义评价
-  -> 可审计 ScreeningResult
+  -> 严格 Schema 校验
+  -> Resume 结构化草稿
 ```
 
 Redis 和 Chroma 已完成基础设施接入，但综合 Agent 与 RAG 业务仍属于后续阶段。
@@ -63,7 +62,7 @@ Redis 和 Chroma 已完成基础设施接入，但综合 Agent 与 RAG 业务仍
 
 ### 1. 可选：准备环境变量
 
-如果只查看不需要 AI 调用的页面，可以直接使用默认配置启动。需要验证真实简历结构化、Rubric 生成或候选人语义评分时，复制环境变量模板并配置自己的 DeepSeek Key：
+如果只查看不需要 AI 调用的页面，可以直接使用默认配置启动。需要验证真实简历结构化时，复制环境变量模板并配置自己的 DeepSeek Key：
 
 ```powershell
 Copy-Item .env.example .env
@@ -148,8 +147,8 @@ npm run dev -- --host 127.0.0.1
 | `http://localhost:5173/app/candidates` | 候选人管理 |
 | `http://localhost:5173/app/candidates/new` | 新增候选人和简历智能识别 |
 | `http://localhost:5173/app/jobs` | 岗位管理 |
-| `http://localhost:5173/app/screening` | AI 初筛中心 |
-| `http://localhost:5173/app/reports` | 初筛报告中心 |
+| `http://localhost:5173/app/screening` | Application 与 HR 初筛工作台 |
+| `http://localhost:5173/app/reports` | 通用报告中心 |
 | `http://localhost:5173/apply` | 公开投递页预览 |
 | `http://localhost:8000/docs` | FastAPI Swagger 文档 |
 | `http://localhost:8000/api/health` | 后端健康检查 |
@@ -168,15 +167,11 @@ npm run dev -- --host 127.0.0.1
 
 ## AI 配置说明
 
-`.env.example` 中的主要 AI 开关包括：
-
-- `RESUME_STRUCTURE_*`：简历结构化
-- `RUBRIC_GENERATION_*`：岗位评分标准生成
-- `SCREENING_MODEL_*`：候选人语义评价
+`.env.example` 当前保留的专用 AI 开关是 `RESUME_STRUCTURE_*`，用于简历结构化。新版 JD 评价计划和 AI 初筛报告的专用配置会在对应实现步骤中增加。
 
 平台可以在没有 Key 的情况下启动，但真实 AI 请求需要有效的 DeepSeek 配置。配置缺失或模型调用失败时，相关业务接口会返回明确错误，不应把失败结果当作真实 AI 结论。
 
-`LLM_PROVIDER=mock` 是通用 LLM 配置，不代表阶段 5/7 的专用结构化与评分链路一定会生成模拟成功结果。
+`LLM_PROVIDER=mock` 是通用 LLM 配置，不代表阶段 5 的专用简历结构化链路一定会生成模拟成功结果。
 
 ## 项目目录
 
@@ -251,7 +246,7 @@ Set-Location backend
 ..\.venv\Scripts\python.exe -m alembic check
 ```
 
-当前验证基线：后端 595 项测试、前端 14 个测试脚本、Vite 生产构建 3116 个模块、Alembic revision `f8c2d0e5b317`。
+当前验证基线：后端 460 项测试、前端 16 个测试脚本、Vite 生产构建 3116 个模块、Alembic revision `c4a9d8e7f621`。
 
 ## 停止服务
 
@@ -268,8 +263,7 @@ docker compose stop postgres redis chroma
 以下能力尚未完成，不应在演示或简历中描述为已交付：
 
 - 公开投递表单正式提交
-- 阶段 7 旧 Rubric 体系尚待盘点和删除
-- JD 评价计划、新 AI 初筛报告和重新评估链路尚未实现
+- JobEvaluationPlan、新 AI 初筛报告和重新评估链路尚未实现
 - 面试、Offer、录取闭环
 - 登录、角色与权限
 - 综合 Agent 与 RAG 知识库

@@ -21,7 +21,6 @@ if TYPE_CHECKING:
     from app.models.candidate import Candidate
     from app.models.job import Job
     from app.models.resume import Resume
-    from app.models.screening_result import ScreeningResult
     from app.models.stage_history import StageHistory
 
 
@@ -42,16 +41,8 @@ class Application(Base):
             name="ck_applications_recruitment_stage_allowed",
         ),
         CheckConstraint(
-            "ai_status IN ('not_started', 'screening', 'completed', 'failed', 'blocked')",
-            name="ck_applications_ai_status_allowed",
-        ),
-        CheckConstraint(
             "hr_decision IN ('pending', 'passed', 'backup', 'rejected')",
             name="ck_applications_hr_decision_allowed",
-        ),
-        UniqueConstraint(
-            "current_screening_result_id",
-            name="uq_applications_current_screening_result_id",
         ),
         Index(
             "uq_applications_active_candidate_job",
@@ -91,24 +82,10 @@ class Application(Base):
         nullable=False,
         index=True,
     )
-    ai_status: Mapped[str] = mapped_column(
-        String(20),
-        nullable=False,
-        default="not_started",
-        server_default="not_started",
-        index=True,
-    )
     hr_decision: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
         index=True,
-    )
-    current_screening_result_id: Mapped[int | None] = mapped_column(
-        ForeignKey(
-            "screening_results.id",
-            name="fk_applications_current_screening_result_id_screening_results",
-            use_alter=True,
-        ),
     )
     applied_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -133,15 +110,6 @@ class Application(Base):
     current_resume: Mapped["Resume"] = relationship(
         back_populates="current_applications",
         foreign_keys=[current_resume_id],
-    )
-    screening_results: Mapped[list["ScreeningResult"]] = relationship(
-        back_populates="application",
-        foreign_keys="ScreeningResult.application_id",
-        order_by="ScreeningResult.attempt_number",
-    )
-    current_screening_result: Mapped["ScreeningResult | None"] = relationship(
-        foreign_keys=[current_screening_result_id],
-        post_update=True,
     )
     stage_histories: Mapped[list["StageHistory"]] = relationship(
         back_populates="application",

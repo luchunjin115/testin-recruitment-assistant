@@ -1,15 +1,12 @@
 import { v2Http } from '../../../services/http';
 import type {
-  Stage7ApplicationAIStatus,
   Stage7ApplicationSource,
+  Stage7HRDecision,
   Stage7RecruitmentStage,
-  Stage7ScreeningResultSummaryApiResponse,
 } from '../types/applicationScreening';
 import {
   intakeStage7Application,
   listStage7Applications,
-  mapStage7ScreeningSummary,
-  runStage7ApplicationScreening,
 } from './applications';
 import type { JobStatus } from './jobs';
 
@@ -27,10 +24,7 @@ export type CandidateListItem = {
   jobDepartment: string | null;
   applicationSource: Stage7ApplicationSource;
   recruitmentStage: Stage7RecruitmentStage;
-  aiStatus: Stage7ApplicationAIStatus;
-  currentScore: number | null;
-  currentRecommendation: string | null;
-  currentResultIsOutdated: boolean;
+  hrDecision: Stage7HRDecision;
   updatedAt: string;
 };
 
@@ -126,8 +120,6 @@ export type RecruitmentHrDirectOutcome = {
   candidateResolution: 'created' | 'reused';
   existingApplicationReused: boolean;
   suspectedDuplicateCandidateIds: number[];
-  screeningStatus: 'screening' | 'completed' | 'blocked' | 'failed' | 'already_available' | 'start_failed';
-  screeningError?: unknown;
 };
 
 export type CandidateListSnapshot = {
@@ -140,27 +132,18 @@ export type CandidateListSnapshot = {
 };
 
 export const getRecruitmentCandidates = async (): Promise<CandidateListSnapshot> => {
-  const [applications, candidatesResponse, jobsResponse, screeningResultsResponse] = await Promise.all([
+  const [applications, candidatesResponse, jobsResponse] = await Promise.all([
     listStage7Applications({ hrDecision: 'passed' }),
     v2Http.get<CandidateResponse[]>('/candidates'),
     v2Http.get<JobResponse[]>('/jobs'),
-    v2Http.get<Stage7ScreeningResultSummaryApiResponse[]>('/screening-results'),
   ]);
 
   const candidates = new Map(candidatesResponse.data.map(candidate => [candidate.id, candidate]));
   const jobRecords = new Map(jobsResponse.data.map(job => [job.id, job]));
-  const screeningResults = new Map(
-    screeningResultsResponse.data
-      .map(mapStage7ScreeningSummary)
-      .map(result => [result.id, result]),
-  );
   const items = applications
     .map(application => {
       const candidate = candidates.get(application.candidateId);
       const job = jobRecords.get(application.jobId);
-      const currentResult = application.currentScreeningResultId === null
-        ? null
-        : screeningResults.get(application.currentScreeningResultId) || null;
       return {
         applicationId: application.id,
         candidateId: application.candidateId,
@@ -175,10 +158,7 @@ export const getRecruitmentCandidates = async (): Promise<CandidateListSnapshot>
         jobDepartment: job?.department || null,
         applicationSource: application.source,
         recruitmentStage: application.recruitmentStage,
-        aiStatus: application.aiStatus,
-        currentScore: currentResult?.overallScore ?? null,
-        currentRecommendation: currentResult?.recommendation || null,
-        currentResultIsOutdated: currentResult?.isOutdated || false,
+        hrDecision: application.hrDecision,
         updatedAt: application.updatedAt,
       };
     })
@@ -198,11 +178,7 @@ export const getRecruitmentCandidates = async (): Promise<CandidateListSnapshot>
     total: items.length,
     uniqueCandidateCount: new Set(items.map(item => item.candidateId)).size,
     linkedJobCount: visibleJobIds.size,
-    needsAttentionCount: items.filter(item => (
-      item.aiStatus !== 'completed'
-      || item.currentResultIsOutdated
-      || item.currentScore === null
-    )).length,
+    needsAttentionCount: items.filter(item => !item.email || !item.phone).length,
   };
 };
 
@@ -361,38 +337,13 @@ export const createRecruitmentHrDirectApplication = async (
     },
   });
 
-  if (intake.application.aiStatus !== 'not_started') {
-    return {
-      applicationId: intake.application.id,
-      candidateId: intake.application.candidateId,
-      candidateResolution: intake.candidateResolution,
-      existingApplicationReused: intake.existingApplicationReused,
-      suspectedDuplicateCandidateIds: intake.suspectedDuplicateCandidateIds,
-      screeningStatus: 'already_available',
-    };
-  }
-
-  try {
-    const screening = await runStage7ApplicationScreening(intake.application.id);
-    return {
-      applicationId: intake.application.id,
-      candidateId: intake.application.candidateId,
-      candidateResolution: intake.candidateResolution,
-      existingApplicationReused: intake.existingApplicationReused,
-      suspectedDuplicateCandidateIds: intake.suspectedDuplicateCandidateIds,
-      screeningStatus: screening.result.executionStatus,
-    };
-  } catch (screeningError) {
-    return {
-      applicationId: intake.application.id,
-      candidateId: intake.application.candidateId,
-      candidateResolution: intake.candidateResolution,
-      existingApplicationReused: intake.existingApplicationReused,
-      suspectedDuplicateCandidateIds: intake.suspectedDuplicateCandidateIds,
-      screeningStatus: 'start_failed',
-      screeningError,
-    };
-  }
+  return {
+    applicationId: intake.application.id,
+    candidateId: intake.application.candidateId,
+    candidateResolution: intake.candidateResolution,
+    existingApplicationReused: intake.existingApplicationReused,
+    suspectedDuplicateCandidateIds: intake.suspectedDuplicateCandidateIds,
+  };
 };
 
 export const getRecruitmentCandidateJobs = async (): Promise<CandidateJobOption[]> => {

@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from app.models.project_experience import ProjectExperience
     from app.models.report import Report
     from app.models.resume import Resume
-    from app.models.screening_result import ScreeningResult
     from app.models.work_experience import WorkExperience
 
 
@@ -68,6 +67,5 @@ class Candidate(Base):
         back_populates="candidate",
         cascade="all, delete-orphan",
     )
-    screening_results: Mapped[list["ScreeningResult"]] = relationship(back_populates="candidate")
     applications: Mapped[list["Application"]] = relationship(back_populates="candidate")
     reports: Mapped[list["Report"]] = relationship(back_populates="candidate")

@@ -4,9 +4,7 @@ from unittest.mock import AsyncMock, Mock
 
 from sqlalchemy.dialects import postgresql
 
-from app.models.activity_log import ActivityLog
 from app.models.job import Job
-from app.models.job_screening_rubric import JobScreeningRubric
 from app.schemas.job import JobCreate, JobUpdate
 from app.services.job_service import (
     InvalidJobStatusTransitionError,
@@ -70,7 +68,7 @@ def set_reference_counts(session: Mock, **overrides: int) -> None:
     values = {
         "candidates": 0,
         "resumes": 0,
-        "screening_results": 0,
+        "applications": 0,
         "reports": 0,
     }
     values.update(overrides)
@@ -85,13 +83,6 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         self.db = make_session()
 
     async def test_create_draft_commits_complete_empty_v1(self) -> None:
-        async def assign_job_id() -> None:
-            for call in self.db.add.call_args_list:
-                item = call.args[0]
-                if isinstance(item, Job) and item.id is None:
-                    item.id = 1
-
-        self.db.flush.side_effect = assign_job_id
         job = await self.service.create_job(
             self.db,
             JobCreate(title="后端开发工程师", department="研发部"),
@@ -100,19 +91,7 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(job.title, "后端开发工程师")
         self.assertEqual(job.status, "draft")
         self.assertEqual(job.requirements["schema_version"], "1.0")
-        added = [call.args[0] for call in self.db.add.call_args_list]
-        rubric = next(item for item in added if isinstance(item, JobScreeningRubric))
-        self.assertIn(job, added)
-        self.assertEqual(rubric.job_id, 1)
-        self.assertEqual(rubric.version, 1)
-        self.assertEqual(rubric.weights["must_have_requirements"], 40)
-        self.assertTrue(rubric.is_current)
-        self.assertEqual(rubric.status, "active")
-        self.assertEqual(rubric.source, "standard_template")
-        self.assertEqual(rubric.template_key, "standard")
-        self.assertEqual(len(rubric.semantic_items), 5)
-        self.assertEqual(len(rubric.job_fingerprint), 64)
-        self.db.flush.assert_awaited_once()
+        self.db.add.assert_called_once_with(job)
         self.db.commit.assert_awaited_once()
         self.db.refresh.assert_awaited_once_with(job)
         self.db.rollback.assert_not_awaited()
@@ -231,25 +210,6 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(existing.headcount, 3)
         self.db.commit.assert_awaited_once()
 
-    async def test_scoring_related_job_change_marks_rubric_and_results_stale(self) -> None:
-        existing = make_job(status="open")
-        self.db.scalar.return_value = existing
-
-        await self.service.update_job(
-            self.db,
-            1,
-            JobUpdate(description="负责新的 AI 招聘平台核心能力"),
-        )
-
-        self.assertEqual(self.db.execute.await_count, 2)
-        statements = [str(call.args[0]) for call in self.db.execute.await_args_list]
-        self.assertIn("UPDATE job_screening_rubrics", statements[0])
-        self.assertIn("UPDATE screening_results", statements[1])
-        activity = self.db.add.call_args.args[0]
-        self.assertIsInstance(activity, ActivityLog)
-        self.assertEqual(activity.action, "job_screening_rubric_marked_stale")
-        self.db.commit.assert_awaited_once()
-
     async def test_non_scoring_job_change_does_not_mark_rubric_stale(self) -> None:
         existing = make_job(status="open")
         self.db.scalar.return_value = existing
@@ -352,7 +312,7 @@ class JobServiceTest(IsolatedAsyncioTestCase):
             self.db,
             candidates=2,
             resumes=3,
-            screening_results=4,
+            applications=4,
             reports=5,
         )
 
@@ -363,7 +323,7 @@ class JobServiceTest(IsolatedAsyncioTestCase):
             JobReferenceCounts(
                 candidates=2,
                 resumes=3,
-                screening_results=4,
+                applications=4,
                 reports=5,
             ),
         )
@@ -373,7 +333,7 @@ class JobServiceTest(IsolatedAsyncioTestCase):
             {
                 "candidates": 2,
                 "resumes": 3,
-                "screening_results": 4,
+                "applications": 4,
                 "reports": 5,
             },
         )
@@ -389,7 +349,7 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         self.db.rollback.assert_awaited_once()
 
     async def test_each_reference_type_blocks_delete_with_all_counts(self) -> None:
-        for field in ("candidates", "resumes", "screening_results", "reports"):
+        for field in ("candidates", "resumes", "applications", "reports"):
             with self.subTest(field=field):
                 db = make_session()
                 db.scalar.return_value = make_job(status="closed")
@@ -414,12 +374,7 @@ class JobServiceTest(IsolatedAsyncioTestCase):
                 deleted = await self.service.delete_job(db, existing.id)
 
                 self.assertTrue(deleted)
-                self.assertEqual(db.execute.await_count, 2)
-                rubric_delete = db.execute.await_args_list[1].args[0]
-                self.assertIn(
-                    "DELETE FROM job_screening_rubrics",
-                    str(rubric_delete.compile(dialect=postgresql.dialect())),
-                )
+                self.assertEqual(db.execute.await_count, 1)
                 db.delete.assert_awaited_once_with(existing)
                 db.commit.assert_awaited_once()
 

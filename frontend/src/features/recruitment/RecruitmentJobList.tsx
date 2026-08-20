@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckCircleOutlined,
-  AuditOutlined,
   DeleteOutlined,
   EditOutlined,
   FileTextOutlined,
@@ -44,7 +43,6 @@ import {
   RecruitmentJobInput,
   updateRecruitmentJob,
 } from './services/jobs';
-import RecruitmentJobRubricDrawer from './RecruitmentJobRubricDrawer';
 
 type LoadState =
   | { status: 'loading' }
@@ -134,7 +132,7 @@ const formatReferenceCounts = (references: Record<string, number> | null) => {
   const labels: Record<string, string> = {
     candidates: '候选人',
     resumes: '简历',
-    screening_results: '初筛结果',
+    applications: '申请',
     reports: '报告',
   };
   const details = Object.entries(references)
@@ -188,7 +186,6 @@ const RecruitmentJobList: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | JobStatus>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<RecruitmentJob | null>(null);
-  const [rubricJob, setRubricJob] = useState<RecruitmentJob | null>(null);
   const [operationPending, setOperationPending] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -485,7 +482,6 @@ const RecruitmentJobList: React.FC = () => {
                   <div><Tag bordered={false} className={`recruitment-status-tag is-${statusMeta.tone}`}>{statusMeta.label}</Tag></div>
                   <span className="recruitment-time-cell">{formatDateTime(item.updatedAt)}</span>
                   <div className="recruitment-job-action-cell">
-                    <Button icon={<AuditOutlined />} onClick={() => setRubricJob(item)} size="small">评分规则</Button>
                     <Button icon={<EditOutlined />} onClick={() => openForm(item)} size="small">编辑</Button>
                     <Button disabled={operationPending} onClick={() => confirmStatusAction(item)} size="small">{actionLabel}</Button>
                     {item.status !== 'open' && (
@@ -498,12 +494,6 @@ const RecruitmentJobList: React.FC = () => {
           </div>
         )}
       </section>
-
-      <RecruitmentJobRubricDrawer
-        job={rubricJob}
-        onClose={() => setRubricJob(null)}
-        open={rubricJob !== null}
-      />
 
       <Drawer
         className="recruitment-job-form-drawer"

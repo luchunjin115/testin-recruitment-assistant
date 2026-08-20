@@ -12,27 +12,11 @@ import type {
   Stage7PassApplicationInput,
   Stage7RejectApplicationInput,
   Stage7ReverseDecisionInput,
-  Stage7ScreeningBatchApiResponse,
-  Stage7ScreeningBatchInput,
-  Stage7ScreeningBatchOutcome,
-  Stage7ScreeningResultDetail,
-  Stage7ScreeningResultDetailApiResponse,
-  Stage7ScreeningResultSummary,
-  Stage7ScreeningResultSummaryApiResponse,
-  Stage7ScreeningRunApiResponse,
-  Stage7ScreeningRunInput,
-  Stage7ScreeningRunOutcome,
   Stage7StageHistory,
   Stage7StageHistoryApiResponse,
   Stage7VoidApplicationInput,
 } from '../types/applicationScreening';
 
-
-const nullableNumber = (value: string | number | null): number | null => {
-  if (value === null) return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : null;
-};
 
 export const mapStage7Application = (
   value: Stage7ApplicationApiResponse,
@@ -44,76 +28,10 @@ export const mapStage7Application = (
   source: value.source,
   lifecycleStatus: value.lifecycle_status,
   recruitmentStage: value.recruitment_stage,
-  aiStatus: value.ai_status,
   hrDecision: value.hr_decision,
-  currentScreeningResultId: value.current_screening_result_id,
   appliedAt: value.applied_at,
   createdAt: value.created_at,
   updatedAt: value.updated_at,
-});
-
-export const mapStage7ScreeningSummary = (
-  value: Stage7ScreeningResultSummaryApiResponse,
-): Stage7ScreeningResultSummary => ({
-  id: value.id,
-  candidateId: value.candidate_id,
-  jobId: value.job_id,
-  applicationId: value.application_id,
-  resumeId: value.resume_id,
-  attemptNumber: value.attempt_number,
-  executionStatus: value.execution_status,
-  overallScore: value.overall_score,
-  hardPass: value.hard_pass,
-  recommendation: value.recommendation,
-  evidenceCoverageRate: nullableNumber(value.evidence_coverage_rate),
-  errorCode: value.error_code,
-  errorMessage: value.error_message,
-  startedAt: value.started_at,
-  finishedAt: value.finished_at,
-  durationMs: value.duration_ms,
-  triggerReason: value.trigger_reason,
-  forceRerun: value.force_rerun,
-  isOutdated: value.is_outdated,
-  outdatedAt: value.outdated_at,
-  createdAt: value.created_at,
-  updatedAt: value.updated_at,
-});
-
-export const mapStage7ScreeningDetail = (
-  value: Stage7ScreeningResultDetailApiResponse,
-): Stage7ScreeningResultDetail => ({
-  ...mapStage7ScreeningSummary(value),
-  inputFingerprint: value.input_fingerprint,
-  skillScore: value.skill_score,
-  experienceScore: value.experience_score,
-  projectScore: value.project_score,
-  strengths: value.strengths || [],
-  risks: value.risks || [],
-  hardRequirementChecks: value.hard_requirement_checks || [],
-  dimensionScores: value.dimension_scores || {},
-  reason: value.reason,
-  pendingQuestions: value.pending_questions || [],
-  resumeEvidence: value.resume_evidence || [],
-  jobEvidence: value.job_evidence || [],
-  candidateInputSnapshot: value.candidate_input_snapshot,
-  resumeSnapshot: value.resume_snapshot,
-  jobRequirementsSnapshot: value.job_requirements_snapshot,
-  rubricSnapshot: value.rubric_snapshot,
-  rulesVersion: value.rules_version,
-  promptVersion: value.prompt_version,
-  modelProvider: value.model_provider,
-  modelName: value.model_name,
-  modelConfigVersion: value.model_config_version,
-  jobSchemaVersion: value.job_schema_version,
-  resumeSchemaVersion: value.resume_schema_version,
-  promptTokens: value.prompt_tokens,
-  completionTokens: value.completion_tokens,
-  totalTokens: value.total_tokens,
-  estimatedCost: nullableNumber(value.estimated_cost),
-  actorType: value.actor_type,
-  actorId: value.actor_id,
-  actorLabel: value.actor_label,
-  rawResult: value.raw_result,
 });
 
 const mapStage7History = (value: Stage7StageHistoryApiResponse): Stage7StageHistory => ({
@@ -128,8 +46,6 @@ const mapStage7History = (value: Stage7StageHistoryApiResponse): Stage7StageHist
   actorType: value.actor_type,
   actorId: value.actor_id,
   actorLabel: value.actor_label,
-  screeningResultId: value.screening_result_id,
-  overridesAiRecommendation: value.overrides_ai_recommendation,
   createdAt: value.created_at,
 });
 
@@ -140,7 +56,6 @@ export const listStage7Applications = async (
     params: {
       job_id: filters.jobId,
       recruitment_stage: filters.recruitmentStage,
-      ai_status: filters.aiStatus,
       hr_decision: filters.hrDecision,
       lifecycle_status: filters.lifecycleStatus,
     },
@@ -165,63 +80,6 @@ export const intakeStage7Application = async (
     candidateResolution: response.data.candidate_resolution,
     existingApplicationReused: response.data.existing_application_reused,
     suspectedDuplicateCandidateIds: response.data.suspected_duplicate_candidate_ids,
-  };
-};
-
-export const runStage7ApplicationScreening = async (
-  applicationId: number,
-  input: Stage7ScreeningRunInput = {},
-): Promise<Stage7ScreeningRunOutcome> => {
-  const response = await v2Http.post<Stage7ScreeningRunApiResponse>(
-    `/applications/${applicationId}/screenings`,
-    input,
-  );
-  return {
-    result: mapStage7ScreeningDetail(response.data.result),
-    reused: response.data.reused,
-    modelCalled: response.data.model_called,
-  };
-};
-
-export const listStage7ApplicationScreenings = async (
-  applicationId: number,
-): Promise<Stage7ScreeningResultSummary[]> => {
-  const response = await v2Http.get<Stage7ScreeningResultSummaryApiResponse[]>(
-    `/applications/${applicationId}/screenings`,
-  );
-  return response.data.map(mapStage7ScreeningSummary);
-};
-
-export const getStage7ScreeningResult = async (
-  screeningResultId: number,
-): Promise<Stage7ScreeningResultDetail> => {
-  const response = await v2Http.get<Stage7ScreeningResultDetailApiResponse>(
-    `/screening-results/${screeningResultId}`,
-  );
-  return mapStage7ScreeningDetail(response.data);
-};
-
-export const runStage7ScreeningBatch = async (
-  jobId: number,
-  input: Stage7ScreeningBatchInput,
-): Promise<Stage7ScreeningBatchOutcome> => {
-  const response = await v2Http.post<Stage7ScreeningBatchApiResponse>(
-    `/jobs/${jobId}/screenings/batch`,
-    input,
-  );
-  return {
-    jobId: response.data.job_id,
-    items: response.data.items.map(item => ({
-      applicationId: item.application_id,
-      status: item.status,
-      screeningResultId: item.screening_result_id,
-      attemptNumber: item.attempt_number,
-      reused: item.reused,
-      modelCalled: item.model_called,
-      errorCode: item.error_code,
-      errorMessage: item.error_message,
-    })),
-    summary: response.data.summary,
   };
 };
 

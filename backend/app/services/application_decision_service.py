@@ -13,7 +13,6 @@ from app.models.stage_history import StageHistory
 from app.schemas.stage_history import (
     BackupApplicationRequest,
     PassApplicationRequest,
-    PassReasonCode,
     RejectApplicationRequest,
     ReverseDecisionRequest,
     VoidApplicationRequest,
@@ -22,7 +21,6 @@ from app.schemas.stage_history import (
 
 LOCAL_HR_ACTOR_LABEL = "本地 HR（未认证）"
 ACTIVE_APPLICATION_UNIQUE_CONSTRAINT = "uq_applications_active_candidate_job"
-AI_DECISION_READY_STATUSES = frozenset({"completed", "blocked", "failed"})
 
 
 class ApplicationDecisionError(ValueError):
@@ -66,9 +64,6 @@ class ApplicationDecisionService:
             allowed_decisions={"pending", "backup"},
             target=_TransitionTarget("passed", "screening_passed", "active"),
             action=_DecisionAction.PASS,
-            overrides_ai_recommendation=(
-                data.reason_code is PassReasonCode.MANUAL_OVERRIDE
-            ),
         )
 
     async def backup_application(
@@ -118,9 +113,6 @@ class ApplicationDecisionService:
                 or application.recruitment_stage != "rejected"
             ):
                 raise InvalidApplicationTransitionError("只有已淘汰申请可以撤销淘汰")
-            if application.ai_status == "screening":
-                raise InvalidApplicationTransitionError("AI 评分执行中不能撤销淘汰")
-
             active_application = await self._get_other_active_application_for_update(
                 db,
                 application,
@@ -136,7 +128,6 @@ class ApplicationDecisionService:
                 data=data,
                 target=_TransitionTarget("pending", "hr_review", "active"),
                 action=_DecisionAction.UNDO_REJECTION,
-                overrides_ai_recommendation=False,
             )
             await db.commit()
             await db.refresh(application)
@@ -165,9 +156,6 @@ class ApplicationDecisionService:
                 raise ApplicationNotFoundError("Application 不存在")
             if application.lifecycle_status == "voided":
                 raise InvalidApplicationTransitionError("Application 已经作废")
-            if application.ai_status == "screening":
-                raise InvalidApplicationTransitionError("AI 评分执行中不能作废申请")
-
             await self._apply_transition(
                 db,
                 application,
@@ -178,7 +166,6 @@ class ApplicationDecisionService:
                     "voided",
                 ),
                 action=_DecisionAction.VOID,
-                overrides_ai_recommendation=False,
             )
             await db.commit()
             await db.refresh(application)
@@ -214,7 +201,6 @@ class ApplicationDecisionService:
         allowed_decisions: set[str],
         target: _TransitionTarget,
         action: _DecisionAction,
-        overrides_ai_recommendation: bool = False,
     ) -> Application:
         application: Application | None = None
         try:
@@ -231,7 +217,6 @@ class ApplicationDecisionService:
                 data=data,
                 target=target,
                 action=action,
-                overrides_ai_recommendation=overrides_ai_recommendation,
             )
             await db.commit()
             await db.refresh(application)
@@ -248,17 +233,8 @@ class ApplicationDecisionService:
     ) -> None:
         if application.lifecycle_status != "active":
             raise InvalidApplicationTransitionError("只有有效申请可以执行 HR 决策")
-        if application.ai_status == "screening":
-            raise InvalidApplicationTransitionError("AI 评分执行中不能执行 HR 决策")
         if application.hr_decision not in allowed_decisions:
             raise InvalidApplicationTransitionError("当前 HR 决策不允许执行该操作")
-        if application.hr_decision == "pending" and (
-            application.recruitment_stage != "hr_review"
-            or application.ai_status not in AI_DECISION_READY_STATUSES
-        ):
-            raise InvalidApplicationTransitionError(
-                "初筛申请必须等待 AI 进入终态和人工审核阶段"
-            )
 
     @staticmethod
     async def _apply_transition(
@@ -272,7 +248,6 @@ class ApplicationDecisionService:
         | VoidApplicationRequest,
         target: _TransitionTarget,
         action: _DecisionAction,
-        overrides_ai_recommendation: bool,
     ) -> None:
         from_lifecycle_status = application.lifecycle_status
         from_recruitment_stage = application.recruitment_stage
@@ -294,8 +269,6 @@ class ApplicationDecisionService:
             actor_type="hr",
             actor_id=None,
             actor_label=LOCAL_HR_ACTOR_LABEL,
-            screening_result_id=application.current_screening_result_id,
-            overrides_ai_recommendation=overrides_ai_recommendation,
         )
         activity_log = ActivityLog(
             user_id=None,
@@ -313,7 +286,6 @@ class ApplicationDecisionService:
                 "reason_detail": data.reason_detail,
                 "actor_type": "hr",
                 "actor_label": LOCAL_HR_ACTOR_LABEL,
-                "overrides_ai_recommendation": overrides_ai_recommendation,
             },
         )
         db.add_all([history, activity_log])

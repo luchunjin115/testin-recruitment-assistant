@@ -10,7 +10,7 @@ import {
   UploadOutlined,
   UserAddOutlined,
 } from '@ant-design/icons';
-import { Alert, Avatar, Button, Empty, Progress, Skeleton, Tag } from 'antd';
+import { Alert, Avatar, Button, Empty, Skeleton } from 'antd';
 import { Link } from 'react-router-dom';
 import { DashboardSnapshot, getRecruitmentDashboardSnapshot } from './services/dashboard';
 
@@ -26,17 +26,6 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat('zh-CN', {
   minute: '2-digit',
   hour12: false,
 }).format(new Date(value));
-
-const getScreeningMeta = (score: number | null, recommendation: string | null) => {
-  if (score === null) return { label: '待初筛', tone: 'neutral' };
-  if (recommendation) {
-    const tone = score >= 80 ? 'success' : score >= 60 ? 'warning' : 'neutral';
-    return { label: recommendation, tone };
-  }
-  if (score >= 80) return { label: '建议推进', tone: 'success' };
-  if (score >= 60) return { label: '需要复核', tone: 'warning' };
-  return { label: '关注风险', tone: 'neutral' };
-};
 
 const RecruitmentDashboard: React.FC = () => {
   const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
@@ -91,7 +80,7 @@ const RecruitmentDashboard: React.FC = () => {
   const stats = [
     { label: '开放岗位', value: data.openJobs, note: '来自新版岗位表', icon: <SolutionOutlined />, tone: 'blue' },
     { label: '候选人', value: data.candidateCount, note: 'PostgreSQL 真实记录', icon: <TeamOutlined />, tone: 'green' },
-    { label: '待初筛', value: data.pendingScreening, note: '尚未生成筛选结果', icon: <InboxOutlined />, tone: 'orange' },
+    { label: '待 HR 决策', value: data.pendingReview, note: '有效且尚未决定的 Application', icon: <InboxOutlined />, tone: 'orange' },
     { label: '待跟进', value: '—', note: '新版跟进规则待接入', icon: <ClockCircleOutlined />, tone: 'red' },
   ];
 
@@ -104,7 +93,7 @@ const RecruitmentDashboard: React.FC = () => {
           <p>
             {data.candidateCount === 0
               ? '新版候选人库暂无记录；页面不会填充演示数据。'
-              : `${data.pendingScreening} 位候选人尚未生成初筛结果。`}
+              : `${data.pendingReview} 份 Application 等待 HR 决策。`}
           </p>
         </div>
         <div className="recruitment-welcome-actions">
@@ -131,7 +120,7 @@ const RecruitmentDashboard: React.FC = () => {
           <div className="recruitment-panel-header">
             <div>
               <h3>最新候选人</h3>
-              <p>最近更新的候选人与真实初筛结果</p>
+              <p>最近更新的真实候选人记录</p>
             </div>
             <Link className="recruitment-panel-link" to="/app/candidates">查看全部候选人</Link>
           </div>
@@ -141,7 +130,7 @@ const RecruitmentDashboard: React.FC = () => {
               description={
                 <div className="recruitment-empty-copy">
                   <strong>暂无新版候选人记录</strong>
-                  <span>页面已连接候选人和筛选结果接口，没有填充样板演示数据。</span>
+                  <span>页面已连接候选人接口，没有填充样板演示数据。</span>
                 </div>
               }
               image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -149,36 +138,19 @@ const RecruitmentDashboard: React.FC = () => {
           ) : (
             <div aria-label="最新候选人" className="recruitment-table" role="table">
               <div className="recruitment-table-head recruitment-dashboard-table-columns" role="row">
-                <span>候选人</span><span>应聘岗位</span><span>AI 匹配</span><span>状态</span><span>更新时间</span>
+                <span>候选人</span><span>应聘岗位</span><span>来源</span><span>更新时间</span>
               </div>
-              {data.recentCandidates.map(candidate => {
-                const meta = getScreeningMeta(candidate.score, candidate.recommendation);
-                return (
+              {data.recentCandidates.map(candidate => (
                   <div className="recruitment-table-row recruitment-dashboard-table-columns" key={candidate.id} role="row">
                     <div className="recruitment-candidate-cell">
                       <Avatar className="recruitment-candidate-avatar is-blue">{candidate.name.slice(0, 1)}</Avatar>
                       <div><Link className="recruitment-candidate-name-link" to={`/app/candidates/${candidate.id}`}>{candidate.name}</Link><span>{candidate.source}</span></div>
                     </div>
                     <span className="recruitment-role-cell">{candidate.role}</span>
-                    <div className="recruitment-score-cell">
-                      <strong>{candidate.score ?? '—'}</strong>
-                      {candidate.score === null ? (
-                        <span className="recruitment-score-pending">待初筛</span>
-                      ) : (
-                        <Progress
-                          percent={candidate.score}
-                          showInfo={false}
-                          size="small"
-                          strokeColor={candidate.score >= 80 ? '#3f6fd9' : '#8b96a8'}
-                          trailColor="#edf0f4"
-                        />
-                      )}
-                    </div>
-                    <div><Tag bordered={false} className={`recruitment-status-tag is-${meta.tone}`}>{meta.label}</Tag></div>
+                    <span>{candidate.source}</span>
                     <span className="recruitment-time-cell">{formatDateTime(candidate.updatedAt)}</span>
                   </div>
-                );
-              })}
+              ))}
             </div>
           )}
         </article>

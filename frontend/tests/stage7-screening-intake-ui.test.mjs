@@ -75,31 +75,17 @@ try {
     'utf8',
   );
   for (const text of [
-    '录入新申请',
-    '先保存申请，再由 AI 提供证据',
+    '录入待审核申请',
     'uploadRecruitmentResume',
     'extractRecruitmentResumeText',
     'intakeStage7Application',
-    'runStage7ApplicationScreening(applicationId)',
     'existingApplicationReused',
-    '失败不会删除已保存申请',
-    'intakeGuardRef',
-    'source=hr_screening',
+    '已进入 HR 工作队列',
+    '保存到工作队列',
   ]) {
     assert.ok(pageSource.includes(text), `录入新申请页面缺少交互边界：${text}`);
   }
-
-  const intakeCall = pageSource.indexOf('intakeStage7Application(buildResult.input)');
-  const screeningCall = pageSource.indexOf('runStage7ApplicationScreening(applicationId)');
-  assert.ok(intakeCall >= 0 && screeningCall > intakeCall, '必须先保存 Application，再启动 AI 初筛');
-
-  const styles = await readFile(
-    new URL('../src/features/recruitment/styles/screening.css', import.meta.url),
-    'utf8',
-  );
-  assert.match(styles, /\.recruitment-intake-rail\s*\{/s);
-  assert.match(styles, /@media\s*\(max-width:\s*560px\)[\s\S]*?\.recruitment-intake-rail/s);
-  assert.match(styles, /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.recruitment-intake-progress/s);
+  assert.equal(pageSource.includes('runStage7ApplicationScreening'), false);
 
   console.log('STAGE7_SCREENING_INTAKE_UI_TEST_OK');
 } finally {

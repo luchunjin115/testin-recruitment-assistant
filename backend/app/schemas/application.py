@@ -42,14 +42,6 @@ class RecruitmentStage(str, Enum):
     REJECTED = "rejected"
 
 
-class ApplicationAIStatus(str, Enum):
-    NOT_STARTED = "not_started"
-    SCREENING = "screening"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    BLOCKED = "blocked"
-
-
 class HRDecision(str, Enum):
     PENDING = "pending"
     PASSED = "passed"
@@ -165,7 +157,6 @@ class ApplicationCreate(BaseModel):
     source: ApplicationSource
     lifecycle_status: ApplicationLifecycleStatus = ApplicationLifecycleStatus.ACTIVE
     recruitment_stage: RecruitmentStage
-    ai_status: ApplicationAIStatus = ApplicationAIStatus.NOT_STARTED
     hr_decision: HRDecision
     applied_at: AwareDatetime | None = None
     model_config = ConfigDict(extra="forbid")
@@ -176,13 +167,11 @@ class ApplicationCreate(BaseModel):
             expected = (
                 ApplicationLifecycleStatus.ACTIVE,
                 RecruitmentStage.SCREENING_PASSED,
-                ApplicationAIStatus.NOT_STARTED,
                 HRDecision.PASSED,
             )
             actual = (
                 self.lifecycle_status,
                 self.recruitment_stage,
-                self.ai_status,
                 self.hr_decision,
             )
             if actual != expected:
@@ -195,13 +184,11 @@ class ApplicationCreate(BaseModel):
             expected = (
                 ApplicationLifecycleStatus.ACTIVE,
                 RecruitmentStage.APPLIED,
-                ApplicationAIStatus.NOT_STARTED,
                 HRDecision.PENDING,
             )
             actual = (
                 self.lifecycle_status,
                 self.recruitment_stage,
-                self.ai_status,
                 self.hr_decision,
             )
             if actual != expected:
@@ -217,9 +204,7 @@ class ApplicationRead(BaseModel):
     source: ApplicationSource
     lifecycle_status: ApplicationLifecycleStatus
     recruitment_stage: RecruitmentStage
-    ai_status: ApplicationAIStatus
     hr_decision: HRDecision
-    current_screening_result_id: PositiveId | None
     applied_at: AwareDatetime
     created_at: AwareDatetime
     updated_at: AwareDatetime
@@ -235,25 +220,8 @@ class ApplicationIntakeResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class ScreeningRunRequest(BaseModel):
-    force: StrictBool = False
-    confirm_force: StrictBool = False
-    reason: ReasonText | None = None
-
-    model_config = ConfigDict(extra="forbid")
-
-    @model_validator(mode="after")
-    def validate_force_confirmation(self) -> ScreeningRunRequest:
-        if self.force and (not self.confirm_force or self.reason is None):
-            raise ValueError("强制重跑必须二次确认并填写原因")
-        if not self.force and self.confirm_force:
-            raise ValueError("普通评分请求不能提交强制重跑确认")
-        return self
-
-
 __all__ = [
     "ApplicationResumeProfile",
-    "ApplicationAIStatus",
     "ApplicationCreate",
     "ApplicationIntakeRequest",
     "ApplicationIntakeResponse",
@@ -265,7 +233,6 @@ __all__ = [
     "PositiveId",
     "ReasonText",
     "RecruitmentStage",
-    "ScreeningRunRequest",
     "normalize_application_email",
     "normalize_application_phone",
 ]

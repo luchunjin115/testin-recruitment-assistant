@@ -8,10 +8,10 @@
 
 - 项目正在建设新版招聘主链，旧 React + FastAPI + SQLite + Mock LLM 演示系统已经退役。
 - 阶段 4“简历上传与原文提取”、阶段 5“AI 结构化草稿”、阶段 6“结构化岗位管理”已经完成。
-- 阶段 7“Application 与 AI 初筛底座”正在重设计后的实施准备阶段。
+- 阶段 7“Application 与 AI 初筛底座”正在按重设计方案逐步实施。
 - Application、Resume 隔离、HR 内部录入和 HR 决策等公共能力继续保留。
 - 旧 Rubric、五维权重、确定性评分、`unknown`、证据覆盖率、Python 加权总分和多报告历史方案已经废弃。
-- 阶段 7 当前业务方案已经确认；下一步不是继续开发旧 Rubric，而是先只读盘点其全部引用并形成精确删除清单。
+- 阶段 7 当前业务方案已经确认；旧 Rubric 全链盘点和删除已经完成，下一步实现新版 `JobEvaluationPlan`。
 
 ## 2. 当前权威文档
 
@@ -80,7 +80,7 @@ React 渲染完整报告，HR 独立决定通过、备选或淘汰
 - Application 按岗位独立绑定 Resume、独立 HR 决策和阶段历史
 - HR 直通录入与 AI 初筛中心待审核录入
 
-## 5. 明确废弃且等待清理的旧阶段 7 能力
+## 5. 已完成删除的旧阶段 7 能力
 
 - `JobScreeningRubric` 及模板、草稿、编辑、生成、发布和版本流程
 - `standard/technical/non_technical` Rubric 模板
@@ -91,43 +91,29 @@ React 渲染完整报告，HR 独立决定通过、备选或淘汰
 - 同一 Application 多份完整 ScreeningResult 历史
 - 旧 Rubric 页面、API、Schema、Service、Prompt、Adapter、Model 字段和相关测试
 
-已执行的 Alembic 历史不能修改或删除；旧表和字段应通过新的向前迁移移除。
+已执行的 Alembic 历史保持不变；新迁移 `c4a9d8e7f621` 已向前删除旧表、字段、索引和约束。它的 downgrade 只恢复空结构，不能恢复已删除的数据。
 
 旧设计已经归档到 `docs/archive/superseded/2026-08-17-stage7-application-ai-screening-design.md`，只在盘点旧 Rubric 或追溯历史时阅读。
 
-## 6. 当前工作区风险
+## 6. 当前工作区状态与风险
 
-- 工作区存在大量尚未提交的旧 Rubric 相关修改，其中包含用户已有工作。
+- 工作区存在本轮尚未提交的旧 Rubric 删除和公共链路解耦修改；`AGENTS.md` 另有用户原有修改，必须继续保留。
 - 禁止使用 `git reset --hard`、`git clean`、`git checkout --` 或其他方式整体覆盖这些修改。
-- 删除旧体系前必须从前端入口一路扫描到 API、Schema、Service、Prompt/Adapter、Model、Alembic 和 PostgreSQL。
-- 必须区分“只服务旧 Rubric 的代码”和“Application、Resume、HR 决策等公共能力”，不能按文件名盲删。
+- 后续不得恢复旧 Rubric、旧 ScreeningResult 或嵌入 Application 的 AI 状态字段。
+- 新功能应复用 Candidate、Application、Resume、Job、StageHistory、Report 和通用 DeepSeek/数据库基础设施。
 
 ## 7. 当前唯一下一步
 
-执行阶段 7 当前设计的小步骤 2：旧 Rubric 引用盘点。
+执行阶段 7 当前设计的小步骤 4：实现 `JobEvaluationPlan`。
 
-本步只允许：
-
-1. 读取 `git status`、`git diff`、代码引用和数据库结构。
-2. 输出精确删除清单、保留清单和受影响测试清单。
-3. 标明前端到 PostgreSQL 的依赖关系。
-
-本步不允许：
-
-- 删除或重写旧 Rubric 业务文件；
-- 新增 JobEvaluationPlan 或新 AI 报告代码；
-- 执行删除表或字段的 migration；
-- 修改 PostgreSQL 业务数据；
-- 提前进入阶段 8、Agent、RAG、面试或 Offer。
-
-盘点结果经用户确认后，才进入“小步骤 3：删除旧 Rubric 业务体系”。
+开始前仍须按当前设计核对 `JobEvaluationPlan` 的字段、JD 版本绑定、生成/校验/只读边界和验收测试。本轮小步骤 3 没有提前创建该模型，也没有实现新版 AI 初筛报告。
 
 ## 8. 最近验证基线
 
-- 旧版系统退役后，正式开发库已经从空库升级到 Alembic `f8c2d0e5b317 (head)`；当时 12 张业务表均为 0 行。
-- 旧 Rubric 方案最后一次记录的基线为后端 604 项测试、前端 22 组测试和 3124 模块生产构建通过。
-- 上述数字证明当时旧方案代码可通过回归，不代表新的 JD 驱动方案已经实现或验收。
-- 本轮文档整理不修改前端、API、Schema、Service、Model、Alembic 或 PostgreSQL。
+- 开发库旧 `job_screening_rubrics` 与 `screening_results` 均为 0 行后执行删除迁移，最终位于 Alembic `c4a9d8e7f621 (head)`。
+- 迁移已实际完成“升级 → 回退到 `f8c2d0e5b317` → 再升级”；回退时旧表、字段、索引和约束恢复为空结构，最终再次删除。
+- 后端 460 项 `unittest` 通过；前端 16 个 Node/Vite 测试脚本通过；Vite 生产构建 3116 个模块通过。
+- 这些结果证明旧引用已移除、公共链路可回归、迁移可执行；不代表新版 `JobEvaluationPlan` 或 AI 初筛报告已经实现。
 
 开始下一步前仍须重新检查实际 Git 状态、测试数量、Alembic revision 和数据库状态，不能只依赖这里的历史基线。
 

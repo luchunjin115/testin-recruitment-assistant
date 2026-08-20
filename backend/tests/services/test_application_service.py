@@ -18,9 +18,7 @@ def make_application(application_id: int = 1) -> Application:
         source="hr_screening",
         lifecycle_status="active",
         recruitment_stage="hr_review",
-        ai_status="completed",
         hr_decision="pending",
-        current_screening_result_id=5,
         applied_at=TEST_TIME,
         created_at=TEST_TIME,
         updated_at=TEST_TIME,
@@ -53,7 +51,6 @@ class ApplicationServiceTest(IsolatedAsyncioTestCase):
             self.db,
             job_id=3,
             recruitment_stage="hr_review",
-            ai_status="completed",
             hr_decision="pending",
             lifecycle_status="active",
         )
@@ -62,7 +59,6 @@ class ApplicationServiceTest(IsolatedAsyncioTestCase):
         statement = str(self.db.scalars.await_args.args[0])
         self.assertIn("applications.job_id", statement)
         self.assertIn("applications.recruitment_stage", statement)
-        self.assertIn("applications.ai_status", statement)
         self.assertIn("applications.hr_decision", statement)
         self.assertIn("applications.lifecycle_status", statement)
         self.assertIn("ORDER BY applications.applied_at DESC", statement)

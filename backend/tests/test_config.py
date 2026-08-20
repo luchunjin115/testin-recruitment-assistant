@@ -45,31 +45,3 @@ class SettingsTest(TestCase):
         for field, value in invalid_values.items():
             with self.subTest(field=field), self.assertRaises(ValidationError):
                 Settings(_env_file=None, **{field: value})
-
-    def test_screening_model_defaults_are_bounded_versioned_and_unpriced(self) -> None:
-        settings = Settings(_env_file=None)
-
-        self.assertTrue(settings.SCREENING_MODEL_ENABLED)
-        self.assertEqual(settings.SCREENING_MODEL_NAME, "deepseek-v4-flash")
-        self.assertEqual(settings.SCREENING_MODEL_TIMEOUT_SECONDS, 90)
-        self.assertEqual(settings.SCREENING_MODEL_MAX_INPUT_CHARS, 160_000)
-        self.assertEqual(settings.SCREENING_MODEL_MAX_OUTPUT_TOKENS, 8_000)
-        self.assertEqual(
-            settings.SCREENING_MODEL_PROMPT_VERSION,
-            "screening_evaluation_v3",
-        )
-        self.assertEqual(settings.SCREENING_MODEL_SCHEMA_VERSION, "1.0")
-        self.assertIsNone(settings.SCREENING_MODEL_INPUT_COST_PER_MILLION)
-        self.assertIsNone(settings.SCREENING_MODEL_OUTPUT_COST_PER_MILLION)
-
-    def test_screening_model_rejects_unsafe_numeric_configuration(self) -> None:
-        invalid_values = {
-            "SCREENING_MODEL_TIMEOUT_SECONDS": 0,
-            "SCREENING_MODEL_MAX_INPUT_CHARS": 9_999,
-            "SCREENING_MODEL_MAX_OUTPUT_TOKENS": 999,
-            "SCREENING_MODEL_INPUT_COST_PER_MILLION": -1,
-            "SCREENING_MODEL_OUTPUT_COST_PER_MILLION": -1,
-        }
-        for field, value in invalid_values.items():
-            with self.subTest(field=field), self.assertRaises(ValidationError):
-                Settings(_env_file=None, **{field: value})

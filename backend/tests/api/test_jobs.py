@@ -291,7 +291,7 @@ class JobApiTest(TestCase):
         references = JobReferenceCounts(
             candidates=2,
             resumes=1,
-            screening_results=2,
+            applications=2,
             reports=0,
         )
         with patch.object(

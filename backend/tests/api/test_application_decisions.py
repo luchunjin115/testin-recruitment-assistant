@@ -33,9 +33,7 @@ def make_application(
         source="hr_screening",
         lifecycle_status=lifecycle_status,
         recruitment_stage=recruitment_stage,
-        ai_status="completed",
         hr_decision=hr_decision,
-        current_screening_result_id=None,
         applied_at=TEST_TIME,
         created_at=TEST_TIME,
         updated_at=TEST_TIME,
@@ -55,8 +53,6 @@ def make_history() -> StageHistory:
         actor_type="hr",
         actor_id=None,
         actor_label="本地 HR（未认证）",
-        screening_result_id=None,
-        overrides_ai_recommendation=False,
         created_at=TEST_TIME,
     )
 

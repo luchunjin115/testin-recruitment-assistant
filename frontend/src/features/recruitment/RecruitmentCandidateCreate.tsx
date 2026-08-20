@@ -854,20 +854,10 @@ const RecruitmentCandidateCreate: React.FC = () => {
       const duplicateNotice = outcome.suspectedDuplicateCandidateIds.length > 0
         ? ` 另有同名候选人 #${outcome.suspectedDuplicateCandidateIds.join('、')}，后续请人工核对。`
         : '';
-      const screeningCopy = {
-        completed: 'AI 岗位评分已完成。',
-        blocked: 'AI 因资料不足暂未给分，可稍后补充材料。',
-        failed: 'AI 评分本次失败，可在 AI 初筛中心重试。',
-        screening: 'AI 评分已经启动，请在 AI 初筛中心查看进度。',
-        already_available: '该岗位申请已有评分状态，本次没有重复调用模型。',
-        start_failed: '申请已安全保存，但 AI 评分没有成功启动，可在 AI 初筛中心重试。',
-      }[outcome.screeningStatus];
       await messageApi.open({
-        content: `${values.name.trim()} 已由 HR 人工通过。${screeningCopy}${reuseNotice}${duplicateNotice}`,
+        content: `${values.name.trim()} 已由 HR 人工通过，Application 已安全保存。${reuseNotice}${duplicateNotice}`,
         duration: 2.5,
-        type: outcome.screeningStatus === 'completed' || outcome.screeningStatus === 'already_available'
-          ? 'success'
-          : 'warning',
+        type: 'success',
       });
       navigate('/app/candidates');
     } catch (error) {
@@ -932,7 +922,7 @@ const RecruitmentCandidateCreate: React.FC = () => {
             <div>
               <span className="recruitment-section-kicker">阶段 7 · HR 人工直通</span>
               <h2>新增候选人</h2>
-              <p>选择岗位并核对简历后，明确人工通过；系统保存完整申请并立即尝试一次 AI 岗位评分。</p>
+              <p>选择岗位并核对简历后，明确人工通过；系统保存完整申请和阶段历史。</p>
             </div>
           </div>
           <Tag bordered={false} color="blue">真实写入 /api/v2</Tag>
@@ -940,7 +930,7 @@ const RecruitmentCandidateCreate: React.FC = () => {
 
         <Alert
           className="recruitment-candidate-create-boundary"
-          description="AI 识别只帮助补全资料，最终通过决定由 HR 作出。AI 评分是岗位匹配参考，即使低分、资料不足或执行失败，也不会撤销这次人工通过。"
+          description="AI 识别只帮助补全简历资料，最终通过决定由 HR 作出。新版岗位匹配报告将在后续步骤接入，不会自动修改本次人工决定。"
           message="这是人工通过入口，不是 AI 自动录用"
           showIcon
           type="info"
@@ -1441,7 +1431,7 @@ const RecruitmentCandidateCreate: React.FC = () => {
                   <span><strong>人工通过</strong><small>AI 只提供补充参考</small></span>
                 </div>
                 <h3>确认进入候选人页面</h3>
-                <p>姓名、手机号、邮箱、开放岗位和简历会与 Application、首次阶段历史一起保存；随后立即尝试一次 AI 岗位评分。</p>
+                <p>姓名、手机号、邮箱、开放岗位和简历会与 Application、首次阶段历史一起保存。</p>
                 <Form.Item
                   className="recruitment-candidate-pass-confirmation"
                   name="confirmHrPass"
@@ -1464,7 +1454,7 @@ const RecruitmentCandidateCreate: React.FC = () => {
                   size="large"
                   type="primary"
                 >
-                  确认人工通过并启动 AI 评分
+                  确认人工通过并保存 Application
                 </Button>
                 {!attachedResume && <span className="recruitment-candidate-resume-required">请先上传并完成一份简历的原文提取</span>}
                 <Button

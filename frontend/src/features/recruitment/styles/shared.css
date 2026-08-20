@@ -370,21 +370,6 @@
   white-space: nowrap;
 }
 
-.recruitment-score-cell {
-  display: grid;
-  grid-template-columns: 24px minmax(30px, 1fr);
-  align-items: center;
-  gap: 7px;
-}
-
-.recruitment-score-cell strong {
-  font-size: 11px;
-}
-
-.recruitment-score-cell .ant-progress {
-  margin: 0;
-}
-
 .recruitment-status-tag {
   margin: 0;
   padding: 2px 7px;

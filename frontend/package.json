@@ -18,16 +18,10 @@
     "test:recruitment-job-read-boundaries": "node tests/recruitment-job-read-boundaries.test.mjs",
     "test:stage7-application-service": "node tests/stage7-application-service.test.mjs",
     "test:stage7-screening-center": "node tests/stage7-screening-center.test.mjs",
-    "test:stage7-single-screening-ui": "node tests/stage7-single-screening-ui.test.mjs",
-    "test:stage7-batch-screening-ui": "node tests/stage7-batch-screening-ui.test.mjs",
-    "test:stage7-screening-detail-ui": "node tests/stage7-screening-detail-ui.test.mjs",
     "test:stage7-hr-decision-ui": "node tests/stage7-hr-decision-ui.test.mjs",
     "test:stage7-screening-intake-ui": "node tests/stage7-screening-intake-ui.test.mjs",
     "test:stage7-candidate-application-list": "node tests/stage7-candidate-application-list.test.mjs",
     "test:stage7-hr-direct-candidate-ui": "node tests/stage7-hr-direct-candidate-ui.test.mjs",
-    "test:stage7-job-rubric-readonly-ui": "node tests/stage7-job-rubric-readonly-ui.test.mjs",
-    "test:stage7-job-rubric-draft-ui": "node tests/stage7-job-rubric-draft-ui.test.mjs",
-    "test:stage7-job-rubric-item-editor": "node tests/stage7-job-rubric-item-editor.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

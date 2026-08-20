@@ -23,8 +23,8 @@ for (const text of [
   '阶段 7 · HR 人工直通',
   '这是人工通过入口，不是 AI 自动录用',
   '我已核对岗位和候选人资料，并确认 HR 人工通过',
-  '确认人工通过并启动 AI 评分',
-  '即使低分、资料不足或执行失败，也不会撤销这次人工通过',
+  '确认人工通过并保存 Application',
+  '系统保存完整申请和阶段历史',
 ]) {
   assert.ok(createSource.includes(text), `缺少 HR 人工直通确认文案：${text}`);
 }
@@ -39,19 +39,13 @@ for (const contract of [
   'confirm_hr_pass: true',
   'resume_profile:',
   'intakeStage7Application',
-  'runStage7ApplicationScreening',
-  "intake.application.aiStatus !== 'not_started'",
 ]) {
   assert.ok(candidateService.includes(contract), `HR 直通服务缺少合同：${contract}`);
 }
 
-assert.ok(
-  candidateService.indexOf('intakeStage7Application({')
-    < candidateService.indexOf('runStage7ApplicationScreening(intake.application.id)'),
-  '必须先保存 Application，再尝试 AI 评分',
-);
-assert.ok(candidateService.includes("screeningStatus: 'start_failed'"));
-assert.ok(createSource.includes('申请已安全保存，但 AI 评分没有成功启动'));
+assert.equal(candidateService.includes('runStage7ApplicationScreening'), false);
+assert.equal(candidateService.includes('screeningStatus'), false);
+assert.ok(createSource.includes('Application 已安全保存'));
 assert.ok(createSource.includes("navigate('/app/candidates')"));
 assert.ok(candidateList.includes("navigate('/app/candidates/new')"));
 assert.equal(candidateList.includes('新增候选人 · 待升级'), false);

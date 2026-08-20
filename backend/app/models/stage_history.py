@@ -3,14 +3,13 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
 if TYPE_CHECKING:
     from app.models.application import Application
-    from app.models.screening_result import ScreeningResult
 
 
 class StageHistory(Base):
@@ -56,16 +55,6 @@ class StageHistory(Base):
     actor_type: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     actor_id: Mapped[str | None] = mapped_column(String(100))
     actor_label: Mapped[str] = mapped_column(String(100), nullable=False)
-    screening_result_id: Mapped[int | None] = mapped_column(
-        ForeignKey("screening_results.id"),
-        index=True,
-    )
-    overrides_ai_recommendation: Mapped[bool] = mapped_column(
-        Boolean,
-        nullable=False,
-        default=False,
-        server_default="false",
-    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -74,6 +63,3 @@ class StageHistory(Base):
     )
 
     application: Mapped["Application"] = relationship(back_populates="stage_histories")
-    screening_result: Mapped["ScreeningResult | None"] = relationship(
-        back_populates="stage_histories"
-    )

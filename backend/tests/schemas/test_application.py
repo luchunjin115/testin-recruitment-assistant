@@ -4,7 +4,6 @@ from unittest import TestCase
 from pydantic import ValidationError
 
 from app.schemas import (
-    ApplicationAIStatus,
     ApplicationCreate,
     ApplicationIntakeRequest,
     ApplicationIntakeResponse,
@@ -13,7 +12,6 @@ from app.schemas import (
     ApplicationSource,
     HRDecision,
     RecruitmentStage,
-    ScreeningRunRequest,
 )
 
 
@@ -129,7 +127,6 @@ class ApplicationPersistenceSchemaTest(TestCase):
         )
 
         self.assertIs(application.lifecycle_status, ApplicationLifecycleStatus.ACTIVE)
-        self.assertIs(application.ai_status, ApplicationAIStatus.NOT_STARTED)
 
         with self.assertRaises(ValidationError):
             ApplicationCreate(
@@ -189,45 +186,17 @@ class ApplicationPersistenceSchemaTest(TestCase):
             source="hr_screening",
             lifecycle_status="active",
             recruitment_stage="hr_review",
-            ai_status="failed",
             hr_decision="pending",
-            current_screening_result_id=None,
             applied_at=timestamp,
             created_at=timestamp,
             updated_at=timestamp,
         )
-        self.assertIs(application.ai_status, ApplicationAIStatus.FAILED)
         self.assertIs(application.hr_decision, HRDecision.PENDING)
 
         payload = application.model_dump()
         payload["applied_at"] = datetime(2026, 8, 17)
         with self.assertRaises(ValidationError):
             ApplicationRead.model_validate(payload)
-
-
-class ScreeningRunRequestTest(TestCase):
-    def test_regular_run_needs_no_force_reason(self) -> None:
-        request = ScreeningRunRequest()
-        self.assertFalse(request.force)
-        self.assertIsNone(request.reason)
-
-    def test_force_run_requires_reason_and_explicit_confirmation(self) -> None:
-        invalid_payloads = (
-            {"force": True},
-            {"force": True, "confirm_force": True},
-            {"force": True, "reason": "复核评分"},
-            {"force": True, "confirm_force": "yes", "reason": "复核评分"},
-        )
-        for payload in invalid_payloads:
-            with self.subTest(payload=payload), self.assertRaises(ValidationError):
-                ScreeningRunRequest.model_validate(payload)
-
-        request = ScreeningRunRequest(
-            force=True,
-            confirm_force=True,
-            reason="  岗位要求变化后人工复核  ",
-        )
-        self.assertEqual(request.reason, "岗位要求变化后人工复核")
 
 
 class ApplicationIntakeResponseTest(TestCase):
@@ -243,9 +212,7 @@ class ApplicationIntakeResponseTest(TestCase):
                     "source": "hr_screening",
                     "lifecycle_status": "active",
                     "recruitment_stage": "applied",
-                    "ai_status": "not_started",
                     "hr_decision": "pending",
-                    "current_screening_result_id": None,
                     "applied_at": timestamp,
                     "created_at": timestamp,
                     "updated_at": timestamp,

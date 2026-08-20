@@ -4,11 +4,9 @@ from unittest.mock import AsyncMock, Mock
 from app.models.candidate import Candidate
 from app.models.job import Job
 from app.models.report import Report
-from app.models.screening_result import ScreeningResult
 from app.schemas.report import ReportCreate, ReportUpdate
 from app.services.report_service import (
     ReportDependencyNotFoundError,
-    ReportScreeningMismatchError,
     ReportService,
 )
 
@@ -34,22 +32,19 @@ class ReportServiceTest(IsolatedAsyncioTestCase):
         self.db.get.side_effect = [
             Candidate(id=10, name="候选人"),
             Job(id=3, title="岗位"),
-            ScreeningResult(id=5, candidate_id=10, job_id=3),
         ]
         report = await self.service.create_report(
             self.db,
             ReportCreate(
                 candidate_id=10,
                 job_id=3,
-                screening_id=5,
-                title="初筛报告",
+                title="通用报告",
                 content="# 报告内容",
                 report_metadata={"version": 1},
             ),
         )
 
         self.assertEqual(report.candidate_id, 10)
-        self.assertEqual(report.screening_id, 5)
         self.assertEqual(report.format, "markdown")
         self.db.add.assert_called_once_with(report)
         self.db.commit.assert_awaited_once()
@@ -70,27 +65,6 @@ class ReportServiceTest(IsolatedAsyncioTestCase):
             )
         self.assertEqual(job_error.exception.resource, "job")
 
-    async def test_create_rejects_missing_or_mismatched_screening(self) -> None:
-        self.db.get.side_effect = [Candidate(id=10, name="候选人"), Job(id=3, title="岗位"), None]
-        with self.assertRaises(ReportDependencyNotFoundError) as missing_error:
-            await self.service.create_report(
-                self.db,
-                ReportCreate(candidate_id=10, job_id=3, screening_id=999, content="报告"),
-            )
-        self.assertEqual(missing_error.exception.resource, "screening_result")
-
-        self.db.get.side_effect = [
-            Candidate(id=10, name="候选人"),
-            Job(id=3, title="岗位"),
-            ScreeningResult(id=5, candidate_id=11, job_id=3),
-        ]
-        with self.assertRaises(ReportScreeningMismatchError):
-            await self.service.create_report(
-                self.db,
-                ReportCreate(candidate_id=10, job_id=3, screening_id=5, content="报告"),
-            )
-        self.db.add.assert_not_called()
-
     async def test_get_and_filtered_list(self) -> None:
         expected = Report(id=7, candidate_id=10, job_id=3, content="报告")
         self.db.get.return_value = expected
@@ -100,46 +74,31 @@ class ReportServiceTest(IsolatedAsyncioTestCase):
         scalar_result.all.return_value = [expected]
         self.db.scalars.return_value = scalar_result
         listed = await self.service.list_reports(
-            self.db, candidate_id=10, job_id=3, screening_id=5
+            self.db, candidate_id=10, job_id=3
         )
         self.assertEqual(listed, [expected])
         statement = str(self.db.scalars.await_args.args[0])
         self.assertIn("reports.candidate_id", statement)
         self.assertIn("reports.job_id", statement)
-        self.assertIn("reports.screening_id", statement)
 
-    async def test_update_validates_new_screening_and_updates_fields(self) -> None:
+    async def test_update_changes_public_fields(self) -> None:
         existing = Report(
             id=4,
             candidate_id=10,
             job_id=3,
-            screening_id=None,
             title="旧标题",
             content="旧内容",
         )
-        self.db.get.side_effect = [
-            existing,
-            ScreeningResult(id=5, candidate_id=10, job_id=3),
-        ]
+        self.db.get.return_value = existing
         report = await self.service.update_report(
             self.db,
             4,
-            ReportUpdate(screening_id=5, title="新标题", content="新内容"),
+            ReportUpdate(title="新标题", content="新内容"),
         )
 
         self.assertIs(report, existing)
-        self.assertEqual(existing.screening_id, 5)
         self.assertEqual(existing.title, "新标题")
         self.db.commit.assert_awaited_once()
-
-    async def test_update_can_unlink_screening_without_lookup(self) -> None:
-        existing = Report(id=4, candidate_id=10, job_id=3, screening_id=5, content="报告")
-        self.db.get.return_value = existing
-        report = await self.service.update_report(
-            self.db, 4, ReportUpdate(screening_id=None)
-        )
-        self.assertIsNone(report.screening_id)
-        self.db.get.assert_awaited_once_with(Report, 4)
 
     async def test_update_and_delete_not_found(self) -> None:
         self.db.get.return_value = None

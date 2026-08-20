@@ -3,9 +3,6 @@ from pathlib import Path
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-from app.prompts.screening_rubric_templates import get_rubric_template
-
-
 MIGRATION_PATH = (
     Path(__file__).resolve().parents[2]
     / "migrations"
@@ -52,11 +49,14 @@ class Stage7ApplicationFoundationMigrationTest(TestCase):
         self.assertTrue(all(item["max_score"] == 10 for item in items))
         self.assertTrue(all(item["source"] == "template" for item in items))
         self.assertEqual(
-            items,
-            [
-                item.model_dump(mode="json")
-                for item in get_rubric_template("standard").semantic_items
-            ],
+            {item["key"] for item in items},
+            {
+                "responsibility_alignment",
+                "experience_depth",
+                "project_impact",
+                "problem_solving_depth",
+                "role_specific_context",
+            },
         )
 
     def test_upgrade_declares_v2_rubric_storage_indexes_and_template_backfill(self) -> None:

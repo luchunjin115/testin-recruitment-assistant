@@ -22,7 +22,6 @@ class ApplicationService:
         *,
         job_id: int | None = None,
         recruitment_stage: str | None = None,
-        ai_status: str | None = None,
         hr_decision: str | None = None,
         lifecycle_status: str | None = None,
     ) -> list[Application]:
@@ -33,8 +32,6 @@ class ApplicationService:
             statement = statement.where(
                 Application.recruitment_stage == recruitment_stage
             )
-        if ai_status is not None:
-            statement = statement.where(Application.ai_status == ai_status)
         if hr_decision is not None:
             statement = statement.where(Application.hr_decision == hr_decision)
         if lifecycle_status is not None:

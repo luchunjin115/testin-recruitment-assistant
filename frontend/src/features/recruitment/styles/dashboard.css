@@ -51,12 +51,6 @@
   min-height: 210px;
 }
 
-.recruitment-score-pending {
-  color: #949cab;
-  font-size: 9px;
-  white-space: nowrap;
-}
-
 .recruitment-content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(300px, 0.8fr);

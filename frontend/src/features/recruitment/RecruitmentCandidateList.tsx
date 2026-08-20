@@ -4,7 +4,6 @@ import {
   ExclamationCircleOutlined,
   LinkOutlined,
   ReloadOutlined,
-  RobotOutlined,
   SearchOutlined,
   TeamOutlined,
   UserAddOutlined,
@@ -15,37 +14,19 @@ import {
   type CandidateListSnapshot,
   getRecruitmentCandidates,
 } from './services/candidates';
-import type { Stage7ApplicationAIStatus } from './types/applicationScreening';
 
 type LoadState =
   | { status: 'loading' }
   | { status: 'error'; message: string }
   | { status: 'ready'; data: CandidateListSnapshot };
 
-type StatusMeta = { label: string; tone: 'info' | 'success' | 'warning' | 'danger' | 'neutral' };
-
 const avatarTones = ['blue', 'violet', 'green', 'orange'];
-
-const AI_STATUS_META: Record<Stage7ApplicationAIStatus, StatusMeta> = {
-  not_started: { label: '等待评分', tone: 'neutral' },
-  screening: { label: '评分中', tone: 'info' },
-  completed: { label: '评分完成', tone: 'success' },
-  failed: { label: '评分失败', tone: 'danger' },
-  blocked: { label: '资料不足', tone: 'warning' },
-};
 
 const SOURCE_LABELS = {
   hr_direct: 'HR 人工直通',
-  hr_screening: 'AI 初筛通过',
+  hr_screening: 'HR 审核通过',
   public_apply: '公开投递通过',
 } as const;
-
-const RECOMMENDATION_LABELS: Record<string, string> = {
-  strong_recommend: '强烈推荐',
-  recommend: '建议推进',
-  review_required: '需要复核',
-  low_match: '匹配度较低',
-};
 
 const formatDateTime = (value: string) => {
   const date = new Date(value);
@@ -64,7 +45,6 @@ const RecruitmentCandidateList: React.FC = () => {
   const navigate = useNavigate();
   const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
   const [keyword, setKeyword] = useState('');
-  const [aiFilter, setAiFilter] = useState<Stage7ApplicationAIStatus | 'all'>('all');
   const [jobFilter, setJobFilter] = useState<number | 'all'>('all');
 
   const loadCandidates = useCallback(async () => {
@@ -88,7 +68,6 @@ const RecruitmentCandidateList: React.FC = () => {
     const normalizedKeyword = keyword.trim().toLowerCase();
 
     return loadState.data.items.filter(item => {
-      const matchesAi = aiFilter === 'all' || item.aiStatus === aiFilter;
       const matchesJob = jobFilter === 'all' || item.jobId === jobFilter;
       const matchesKeyword = !normalizedKeyword || [
         item.name,
@@ -100,13 +79,12 @@ const RecruitmentCandidateList: React.FC = () => {
         item.jobDepartment,
         `application #${item.applicationId}`,
       ].some(value => value?.toLowerCase().includes(normalizedKeyword));
-      return matchesAi && matchesJob && matchesKeyword;
+      return matchesJob && matchesKeyword;
     });
-  }, [aiFilter, jobFilter, keyword, loadState]);
+  }, [jobFilter, keyword, loadState]);
 
   const resetFilters = () => {
     setKeyword('');
-    setAiFilter('all');
     setJobFilter('all');
   };
 
@@ -136,7 +114,7 @@ const RecruitmentCandidateList: React.FC = () => {
         <Alert
           action={<Button icon={<ReloadOutlined />} onClick={() => void loadCandidates()}>重新加载</Button>}
           className="recruitment-dashboard-alert recruitment-section-gap"
-          description={`请确认 applications、candidates、jobs 和 screening-results 接口可访问。技术信息：${loadState.message}`}
+          description={`请确认 applications、candidates 和 jobs 接口可访问。技术信息：${loadState.message}`}
           message="已通过候选人数据加载失败"
           showIcon
           type="error"
@@ -160,7 +138,7 @@ const RecruitmentCandidateList: React.FC = () => {
       icon: <LinkOutlined />, tone: 'orange',
     },
     {
-      label: '评分待跟进', value: data.needsAttentionCount, note: '未完成、失败、资料不足或过期',
+      label: '资料待补充', value: data.needsAttentionCount, note: '手机号或邮箱尚不完整',
       icon: <ExclamationCircleOutlined />, tone: 'red',
     },
   ];
@@ -171,9 +149,9 @@ const RecruitmentCandidateList: React.FC = () => {
         <div>
           <span className="recruitment-section-kicker">阶段 7 · 已通过 Application 业务视图</span>
           <h2>候选人</h2>
-          <p>只展示 HR 已通过的岗位申请；AI 后续重跑不会自动改变这里的人员归类。</p>
+          <p>只展示 HR 已通过的岗位申请；人工决定与 AI 报告相互独立。</p>
         </div>
-        <Tooltip title="HR 核对资料并人工通过后，系统会自动尝试一次 AI 岗位评分">
+        <Tooltip title="上传简历并由 HR 明确确认后，候选人进入已通过业务视图">
           <Button icon={<UserAddOutlined />} onClick={() => navigate('/app/candidates/new')} type="primary">新增候选人</Button>
         </Tooltip>
       </section>
@@ -223,17 +201,7 @@ const RecruitmentCandidateList: React.FC = () => {
               ]}
               value={jobFilter}
             />
-            <Select
-              aria-label="按 AI 状态筛选"
-              className="recruitment-candidate-status-select"
-              onChange={setAiFilter}
-              options={[
-                { value: 'all', label: '全部 AI 状态' },
-                ...Object.entries(AI_STATUS_META).map(([value, meta]) => ({ value, label: meta.label })),
-              ]}
-              value={aiFilter}
-            />
-            {(keyword || jobFilter !== 'all' || aiFilter !== 'all') && <Button onClick={resetFilters}>清除筛选</Button>}
+            {(keyword || jobFilter !== 'all') && <Button onClick={resetFilters}>清除筛选</Button>}
             <Button aria-label="刷新已通过 Application" icon={<ReloadOutlined />} onClick={() => void loadCandidates()} />
           </div>
         </div>
@@ -249,7 +217,7 @@ const RecruitmentCandidateList: React.FC = () => {
             }
             image={Empty.PRESENTED_IMAGE_SIMPLE}
           >
-            <Button icon={<RobotOutlined />} onClick={() => navigate('/app/screening')} type="primary">前往 AI 初筛中心</Button>
+            <Button onClick={() => navigate('/app/screening')} type="primary">前往 HR 初筛工作台</Button>
           </Empty>
         ) : filteredItems.length === 0 ? (
           <Empty
@@ -262,11 +230,9 @@ const RecruitmentCandidateList: React.FC = () => {
         ) : (
           <div aria-label="HR 已通过 Application 列表" className="recruitment-table" role="table">
             <div className="recruitment-table-head recruitment-candidate-table-columns" role="row">
-              <span>候选人</span><span>已通过岗位</span><span>当前 AI 证据</span><span>AI 状态</span><span>招聘阶段</span><span>申请来源</span><span>更新时间</span>
+              <span>候选人</span><span>已通过岗位</span><span>HR 决策</span><span>联系方式</span><span>招聘阶段</span><span>申请来源</span><span>更新时间</span>
             </div>
-            {filteredItems.map(item => {
-              const aiMeta = AI_STATUS_META[item.aiStatus];
-              return (
+            {filteredItems.map(item => (
                 <div className="recruitment-table-row recruitment-candidate-table-columns" key={item.applicationId} role="row">
                   <div className="recruitment-candidate-cell">
                     <Avatar className={`recruitment-candidate-avatar is-${avatarTones[item.candidateId % avatarTones.length]}`}>
@@ -281,21 +247,13 @@ const RecruitmentCandidateList: React.FC = () => {
                     <strong>{item.jobTitle}</strong>
                     <span>{item.jobDepartment || '部门未填写'} · Application #{item.applicationId}</span>
                   </div>
-                  <div className="recruitment-candidate-ai-result">
-                    <strong>{item.currentScore === null ? '—' : `${item.currentScore} 分`}</strong>
-                    <span>{item.currentResultIsOutdated
-                      ? '结果已过期'
-                      : item.currentRecommendation
-                        ? RECOMMENDATION_LABELS[item.currentRecommendation] || item.currentRecommendation
-                        : '暂无推荐等级'}</span>
-                  </div>
-                  <div><Tag bordered={false} className={`recruitment-status-tag is-${aiMeta.tone}`}>{aiMeta.label}</Tag></div>
+                  <div><Tag bordered={false} className="recruitment-status-tag is-success">HR 已通过</Tag></div>
+                  <span>{item.email || item.phone || '待补充'}</span>
                   <div><Tag bordered={false} className="recruitment-status-tag is-success">初筛已通过</Tag></div>
                   <span className="recruitment-role-cell">{SOURCE_LABELS[item.applicationSource]}</span>
                   <span className="recruitment-time-cell">{formatDateTime(item.updatedAt)}</span>
                 </div>
-              );
-            })}
+            ))}
           </div>
         )}
       </section>
