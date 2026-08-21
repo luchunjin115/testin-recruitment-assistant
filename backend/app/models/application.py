@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from app.models.job import Job
     from app.models.resume import Resume
     from app.models.stage_history import StageHistory
+    from app.models.screening_report import ScreeningReport
+    from app.models.screening_run import ScreeningRun
 
 
 class Application(Base):
@@ -114,4 +116,14 @@ class Application(Base):
     stage_histories: Mapped[list["StageHistory"]] = relationship(
         back_populates="application",
         order_by="StageHistory.created_at",
+    )
+    screening_report: Mapped["ScreeningReport | None"] = relationship(
+        back_populates="application",
+        uselist=False,
+        passive_deletes=True,
+    )
+    screening_runs: Mapped[list["ScreeningRun"]] = relationship(
+        back_populates="application",
+        order_by="ScreeningRun.created_at",
+        passive_deletes=True,
     )

@@ -1,0 +1,111 @@
+{
+  "acceptance_scope": "stage7_small_step_8_browser_frontend_manual_acceptance",
+  "overall_stage7_status": "failed_due_to_prior_real_deepseek_quality_gates",
+  "browser_acceptance_status": "failed_with_unverified_scenario",
+  "playwright_mcp_available": true,
+  "pages_opened": [
+    "http://127.0.0.1:5173/app/jobs",
+    "http://127.0.0.1:5173/app/screening"
+  ],
+  "data": {
+    "actual_local_empty_state_checked": true,
+    "full_state_fixture": "STAGE7_BROWSER_ACCEPTANCE_FIXTURE",
+    "fixture_is_fictional_and_redacted": true,
+    "database_writes": 0,
+    "deepseek_calls": 0,
+    "real_candidate_records_used": 0
+  },
+  "scenario_counts": {
+    "total": 60,
+    "passed": 57,
+    "failed": 2,
+    "unverified": 1,
+    "blocked": 0
+  },
+  "failed_scenarios": [
+    {
+      "id": "K02",
+      "result": "failed",
+      "reason": "评价计划抽屉的键盘焦点会先经过无可访问名称的焦点哨兵，Chromium 同时报告 aria-hidden 焦点警告。关闭后的焦点回归已修复并通过。"
+    },
+    {
+      "id": "C01",
+      "result": "failed",
+      "reason": "控制台无 React、未捕获异常、hydration 或 key 错误，但仍有 1 条 Ant Drawer 焦点哨兵与 aria-hidden 冲突警告。"
+    }
+  ],
+  "unverified_scenarios": [
+    {
+      "id": "B19",
+      "result": "unverified",
+      "reason": "虚构前端响应验证了 reused_report 提示，但本轮没有向真实数据库写入，不能用夹具证明普通初筛端到端幂等持久化。"
+    }
+  ],
+  "polling": {
+    "interval_ms_observed": [4015, 4030],
+    "queued_to_running_to_succeeded": {
+      "request_path": "/api/v2/applications/104/screening",
+      "count_at_open": 3,
+      "count_after_first_poll": 4,
+      "count_after_second_poll": 5,
+      "count_after_two_more_terminal_intervals": 5
+    },
+    "close_drawer_stops": {
+      "request_path": "/api/v2/applications/105/screening",
+      "count_before_close": 4,
+      "count_after_two_intervals": 4
+    },
+    "route_leave_stops": {
+      "request_path": "/api/v2/applications/105/screening",
+      "count_before_leave": 6,
+      "count_after_two_intervals": 6
+    },
+    "plan_generating_requests": {
+      "request_path": "/api/v2/jobs/2/evaluation-plan",
+      "count_at_open": 1,
+      "count_after_two_screening_intervals": 1,
+      "count_after_close": 1,
+      "note": "评价计划页面按当前实现只在打开或手动刷新时请求，不自动轮询。"
+    }
+  },
+  "network": {
+    "full_script_request_count": 103,
+    "http_error_count": 0,
+    "single_reassessment_posts": 2,
+    "batch_reassessment_posts": 1,
+    "post_fix_reassessment_path": "/api/v2/applications/101/screening/re-evaluate",
+    "post_fix_reassessment_status": 200
+  },
+  "console": {
+    "react_errors": 0,
+    "uncaught_errors": 0,
+    "hydration_errors": 0,
+    "key_warnings": 0,
+    "static_modal_warning_after_fix": 0,
+    "remaining_project_warnings": 1,
+    "remaining_warning": "Blocked aria-hidden on an element because its descendant retained focus."
+  },
+  "responsive": {
+    "desktop": "1440x900: 岗位表、状态卡、计划抽屉和完整报告无横向溢出",
+    "narrow": "820x1180: 计划抽屉 760px、报告抽屉 820px，操作按钮和证据可见",
+    "mobile": "390x844: 两类抽屉适配 390px，正文可纵向滚动且核心查看操作可完成"
+  },
+  "minimal_frontend_fixes": [
+    "评价计划抽屉关闭前把焦点返回触发按钮",
+    "静态 Modal API 改为 Modal.useModal 上下文实例",
+    "tradeoff_reason 为空时不渲染综合权衡空壳区域"
+  ],
+  "screenshots": [
+    "jobs-empty-desktop-1440x900.png",
+    "jobs-plan-ready-desktop-1440x900.png",
+    "jobs-plan-failed-desktop-1440x900.png",
+    "jobs-plan-ready-narrow-820x1180.png",
+    "jobs-plan-ready-mobile-390x844.png",
+    "screening-state-grid-desktop-1440x900.png",
+    "screening-failed-old-report-desktop-1440x900.png",
+    "screening-report-zero-bonus-tradeoff-desktop-1440x900.png",
+    "screening-report-narrow-820x1180.png",
+    "screening-report-mobile-390x844.png"
+  ],
+  "accessibility_snapshot": "screening-report-accessibility.md"
+}

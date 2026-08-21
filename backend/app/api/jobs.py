@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from inspect import isawaitable
 from collections.abc import Awaitable, Callable
 
 from fastapi import (
@@ -28,6 +29,8 @@ from app.services.job_service import (
     JobOpenValidationError,
     job_service,
 )
+from app.services.job_evaluation_plan_service import job_evaluation_plan_service
+from app.services.screening_service import screening_service
 
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -97,6 +100,29 @@ def _open_validation_failed(exc: JobOpenValidationError) -> HTTPException:
     )
 
 
+async def _generate_plan_after_job_commit(
+    db: AsyncSession,
+    job: Job,
+) -> None:
+    """Best-effort post-commit hook; plan failure never rolls back the Job."""
+    if job.status != "open":
+        return
+    try:
+        plan = await job_evaluation_plan_service.generate_for_job(db, job.id)
+        await screening_service.after_plan_changed(
+            db,
+            job.id,
+            plan_ready=plan.status == "ready" and plan.is_current,
+        )
+    except Exception:
+        try:
+            rollback_result = db.rollback()
+            if isawaitable(rollback_result):
+                await rollback_result
+        except Exception:
+            pass
+
+
 async def _run_status_action(
     action: _StatusAction,
     db: AsyncSession,
@@ -122,11 +148,13 @@ async def _run_status_action(
 @router.post("", response_model=JobRead, status_code=status.HTTP_201_CREATED)
 async def create_job(data: JobCreate, db: AsyncSession = Depends(get_db)) -> Job:
     try:
-        return await job_service.create_job(db, data)
+        job = await job_service.create_job(db, data)
     except JobOpenValidationError as exc:
         raise _open_validation_failed(exc) from exc
     except Exception as exc:
         raise _operation_failed() from exc
+    await _generate_plan_after_job_commit(db, job)
+    return job
 
 
 @router.get("", response_model=list[JobRead])
@@ -165,22 +193,36 @@ async def update_job(
         raise _operation_failed() from exc
     if job is None:
         raise _not_found()
+    await _generate_plan_after_job_commit(db, job)
     return job
 
 
 @router.post("/{job_id}/open", response_model=JobRead)
 async def open_job(job_id: int, db: AsyncSession = Depends(get_db)) -> Job:
-    return await _run_status_action(job_service.open_job, db, job_id)
+    job = await _run_status_action(job_service.open_job, db, job_id)
+    await _generate_plan_after_job_commit(db, job)
+    return job
 
 
 @router.post("/{job_id}/close", response_model=JobRead)
 async def close_job(job_id: int, db: AsyncSession = Depends(get_db)) -> Job:
-    return await _run_status_action(job_service.close_job, db, job_id)
+    job = await _run_status_action(job_service.close_job, db, job_id)
+    try:
+        await screening_service.after_job_closed(db, job.id)
+    except Exception:
+        pass
+    return job
 
 
 @router.post("/{job_id}/reopen", response_model=JobRead)
 async def reopen_job(job_id: int, db: AsyncSession = Depends(get_db)) -> Job:
-    return await _run_status_action(job_service.reopen_job, db, job_id)
+    job = await _run_status_action(job_service.reopen_job, db, job_id)
+    await _generate_plan_after_job_commit(db, job)
+    try:
+        await screening_service.after_job_reopened(db, job.id)
+    except Exception:
+        pass
+    return job
 
 
 @router.delete(

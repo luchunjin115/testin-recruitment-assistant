@@ -49,6 +49,7 @@ from app.services.application_intake_service import (
     application_intake_service,
 )
 from app.services.application_service import application_service
+from app.services.screening_service import screening_service
 
 
 router = APIRouter(prefix="/applications", tags=["applications"])
@@ -194,6 +195,11 @@ async def intake_application(
 
     if result.existing_application_reused:
         response.status_code = status.HTTP_200_OK
+    try:
+        await screening_service.after_application_commit(db, result.application.id)
+    except Exception:
+        # Application is already committed; background-trigger failure must not undo it.
+        pass
     return ApplicationIntakeResponse(
         application=result.application,
         candidate_resolution=result.candidate_resolution,

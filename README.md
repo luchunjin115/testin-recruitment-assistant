@@ -1,20 +1,20 @@
 # HR Agent 招聘提效平台
 
-一个面向公司内部 HR 团队的 AI 招聘工作台。项目使用 React、FastAPI 和 PostgreSQL 构建招聘业务主链，并在简历结构化中接入可审计的 AI 能力。JD 驱动的新版 AI 初筛正在按阶段 7 设计重建。
+一个面向公司内部 HR 团队的 AI 招聘工作台。项目使用 React、FastAPI 和 PostgreSQL 构建招聘业务主链，并在简历结构化和 JD 驱动的 AI 初筛中接入可审计的 AI 能力。
 
-> 当前状态：阶段 4—6 已完成；阶段 7 的旧 Rubric、权重评分和 ScreeningResult 体系已删除，下一步实现新版 JobEvaluationPlan。旧 React + FastAPI + SQLite + Mock LLM 演示系统及其演示数据已于 2026-08-18 完成退役。
+> 当前状态：阶段 4—6 已完成；阶段 7 的旧 Rubric、权重评分和 ScreeningResult 体系已删除，JobEvaluationPlan、严格 AI 评价、持久运行、幂等、当前报告替换和 React 完整报告交互已完成。下一步等待专项质量验收。旧 React + FastAPI + SQLite + Mock LLM 演示系统及其演示数据已于 2026-08-18 完成退役。
 
 ## 当前能做什么
 
 | 能力 | 当前状态 | 说明 |
 | --- | --- | --- |
-| 岗位管理 | 可用 | 创建、编辑、开放、关闭、重新开放和安全删除 |
+| 岗位管理 | 可用 | 创建、编辑、开放、关闭、重新开放、安全删除，并只读预览当前 JD 评价计划 |
 | 候选人管理 | 可用 | 列表、创建、详情和基础资料维护 |
 | 简历处理 | 可用 | PDF、DOCX、TXT 私有上传、原文提取、AI 结构化、人工核对后绑定候选人 |
 | Application 申请合同 | 可用 | 录入、身份解析、简历隔离、状态、历史和独立 HR 决策 |
-| AI 初筛 | 重建中 | 当前保留 Application 工作台；旧 Rubric 与旧评分已删除，新版 JD 驱动报告尚未实现 |
+| AI 初筛 | 可用 | 支持运行状态、完整报告、证据展开、过期提示、普通复用、单人/最多 20 人重新评估和失败保留旧报告 |
 | Dashboard | 可用 | 读取 PostgreSQL 中的岗位、候选人和待处理 Application 统计 |
-| 报告中心 | 只读 | 查看通用 Report；新版 AI 初筛报告生成尚未开放 |
+| 报告中心 | 只读 | `/app/reports` 继续查看通用 Report；Application 的当前 AI 报告在 `/app/screening` 查看 |
 | 公开投递 | 页面预览 | `/apply` 可读取开放岗位，提交按钮尚未开放 |
 | 权限、面试、Offer、Agent、RAG | 未完成 | 属于后续阶段，不在当前完成范围内 |
 
@@ -62,7 +62,7 @@ Redis 和 Chroma 已完成基础设施接入，但综合 Agent 与 RAG 业务仍
 
 ### 1. 可选：准备环境变量
 
-如果只查看不需要 AI 调用的页面，可以直接使用默认配置启动。需要验证真实简历结构化时，复制环境变量模板并配置自己的 DeepSeek Key：
+如果只查看不需要 AI 调用的页面，可以直接使用默认配置启动。需要验证真实简历结构化或 JD 评价计划生成时，复制环境变量模板并配置自己的 DeepSeek Key：
 
 ```powershell
 Copy-Item .env.example .env
@@ -146,8 +146,8 @@ npm run dev -- --host 127.0.0.1
 | `http://localhost:5173/app/resumes` | 简历管理 |
 | `http://localhost:5173/app/candidates` | 候选人管理 |
 | `http://localhost:5173/app/candidates/new` | 新增候选人和简历智能识别 |
-| `http://localhost:5173/app/jobs` | 岗位管理 |
-| `http://localhost:5173/app/screening` | Application 与 HR 初筛工作台 |
+| `http://localhost:5173/app/jobs` | 岗位管理与只读评价计划预览 |
+| `http://localhost:5173/app/screening` | Application、AI 完整报告、重新评估与 HR 独立决策 |
 | `http://localhost:5173/app/reports` | 通用报告中心 |
 | `http://localhost:5173/apply` | 公开投递页预览 |
 | `http://localhost:8000/docs` | FastAPI Swagger 文档 |
@@ -167,11 +167,39 @@ npm run dev -- --host 127.0.0.1
 
 ## AI 配置说明
 
-`.env.example` 当前保留的专用 AI 开关是 `RESUME_STRUCTURE_*`，用于简历结构化。新版 JD 评价计划和 AI 初筛报告的专用配置会在对应实现步骤中增加。
+`.env.example` 中的 `RESUME_STRUCTURE_*` 用于简历结构化，`JOB_EVALUATION_PLAN_*` 用于 JD 评价计划生成，`SCREENING_EVALUATION_*` 与 `SCREENING_WORKER_*` 用于候选人评价和 PostgreSQL 持久任务工人。AI SDK 自动重试保持关闭；评价计划和候选人评价 Service 只对网络、限流、超时和模型服务端错误额外重试 1 次。
 
 平台可以在没有 Key 的情况下启动，但真实 AI 请求需要有效的 DeepSeek 配置。配置缺失或模型调用失败时，相关业务接口会返回明确错误，不应把失败结果当作真实 AI 结论。
 
 `LLM_PROVIDER=mock` 是通用 LLM 配置，不代表阶段 5 的专用简历结构化链路一定会生成模拟成功结果。
+
+## JobEvaluationPlan API
+
+岗位创建即开放、开放、重新开放或开放状态下修改后，后端会在岗位事务提交后尝试生成当前 JD 指纹对应的评价计划。生成失败不会回滚岗位发布。React 岗位列表中的“评价计划”入口会展示状态、事项、来源、警告和版本；这里只读，不提供旧 Rubric 式编辑、权重或发布流程。
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| `GET` | `/api/v2/jobs/{job_id}/evaluation-plan` | 查询当前 JD 的只读评价计划 |
+| `POST` | `/api/v2/jobs/{job_id}/evaluation-plan/generate` | 幂等触发当前 JD 计划生成 |
+| `POST` | `/api/v2/jobs/{job_id}/evaluation-plan/regenerate` | 重新生成失败的当前计划 |
+
+当前项目尚未实现登录与 RBAC，这些接口继承现有 `/api/v2/jobs` 的内部开发接口边界。
+
+## AI 初筛运行 API
+
+Application 创建后，系统只在数据库事务提交成功后创建持久 `ScreeningRun`；HTTP 请求不会等待 DeepSeek。FastAPI 生命周期中的 worker 从 PostgreSQL 领取任务，成功后在一个事务中替换该 Application 唯一的当前 `ScreeningReport`，失败时保留旧报告。任务状态和租约都在数据库中，进程重启后可继续解释和恢复，不依赖内存任务状态。
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| `GET` | `/api/v2/applications/{application_id}/screening` | 查询当前报告和最近运行 |
+| `POST` | `/api/v2/applications/{application_id}/screening` | 幂等触发普通初筛 |
+| `POST` | `/api/v2/applications/{application_id}/screening/re-evaluate` | 单人重新评估 |
+| `POST` | `/api/v2/jobs/{job_id}/screening/re-evaluate-batch` | 同一岗位下 1—20 人重新评估 |
+| `PUT` | `/api/v2/applications/{application_id}/current-resume` | 切换当前 Resume 并使旧报告过期，不自动重评 |
+
+这些接口同样沿用当前内部开发边界；项目尚未实现登录/RBAC，不能把它们当作已经具备生产权限控制。
+
+在 `/app/screening` 中，“查看 AI 报告”会展示当前成功报告和最近运行；`queued/running` 时页面每 4 秒最小轮询，终态或关闭抽屉后停止。普通“开始初筛”可能复用相同报告或运行；“重新评估”会二次确认并创建主动运行。新运行期间或失败后旧成功报告继续显示，过期报告不会自动调用 AI。批量重新评估只允许同一岗位 1—20 个 Application。
 
 ## 项目目录
 
@@ -246,7 +274,7 @@ Set-Location backend
 ..\.venv\Scripts\python.exe -m alembic check
 ```
 
-当前验证基线：后端 460 项测试、前端 16 个测试脚本、Vite 生产构建 3116 个模块、Alembic revision `c4a9d8e7f621`。
+当前验证基线：后端 573 项测试、前端 16 个测试脚本、Vite 生产构建 3116 个模块、Alembic revision `b7f2c9d4e816`。
 
 ## 停止服务
 
@@ -263,7 +291,7 @@ docker compose stop postgres redis chroma
 以下能力尚未完成，不应在演示或简历中描述为已交付：
 
 - 公开投递表单正式提交
-- JobEvaluationPlan、新 AI 初筛报告和重新评估链路尚未实现
+- 真实 DeepSeek 的 20 份 JD 与 20 组 JD/Resume 专项质量验收
 - 面试、Offer、录取闭环
 - 登录、角色与权限
 - 综合 Agent 与 RAG 知识库

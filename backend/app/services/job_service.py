@@ -10,8 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.candidate import Candidate
 from app.models.application import Application
 from app.models.job import Job
+from app.models.job_evaluation_plan import JobEvaluationPlan
 from app.models.report import Report
 from app.models.resume import Resume
+from app.models.screening_report import ScreeningReport
+from app.models.screening_run import ScreeningRun
 from app.schemas.job import (
     JobCreate,
     JobRequirementsV1,
@@ -47,18 +50,32 @@ class JobReferenceCounts:
     candidates: int
     resumes: int
     applications: int
+    evaluation_plans: int
     reports: int
+    screening_reports: int
+    screening_runs: int
 
     @property
     def total(self) -> int:
-        return self.candidates + self.resumes + self.applications + self.reports
+        return (
+            self.candidates
+            + self.resumes
+            + self.applications
+            + self.evaluation_plans
+            + self.reports
+            + self.screening_reports
+            + self.screening_runs
+        )
 
     def as_dict(self) -> dict[str, int]:
         return {
             "candidates": self.candidates,
             "resumes": self.resumes,
             "applications": self.applications,
+            "evaluation_plans": self.evaluation_plans,
             "reports": self.reports,
+            "screening_reports": self.screening_reports,
+            "screening_runs": self.screening_runs,
         }
 
 
@@ -187,17 +204,32 @@ class JobService:
             .where(Application.job_id == job_id)
             .scalar_subquery()
             .label("applications"),
+            select(func.count(JobEvaluationPlan.id))
+            .where(JobEvaluationPlan.job_id == job_id)
+            .scalar_subquery()
+            .label("evaluation_plans"),
             select(func.count(Report.id))
             .where(Report.job_id == job_id)
             .scalar_subquery()
             .label("reports"),
+            select(func.count(ScreeningReport.id))
+            .where(ScreeningReport.job_id == job_id)
+            .scalar_subquery()
+            .label("screening_reports"),
+            select(func.count(ScreeningRun.id))
+            .where(ScreeningRun.job_id == job_id)
+            .scalar_subquery()
+            .label("screening_runs"),
         )
         row = (await db.execute(statement)).one()
         return JobReferenceCounts(
             candidates=int(row.candidates or 0),
             resumes=int(row.resumes or 0),
             applications=int(row.applications or 0),
+            evaluation_plans=int(row.evaluation_plans or 0),
             reports=int(row.reports or 0),
+            screening_reports=int(row.screening_reports or 0),
+            screening_runs=int(row.screening_runs or 0),
         )
 
     async def delete_job(self, db: AsyncSession, job_id: int) -> bool:

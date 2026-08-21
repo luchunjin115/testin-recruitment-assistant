@@ -13,6 +13,8 @@ if TYPE_CHECKING:
     from app.models.application import Application
     from app.models.candidate import Candidate
     from app.models.job import Job
+    from app.models.screening_report import ScreeningReport
+    from app.models.screening_run import ScreeningRun
 
 
 class Resume(Base):
@@ -56,4 +58,12 @@ class Resume(Base):
     current_applications: Mapped[list["Application"]] = relationship(
         back_populates="current_resume",
         foreign_keys="Application.current_resume_id",
+    )
+    screening_reports: Mapped[list["ScreeningReport"]] = relationship(
+        back_populates="resume",
+        passive_deletes=True,
+    )
+    screening_runs: Mapped[list["ScreeningRun"]] = relationship(
+        back_populates="resume",
+        passive_deletes=True,
     )

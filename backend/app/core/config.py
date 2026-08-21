@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.parse import quote_plus
 from typing import List, Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -69,6 +69,79 @@ class Settings(BaseSettings):
         min_length=1,
         max_length=20,
     )
+    JOB_EVALUATION_PLAN_ENABLED: bool = True
+    JOB_EVALUATION_PLAN_MODEL: str = Field(
+        default="deepseek-chat",
+        min_length=1,
+        max_length=100,
+    )
+    JOB_EVALUATION_PLAN_TIMEOUT_SECONDS: float = Field(default=90, gt=0, le=600)
+    JOB_EVALUATION_PLAN_MAX_INPUT_CHARS: int = Field(
+        default=100_000,
+        ge=1_000,
+        le=1_000_000,
+    )
+    JOB_EVALUATION_PLAN_MAX_OUTPUT_TOKENS: int = Field(
+        default=8_000,
+        ge=1_000,
+        le=384_000,
+    )
+    JOB_EVALUATION_PLAN_PROMPT_VERSION: str = Field(
+        default="job_evaluation_plan_v3",
+        min_length=1,
+        max_length=100,
+    )
+    JOB_EVALUATION_PLAN_SCHEMA_VERSION: str = Field(
+        default="1.0",
+        min_length=1,
+        max_length=20,
+    )
+    SCREENING_EVALUATION_ENABLED: bool = True
+    SCREENING_EVALUATION_MODEL: str = Field(
+        default="deepseek-chat",
+        min_length=1,
+        max_length=100,
+    )
+    SCREENING_EVALUATION_TIMEOUT_SECONDS: float = Field(default=90, gt=0, le=600)
+    SCREENING_EVALUATION_MAX_INPUT_CHARS: int = Field(
+        default=150_000,
+        ge=1_000,
+        le=1_000_000,
+    )
+    SCREENING_EVALUATION_MAX_OUTPUT_TOKENS: int = Field(
+        default=12_000,
+        ge=1_000,
+        le=384_000,
+    )
+    SCREENING_EVALUATION_PROMPT_VERSION: str = Field(
+        default="screening_evaluation_v3",
+        min_length=1,
+        max_length=100,
+    )
+    SCREENING_EVALUATION_SCHEMA_VERSION: str = Field(
+        default="2.0",
+        min_length=1,
+        max_length=20,
+    )
+    SCREENING_EVALUATION_TIMEZONE: str = Field(
+        default="Asia/Shanghai",
+        min_length=1,
+        max_length=100,
+    )
+    EXPERIENCE_PERIOD_FACTS_RULE_VERSION: str = Field(
+        default="experience_period_facts_v1",
+        min_length=1,
+        max_length=100,
+    )
+    SCREENING_REDACTION_VERSION: str = Field(
+        default="screening_redaction_v1",
+        min_length=1,
+        max_length=100,
+    )
+    SCREENING_WORKER_ENABLED: bool = True
+    SCREENING_WORKER_POLL_SECONDS: float = Field(default=1.0, ge=0.1, le=60)
+    SCREENING_WORKER_LEASE_SECONDS: int = Field(default=300, ge=30, le=3_600)
+    SCREENING_WORKER_BATCH_SIZE: int = Field(default=5, ge=1, le=20)
     STORAGE_DIR: str = str((BACKEND_DIR / "storage").resolve())
     MAX_FILE_SIZE_MB: int = 10
     RESUME_CLEANUP_ENABLED: bool = True
@@ -80,6 +153,15 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_storage_dir(cls, value: str) -> str:
         return _resolve_path(value)
+
+    @model_validator(mode="after")
+    def validate_screening_worker_lease(self) -> "Settings":
+        minimum_lease = int(self.SCREENING_EVALUATION_TIMEOUT_SECONDS * 2) + 30
+        if self.SCREENING_WORKER_LEASE_SECONDS < minimum_lease:
+            raise ValueError(
+                "SCREENING_WORKER_LEASE_SECONDS 必须覆盖两次模型超时和收尾时间"
+            )
+        return self
 
     @property
     def backend_port(self) -> int:

@@ -22,6 +22,9 @@
     "test:stage7-screening-intake-ui": "node tests/stage7-screening-intake-ui.test.mjs",
     "test:stage7-candidate-application-list": "node tests/stage7-candidate-application-list.test.mjs",
     "test:stage7-hr-direct-candidate-ui": "node tests/stage7-hr-direct-candidate-ui.test.mjs",
+    "test:stage7-ai-screening-service": "node tests/stage7-ai-screening-service.test.mjs",
+    "test:stage7-ai-screening-presentation": "node tests/stage7-ai-screening-presentation.test.mjs",
+    "test:stage7-ai-screening-ui": "node tests/stage7-ai-screening-ui.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

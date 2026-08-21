@@ -45,3 +45,81 @@ class SettingsTest(TestCase):
         for field, value in invalid_values.items():
             with self.subTest(field=field), self.assertRaises(ValidationError):
                 Settings(_env_file=None, **{field: value})
+
+    def test_job_evaluation_plan_defaults_are_bounded_and_versioned(self) -> None:
+        settings = Settings(_env_file=None)
+
+        self.assertTrue(settings.JOB_EVALUATION_PLAN_ENABLED)
+        self.assertEqual(settings.JOB_EVALUATION_PLAN_MODEL, "deepseek-chat")
+        self.assertEqual(settings.JOB_EVALUATION_PLAN_TIMEOUT_SECONDS, 90)
+        self.assertEqual(settings.JOB_EVALUATION_PLAN_MAX_INPUT_CHARS, 100_000)
+        self.assertEqual(settings.JOB_EVALUATION_PLAN_MAX_OUTPUT_TOKENS, 8_000)
+        self.assertEqual(
+            settings.JOB_EVALUATION_PLAN_PROMPT_VERSION,
+            "job_evaluation_plan_v3",
+        )
+        self.assertEqual(settings.JOB_EVALUATION_PLAN_SCHEMA_VERSION, "1.0")
+
+    def test_job_evaluation_plan_rejects_unsafe_numeric_configuration(self) -> None:
+        invalid_values = {
+            "JOB_EVALUATION_PLAN_TIMEOUT_SECONDS": 0,
+            "JOB_EVALUATION_PLAN_MAX_INPUT_CHARS": 999,
+            "JOB_EVALUATION_PLAN_MAX_OUTPUT_TOKENS": 999,
+        }
+        for field, value in invalid_values.items():
+            with self.subTest(field=field), self.assertRaises(ValidationError):
+                Settings(_env_file=None, **{field: value})
+
+    def test_screening_evaluation_defaults_are_bounded_and_versioned(self) -> None:
+        settings = Settings(_env_file=None)
+
+        self.assertTrue(settings.SCREENING_EVALUATION_ENABLED)
+        self.assertEqual(settings.SCREENING_EVALUATION_MODEL, "deepseek-chat")
+        self.assertEqual(settings.SCREENING_EVALUATION_TIMEOUT_SECONDS, 90)
+        self.assertEqual(settings.SCREENING_EVALUATION_MAX_INPUT_CHARS, 150_000)
+        self.assertEqual(settings.SCREENING_EVALUATION_MAX_OUTPUT_TOKENS, 12_000)
+        self.assertEqual(
+            settings.SCREENING_EVALUATION_PROMPT_VERSION,
+            "screening_evaluation_v3",
+        )
+        self.assertEqual(settings.SCREENING_EVALUATION_SCHEMA_VERSION, "2.0")
+        self.assertEqual(settings.SCREENING_EVALUATION_TIMEZONE, "Asia/Shanghai")
+        self.assertEqual(
+            settings.EXPERIENCE_PERIOD_FACTS_RULE_VERSION,
+            "experience_period_facts_v1",
+        )
+        self.assertEqual(settings.SCREENING_REDACTION_VERSION, "screening_redaction_v1")
+
+    def test_screening_evaluation_rejects_unsafe_numeric_configuration(self) -> None:
+        invalid_values = {
+            "SCREENING_EVALUATION_TIMEOUT_SECONDS": 0,
+            "SCREENING_EVALUATION_MAX_INPUT_CHARS": 999,
+            "SCREENING_EVALUATION_MAX_OUTPUT_TOKENS": 999,
+        }
+        for field, value in invalid_values.items():
+            with self.subTest(field=field), self.assertRaises(ValidationError):
+                Settings(_env_file=None, **{field: value})
+
+    def test_screening_worker_defaults_are_bounded_and_persistent_queue_friendly(self) -> None:
+        settings = Settings(_env_file=None)
+        self.assertTrue(settings.SCREENING_WORKER_ENABLED)
+        self.assertEqual(settings.SCREENING_WORKER_POLL_SECONDS, 1.0)
+        self.assertEqual(settings.SCREENING_WORKER_LEASE_SECONDS, 300)
+        self.assertEqual(settings.SCREENING_WORKER_BATCH_SIZE, 5)
+
+    def test_screening_worker_rejects_unsafe_limits(self) -> None:
+        invalid_values = {
+            "SCREENING_WORKER_POLL_SECONDS": 0,
+            "SCREENING_WORKER_LEASE_SECONDS": 29,
+            "SCREENING_WORKER_BATCH_SIZE": 21,
+        }
+        for field, value in invalid_values.items():
+            with self.subTest(field=field), self.assertRaises(ValidationError):
+                Settings(_env_file=None, **{field: value})
+
+        with self.assertRaises(ValidationError):
+            Settings(
+                _env_file=None,
+                SCREENING_EVALUATION_TIMEOUT_SECONDS=200,
+                SCREENING_WORKER_LEASE_SECONDS=300,
+            )

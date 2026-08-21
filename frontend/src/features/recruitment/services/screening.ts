@@ -2,6 +2,8 @@ import { v2Http } from '../../../services/http';
 import type { Stage7Application, Stage7ApplicationFilters } from '../types/applicationScreening';
 import { listStage7Applications } from './applications';
 import type { JobStatus } from './jobs';
+import type { ScreeningState } from '../types/aiScreening';
+import { getAIScreeningApiError, getApplicationScreening } from './aiScreening';
 
 type JobResponse = {
   id: number;
@@ -29,6 +31,8 @@ export type Stage7ScreeningCenterItem = {
   jobTitle: string;
   jobDepartment: string | null;
   jobStatus: JobStatus | null;
+  screeningState: ScreeningState | null;
+  screeningLoadError: string | null;
 };
 
 export type Stage7ScreeningCenterSnapshot = {
@@ -47,20 +51,31 @@ export const getStage7ScreeningCenter = async (
   const jobs = new Map(jobsResponse.data.map(job => [job.id, job]));
   const candidates = new Map(candidatesResponse.data.map(candidate => [candidate.id, candidate]));
 
+  const items = await Promise.all(applications.map(async application => {
+    const candidate = candidates.get(application.candidateId);
+    const job = jobs.get(application.jobId);
+    let screeningState: ScreeningState | null = null;
+    let screeningLoadError: string | null = null;
+    try {
+      screeningState = await getApplicationScreening(application.id);
+    } catch (error) {
+      screeningLoadError = getAIScreeningApiError(error).message;
+    }
+    return {
+      application,
+      candidateName: candidate?.name || `候选人 #${application.candidateId}`,
+      candidateTitle: candidate?.current_title || null,
+      candidateSource: candidate?.source || null,
+      jobTitle: job?.title || `岗位 #${application.jobId}`,
+      jobDepartment: job?.department || null,
+      jobStatus: job?.status || null,
+      screeningState,
+      screeningLoadError,
+    };
+  }));
+
   return {
     jobs: [...jobsResponse.data].sort((left, right) => left.id - right.id),
-    items: applications.map(application => {
-      const candidate = candidates.get(application.candidateId);
-      const job = jobs.get(application.jobId);
-      return {
-        application,
-        candidateName: candidate?.name || `候选人 #${application.candidateId}`,
-        candidateTitle: candidate?.current_title || null,
-        candidateSource: candidate?.source || null,
-        jobTitle: job?.title || `岗位 #${application.jobId}`,
-        jobDepartment: job?.department || null,
-        jobStatus: job?.status || null,
-      };
-    }),
+    items,
   };
 };

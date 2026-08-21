@@ -28,6 +28,9 @@ try {
     if (config.url === '/applications') data = applications;
     if (config.url === '/jobs') data = jobs;
     if (config.url === '/candidates') data = candidates;
+    if (config.url === '/applications/31/screening') data = {
+      application_id: 31, report: null, latest_run: null,
+    };
     return { config, data, headers: {}, status: 200, statusText: 'OK' };
   };
   const snapshot = await screening.getStage7ScreeningCenter({
@@ -37,8 +40,11 @@ try {
   assert.equal(snapshot.items[0].candidateName, '虚构候选人');
   assert.equal(snapshot.items[0].jobTitle, '历史关闭岗位');
   assert.equal(snapshot.items[0].jobStatus, 'closed');
+  assert.equal(snapshot.items[0].screeningState.applicationId, 31);
   assert.equal('currentResult' in snapshot.items[0], false);
-  assert.deepEqual(requests.map(request => request.url), ['/applications', '/jobs', '/candidates']);
+  assert.deepEqual(requests.map(request => request.url), [
+    '/applications', '/jobs', '/candidates', '/applications/31/screening',
+  ]);
   assert.deepEqual(requests[0].params, {
     job_id: 2, recruitment_stage: 'hr_review', hr_decision: 'pending', lifecycle_status: 'active',
   });
@@ -47,9 +53,13 @@ try {
     new URL('../src/features/recruitment/RecruitmentScreeningCenter.tsx', import.meta.url), 'utf8',
   );
   for (const text of [
-    'HR 初筛工作台', '录入待审核申请', 'HR 决策不依赖 AI 状态',
-    '新版 JD 驱动 AI 报告将在后续步骤接入', "status: 'loading'", "status: 'error'",
+    'AI 初筛', '录入待审核申请', 'AI 解释匹配依据，HR 作出最终决定',
+    '申请队列', '目前没有待审核申请',
+    '查看 AI 报告', '批量重新评估', "status: 'loading'", "status: 'error'",
   ]) assert.ok(pageSource.includes(text), `申请工作台缺少页面状态：${text}`);
+  for (const technicalCopy of ['hr_decision', 'recruitment_stage', 'lifecycle_status', '尚未接入登录/RBAC']) {
+    assert.equal(pageSource.includes(technicalCopy), false, `主工作区不应展示开发字段：${technicalCopy}`);
+  }
   assert.equal(pageSource.includes('/screening-results'), false);
   console.log('STAGE7_SCREENING_CENTER_TEST_OK');
 } finally {

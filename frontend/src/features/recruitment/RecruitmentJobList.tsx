@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CheckCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   FileTextOutlined,
+  FundProjectionScreenOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -43,6 +44,7 @@ import {
   RecruitmentJobInput,
   updateRecruitmentJob,
 } from './services/jobs';
+import JobEvaluationPlanDrawer from './JobEvaluationPlanDrawer';
 
 type LoadState =
   | { status: 'loading' }
@@ -186,6 +188,8 @@ const RecruitmentJobList: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | JobStatus>('all');
   const [formOpen, setFormOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<RecruitmentJob | null>(null);
+  const [planJob, setPlanJob] = useState<RecruitmentJob | null>(null);
+  const planTriggerRef = useRef<HTMLElement | null>(null);
   const [operationPending, setOperationPending] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
@@ -482,6 +486,16 @@ const RecruitmentJobList: React.FC = () => {
                   <div><Tag bordered={false} className={`recruitment-status-tag is-${statusMeta.tone}`}>{statusMeta.label}</Tag></div>
                   <span className="recruitment-time-cell">{formatDateTime(item.updatedAt)}</span>
                   <div className="recruitment-job-action-cell">
+                    <Button
+                      icon={<FundProjectionScreenOutlined />}
+                      onClick={event => {
+                        planTriggerRef.current = event.currentTarget;
+                        setPlanJob(item);
+                      }}
+                      size="small"
+                    >
+                      评价计划
+                    </Button>
                     <Button icon={<EditOutlined />} onClick={() => openForm(item)} size="small">编辑</Button>
                     <Button disabled={operationPending} onClick={() => confirmStatusAction(item)} size="small">{actionLabel}</Button>
                     {item.status !== 'open' && (
@@ -494,6 +508,15 @@ const RecruitmentJobList: React.FC = () => {
           </div>
         )}
       </section>
+
+      <JobEvaluationPlanDrawer
+        job={planJob}
+        onClose={() => {
+          planTriggerRef.current?.focus();
+          setPlanJob(null);
+        }}
+        open={planJob !== null}
+      />
 
       <Drawer
         className="recruitment-job-form-drawer"

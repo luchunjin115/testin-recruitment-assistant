@@ -11,9 +11,11 @@ from .api import candidates
 from .api import education
 from .api import health
 from .api import jobs
+from .api import job_evaluation_plans
 from .api import project_experiences
 from .api import reports
 from .api import resumes
+from .api import screening
 from .api import work_experiences
 from .core.config import get_settings
 
@@ -22,8 +24,10 @@ from .core.config import get_settings
 async def lifespan(app: FastAPI):
     from .core.database import get_sessionmaker
     from .services.resume_retention_service import run_resume_retention_loop
+    from .services.screening_service import run_screening_worker_loop
 
     cleanup_task = None
+    screening_task = None
     if settings.RESUME_CLEANUP_ENABLED:
         cleanup_task = asyncio.create_task(
             run_resume_retention_loop(
@@ -40,6 +44,16 @@ async def lifespan(app: FastAPI):
             ),
             name="resume-retention-cleanup",
         )
+    if getattr(settings, "SCREENING_WORKER_ENABLED", False) is True:
+        screening_task = asyncio.create_task(
+            run_screening_worker_loop(
+                session_factory=get_sessionmaker(),
+                interval_seconds=settings.SCREENING_WORKER_POLL_SECONDS,
+                lease_seconds=settings.SCREENING_WORKER_LEASE_SECONDS,
+                batch_size=settings.SCREENING_WORKER_BATCH_SIZE,
+            ),
+            name="screening-postgres-worker",
+        )
     try:
         yield
     finally:
@@ -47,6 +61,10 @@ async def lifespan(app: FastAPI):
             cleanup_task.cancel()
             with suppress(asyncio.CancelledError):
                 await cleanup_task
+        if screening_task is not None:
+            screening_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await screening_task
 
 
 settings = get_settings()
@@ -59,6 +77,7 @@ app = FastAPI(
 )
 jobs.install_job_exception_handlers(app)
 applications.install_application_exception_handlers(app)
+screening.install_screening_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
@@ -74,7 +93,9 @@ app.include_router(applications.router, prefix="/api/v2")
 app.include_router(candidates.router, prefix="/api/v2")
 app.include_router(education.router, prefix="/api/v2")
 app.include_router(jobs.router, prefix="/api/v2")
+app.include_router(job_evaluation_plans.router, prefix="/api/v2")
 app.include_router(project_experiences.router, prefix="/api/v2")
 app.include_router(reports.router, prefix="/api/v2")
 app.include_router(resumes.router, prefix="/api/v2")
+app.include_router(screening.router, prefix="/api/v2")
 app.include_router(work_experiences.router, prefix="/api/v2")

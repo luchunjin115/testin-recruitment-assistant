@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CheckCircleOutlined,
+  FileSearchOutlined,
   InboxOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -10,6 +11,7 @@ import {
 import {
   Alert,
   Button,
+  Checkbox,
   Empty,
   Form,
   Input,
@@ -21,6 +23,7 @@ import {
   Tag,
   Upload,
 } from 'antd';
+import ApplicationScreeningDrawer from './ApplicationScreeningDrawer';
 import {
   backupStage7Application,
   getStage7ApplicationApiError,
@@ -42,6 +45,19 @@ import {
   type Stage7ScreeningCenterItem,
   type Stage7ScreeningCenterSnapshot,
 } from './services/screening';
+import {
+  getAIScreeningApiError,
+  reassessJobApplications,
+} from './services/aiScreening';
+import {
+  getScreeningStateLabel,
+  SCREENING_STATUS_META,
+  validateBatchSelection,
+} from './screeningPresentation';
+import type {
+  ScreeningBatchReassessmentResult,
+  ScreeningState,
+} from './types/aiScreening';
 import {
   buildStage7DecisionSubmission,
   getStage7DecisionEntry,
@@ -107,6 +123,12 @@ const RecruitmentScreeningCenter: React.FC = () => {
   const [reasonDetail, setReasonDetail] = useState('');
   const [decisionPending, setDecisionPending] = useState(false);
   const [decisionError, setDecisionError] = useState<string | null>(null);
+  const [reportApplicationId, setReportApplicationId] = useState<number | null>(null);
+  const [selectedApplicationIds, setSelectedApplicationIds] = useState<number[]>([]);
+  const [batchPending, setBatchPending] = useState(false);
+  const [batchError, setBatchError] = useState<string | null>(null);
+  const [batchResult, setBatchResult] = useState<ScreeningBatchReassessmentResult | null>(null);
+  const [modal, modalContextHolder] = Modal.useModal();
 
   const load = useCallback(async () => {
     setLoadState({ status: 'loading' });
@@ -124,6 +146,95 @@ const RecruitmentScreeningCenter: React.FC = () => {
     (jobFilter === 'all' || item.application.jobId === jobFilter)
     && (decisionFilter === 'all' || item.application.hrDecision === decisionFilter)
   )), [decisionFilter, jobFilter, snapshot]);
+  const hasActiveFilters = jobFilter !== 'all' || decisionFilter !== 'all';
+  const selectedItems = useMemo(() => (snapshot?.items || [])
+    .filter(item => selectedApplicationIds.includes(item.application.id)), [selectedApplicationIds, snapshot]);
+  const selectedJobId = selectedItems[0]?.application.jobId ?? null;
+  const reportItem = snapshot?.items.find(
+    item => item.application.id === reportApplicationId,
+  ) ?? null;
+
+  const updateScreeningState = useCallback((next: ScreeningState) => {
+    setLoadState(current => {
+      if (current.status !== 'ready') return current;
+      return {
+        status: 'ready',
+        data: {
+          ...current.data,
+          items: current.data.items.map(item => item.application.id === next.applicationId
+            ? { ...item, screeningState: next, screeningLoadError: null }
+            : item),
+        },
+      };
+    });
+  }, []);
+
+  const toggleBatchSelection = (item: Stage7ScreeningCenterItem, checked: boolean) => {
+    setBatchError(null);
+    setBatchResult(null);
+    if (!checked) {
+      setSelectedApplicationIds(current => current.filter(id => id !== item.application.id));
+      return;
+    }
+    const validation = validateBatchSelection([
+      ...selectedItems.map(selected => ({
+        applicationId: selected.application.id,
+        jobId: selected.application.jobId,
+      })),
+      { applicationId: item.application.id, jobId: item.application.jobId },
+    ]);
+    if (!validation.valid) {
+      setBatchError(validation.message);
+      return;
+    }
+    setSelectedApplicationIds(current => [...current, item.application.id]);
+  };
+
+  const submitBatch = () => {
+    if (batchPending) return;
+    const validation = validateBatchSelection(selectedItems.map(item => ({
+      applicationId: item.application.id,
+      jobId: item.application.jobId,
+    })));
+    if (!validation.valid) {
+      setBatchError(validation.message);
+      return;
+    }
+    const selectedJob = snapshot?.jobs.find(job => job.id === validation.jobId);
+    if (selectedJob?.status !== 'open') {
+      setBatchError('岗位关闭时不能批量重新评估。');
+      return;
+    }
+    modal.confirm({
+      title: `确认重新评估 ${validation.applicationIds.length} 人？`,
+      content: '所选 Application 属于同一岗位。提交后任务进入后台，旧成功报告会保留到各自新报告成功。',
+      okText: '批量重新评估',
+      cancelText: '取消',
+      onOk: async () => {
+        setBatchPending(true);
+        setBatchError(null);
+        try {
+          const result = await reassessJobApplications(validation.jobId, validation.applicationIds);
+          setBatchResult(result);
+          result.results.forEach(item => {
+            const existing = selectedItems.find(
+              selected => selected.application.id === item.applicationId,
+            )?.screeningState;
+            updateScreeningState({
+              applicationId: item.applicationId,
+              report: item.report ?? existing?.report ?? null,
+              latestRun: item.run ?? existing?.latestRun ?? null,
+            });
+          });
+          setSelectedApplicationIds([]);
+        } catch (error) {
+          setBatchError(getAIScreeningApiError(error).message);
+        } finally {
+          setBatchPending(false);
+        }
+      },
+    });
+  };
 
   const loadResumes = async () => {
     setResumeLoad({ status: 'loading' });
@@ -247,81 +358,197 @@ const RecruitmentScreeningCenter: React.FC = () => {
         : [];
 
   return (
-    <section className="recruitment-screening-page">
-      <div className="recruitment-page-header">
+    <main className="recruitment-main recruitment-screening-page">
+      {modalContextHolder}
+      <section className="recruitment-page-heading">
         <div>
-          <span className="recruitment-page-kicker">APPLICATION WORKSPACE</span>
-          <h1>HR 初筛工作台</h1>
-          <p>保留候选人录入、简历绑定和人工决定；新版 JD 驱动 AI 报告将在后续步骤接入。</p>
+          <span className="recruitment-section-kicker">阶段 7 · Application 初筛队列</span>
+          <h2>AI 初筛</h2>
+          <p>集中查看岗位匹配建议，并由 HR 独立完成通过、备选或淘汰决定。</p>
         </div>
-        <div className="recruitment-page-actions">
-          <Button icon={<ReloadOutlined />} onClick={() => void load()}>刷新</Button>
-          <Button type="primary" icon={<PlusOutlined />} onClick={openIntake}>录入待审核申请</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openIntake}>录入待审核申请</Button>
+      </section>
+
+      <section aria-label="AI 与 HR 的职责边界" className="recruitment-screening-boundary">
+        <div className="recruitment-screening-boundary-mark"><SafetyCertificateOutlined /></div>
+        <div className="recruitment-screening-boundary-copy">
+          <span>协作边界</span>
+          <strong>AI 解释匹配依据，HR 作出最终决定</strong>
+          <p>查看或重新评估只更新 AI 报告，不会改变人工结论或招聘进度。</p>
         </div>
-      </div>
+        <div aria-label="AI 建议不会自动改写 HR 决定" className="recruitment-screening-boundary-lanes">
+          <div><span>AI</span><strong>生成匹配建议</strong></div>
+          <i>不自动改写</i>
+          <div><span>HR</span><strong>保留最终决定</strong></div>
+        </div>
+      </section>
 
-      <Alert
-        showIcon
-        icon={<SafetyCertificateOutlined />}
-        type="info"
-        message="AI 初筛业务正在按新设计重建"
-        description="旧 Rubric、权重评分和自动推荐已移除。HR 决策不依赖 AI 状态，仍可根据岗位要求和候选人材料独立操作。"
-      />
+      <section className="recruitment-panel recruitment-screening-workspace">
+        <div className="recruitment-screening-toolbar">
+          <div className="recruitment-screening-toolbar-heading">
+            <h3>申请队列</h3>
+            <p>
+              {snapshot
+                ? `共 ${snapshot.items.length} 份申请，当前显示 ${items.length} 份`
+                : '正在读取待审核申请与 AI 初筛状态'}
+            </p>
+          </div>
+          <div className="recruitment-screening-filter-controls">
+            <Select
+              aria-label="按岗位筛选申请"
+              value={jobFilter}
+              onChange={setJobFilter}
+              options={[
+                { value: 'all', label: '全部岗位' },
+                ...(snapshot?.jobs || []).map(job => ({ value: job.id, label: job.title })),
+              ]}
+            />
+            <Select
+              aria-label="按 HR 决策筛选申请"
+              value={decisionFilter}
+              onChange={setDecisionFilter}
+              options={[
+                { value: 'all', label: '全部 HR 决策' },
+                ...Object.entries(HR_META).map(([value, meta]) => ({ value, label: meta.label })),
+              ]}
+            />
+            {hasActiveFilters && (
+              <Button onClick={() => { setJobFilter('all'); setDecisionFilter('all'); }}>清除筛选</Button>
+            )}
+            <Button aria-label="刷新申请队列" icon={<ReloadOutlined />} onClick={() => void load()} />
+          </div>
+        </div>
 
-      <div className="recruitment-screening-toolbar">
-        <Select
-          value={jobFilter}
-          onChange={setJobFilter}
-          options={[
-            { value: 'all', label: '全部岗位' },
-            ...(snapshot?.jobs || []).map(job => ({ value: job.id, label: job.title })),
-          ]}
-        />
-        <Select
-          value={decisionFilter}
-          onChange={setDecisionFilter}
-          options={[
-            { value: 'all', label: '全部 HR 决策' },
-            ...Object.entries(HR_META).map(([value, meta]) => ({ value, label: meta.label })),
-          ]}
-        />
-      </div>
-
-      {loadState.status === 'loading' && <Skeleton active paragraph={{ rows: 6 }} />}
-      {loadState.status === 'error' && (
-        <Alert type="error" showIcon message={loadState.message} action={<Button onClick={() => void load()}>重试</Button>} />
-      )}
-      {loadState.status === 'ready' && items.length === 0 && (
-        <Empty image={<InboxOutlined />} description="当前筛选条件下没有 Application" />
-      )}
-      {loadState.status === 'ready' && items.map(item => {
-        const decisionEntry = getStage7DecisionEntry(item, false);
-        return (
-          <article className="recruitment-screening-card" key={item.application.id}>
-            <div>
-              <span>Application #{item.application.id}</span>
-              <h3>{item.candidateName}</h3>
-              <p>{item.candidateTitle || '职位信息未填写'} · {item.jobTitle}</p>
-              <p>当前简历 #{item.application.currentResumeId} · {SOURCE_LABELS[item.application.source]}</p>
-            </div>
-            <div>
-              <Tag color={HR_META[item.application.hrDecision].color}>{HR_META[item.application.hrDecision].label}</Tag>
-              <Tag>{LIFECYCLE_META[item.application.lifecycleStatus]}</Tag>
-              {item.jobStatus === 'closed' && <Tag color="default">岗位已关闭</Tag>}
-            </div>
+        <div className="recruitment-screening-batch-bar">
+          <div>
+            <span>批量操作</span>
+            <p>同一开放岗位最多选择 20 份申请；每份申请会建立独立任务。</p>
+          </div>
+          <div className="recruitment-screening-batch-actions">
+            <span>已选 <strong>{selectedApplicationIds.length}</strong> / 20</span>
+            {selectedApplicationIds.length > 0 && <Button onClick={() => setSelectedApplicationIds([])}>清空</Button>}
             <Button
-              icon={<CheckCircleOutlined />}
-              disabled={!decisionEntry.allowed}
-              onClick={() => openDecision(item)}
+              disabled={selectedApplicationIds.length === 0}
+              loading={batchPending}
+              onClick={submitBatch}
+              type="primary"
             >
-              {decisionEntry.label}
+              批量重新评估
             </Button>
-          </article>
-        );
-      })}
+          </div>
+        </div>
+
+        {batchError && (
+          <Alert className="recruitment-screening-inline-alert" closable message={batchError} onClose={() => setBatchError(null)} showIcon type="error" />
+        )}
+
+        {batchResult && (
+          <Alert
+            className="recruitment-screening-inline-alert"
+            closable
+            description={(
+              <div className="recruitment-batch-result-list">
+                {batchResult.results.map(result => (
+                  <span key={result.applicationId}>
+                    Application #{result.applicationId}
+                    <Tag color={result.run ? SCREENING_STATUS_META[result.run.status].tone : 'success'}>
+                      {result.run ? SCREENING_STATUS_META[result.run.status].label : result.reusedReport ? '复用报告' : '已提交'}
+                    </Tag>
+                  </span>
+                ))}
+              </div>
+            )}
+            message={`岗位 #${batchResult.jobId} 已提交 ${batchResult.results.length} 个独立后台任务`}
+            onClose={() => setBatchResult(null)}
+            showIcon
+            type="success"
+          />
+        )}
+
+        {loadState.status === 'loading' && (
+          <div aria-busy="true" aria-label="申请队列加载中" className="recruitment-screening-loading">
+            <Skeleton active paragraph={{ rows: 6 }} />
+          </div>
+        )}
+        {loadState.status === 'error' && (
+          <Alert
+            action={<Button onClick={() => void load()}>重试</Button>}
+            className="recruitment-screening-inline-alert"
+            description="请确认本地 API 服务可访问后重试。"
+            message={loadState.message}
+            showIcon
+            type="error"
+          />
+        )}
+        {loadState.status === 'ready' && items.length === 0 && (
+          <Empty
+            className="recruitment-panel-empty recruitment-screening-empty"
+            description={(
+              <div className="recruitment-empty-copy">
+                <strong>{loadState.data.items.length === 0 ? '目前没有待审核申请' : '没有符合当前条件的申请'}</strong>
+                <span>{loadState.data.items.length === 0
+                  ? '录入申请并绑定简历后，AI 匹配建议和 HR 处理状态会显示在这里。'
+                  : '调整岗位或 HR 决策筛选条件后再查看。'}</span>
+              </div>
+            )}
+            image={<InboxOutlined />}
+          >
+            {loadState.data.items.length === 0
+              ? <Button icon={<PlusOutlined />} onClick={openIntake} type="primary">录入第一份申请</Button>
+              : <Button onClick={() => { setJobFilter('all'); setDecisionFilter('all'); }}>清除筛选</Button>}
+          </Empty>
+        )}
+        {loadState.status === 'ready' && items.length > 0 && (
+          <div aria-label="AI 初筛申请列表" className="recruitment-screening-list">
+            {items.map(item => {
+              const decisionEntry = getStage7DecisionEntry(item, false);
+              return (
+                <article className="recruitment-screening-card" key={item.application.id}>
+                  <Checkbox
+                    aria-label={`选择 Application #${item.application.id} 进行批量重新评估`}
+                    checked={selectedApplicationIds.includes(item.application.id)}
+                    disabled={item.jobStatus !== 'open'
+                      || (selectedJobId !== null && selectedJobId !== item.application.jobId)
+                      || (selectedApplicationIds.length >= 20 && !selectedApplicationIds.includes(item.application.id))}
+                    onChange={event => toggleBatchSelection(item, event.target.checked)}
+                  />
+                  <div>
+                    <span>Application #{item.application.id}</span>
+                    <h3>{item.candidateName}</h3>
+                    <p>{item.candidateTitle || '职位信息未填写'} · {item.jobTitle}</p>
+                    <p>当前简历 #{item.application.currentResumeId} · {SOURCE_LABELS[item.application.source]}</p>
+                  </div>
+                  <div>
+                    <Tag color={HR_META[item.application.hrDecision].color}>{HR_META[item.application.hrDecision].label}</Tag>
+                    <Tag>{LIFECYCLE_META[item.application.lifecycleStatus]}</Tag>
+                    {item.jobStatus === 'closed' && <Tag color="default">岗位已关闭</Tag>}
+                    <Tag color={item.screeningState?.latestRun
+                      ? SCREENING_STATUS_META[item.screeningState.latestRun.status].tone
+                      : item.screeningState?.report?.isOutdated ? 'warning' : 'default'}>
+                      {item.screeningLoadError ? '状态读取失败' : getScreeningStateLabel(item.screeningState)}
+                    </Tag>
+                  </div>
+                  <div className="recruitment-screening-card-actions">
+                    <Button icon={<FileSearchOutlined />} onClick={() => setReportApplicationId(item.application.id)}>
+                      查看 AI 报告
+                    </Button>
+                    <Button
+                      icon={<CheckCircleOutlined />}
+                      disabled={!decisionEntry.allowed}
+                      onClick={() => openDecision(item)}
+                    >
+                      {decisionEntry.label}
+                    </Button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       <Modal
-        title="录入待审核 Application"
+        title="录入待审核申请"
         open={intakeOpen}
         onCancel={() => void closeIntake()}
         onOk={() => void submitIntake()}
@@ -412,7 +639,19 @@ const RecruitmentScreeningCenter: React.FC = () => {
           </>
         )}
       </Modal>
-    </section>
+
+      <ApplicationScreeningDrawer
+        applicationId={reportItem?.application.id ?? null}
+        candidateName={reportItem?.candidateName ?? ''}
+        initialState={reportItem?.screeningState ?? null}
+        jobId={reportItem?.application.jobId ?? null}
+        jobStatus={reportItem?.jobStatus ?? null}
+        jobTitle={reportItem?.jobTitle ?? ''}
+        onClose={() => setReportApplicationId(null)}
+        onStateChange={updateScreeningState}
+        open={reportItem !== null}
+      />
+    </main>
   );
 };
 

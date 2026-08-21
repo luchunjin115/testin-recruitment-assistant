@@ -63,6 +63,7 @@ from app.services.resume_storage import (
     ResumeStorageError,
     UnsupportedResumeTypeError,
 )
+from app.services.screening_service import screening_service
 
 
 router = APIRouter(prefix="/resumes", tags=["resumes"])
@@ -186,6 +187,11 @@ async def extract_resume_text(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=RESUME_NOT_FOUND,
         )
+    try:
+        await screening_service.after_resume_ready(db, resume.id)
+    except Exception:
+        # Resume extraction is already committed and remains successful.
+        pass
     return resume
 
 

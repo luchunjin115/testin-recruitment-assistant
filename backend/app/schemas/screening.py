@@ -1,0 +1,175 @@
+from __future__ import annotations
+
+from datetime import datetime
+from enum import Enum
+from typing import Annotated
+
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StringConstraints, model_validator
+
+from app.schemas.screening_evaluation import BonusHighlight, RequirementAssessment
+from app.schemas.experience_period import ExperiencePeriodFactsSnapshot
+
+
+class ScreeningRunTriggerType(str, Enum):
+    AUTOMATIC = "automatic"
+    SINGLE_REASSESSMENT = "single_reassessment"
+    BATCH_REASSESSMENT = "batch_reassessment"
+
+
+class ScreeningRunStatus(str, Enum):
+    WAITING_RESUME = "waiting_resume"
+    WAITING_PLAN = "waiting_plan"
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    PAUSED = "paused"
+
+
+class ScreeningOutdatedReason(str, Enum):
+    RESUME_CHANGED = "resume_changed"
+    JD_CHANGED = "jd_changed"
+    EVALUATION_PLAN_CHANGED = "evaluation_plan_changed"
+
+
+Fingerprint = Annotated[str, StringConstraints(pattern=r"^[0-9a-f]{64}$")]
+VersionText = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=100),
+]
+SafeErrorCode = Annotated[
+    str,
+    StringConstraints(pattern=r"^[A-Z][A-Z0-9_]*$", max_length=100),
+]
+SafeErrorMessage = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=500),
+]
+PositiveId = Annotated[StrictInt, Field(ge=1)]
+
+
+class ScreeningReportRead(BaseModel):
+    id: PositiveId
+    application_id: PositiveId
+    job_id: PositiveId
+    resume_id: PositiveId
+    job_evaluation_plan_id: PositiveId
+    overall_score: int = Field(strict=True, ge=0, le=100)
+    display_label: str = Field(min_length=1, max_length=30)
+    overall_summary: str = Field(min_length=1, max_length=3_000)
+    requirement_assessments: list[RequirementAssessment] = Field(max_length=30)
+    bonus_highlights: list[BonusHighlight] = Field(max_length=5)
+    tradeoff_reason: str | None = Field(default=None, min_length=1, max_length=2_000)
+    interview_questions: list[str] = Field(max_length=5)
+    input_fingerprint: Fingerprint
+    jd_fingerprint: Fingerprint
+    plan_fingerprint: Fingerprint
+    resume_fingerprint: Fingerprint
+    prompt_version: VersionText
+    model_version: VersionText
+    schema_version: VersionText
+    redaction_version: VersionText
+    evaluation_reference_at: datetime | None = None
+    evaluation_timezone: VersionText | None = None
+    experience_period_facts_rule_version: VersionText | None = None
+    experience_period_facts: ExperiencePeriodFactsSnapshot | None = Field(
+        default=None,
+        exclude=True,
+    )
+    is_outdated: bool
+    outdated_reasons: list[ScreeningOutdatedReason] = Field(max_length=3)
+    outdated_at: datetime | None
+    generated_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        extra="forbid",
+        protected_namespaces=(),
+    )
+
+    @model_validator(mode="after")
+    def validate_outdated_state(self) -> ScreeningReportRead:
+        if self.is_outdated != bool(self.outdated_reasons):
+            raise ValueError("报告过期状态与原因不一致")
+        if self.is_outdated != (self.outdated_at is not None):
+            raise ValueError("报告过期状态与时间不一致")
+        return self
+
+
+class ScreeningRunRead(BaseModel):
+    id: PositiveId
+    application_id: PositiveId
+    job_id: PositiveId
+    resume_id: PositiveId
+    job_evaluation_plan_id: PositiveId | None
+    trigger_type: ScreeningRunTriggerType
+    status: ScreeningRunStatus
+    input_fingerprint: Fingerprint
+    prompt_version: VersionText
+    model_version: VersionText
+    schema_version: VersionText
+    redaction_version: VersionText
+    evaluation_reference_at: datetime | None = None
+    evaluation_timezone: VersionText | None = None
+    experience_period_facts_rule_version: VersionText | None = None
+    experience_period_facts_fingerprint: Fingerprint | None = None
+    started_at: datetime | None
+    completed_at: datetime | None
+    error_code: SafeErrorCode | None
+    error_message: SafeErrorMessage | None
+    input_tokens: int | None = Field(default=None, ge=0)
+    output_tokens: int | None = Field(default=None, ge=0)
+    duration_ms: int | None = Field(default=None, ge=0)
+    attempt_count: int = Field(ge=0, le=2)
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        extra="forbid",
+        protected_namespaces=(),
+    )
+
+
+class ScreeningStateRead(BaseModel):
+    application_id: PositiveId
+    report: ScreeningReportRead | None
+    latest_run: ScreeningRunRead | None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ScreeningTriggerRead(BaseModel):
+    application_id: PositiveId
+    run: ScreeningRunRead | None
+    report: ScreeningReportRead | None
+    reused_report: bool = False
+    reused_run: bool = False
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ScreeningBatchReassessmentRequest(BaseModel):
+    application_ids: list[PositiveId] = Field(min_length=1, max_length=20)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_unique_applications(self) -> ScreeningBatchReassessmentRequest:
+        if len(self.application_ids) != len(set(self.application_ids)):
+            raise ValueError("批量重新评估不能包含重复 Application")
+        return self
+
+
+class ScreeningBatchReassessmentRead(BaseModel):
+    job_id: PositiveId
+    results: list[ScreeningTriggerRead] = Field(min_length=1, max_length=20)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ApplicationResumeSwitchRequest(BaseModel):
+    resume_id: PositiveId
+
+    model_config = ConfigDict(extra="forbid")

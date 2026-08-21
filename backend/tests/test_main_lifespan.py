@@ -67,6 +67,44 @@ class MainLifespanTest(IsolatedAsyncioTestCase):
         sessionmaker.assert_not_called()
         cleanup_loop.assert_not_called()
 
+    async def test_lifespan_starts_and_cancels_postgres_screening_worker(self) -> None:
+        settings = Mock(
+            RESUME_CLEANUP_ENABLED=False,
+            SCREENING_WORKER_ENABLED=True,
+            SCREENING_WORKER_POLL_SECONDS=1,
+            SCREENING_WORKER_LEASE_SECONDS=300,
+            SCREENING_WORKER_BATCH_SIZE=5,
+        )
+        session_factory = Mock()
+        started = asyncio.Event()
+        captured_task = None
+
+        async def fake_worker(**kwargs):
+            nonlocal captured_task
+            captured_task = asyncio.current_task()
+            started.set()
+            await asyncio.Event().wait()
+
+        with (
+            patch("app.main.settings", settings),
+            patch("app.core.database.get_sessionmaker", return_value=session_factory),
+            patch(
+                "app.services.screening_service.run_screening_worker_loop",
+                side_effect=fake_worker,
+            ) as worker_loop,
+        ):
+            async with lifespan(Mock()):
+                await asyncio.wait_for(started.wait(), timeout=1)
+                self.assertFalse(captured_task.done())
+
+        worker_loop.assert_called_once_with(
+            session_factory=session_factory,
+            interval_seconds=1,
+            lease_seconds=300,
+            batch_size=5,
+        )
+        self.assertTrue(captured_task.cancelled())
+
     def test_main_registers_only_versioned_business_routes(self) -> None:
         api_paths = {
             route.path

@@ -69,7 +69,10 @@ def set_reference_counts(session: Mock, **overrides: int) -> None:
         "candidates": 0,
         "resumes": 0,
         "applications": 0,
+        "evaluation_plans": 0,
         "reports": 0,
+        "screening_reports": 0,
+        "screening_runs": 0,
     }
     values.update(overrides)
     result = Mock()
@@ -210,7 +213,7 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(existing.headcount, 3)
         self.db.commit.assert_awaited_once()
 
-    async def test_non_scoring_job_change_does_not_mark_rubric_stale(self) -> None:
+    async def test_non_evaluation_job_change_stays_in_job_transaction(self) -> None:
         existing = make_job(status="open")
         self.db.scalar.return_value = existing
 
@@ -307,13 +310,16 @@ class JobServiceTest(IsolatedAsyncioTestCase):
                 self.assertIsNone(result)
                 db.commit.assert_not_awaited()
 
-    async def test_get_reference_counts_returns_all_four_relations(self) -> None:
+    async def test_get_reference_counts_returns_all_seven_relations(self) -> None:
         set_reference_counts(
             self.db,
             candidates=2,
             resumes=3,
             applications=4,
+            evaluation_plans=6,
             reports=5,
+            screening_reports=7,
+            screening_runs=8,
         )
 
         counts = await self.service.get_reference_counts(self.db, 1)
@@ -324,17 +330,23 @@ class JobServiceTest(IsolatedAsyncioTestCase):
                 candidates=2,
                 resumes=3,
                 applications=4,
+                evaluation_plans=6,
                 reports=5,
+                screening_reports=7,
+                screening_runs=8,
             ),
         )
-        self.assertEqual(counts.total, 14)
+        self.assertEqual(counts.total, 35)
         self.assertEqual(
             counts.as_dict(),
             {
                 "candidates": 2,
                 "resumes": 3,
                 "applications": 4,
+                "evaluation_plans": 6,
                 "reports": 5,
+                "screening_reports": 7,
+                "screening_runs": 8,
             },
         )
 
@@ -349,7 +361,15 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         self.db.rollback.assert_awaited_once()
 
     async def test_each_reference_type_blocks_delete_with_all_counts(self) -> None:
-        for field in ("candidates", "resumes", "applications", "reports"):
+        for field in (
+            "candidates",
+            "resumes",
+            "applications",
+            "evaluation_plans",
+            "reports",
+            "screening_reports",
+            "screening_runs",
+        ):
             with self.subTest(field=field):
                 db = make_session()
                 db.scalar.return_value = make_job(status="closed")

@@ -98,6 +98,27 @@ class JobApiTest(TestCase):
         self.assertIs(passed_db, self.db)
         self.assertIsInstance(passed_data, JobCreate)
 
+    def test_open_job_plan_failure_does_not_rollback_published_job(self) -> None:
+        opened_job = make_job(1, "后端开发工程师", status="open")
+        open_mock = AsyncMock(return_value=opened_job)
+        plan_mock = AsyncMock(side_effect=RuntimeError("model unavailable"))
+        self.db.rollback = AsyncMock()
+
+        with (
+            patch.object(job_service, "open_job", open_mock),
+            patch(
+                "app.api.jobs.job_evaluation_plan_service.generate_for_job",
+                plan_mock,
+            ),
+        ):
+            response = self.client.post("/jobs/1/open")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "open")
+        open_mock.assert_awaited_once_with(self.db, 1)
+        plan_mock.assert_awaited_once_with(self.db, 1)
+        self.db.rollback.assert_awaited_once()
+
     def test_create_open_validation_error_has_stable_422_detail(self) -> None:
         create_job_mock = AsyncMock(
             side_effect=JobOpenValidationError(
@@ -292,7 +313,10 @@ class JobApiTest(TestCase):
             candidates=2,
             resumes=1,
             applications=2,
+            evaluation_plans=1,
             reports=0,
+            screening_reports=1,
+            screening_runs=2,
         )
         with patch.object(
             job_service,
