@@ -9,8 +9,12 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_vali
 from app.schemas.job import JobRequirementsV1
 
 
-JOB_EVALUATION_PLAN_SCHEMA_VERSION = "1.0"
+JOB_EVALUATION_PLAN_SCHEMA_VERSION = "2.0"
+JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION = "2.0"
+JOB_EVALUATION_PLAN_BREAKING_CONTRACT_VERSION = "jd_extraction_v2"
+JOB_EVALUATION_PLAN_SOURCE_UNIT_RULE_VERSION = "jd_source_units_v1"
 JOB_EVALUATION_PLAN_MAX_ITEMS = 30
+JOB_EVALUATION_PLAN_MAX_SOURCE_UNITS = 100
 
 
 class JobEvaluationPlanStatus(str, Enum):
@@ -90,6 +94,10 @@ SafeErrorMessage = Annotated[
     str,
     StringConstraints(strip_whitespace=True, min_length=1, max_length=500),
 ]
+SourceId = Annotated[
+    str,
+    StringConstraints(pattern=r"^description:\d{4}$"),
+]
 
 
 class JobEvaluationItem(BaseModel):
@@ -141,6 +149,51 @@ class StructuredCoverageResult(BaseModel):
         return self
 
 
+class JobEvaluationPlanFreeTextCoverageUnit(BaseModel):
+    source_id: SourceId
+    disposition: Literal["requirements", "non_requirement"]
+    item_keys: list[ItemKey] = Field(max_length=JOB_EVALUATION_PLAN_MAX_ITEMS)
+    equivalent_structured_item_keys: list[ItemKey] = Field(
+        max_length=JOB_EVALUATION_PLAN_MAX_ITEMS
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_item_keys(self) -> JobEvaluationPlanFreeTextCoverageUnit:
+        if len(self.item_keys) != len(set(self.item_keys)):
+            raise ValueError("自由文本覆盖事项 key 不能重复")
+        if len(self.equivalent_structured_item_keys) != len(
+            set(self.equivalent_structured_item_keys)
+        ):
+            raise ValueError("自由文本结构化等价 key 不能重复")
+        if not set(self.equivalent_structured_item_keys).issubset(self.item_keys):
+            raise ValueError("结构化等价 key 必须同时出现在片段覆盖事项中")
+        if self.disposition == "requirements" and not self.item_keys:
+            raise ValueError("requirements 覆盖片段必须映射至少一个最终事项")
+        if self.disposition == "non_requirement" and self.item_keys:
+            raise ValueError("non_requirement 覆盖片段不能映射评价事项")
+        return self
+
+
+class JobEvaluationPlanFreeTextCoverage(BaseModel):
+    rule_version: Literal["jd_source_units_v1"]
+    all_reviewed: Literal[True]
+    units: list[JobEvaluationPlanFreeTextCoverageUnit] = Field(
+        min_length=1,
+        max_length=JOB_EVALUATION_PLAN_MAX_SOURCE_UNITS,
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_unique_source_ids(self) -> JobEvaluationPlanFreeTextCoverage:
+        source_ids = [unit.source_id for unit in self.units]
+        if len(source_ids) != len(set(source_ids)):
+            raise ValueError("自由文本覆盖 source ID 不能重复")
+        return self
+
+
 class JobEvaluationPlanInputSnapshot(BaseModel):
     job_id: int = Field(gt=0)
     title: str = Field(min_length=1, max_length=200)
@@ -162,9 +215,10 @@ class JobEvaluationPlanRead(BaseModel):
     warnings: list[JobEvaluationPlanWarning] = Field(max_length=5)
     prompt_version: VersionText
     model_version: VersionText
-    schema_version: Literal["1.0"]
+    schema_version: Literal["1.0", "2.0"]
     input_fingerprint: Fingerprint
     input_snapshot: JobEvaluationPlanInputSnapshot
+    contract_outdated: bool = False
     error_code: ErrorCode | None
     error_message: SafeErrorMessage | None
     created_at: datetime
@@ -195,6 +249,47 @@ class JobEvaluationPlanRead(BaseModel):
         return self
 
 
+class JobEvaluationPlanAISourceUnit(BaseModel):
+    source_id: SourceId
+    source_field: Literal["description"]
+    source_text: str = Field(min_length=1, max_length=20_000)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class JobEvaluationPlanAIStructuredCandidate(BaseModel):
+    key: ItemKey
+    title: ItemTitle
+    category: EvaluationItemCategory
+    priority: EvaluationItemPriority
+    source_field: SourceField
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class JobEvaluationPlanAIInput(BaseModel):
+    input_snapshot: JobEvaluationPlanInputSnapshot
+    source_units: list[JobEvaluationPlanAISourceUnit] = Field(
+        min_length=1,
+        max_length=JOB_EVALUATION_PLAN_MAX_SOURCE_UNITS,
+    )
+    structured_candidates: list[JobEvaluationPlanAIStructuredCandidate] = Field(
+        max_length=500
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_unique_input_keys(self) -> JobEvaluationPlanAIInput:
+        source_ids = [unit.source_id for unit in self.source_units]
+        if len(source_ids) != len(set(source_ids)):
+            raise ValueError("source unit ID 不能重复")
+        candidate_keys = [candidate.key for candidate in self.structured_candidates]
+        if len(candidate_keys) != len(set(candidate_keys)):
+            raise ValueError("结构化候选事项 key 不能重复")
+        return self
+
+
 class AIExtractedEvaluationItem(BaseModel):
     title: ItemTitle
     category: EvaluationItemCategory
@@ -204,8 +299,62 @@ class AIExtractedEvaluationItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class AIExtractedEvaluationPlan(BaseModel):
+class LegacyAIExtractedEvaluationPlanV1(BaseModel):
     schema_version: Literal["1.0"]
     items: list[AIExtractedEvaluationItem] = Field(max_length=100)
 
     model_config = ConfigDict(extra="forbid")
+
+
+class AIExtractedSourceReviewItem(BaseModel):
+    title: ItemTitle
+    category: EvaluationItemCategory
+    equivalent_structured_item_key: ItemKey | None
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class AIExtractedSourceReview(BaseModel):
+    source_id: SourceId
+    disposition: Literal["requirements", "non_requirement"]
+    non_requirement_reason: Literal[
+        "company_info",
+        "benefit",
+        "promotion",
+        "context",
+    ] | None
+    items: list[AIExtractedSourceReviewItem] = Field(max_length=100)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_disposition_payload(self) -> AIExtractedSourceReview:
+        if self.disposition == "requirements":
+            if not self.items or self.non_requirement_reason is not None:
+                raise ValueError("requirements 审阅必须有事项且不能包含非要求原因")
+        elif self.items or self.non_requirement_reason is None:
+            raise ValueError("non_requirement 审阅必须无事项且包含受控原因")
+        return self
+
+
+class AIExtractedEvaluationPlanV2(BaseModel):
+    schema_version: Literal["2.0"]
+    source_reviews: list[AIExtractedSourceReview] = Field(
+        min_length=1,
+        max_length=JOB_EVALUATION_PLAN_MAX_SOURCE_UNITS,
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class AIExtractedEvaluationPlan:
+    """Temporary staged parser; production Adapter accepts only the V2 result."""
+
+    @classmethod
+    def model_validate(
+        cls,
+        value: object,
+    ) -> LegacyAIExtractedEvaluationPlanV1 | AIExtractedEvaluationPlanV2:
+        if isinstance(value, dict) and value.get("schema_version") == "2.0":
+            return AIExtractedEvaluationPlanV2.model_validate(value)
+        return LegacyAIExtractedEvaluationPlanV1.model_validate(value)

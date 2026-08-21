@@ -24,8 +24,8 @@ class JobEvaluationPlan(Base):
     __table_args__ = (
         UniqueConstraint(
             "job_id",
-            "jd_fingerprint",
-            name="uq_job_evaluation_plans_job_jd_fingerprint",
+            "input_fingerprint",
+            name="uq_job_evaluation_plans_job_input_fingerprint",
         ),
         CheckConstraint(
             "status IN ('generating', 'ready', 'failed', 'outdated')",
@@ -34,6 +34,16 @@ class JobEvaluationPlan(Base):
         CheckConstraint(
             "status <> 'outdated' OR is_current = false",
             name="ck_job_evaluation_plans_outdated_not_current",
+        ),
+        CheckConstraint(
+            "free_text_coverage IS NULL "
+            "OR jsonb_typeof(free_text_coverage) = 'object'",
+            name="ck_job_evaluation_plans_free_text_coverage_object",
+        ),
+        CheckConstraint(
+            "schema_version <> '2.0' OR status <> 'ready' "
+            "OR free_text_coverage IS NOT NULL",
+            name="ck_job_evaluation_plans_v2_ready_has_free_text_coverage",
         ),
         Index("ix_job_evaluation_plans_job_id", "job_id"),
         Index("ix_job_evaluation_plans_status", "status"),
@@ -75,6 +85,7 @@ class JobEvaluationPlan(Base):
         default=dict,
         server_default=text("'{}'::jsonb"),
     )
+    free_text_coverage: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     warnings: Mapped[list[str]] = mapped_column(
         JSONB,
         nullable=False,

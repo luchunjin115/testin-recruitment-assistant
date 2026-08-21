@@ -42,8 +42,9 @@ export type JobEvaluationPlan = {
   warnings: JobEvaluationPlanWarning[];
   promptVersion: string;
   modelVersion: string;
-  schemaVersion: '1.0';
+  schemaVersion: '1.0' | '2.0';
   inputFingerprint: string;
+  contractOutdated: boolean;
   inputSnapshot: {
     jobId: number;
     title: string;

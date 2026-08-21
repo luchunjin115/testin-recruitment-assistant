@@ -2,11 +2,11 @@
 
 > 日期：2026-08-15
 >
-> 状态：✅ 阶段 6 已于 2026-08-17 获用户确认完成；技术集成验收已通过，受控浏览器当时无可用实例的证据边界保留在同阶段验收记录中
+> 状态：原 `description + JobRequirementsV1` 岗位合同已于 2026-08-17 完成，但 2026-08-21 已决定返回阶段 6 进行五段式 JD 整改；本文件保留原实现依据，当前 JD 字段合同与后续实施顺序改以 `2026-08-21-stage6-five-section-jd-remediation-design.md` 为准
 >
 > 上游依据：`../../architecture/2026-07-15-hr-agent-platform-design.md`、`../../planning/2026-08-14-post-stage5-product-roadmap.md`、`../../planning/implementation-plan.md`
 >
-> 当前进度：新版 Job 的严格 Schema、迁移、Service、API、真实管理表单和下游开放岗位读取边界已完成；详细验收证据见同目录 `2026-08-17-stage6-acceptance.md`
+> 当前进度：原版 Job 的严格 Schema、迁移、Service、API、真实管理表单和下游开放岗位读取边界曾完成；详细历史验收证据见同目录 `2026-08-17-stage6-acceptance.md`。五段式整改尚未进入业务代码实施
 
 ## 1. 文档目的
 

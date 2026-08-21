@@ -91,6 +91,9 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose }) => {
   const plan = loadState.status === 'ready' ? loadState.plan : null;
   const canGenerate = job?.status === 'open' && loadState.status === 'empty';
   const canRegenerate = job?.status === 'open' && plan?.status === 'failed';
+  const canUpgrade = job?.status === 'open'
+    && plan?.status === 'ready'
+    && plan.contractOutdated;
 
   return (
     <Drawer
@@ -151,6 +154,19 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose }) => {
             <div><span>评价事项</span><strong>{plan.items.length}</strong><p>最多 30 项</p></div>
             <div><span>计划版本</span><strong>Schema {plan.schemaVersion}</strong><p>更新于 {formatDateTime(plan.updatedAt)}</p></div>
           </section>
+
+          {plan.contractOutdated && plan.status === 'ready' && (
+            <Alert
+              action={canUpgrade ? (
+                <Button loading={operationPending} onClick={() => void runGeneration('generate')}>
+                  按新规则重新生成
+                </Button>
+              ) : undefined}
+              message="当前评价计划使用旧规则"
+              showIcon
+              type="warning"
+            />
+          )}
 
           {plan.warnings.includes('limited_basis') && (
             <Alert

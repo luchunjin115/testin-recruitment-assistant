@@ -14,6 +14,8 @@ const plan = {
     fields: [{ source_field: 'requirements.required_skills', source_value_count: 1, item_keys: ['required_skill:react'] }],
   },
   warnings: [], prompt_version: 'plan-v1', model_version: 'fake-plan', schema_version: '1.0',
+  contract_outdated: true,
+  free_text_coverage: { rule_version: 'jd_source_units_v1', all_reviewed: true, units: [] },
   input_fingerprint: 'b'.repeat(64),
   input_snapshot: {
     job_id: 7, title: '前端工程师', department: '研发部', description: '负责前端',
@@ -91,6 +93,8 @@ try {
   const mappedPlan = await service.getJobEvaluationPlan(7);
   assert.equal(mappedPlan.items[0].sourceField, 'requirements.required_skills');
   assert.equal(mappedPlan.structuredCoverage.allCovered, true);
+  assert.equal(mappedPlan.contractOutdated, true);
+  assert.equal('freeTextCoverage' in mappedPlan, false);
   assert.equal(mappedPlan.inputSnapshot.requirements.required_skills[0], 'React');
   await service.generateJobEvaluationPlan(7);
   await service.regenerateJobEvaluationPlan(7);

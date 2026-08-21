@@ -1,3 +1,4 @@
+import asyncio
 import json
 from datetime import datetime, timezone
 from unittest import IsolatedAsyncioTestCase, TestCase
@@ -15,6 +16,7 @@ from app.models.job_evaluation_plan import JobEvaluationPlan
 from app.schemas.job_evaluation_plan import JobEvaluationPlanWarning
 from app.services.job_evaluation_plan_service import (
     JobEvaluationPlanContentError,
+    JobEvaluationPlanNotRegenerableError,
     JobEvaluationPlanService,
 )
 
@@ -59,6 +61,80 @@ def ai_content(items: list[dict]) -> str:
     return json.dumps(
         {"schema_version": "1.0", "items": items},
         ensure_ascii=False,
+    )
+
+
+def ai_v2_content(source_reviews: list[dict]) -> str:
+    return json.dumps(
+        {"schema_version": "2.0", "source_reviews": source_reviews},
+        ensure_ascii=False,
+    )
+
+
+def default_ai_v2_content() -> str:
+    return ai_v2_content(
+        [
+            {
+                "source_id": "description:0001",
+                "disposition": "requirements",
+                "non_requirement_reason": None,
+                "items": [
+                    {
+                        "title": "性能优化",
+                        "category": "responsibility",
+                        "equivalent_structured_item_key": None,
+                    }
+                ],
+            },
+            {
+                "source_id": "description:0002",
+                "disposition": "requirements",
+                "non_requirement_reason": None,
+                "items": [
+                    {
+                        "title": "Redis",
+                        "category": "skill",
+                        "equivalent_structured_item_key": None,
+                    },
+                    {
+                        "title": "Kafka",
+                        "category": "skill",
+                        "equivalent_structured_item_key": None,
+                    },
+                ],
+            },
+            {
+                "source_id": "description:0003",
+                "disposition": "non_requirement",
+                "non_requirement_reason": "company_info",
+                "items": [],
+            },
+        ]
+    )
+
+
+def changed_jd_ai_v2_content() -> str:
+    return ai_v2_content(
+        [
+            {
+                "source_id": "description:0001",
+                "disposition": "non_requirement",
+                "non_requirement_reason": "context",
+                "items": [],
+            },
+            {
+                "source_id": "description:0002",
+                "disposition": "requirements",
+                "non_requirement_reason": None,
+                "items": [
+                    {
+                        "title": "Python",
+                        "category": "skill",
+                        "equivalent_structured_item_key": None,
+                    }
+                ],
+            },
+        ]
     )
 
 
@@ -124,6 +200,98 @@ class JobEvaluationPlanContentTest(TestCase):
         self.assertIn("Python", skill_titles)
         self.assertIn("PostgreSQL", skill_titles)
         self.assertIn("Docker", skill_titles)
+
+    def test_ai_extraction_input_contains_units_context_and_structured_candidates(
+        self,
+    ) -> None:
+        snapshot = self.service.build_input_snapshot(make_job())
+
+        extraction_input = self.service.build_ai_extraction_input(snapshot)
+
+        self.assertEqual(
+            set(extraction_input),
+            {"input_snapshot", "source_units", "structured_candidates"},
+        )
+        self.assertEqual(extraction_input["input_snapshot"]["title"], "后端工程师")
+        self.assertEqual(
+            [unit["source_id"] for unit in extraction_input["source_units"]],
+            [
+                "description:0001",
+                "description:0002",
+                "description:0003",
+            ],
+        )
+        self.assertTrue(
+            all(
+                unit["source_field"] == "description"
+                for unit in extraction_input["source_units"]
+            )
+        )
+        structured = extraction_input["structured_candidates"]
+        self.assertTrue(structured)
+        self.assertTrue(
+            all(
+                candidate["source_field"].startswith("requirements.")
+                for candidate in structured
+            )
+        )
+
+    def test_v2_rejects_required_source_as_non_requirement_and_promotional_item(
+        self,
+    ) -> None:
+        cases = (
+            (
+                "必须掌握 Python。",
+                {
+                    "source_id": "description:0001",
+                    "disposition": "non_requirement",
+                    "non_requirement_reason": "context",
+                    "items": [],
+                },
+            ),
+            (
+                "提供五险一金。",
+                {
+                    "source_id": "description:0001",
+                    "disposition": "requirements",
+                    "non_requirement_reason": None,
+                    "items": [
+                        {
+                            "title": "五险一金",
+                            "category": "other",
+                            "equivalent_structured_item_key": None,
+                        }
+                    ],
+                },
+            ),
+        )
+        for description, review in cases:
+            with self.subTest(description=description):
+                snapshot = self.service.build_input_snapshot(
+                    make_job(
+                        description=description,
+                        requirements=make_requirements(
+                            responsibilities=[],
+                            required_skills=[],
+                            preferred_skills=[],
+                            minimum_work_years=None,
+                            education_requirement=None,
+                            required_experiences=[],
+                            preferred_experiences=[],
+                            keywords=[],
+                            additional_requirements=[],
+                        ),
+                    )
+                )
+                with self.assertRaises(JobEvaluationPlanContentError) as raised:
+                    self.service.build_plan_content(
+                        snapshot,
+                        ai_v2_content([review]),
+                    )
+                self.assertEqual(
+                    raised.exception.code,
+                    "JOB_EVALUATION_PLAN_BUSINESS_VALIDATION_FAILED",
+                )
 
     def test_b_plus_c_merge_deduplicates_and_keeps_structured_required(self) -> None:
         snapshot = self.service.build_input_snapshot(make_job())
@@ -356,7 +524,9 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
             setattr(plan, "id", 1),
             plan_holder.append(plan),
         )
-        adapter = FakeJobEvaluationPlanAdapter([adapter_result(ai_content([]))])
+        adapter = FakeJobEvaluationPlanAdapter(
+            [adapter_result(default_ai_v2_content())]
+        )
 
         async def scalar(statement):
             if db.scalar.await_count <= 3:
@@ -376,20 +546,27 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
         self.assertEqual(plan.status, "ready")
         self.assertTrue(plan.is_current)
         self.assertEqual(plan.model_version, "fake-deepseek-v1")
+        self.assertEqual(plan.schema_version, "2.0")
         self.assertGreater(len(plan.items), 0)
+        self.assertTrue(plan.free_text_coverage["all_reviewed"])
+        self.assertNotEqual(plan.jd_fingerprint, plan.input_fingerprint)
         self.assertEqual(len(adapter.calls), 1)
+        self.assertEqual(
+            set(adapter.calls[0]),
+            {"input_snapshot", "source_units", "structured_candidates"},
+        )
         self.assertEqual(db.commit.await_count, 2)
 
     async def test_same_jd_ready_plan_is_idempotent_without_model_call(self) -> None:
         job = make_job()
-        fingerprint = self.service.fingerprint_snapshot(
-            self.service.build_input_snapshot(job)
-        )
+        snapshot = self.service.build_input_snapshot(job)
+        jd_fingerprint = self.service.fingerprint_snapshot(snapshot)
+        input_fingerprint = self.service.fingerprint_input(snapshot)
         existing = JobEvaluationPlan(
             id=1,
             job_id=job.id,
-            jd_fingerprint=fingerprint,
-            input_fingerprint=fingerprint,
+            jd_fingerprint=jd_fingerprint,
+            input_fingerprint=input_fingerprint,
             status="ready",
             is_current=True,
         )
@@ -409,6 +586,190 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
         db.commit.assert_not_awaited()
         db.rollback.assert_awaited_once()
 
+    async def test_same_jd_new_breaking_contract_creates_new_plan_row(self) -> None:
+        job = make_job()
+        snapshot = self.service.build_input_snapshot(job)
+        jd_fingerprint = self.service.fingerprint_snapshot(snapshot)
+        old = JobEvaluationPlan(
+            id=8,
+            job_id=job.id,
+            jd_fingerprint=jd_fingerprint,
+            input_fingerprint="0" * 64,
+            schema_version="1.0",
+            status="ready",
+            is_current=True,
+            completed_at=NOW,
+        )
+        new_holder: list[JobEvaluationPlan] = []
+        db = make_session()
+        db.add.side_effect = lambda plan: (
+            setattr(plan, "id", 9),
+            new_holder.append(plan),
+        )
+
+        async def scalar(statement):
+            initial = [job, old, None]
+            if db.scalar.await_count <= 3:
+                return initial[db.scalar.await_count - 1]
+            return new_holder[0] if db.scalar.await_count == 4 else job
+
+        db.scalar.side_effect = scalar
+        adapter = FakeJobEvaluationPlanAdapter(
+            [adapter_result(default_ai_v2_content())]
+        )
+
+        current = await self.service.generate_for_job(
+            db,
+            job.id,
+            adapter=adapter,
+            settings=self.settings,
+            clock=lambda: NOW,
+        )
+
+        self.assertEqual(old.status, "outdated")
+        self.assertFalse(old.is_current)
+        self.assertEqual(current.jd_fingerprint, jd_fingerprint)
+        self.assertEqual(current.input_fingerprint, self.service.fingerprint_input(snapshot))
+        self.assertNotEqual(current.input_fingerprint, old.input_fingerprint)
+        self.assertEqual(len(new_holder), 1)
+
+    async def test_old_ready_upgrade_failure_keeps_old_row_outdated_and_new_row_failed(
+        self,
+    ) -> None:
+        job = make_job()
+        snapshot = self.service.build_input_snapshot(job)
+        old = JobEvaluationPlan(
+            id=8,
+            job_id=job.id,
+            jd_fingerprint=self.service.fingerprint_snapshot(snapshot),
+            input_fingerprint="0" * 64,
+            prompt_version="job_evaluation_plan_v3",
+            schema_version="1.0",
+            status="ready",
+            is_current=True,
+            completed_at=NOW,
+        )
+        new_holder: list[JobEvaluationPlan] = []
+        db = make_session()
+        db.add.side_effect = lambda plan: (
+            setattr(plan, "id", 9),
+            new_holder.append(plan),
+        )
+
+        async def scalar(statement):
+            initial = [job, old, None]
+            if db.scalar.await_count <= 3:
+                return initial[db.scalar.await_count - 1]
+            return new_holder[0] if db.scalar.await_count == 4 else job
+
+        db.scalar.side_effect = scalar
+        adapter = FakeJobEvaluationPlanAdapter([adapter_result("not-json")])
+
+        failed = await self.service.generate_for_job(
+            db,
+            job.id,
+            adapter=adapter,
+            settings=self.settings,
+            clock=lambda: NOW,
+        )
+
+        self.assertEqual(old.status, "outdated")
+        self.assertFalse(old.is_current)
+        self.assertEqual(failed.id, 9)
+        self.assertEqual(failed.status, "failed")
+        self.assertTrue(failed.is_current)
+        self.assertEqual(
+            failed.error_code,
+            "JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT",
+        )
+        self.assertEqual(len(adapter.calls), 1)
+
+    async def test_ready_upgrade_and_failed_retry_are_separate_actions(self) -> None:
+        job = make_job()
+        old_ready = JobEvaluationPlan(
+            id=8,
+            job_id=job.id,
+            status="ready",
+            is_current=True,
+        )
+        db = make_session(job, old_ready)
+        db.get.return_value = job
+
+        with self.assertRaises(JobEvaluationPlanNotRegenerableError):
+            await self.service.regenerate_failed_plan(db, job.id)
+
+    async def test_concurrent_old_ready_upgrade_reuses_single_generating_row(
+        self,
+    ) -> None:
+        job = make_job()
+        snapshot = self.service.build_input_snapshot(job)
+        old = JobEvaluationPlan(
+            id=8,
+            job_id=job.id,
+            jd_fingerprint=self.service.fingerprint_snapshot(snapshot),
+            input_fingerprint="0" * 64,
+            prompt_version="job_evaluation_plan_v3",
+            schema_version="1.0",
+            status="ready",
+            is_current=True,
+            completed_at=NOW,
+        )
+        holder: list[JobEvaluationPlan] = []
+        first_db = make_session()
+        first_db.add.side_effect = lambda plan: (
+            setattr(plan, "id", 9),
+            holder.append(plan),
+        )
+
+        async def first_scalar(statement):
+            initial = [job, old, None]
+            if first_db.scalar.await_count <= 3:
+                return initial[first_db.scalar.await_count - 1]
+            return holder[0] if first_db.scalar.await_count == 4 else job
+
+        first_db.scalar.side_effect = first_scalar
+        adapter_started = asyncio.Event()
+        adapter_release = asyncio.Event()
+
+        class BlockingAdapter:
+            def __init__(self) -> None:
+                self.calls = 0
+
+            async def extract(self, extraction_input):
+                self.calls += 1
+                adapter_started.set()
+                await adapter_release.wait()
+                return adapter_result(default_ai_v2_content())
+
+        adapter = BlockingAdapter()
+        first = asyncio.create_task(
+            self.service.generate_for_job(
+                first_db,
+                job.id,
+                adapter=adapter,
+                settings=self.settings,
+                clock=lambda: NOW,
+            )
+        )
+        await adapter_started.wait()
+
+        second_db = make_session(job, holder[0])
+        second_adapter = FakeJobEvaluationPlanAdapter([])
+        second = await self.service.generate_for_job(
+            second_db,
+            job.id,
+            adapter=second_adapter,
+            settings=self.settings,
+            clock=lambda: NOW,
+        )
+        adapter_release.set()
+        first_result = await first
+
+        self.assertIs(second, holder[0])
+        self.assertIs(first_result, holder[0])
+        self.assertEqual(len(holder), 1)
+        self.assertEqual(adapter.calls, 1)
+        self.assertEqual(second_adapter.calls, [])
     async def test_jd_change_marks_old_plan_outdated_before_new_generation(self) -> None:
         job = make_job(description="新的 JD：必须掌握 Python")
         old = JobEvaluationPlan(
@@ -434,7 +795,9 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
             return new_holder[0] if db.scalar.await_count == 4 else job
 
         db.scalar.side_effect = scalar
-        adapter = FakeJobEvaluationPlanAdapter([adapter_result(ai_content([]))])
+        adapter = FakeJobEvaluationPlanAdapter(
+            [adapter_result(changed_jd_ai_v2_content())]
+        )
 
         current = await self.service.generate_for_job(
             db,
@@ -469,7 +832,7 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
         adapter = FakeJobEvaluationPlanAdapter(
             [
                 JobEvaluationPlanTimeoutError("timeout"),
-                adapter_result(ai_content([])),
+                adapter_result(default_ai_v2_content()),
             ]
         )
 
@@ -487,6 +850,10 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
     async def test_content_and_nonretryable_errors_do_not_retry(self) -> None:
         cases = (
             (adapter_result("not-json"), "JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT"),
+            (
+                adapter_result(ai_content([])),
+                "JOB_EVALUATION_PLAN_INCOMPLETE_FREE_TEXT_COVERAGE",
+            ),
             (
                 JobEvaluationPlanAuthenticationError("认证失败"),
                 "JOB_EVALUATION_PLAN_AUTHENTICATION_ERROR",
@@ -561,14 +928,14 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
 
     async def test_failed_current_plan_can_be_regenerated(self) -> None:
         job = make_job()
-        fingerprint = self.service.fingerprint_snapshot(
-            self.service.build_input_snapshot(job)
-        )
+        snapshot = self.service.build_input_snapshot(job)
+        jd_fingerprint = self.service.fingerprint_snapshot(snapshot)
+        input_fingerprint = self.service.fingerprint_input(snapshot)
         failed = JobEvaluationPlan(
             id=1,
             job_id=job.id,
-            jd_fingerprint=fingerprint,
-            input_fingerprint=fingerprint,
+            jd_fingerprint=jd_fingerprint,
+            input_fingerprint=input_fingerprint,
             status="failed",
             is_current=True,
             items=[],
@@ -578,7 +945,9 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
         )
         db = make_session(failed, job, failed, failed, job)
         db.get.return_value = job
-        adapter = FakeJobEvaluationPlanAdapter([adapter_result(ai_content([]))])
+        adapter = FakeJobEvaluationPlanAdapter(
+            [adapter_result(default_ai_v2_content())]
+        )
 
         result = await self.service.regenerate_failed_plan(
             db,
@@ -591,3 +960,58 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
         self.assertEqual(result.status, "ready")
         self.assertIsNone(result.error_code)
         self.assertEqual(len(adapter.calls), 1)
+
+
+class JobEvaluationPlanContractOutdatedTest(IsolatedAsyncioTestCase):
+    def setUp(self) -> None:
+        self.service = JobEvaluationPlanService()
+
+    def make_contract_plan(self, **overrides) -> JobEvaluationPlan:
+        job = make_job()
+        snapshot = self.service.build_input_snapshot(job)
+        values = {
+            "id": 1,
+            "job_id": job.id,
+            "input_snapshot": snapshot.model_dump(mode="json"),
+            "input_fingerprint": self.service.fingerprint_input(snapshot),
+            "prompt_version": "job_evaluation_plan_v4",
+            "schema_version": "2.0",
+        }
+        values.update(overrides)
+        return JobEvaluationPlan(**values)
+
+    def test_current_contract_is_not_outdated_and_each_legacy_axis_is_outdated(
+        self,
+    ) -> None:
+        self.assertFalse(
+            self.service.is_contract_outdated(self.make_contract_plan())
+        )
+        self.assertTrue(
+            self.service.is_contract_outdated(
+                self.make_contract_plan(prompt_version="job_evaluation_plan_v3")
+            )
+        )
+        self.assertTrue(
+            self.service.is_contract_outdated(
+                self.make_contract_plan(schema_version="1.0")
+            )
+        )
+        self.assertTrue(
+            self.service.is_contract_outdated(
+                self.make_contract_plan(input_fingerprint="0" * 64)
+            )
+        )
+
+    async def test_read_only_lookup_does_not_write_or_generate(self) -> None:
+        job = make_job()
+        plan = self.make_contract_plan()
+        db = make_session(plan)
+        db.get.return_value = job
+
+        result = await self.service.get_current_plan(db, job.id)
+
+        self.assertIs(result, plan)
+        db.add.assert_not_called()
+        db.flush.assert_not_awaited()
+        db.commit.assert_not_awaited()
+        db.rollback.assert_not_awaited()

@@ -1,7 +1,7 @@
 import asyncio
 from pathlib import Path
 from unittest import IsolatedAsyncioTestCase
-from unittest.mock import Mock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from fastapi.testclient import TestClient
 
@@ -66,6 +66,25 @@ class MainLifespanTest(IsolatedAsyncioTestCase):
 
         sessionmaker.assert_not_called()
         cleanup_loop.assert_not_called()
+
+    async def test_lifespan_does_not_scan_or_generate_evaluation_plans(self) -> None:
+        settings = Mock(
+            RESUME_CLEANUP_ENABLED=False,
+            SCREENING_WORKER_ENABLED=False,
+        )
+
+        with (
+            patch("app.main.settings", settings),
+            patch(
+                "app.services.job_evaluation_plan_service."
+                "job_evaluation_plan_service.generate_for_job",
+                AsyncMock(),
+            ) as generate_plan,
+        ):
+            async with lifespan(Mock()):
+                pass
+
+        generate_plan.assert_not_awaited()
 
     async def test_lifespan_starts_and_cancels_postgres_screening_worker(self) -> None:
         settings = Mock(

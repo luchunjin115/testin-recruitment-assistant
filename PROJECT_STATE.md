@@ -7,8 +7,9 @@
 ## 1. 当前结论
 
 - 项目正在建设新版招聘主链，旧 React + FastAPI + SQLite + Mock LLM 演示系统已经退役。
-- 阶段 4“简历上传与原文提取”、阶段 5“AI 结构化草稿”、阶段 6“结构化岗位管理”已经完成。
-- 阶段 7“Application 与 AI 初筛底座”已完成小步骤 8 的投递时间基准与年限事实整改，但完整真实 AI 质量与浏览器验收仍未达到完成标准，因此阶段 7 尚未完成。
+- 阶段 4“简历上传与原文提取”和阶段 5“AI 结构化草稿”已经完成；阶段 6 原 `description + JobRequirementsV1` 岗位合同曾完成，但 2026-08-21 已决定返回阶段 6 进行五段式 JD 整改。
+- 阶段 7“Application 与 AI 初筛底座”已完成小步骤 8 的投递时间基准与年限事实整改，但完整真实 AI 质量与浏览器验收仍未达到完成标准；当前因上游五段式 JD 变更暂停，不继续修补旧 JD 输入合同。
+- 小步骤 9-I 已完成 20 次 JD 正式复验和 60 次下游真实诊断。18/18 正常 JD 可用、主要要求与结构化覆盖均为 100%，但 JD18 没有形成预期 `too_many_items`，因此 `step9_quality_gate_passed=false`，小步骤 9 仍未通过；下游诊断也仅有 9/20 至少一份合法报告、1/20 三次全部合法。
 - Application、Resume 隔离、HR 内部录入和 HR 决策等公共能力继续保留。
 - 旧 Rubric、五维权重、确定性评分、`unknown`、证据覆盖率、Python 加权总分和多报告历史方案已经废弃。
 - 阶段 7 当前业务方案已经确认；旧 Rubric 删除、`JobEvaluationPlan`、严格单次评价、异步运行、幂等、当前成功报告替换、React 完整报告交互以及固定投递时间事实已经完成。SR05/SR15 最终 6 次真实 DeepSeek 定向复验的严重年限事实冲突为 0，但合法报告只有 3/6；原 Playwright 浏览器验收仍为 60 项中 57 通过、2 失败、1 未验证、0 阻塞。因此这次缺陷已修复，不代表阶段 7 整体通过。
@@ -19,16 +20,20 @@
 
 当前阶段的权威顺序是：
 
-1. 阶段 7 当前设计：`docs/stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`
-2. 本文件：只负责当前进度、工作区风险和下一步
-3. `CLAUDE.md`：项目长期架构、技术栈和稳定约束
-4. `docs/planning/implementation-plan.md`：跨阶段实施顺序
-5. `docs/planning/2026-08-14-post-stage5-product-roadmap.md`：阶段 5 后产品路线
-6. `docs/architecture/2026-07-15-hr-agent-platform-design.md`：总体架构背景
+1. 阶段 6 五段式 JD 整改：`docs/stages/stage6/2026-08-21-stage6-five-section-jd-remediation-design.md`
+2. 阶段 6 原设计：`docs/stages/stage6/2026-08-15-stage6-structured-job-management-design.md`，除被新补充替代的 JD 字段合同外继续有效
+3. 阶段 7 当前设计：`docs/stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`，当前处于上游整改暂停状态
+4. 本文件：只负责当前进度、工作区风险和下一步
+5. `CLAUDE.md`：项目长期架构、技术栈和稳定约束
+6. `docs/planning/implementation-plan.md`：跨阶段实施顺序
+7. `docs/planning/2026-08-14-post-stage5-product-roadmap.md`：阶段 5 后产品路线
+8. `docs/architecture/2026-07-15-hr-agent-platform-design.md`：总体架构背景
 
 发生冲突时，当前阶段专项设计优先于旧总体示例和历史记录。归档文档不具有当前业务权威性。
 
 ## 3. 当前阶段 7 方案摘要
+
+> 暂停说明：以下内容记录阶段 7 在五段式 JD 决定前已经实现的合同。阶段 6 将把 Job 改为岗位背景、岗位职责、任职要求、加分项和候选人可见备注五个独立字段；阶段 6 验收和新的阶段 7 输入设计确认前，旧 JobEvaluationPlan 不得继续生成。
 
 ### 3.1 固定流程
 
@@ -71,7 +76,7 @@ React 渲染完整报告，HR 独立决定通过、备选或淘汰
 - 首次评价、普通幂等请求、单人/批量重新评估和切换 Resume 后的重新评估，都继续使用原 Application 的同一投递时间。
 - 后端负责生成版本化、可复核的经历时间事实；DeepSeek 负责相关性和匹配评分，Python 不恢复固定权重、总分公式或自动招聘决定。
 - 评价基准、时间事实及规则版本必须进入 Prompt、输入指纹、ScreeningRun/ScreeningReport 审计元数据；报告页面展示评价基准日期。
-- 该合同已于 2026-08-21 完成代码、Schema、Model、API、React、向前 migration、自动化和真实 DeepSeek 定向复验。事实规则版本为 `experience_period_facts_v1`，筛选 Prompt 为 `screening_evaluation_v3`，输出 Schema 为 `2.0`，数据库 head 为 `d9a1f4c7e820`。
+- 该合同已于 2026-08-21 完成代码、Schema、Model、API、React、向前 migration、自动化和真实 DeepSeek 定向复验。事实规则版本为 `experience_period_facts_v1`，筛选 Prompt 为 `screening_evaluation_v3`，输出 Schema 为 `2.0`；该合同对应 migration 为 `d9a1f4c7e820`，当前数据库 head 已随小步骤 9-E 前进至 `e4c7a1b9d632`。
 
 完整字段、状态、失败语义、验收场景和实施顺序以阶段 7 当前设计为准，本文件不重复维护第二套详细合同。
 
@@ -98,7 +103,7 @@ React 渲染完整报告，HR 独立决定通过、备选或淘汰
 - 网络、限流和模型服务端错误只自动重试 1 次；JSON、Schema 和业务内容错误不重试。1—4 项返回“评价依据有限”警告，0 项或去重后超过 30 项失败。
 - 岗位创建即开放、开放、重新开放和开放状态修改后，在岗位事务提交后触发当前计划生成；失败不回滚岗位发布，JD 变化会使旧计划过期。
 - 新增 `/api/v2/jobs/{job_id}/evaluation-plan` 的只读查询、幂等生成和失败重新生成接口。React 预览仍留到小步骤 7。
-- 迁移 `a6d4e8f2c713` 只新增评价计划表、索引、外键和约束；该步已完成 `upgrade -> downgrade -> upgrade`，当前数据库继续由后续阶段 7 migration 向前演进至 `d9a1f4c7e820`。
+- 迁移 `a6d4e8f2c713` 只新增评价计划表、索引、外键和约束；该步已完成 `upgrade -> downgrade -> upgrade`，当前数据库继续由后续阶段 7 migration 向前演进至 `e4c7a1b9d632`。
 
 ## 6. 已完成的 AI 报告与单次评价能力
 
@@ -156,25 +161,48 @@ React 渲染完整报告，HR 独立决定通过、备选或淘汰
 
 ## 10. 当前工作区状态与风险
 
-- 当前分支是 `2lcj`。小步骤 3 已提交为 `9c8ea6f`，相对 `origin/2lcj` 为 `ahead 1`，尚未因网络问题推送；不得回退或重做。
-- 工作区同时存在小步骤 4、5、6、7、8 的未提交代码、测试、migration、配置和文档修改；禁止使用 `git reset --hard`、`git clean`、`git checkout --` 或其他方式整体覆盖。
-- 小步骤 8 在小步骤 4 的 JobEvaluationPlan、小步骤 5 的严格评价合同、小步骤 6 的持久运行链路和小步骤 7 的 React 交付上增量实现；五步修改尚未提交，必须作为一条连续链路完整保护。
+- 当前分支是 `2lcj`，HEAD 为 `37f4035`，与 `origin/2lcj` 同步。小步骤 4—8 已包含在当前 HEAD，不得回退或重做。
+- 当前工作区正在同步小步骤 9 独立设计补充及关联状态文档，修改尚未提交；禁止使用 `git reset --hard`、`git clean`、`git checkout --` 或其他方式覆盖。
+- 用户已最终确认并完成小步骤 9 的 9-A—9-I。此前助手误解用户意图产生的独立 20 份 JD 结果继续保留为历史诊断；正式 9-I 已使用新路径独立落盘，没有复用或覆盖该记录。JD18 的正式边界失败是暂停前事实；当前先回到阶段 6 整改上游 JD，不得直接进入阶段 7 步骤 10。
+- 用户已确认五段式 JD 的业务规则，并授权开始文档修改。新增设计补充已形成，但按实施顺序门禁仍需用户最终复核 6R-A—6R-D 后才能修改测试或业务代码。
+- 当前数据库只读核对时 Job、Application、Candidate、Resume、评价计划、筛选报告/运行和阶段历史均为 0 行；这不保证实施时仍为空，6R-B 前必须重新预检，发现 Job 行时禁止自动删除或迁移。
 - 后续不得恢复旧 Rubric、旧 ScreeningResult 或嵌入 Application 的 AI 状态字段。
 - 新功能应复用 Candidate、Application、Resume、Job、StageHistory、Report 和通用 DeepSeek/数据库基础设施。
 
 ## 11. 当前唯一下一步
 
-投递时间基准与年限事实整改已经完成。当前唯一下一步是阶段 7 小步骤 9“JD 拆解质量整改”，只处理正常 JD 无法形成可用计划、中英文要求被翻译/改写后失去原文追溯，以及明确主要要求漏识别。
+当前唯一下一步是请用户最终复核 `docs/stages/stage6/2026-08-21-stage6-five-section-jd-remediation-design.md` 中的完整合同与 6R-A—6R-D 实施顺序。获得明确确认后，每轮只执行一个批次；第一批 6R-A 只建立自动化合同基线，不修改生产代码或调用真实模型。
 
-小步骤 9 的完成门槛是：预设 0 项和超过 30 项边界样本继续正确失败；其余正常 JD 全部形成 `ready/limited` 计划；自由文本主要要求识别率不低于 95%；擅自新增 required、明显重复和不可追溯事项为 0。开始编码前仍须按阶段需求门禁把失败分类、包含/不包含范围、自动化和定向真实 DeepSeek 场景写入独立设计补充并获得用户确认。
+五段式合同已经确认：基础信息不变；新增 `job_background/job_responsibilities/candidate_requirements/preferred_qualifications/public_notes` 五个独立普通文本字段；开放岗位只强制职责和任职要求；备注候选人可见且不参与 AI；旧 `description/requirements/legacy_requirements` 与 `JobRequirementsV1` 退出运行边界；当前不迁移旧 JD 内容、不双写、不实现 AI 生成 JD。未来 Agent 可以生成同一合同的草稿，但必须由 HR 修改、确认并独立开放。
 
-小步骤 9 通过后，才依次执行：小步骤 10 合法报告成功率、小步骤 11 人工方向一致性、小步骤 12 三次重复稳定性、小步骤 13 浏览器收尾与完整质量复验。稳定性正式门槛已明确为至少 18/20 样本三次都合法，并在这些样本中至少 90% 最大分差不超过 5；最终计划内浏览器场景必须全部通过，不得保留失败、未验证或阻塞项。任何前置步骤未通过时不得跳到后一步；阶段 7 通过前不得进入产品阶段 8。
+阶段 7 现受控暂停。6R-B 后端切换时必须阻止旧 JobEvaluationPlan 读取新 Job 继续生成计划，但不在阶段 6 提前实现新 Prompt、Schema、拆解 Service 或调用 DeepSeek。阶段 6 通过后，唯一下一步才是讨论并确认新的阶段 7 五段式评价计划设计。
+
+以下保留阶段 7 暂停前的小步骤 9 实施与验收事实，作为历史诊断和未来对比基线：
+
+小步骤 9 的业务选择和实施顺序已写入 `docs/stages/stage7/2026-08-21-stage7-step9-jd-decomposition-quality-remediation-design.md`，并已获得用户最终确认。9-A—9-F 已完成新合同、持久化和 HR 显式升级链路。9-G 已让验收脚本使用 Schema 2.0 的 `input_snapshot/source_units/structured_candidates`，增加独立 `step9-jd` 模式、6 份定向调试与 20 份正式计数的分离路径，并统计正常、边界、limited、42 项召回、“激活”额外断言、结构化覆盖、required、重复、追溯和宣传误识别。离线统计测试即使全绿也不允许产生真实质量结论；只有 20 份冻结样本各一次实际调用的 `final_count` 才能判定门槛。42 项 step9 合同、139 项 JobEvaluationPlan/Screening/验收器定向、140 项岗位与业务隔离、32 项 migration、677 项后端 pytest 全量、19 个前端 Node 脚本及生产构建均通过。PostgreSQL current/head 均为 `e4c7a1b9d632`，`alembic check` 无新操作。9-G 没有新增或修改 migration，两种 dry-run 均为 0 次模型调用、0 次结果写入，没有调用真实 DeepSeek。
+
+9-H 已先完成零调用、零写入的定向 dry-run，再对 JD04/JD08/JD11/JD13/JD18/JD19 各执行一次真实 DeepSeek 调用。六份 expected/actual outcome 全部一致：三份 ready、一份 `limited_basis`、一份 `too_many_items`、一份 `no_items`；11/11 个定向自由文本重点命中，JD08“激活”命中，结构化覆盖 13/13，擅自 required、明显重复、不可追溯和宣传福利误识别均为 0。实际响应模型名均为 `deepseek-v4-flash`，input/output token 为 7,764/1,209。独立 debug 记录保存原始结构化响应且不允许形成质量结论；42 项合同与 10 项验收器测试通过。本轮没有修改生产业务代码、前端或 migration。
+
+此前误执行的 20 份 JD 真实调用无人工重跑，实际模型名均为 `deepseek-v4-flash`，input/output token 为 `23,761/5,212`。18/18 正常 JD 全部可用，自由文本主要要求 42/42，JD08“激活”命中，结构化明确要求 63/63，擅自 required、明显重复、不可追溯和宣传福利误识别均为 0。JD19 正确 `no_items`，但 JD18 把明确岗位要求误判为 `non_requirement/context` 后被 Service 提前拒绝，没有形成预期 `too_many_items`，所以边界仅 1/2 正确；JD16 形成可用 `limited_basis`，与冻结逐样本 `ready` 元数据存在记录差异。独立结果 `docs/stages/stage7/2026-08-21-stage7-step9-jd-decomposition-results.json` 保持原样，只作为历史审计，不替代重新授权的 9-I。
+
+整理后的 9-I 详细合同统一写在 `docs/stages/stage7/2026-08-21-stage7-step9-jd-decomposition-quality-remediation-design.md` 第 14.10 节。它先运行零调用 dry-run，再产生新的 JD revalidation 结果；随后对有本轮可用计划的筛选样本各评价 3 次，缺少计划的样本标记上游阻塞并留在总体分母。JD 指标正式判定小步骤 9；合法报告率、方向、稳定性、安全、证据和幻觉只形成诊断值，不能标记步骤 10—12 完成。
+
+9-I 已按该合同执行：dry-run 为 0 次调用、0 次写入；正式调用为 20 次 JD + 60 次筛选，80/80 均收到 `deepseek-v4-flash` 完整响应，input/output token 合计 `144,127/66,881`，没有额外基础设施调用。18/18 正常 JD 全部可用，主要要求 42/42、结构化覆盖 63/63，required/重复/追溯/宣传四类错误均为 0；JD19 正确 `no_items`，但 JD18 再次被提前拒绝为 `JOB_EVALUATION_PLAN_BUSINESS_VALIDATION_FAILED`，未形成 `too_many_items`，因此小步骤 9 门禁失败。JD16 的实际 3 项计划正确 `limited_basis`，但与冻结逐样本 `ready` 记录不同，后续也需要先确认记录口径。
+
+下游 20 组均有本轮可用计划，上游阻塞 0，每组恰好评价 3 次。至少一份合法报告 9/20，低于旧基线 10/20；总体方向一致 9/20（45%），低于旧基线 50%；三次全部合法 1/20，低于旧基线 5/20。45 次拒绝主要来自 evidence 25、experience_fact 11、bonus 5、tradeoff 3 和其他模型不服从 1。最终 15 份合法报告的正分/亮点证据均可定位，严重事实、敏感属性评分、招聘决定、投递后事实误用均为 0；被拒绝响应仍暴露 33 次事实 grounding/年限类严重问题、1 项亮点重复和 4 项亮点无关。该数据只标记为 `diagnostic`，不代表步骤 10—12 完成。
+
+阶段 6 整改和新的阶段 7 设计通过后，才重新确定小步骤 9—13 的样本与执行口径；合法报告率、方向一致性、三次稳定性和浏览器完整复验仍不能跳过。原稳定性门槛与质量数据保留为设计参考，但不得直接拿旧 `description + JobRequirementsV1` 样本冒充新合同验收。阶段 7 通过前不得进入产品阶段 8。
 
 ## 12. 最近验证基线
 
 - 阶段 7 AI 前端 3 个专项脚本通过；前端全部 19 个 Node 测试脚本通过；TypeScript 严格检查通过；Vite 5.4.21 生产构建通过，共转换 3124 个模块。
-- 时间事实/评价/Adapter 专项 30 项通过，受影响后端专项 96 项通过；后端全量 592 项 `pytest` 在 30.50 秒内通过，另有 1 条既有 PyPDF2 弃用 warning。
-- Alembic 代码 head 与 PostgreSQL current 均为 `d9a1f4c7e820`；真实数据库已完成 `upgrade -> downgrade b7f2c9d4e816 -> upgrade head`，`alembic check` 返回 `No new upgrade operations detected`。`screening_reports` 和 `screening_runs` 实际行数均为 0。
+- 小步骤 9-G 的 42 项 step9 合同、139 项 JobEvaluationPlan/Screening/验收器定向、140 项岗位及业务隔离和 32 项 migration 测试通过；后端全量 677 项 `pytest` 在 33.52 秒内通过，另有 1 条既有 PyPDF2 弃用 warning。
+- 小步骤 9-H 定向 dry-run 为 0 次调用、0 次写入；真实定向调用 6/6 完成且合同满足 6/6，验收器 10/10 与冻结 step9 合同 42/42 通过。独立结果为 `docs/stages/stage7/2026-08-21-stage7-step9-jd-decomposition-debug-results.json`，不能作为 9-I 正式质量结论。
+- 此前误执行的 20 次 JD 调用形成 18/18 正常 JD 可用、主要要求 42/42、结构化覆盖 63/63，安全追溯类错误均为 0；JD18 边界失败层不符合预期。独立结果保留为历史诊断，不作为整理后 9-I 的正式结论。
+- Alembic 代码 head 与 PostgreSQL current 均为 `e4c7a1b9d632`；9-E 已完成真实数据库 migration 往返，9-F 真实 PostgreSQL 服务回归验证了新旧计划并存和历史报告外键，9-G 重跑实际 PostgreSQL 服务与 migration 回归。`alembic check` 返回 `No new upgrade operations detected`；9-G 没有新增或修改 migration。
+- 合并 9-I dry-run 固定选中 20 份 JD、20 组 JD/Resume、high 8/partial 6/low 6 人工标签和每组 3 次计划，记录 0 次模型调用、0 次结果写入；真实计数严格执行 20 次 JD 和 60 次筛选，额外调用 0。新增验收器 19/19、受影响专项 122/122、后端全量 687/687 通过，另有 1 条既有 PyPDF2 弃用 warning。
+- 9-I 正式 JD 结果为 18/18 正常 JD 可用、主要要求 42/42、JD08“激活”通过、结构化覆盖 63/63，required/重复/追溯/宣传错误均为 0；JD18 未形成预期 `too_many_items`，所以边界 1/2、`step9_quality_gate_passed=false`。JD 结果为 `2026-08-21-stage7-step9-jd-decomposition-revalidation-results.json`。
+- 9-I 下游诊断为：上游阻塞 0，20 组各 3 次；至少一份合法报告 9/20，合法次数分布 0/3=11、1/3=4、2/3=4、3/3=1；总体方向 9/20，三次全部合法 1/20 且其分差 ≤5。结果为 `2026-08-21-stage7-step9-full-chain-diagnostic-results.json/.md`，状态仅为 `diagnostic`。
 - PostgreSQL、Redis、Chroma 均运行；PostgreSQL healthy 并接受连接，Redis 返回 `PONG`，Chroma heartbeat 返回 HTTP 200。
 - OpenAPI 共 64 条 method+path，重复为 0；当前计划、Application 与筛选路由没有重复注册。
 - 运行时扫描没有恢复旧 Rubric、ScreeningResult、五维权重、证据覆盖率或 Python 加权评分；阶段 7 AI UI 没有 `dangerouslySetInnerHTML`、Resume 原文、原始模型响应、API Key、内部异常或敏感属性展示；Git 跟踪文件没有疑似真实 Key。
@@ -184,8 +212,8 @@ React 渲染完整报告，HR 独立决定通过、备选或淘汰
 - Playwright MCP 实际打开 `/app/jobs` 和 `/app/screening`，使用虚构脱敏夹具覆盖计划四状态、筛选状态矩阵、报告、单人/批量动作、约 4 秒轮询、1440×900/820×1180/390×844 布局及键盘检查。60 项中 57 通过、2 失败、1 未验证、0 阻塞；完整脚本观察到 103 个 API 请求、HTTP 错误 0，终态/关闭/离开后轮询均停止。
 - 浏览器最小修复包括计划抽屉关闭回焦、静态 Modal 改为上下文实例、空 `tradeoff_reason` 不再渲染空壳。修复后 Modal 警告为 0、回焦与空壳场景通过；仍有 1 条 Drawer 焦点哨兵 `aria-hidden` 警告，普通初筛真实数据库持久化幂等未在浏览器中验证。
 - 本轮全部最小修复还包括 required 单字误判、JD 逐字/英文约束 Prompt v3、筛选嵌套 evidence/bonus Prompt v2，以及固定投递时间整改后的筛选 Prompt v3 / Schema 2.0。完整证据见 `docs/stages/stage7/2026-08-20-stage7-quality-acceptance.md`、原质量验收 JSON、`2026-08-21-stage7-time-fact-revalidation-results.json` 与 `browser-acceptance-evidence/`。
-- `git diff --check` 通过。上述结果证明自动化、迁移、固定投递时间链路和年限事实防线稳定，并证明大部分前端状态与交互按合同工作；但明确不能证明阶段 7 AI 质量合格、招聘准确、真实数据库端到端幂等或浏览器子验收全通过。中英文事项、总体报告成功率、三次稳定性和额外亮点去重仍需完整质量复验；本次没有重新执行浏览器验收。
-- 后续整改顺序已固定为小步骤 9—13：JD 拆解质量 → 合法报告成功率 → 人工方向一致性 → 三次重复稳定性 → 浏览器收尾与完整复验。原质量结果保留为历史基线，定向调用不覆盖正式统计，失败样本不从总体分母删除。
+- `git diff --check` 通过。上述结果证明自动化、迁移、固定投递时间链路和年限事实防线稳定，并证明大部分前端状态与交互按合同工作；9-I 还证明新 JD 追溯/召回合同在 18 份正常样本上可用，但 JD18 边界、总体报告成功率和三次稳定性仍失败。它明确不能证明阶段 7 AI 质量合格、招聘准确、真实数据库端到端幂等或浏览器子验收全通过；本次没有重新执行浏览器验收。
+- 后续顺序已调整为：最终确认阶段 6 五段式设计 → 6R-A—6R-D 逐批实施与验收 → 重新设计并确认阶段 7 五段式评价计划 → 重新安排 JD、合法报告率、方向、稳定性和浏览器完整复验。原质量结果及误执行结果保持不变，只作历史对比，不作为新合同计数。
 
 开始下一步前仍须重新检查实际 Git 状态、测试数量、Alembic revision 和数据库状态，不能只依赖这里的历史基线。
 

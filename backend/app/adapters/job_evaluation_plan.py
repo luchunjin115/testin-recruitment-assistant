@@ -5,6 +5,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Any
 
+from pydantic import ValidationError
 from openai import (
     APIConnectionError,
     APIStatusError,
@@ -20,7 +21,12 @@ from app.prompts.job_evaluation_plan import (
     JOB_EVALUATION_PLAN_PROMPT_VERSION,
     build_job_evaluation_plan_messages,
 )
-from app.schemas.job_evaluation_plan import JOB_EVALUATION_PLAN_SCHEMA_VERSION
+from app.schemas.job_evaluation_plan import (
+    AIExtractedEvaluationPlanV2,
+    JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION,
+    JOB_EVALUATION_PLAN_SCHEMA_VERSION,
+    JobEvaluationPlanAIInput,
+)
 
 
 class JobEvaluationPlanAdapterError(RuntimeError):
@@ -71,6 +77,10 @@ class JobEvaluationPlanUpstreamError(JobEvaluationPlanAdapterError):
     code = "JOB_EVALUATION_PLAN_UPSTREAM_ERROR"
 
 
+class JobEvaluationPlanInvalidResponseError(JobEvaluationPlanAdapterError):
+    code = "JOB_EVALUATION_PLAN_INVALID_RESPONSE"
+
+
 @dataclass(frozen=True, slots=True)
 class JobEvaluationPlanAdapterResult:
     content: str
@@ -98,6 +108,13 @@ class DeepSeekJobEvaluationPlanAdapter:
                 "岗位评价计划 Prompt 版本与代码不一致"
             )
         if (
+            self.settings.JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION
+            != JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION
+        ):
+            raise JobEvaluationPlanConfigurationError(
+                "岗位评价计划 AI Schema 版本与代码不一致"
+            )
+        if (
             self.settings.JOB_EVALUATION_PLAN_SCHEMA_VERSION
             != JOB_EVALUATION_PLAN_SCHEMA_VERSION
         ):
@@ -114,17 +131,26 @@ class DeepSeekJobEvaluationPlanAdapter:
         self,
         input_snapshot: dict[str, Any],
     ) -> JobEvaluationPlanAdapterResult:
-        serialized = json.dumps(input_snapshot, ensure_ascii=False, sort_keys=True)
-        if (
-            not input_snapshot
-            or len(serialized) > self.settings.JOB_EVALUATION_PLAN_MAX_INPUT_CHARS
-        ):
+        try:
+            validated_input = JobEvaluationPlanAIInput.model_validate(input_snapshot)
+        except (ValidationError, TypeError, ValueError):
+            raise JobEvaluationPlanInputError(
+                "岗位评价计划 AI 输入未通过 Schema 校验"
+            ) from None
+        serialized = json.dumps(
+            validated_input.model_dump(mode="json"),
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+        if len(serialized) > self.settings.JOB_EVALUATION_PLAN_MAX_INPUT_CHARS:
             raise JobEvaluationPlanInputError("岗位 JD 为空或超过安全长度上限")
 
         try:
             response = await self.client.chat.completions.create(
                 model=self.settings.JOB_EVALUATION_PLAN_MODEL,
-                messages=build_job_evaluation_plan_messages(input_snapshot),
+                messages=build_job_evaluation_plan_messages(
+                    validated_input.model_dump(mode="json")
+                ),
                 response_format={"type": "json_object"},
                 max_tokens=self.settings.JOB_EVALUATION_PLAN_MAX_OUTPUT_TOKENS,
                 temperature=0.1,
@@ -189,6 +215,16 @@ class DeepSeekJobEvaluationPlanAdapter:
         content = getattr(message, "content", None)
         if not isinstance(content, str) or not content.strip():
             raise JobEvaluationPlanEmptyResponseError("DeepSeek 返回了空内容")
+        try:
+            payload = json.loads(
+                content,
+                object_pairs_hook=self._object_without_duplicate_keys,
+            )
+            AIExtractedEvaluationPlanV2.model_validate(payload)
+        except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
+            raise JobEvaluationPlanInvalidResponseError(
+                "DeepSeek 返回内容未通过 AI 提取 Schema 2.0 校验"
+            ) from None
 
         usage = getattr(response, "usage", None)
         model = getattr(response, "model", None)
@@ -209,6 +245,15 @@ class DeepSeekJobEvaluationPlanAdapter:
     @staticmethod
     def _optional_int(value: Any) -> int | None:
         return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+    @staticmethod
+    def _object_without_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        value: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError("JSON 对象包含重复字段")
+            value[key] = item
+        return value
 
 
 class FakeJobEvaluationPlanAdapter:

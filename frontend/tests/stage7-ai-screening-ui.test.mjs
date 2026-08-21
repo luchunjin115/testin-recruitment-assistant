@@ -13,8 +13,11 @@ const [plan, drawer, report, center, jobs, styles] = await Promise.all([
 
 for (const text of [
   'AI 初筛的只读评价依据', '评价计划只把当前 JD', '生成评价计划', '重新生成',
+  '当前评价计划使用旧规则', '按新规则重新生成',
   'limited_basis', 'structuredCoverage.allCovered', 'PLAN_STATUS_META',
 ]) assert.ok(plan.includes(text), `评价计划预览缺少：${text}`);
+assert.ok(plan.includes("plan.contractOutdated && plan.status === 'ready'"));
+assert.ok(plan.includes("runGeneration('generate')"), '旧 ready 计划应复用普通生成动作');
 
 for (const text of [
   '开始初筛', '重新评估', '已复用当前报告', '已复用正在进行的任务',
@@ -45,6 +48,10 @@ for (const forbidden of [
   'evidenceCoverage', 'unknown', 'weightedScore',
 ]) {
   assert.equal(`${plan}${drawer}${report}${center}`.includes(forbidden), false, `页面恢复或泄露了禁止内容：${forbidden}`);
+}
+
+for (const internalAudit of ['free_text_coverage', 'freeTextCoverage', 'source_units', 'sourceUnits']) {
+  assert.equal(plan.includes(internalAudit), false, `评价计划页不得展示内部审计数据：${internalAudit}`);
 }
 
 assert.match(styles, /@media\s*\(max-width:\s*560px\)[\s\S]*?\.recruitment-report-overview[\s\S]*?grid-template-columns:\s*1fr;/s);

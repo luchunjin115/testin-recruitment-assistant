@@ -47,8 +47,9 @@ type JobEvaluationPlanResponse = {
   warnings: JobEvaluationPlanWarning[];
   prompt_version: string;
   model_version: string;
-  schema_version: '1.0';
+  schema_version: '1.0' | '2.0';
   input_fingerprint: string;
+  contract_outdated: boolean;
   input_snapshot: {
     job_id: number;
     title: string;
@@ -202,6 +203,7 @@ export const mapJobEvaluationPlan = (value: JobEvaluationPlanResponse): JobEvalu
   modelVersion: value.model_version,
   schemaVersion: value.schema_version,
   inputFingerprint: value.input_fingerprint,
+  contractOutdated: value.contract_outdated,
   inputSnapshot: {
     jobId: value.input_snapshot.job_id,
     title: value.input_snapshot.title,

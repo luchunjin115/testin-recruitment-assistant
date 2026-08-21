@@ -16,6 +16,8 @@ class JobEvaluationPlanModelTest(TestCase):
         )
         self.assertFalse(table.c["items"].nullable)
         self.assertFalse(table.c.structured_coverage.nullable)
+        self.assertTrue(table.c.free_text_coverage.nullable)
+        self.assertNotIn("contract_outdated", table.c)
         self.assertFalse(table.c.input_snapshot.nullable)
         self.assertEqual(table.c.jd_fingerprint.type.length, 64)
         self.assertEqual(table.c.error_code.type.length, 100)
@@ -33,7 +35,15 @@ class JobEvaluationPlanModelTest(TestCase):
         self.assertIn("ck_job_evaluation_plans_status_allowed", constraint_names)
         self.assertIn("ck_job_evaluation_plans_outdated_not_current", constraint_names)
         self.assertIn(
-            "uq_job_evaluation_plans_job_jd_fingerprint",
+            "ck_job_evaluation_plans_free_text_coverage_object",
+            constraint_names,
+        )
+        self.assertIn(
+            "ck_job_evaluation_plans_v2_ready_has_free_text_coverage",
+            constraint_names,
+        )
+        self.assertIn(
+            "uq_job_evaluation_plans_job_input_fingerprint",
             constraint_names,
         )
         self.assertIn("uq_job_evaluation_plans_current_job", index_names)
@@ -51,6 +61,10 @@ class JobEvaluationPlanModelTest(TestCase):
             if isinstance(constraint, UniqueConstraint)
         ]
         self.assertEqual(len(unique_constraints), 1)
+        self.assertEqual(
+            [column.name for column in unique_constraints[0].columns],
+            ["job_id", "input_fingerprint"],
+        )
         self.assertTrue(
             any(
                 isinstance(constraint, CheckConstraint)

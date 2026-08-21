@@ -5,6 +5,8 @@ from pydantic import ValidationError
 
 from app.schemas.job_evaluation_plan import (
     AIExtractedEvaluationPlan,
+    JobEvaluationPlanAIInput,
+    JobEvaluationPlanFreeTextCoverage,
     JobEvaluationItem,
     JobEvaluationPlanRead,
     StructuredCoverageResult,
@@ -131,7 +133,6 @@ class JobEvaluationPlanSchemaTest(TestCase):
                 error_message=None,
             ),
             make_plan(status="outdated", is_current=True),
-            make_plan(schema_version="2.0"),
             make_plan(legacy_weight=40),
         )
         for payload in invalid_cases:
@@ -139,6 +140,59 @@ class JobEvaluationPlanSchemaTest(TestCase):
                 ValidationError
             ):
                 JobEvaluationPlanRead.model_validate(payload)
+
+    def test_public_read_accepts_legacy_and_v2_without_exposing_internal_audit(
+        self,
+    ) -> None:
+        legacy = JobEvaluationPlanRead.model_validate(
+            make_plan(contract_outdated=True)
+        )
+        current = JobEvaluationPlanRead.model_validate(
+            make_plan(schema_version="2.0", contract_outdated=False)
+        )
+
+        self.assertEqual(legacy.schema_version, "1.0")
+        self.assertTrue(legacy.contract_outdated)
+        self.assertEqual(current.schema_version, "2.0")
+        self.assertFalse(current.contract_outdated)
+        self.assertNotIn("free_text_coverage", current.model_dump(mode="json"))
+
+    def test_internal_free_text_coverage_is_strict_and_complete(self) -> None:
+        payload = {
+            "rule_version": "jd_source_units_v1",
+            "all_reviewed": True,
+            "units": [
+                {
+                    "source_id": "description:0001",
+                    "disposition": "requirements",
+                    "item_keys": ["requirement:skill:python"],
+                    "equivalent_structured_item_keys": [
+                        "requirement:skill:python"
+                    ],
+                }
+            ],
+        }
+        parsed = JobEvaluationPlanFreeTextCoverage.model_validate(payload)
+        self.assertTrue(parsed.all_reviewed)
+
+        invalid_cases = (
+            dict(payload, all_reviewed=False),
+            {
+                **payload,
+                "units": [
+                    {
+                        "source_id": "description:0001",
+                        "disposition": "requirements",
+                        "item_keys": [],
+                        "equivalent_structured_item_keys": [],
+                    }
+                ],
+            },
+            {**payload, "unexpected": True},
+        )
+        for invalid in invalid_cases:
+            with self.subTest(invalid=invalid), self.assertRaises(ValidationError):
+                JobEvaluationPlanFreeTextCoverage.model_validate(invalid)
 
     def test_failed_and_generating_statuses_have_safe_contracts(self) -> None:
         failed = JobEvaluationPlanRead.model_validate(
@@ -187,3 +241,57 @@ class JobEvaluationPlanSchemaTest(TestCase):
                     "overall_score": 90,
                 }
             )
+
+    def test_ai_schema_2_accepts_strict_source_reviews(self) -> None:
+        parsed = AIExtractedEvaluationPlan.model_validate(
+            {
+                "schema_version": "2.0",
+                "source_reviews": [
+                    {
+                        "source_id": "description:0001",
+                        "disposition": "requirements",
+                        "non_requirement_reason": None,
+                        "items": [
+                            {
+                                "title": "Python",
+                                "category": "skill",
+                                "equivalent_structured_item_key": None,
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+
+        self.assertEqual(parsed.schema_version, "2.0")
+        self.assertEqual(parsed.source_reviews[0].items[0].title, "Python")
+
+    def test_ai_schema_2_rejects_model_owned_business_fields_and_empty_reviews(self) -> None:
+        invalid_cases = (
+            {"schema_version": "2.0", "source_reviews": []},
+            {
+                "schema_version": "2.0",
+                "source_reviews": [
+                    {
+                        "source_id": "description:0001",
+                        "disposition": "requirements",
+                        "non_requirement_reason": None,
+                        "items": [
+                            {
+                                "title": "Python",
+                                "category": "skill",
+                                "equivalent_structured_item_key": None,
+                                "priority": "required",
+                            }
+                        ],
+                    }
+                ],
+            },
+        )
+        for payload in invalid_cases:
+            with self.subTest(payload=payload), self.assertRaises(ValidationError):
+                AIExtractedEvaluationPlan.model_validate(payload)
+
+    def test_ai_input_requires_snapshot_units_and_strict_structured_candidates(self) -> None:
+        with self.assertRaises(ValidationError):
+            JobEvaluationPlanAIInput.model_validate(make_plan()["input_snapshot"])

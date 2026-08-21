@@ -1,0 +1,2919 @@
+{
+  "generated_at": "2026-08-21T07:19:58.437452+00:00",
+  "mode": "step9-jd",
+  "run_kind": "final_count",
+  "data_policy": {
+    "source": "purpose-built fictional acceptance data",
+    "contains_real_candidate_personal_data": false,
+    "sample_data_directory_sent_to_model": false,
+    "api_key_recorded": false
+  },
+  "provider": {
+    "provider": "deepseek",
+    "job_model": "deepseek-chat",
+    "mock_fallback": false
+  },
+  "fixture_contract": {
+    "case_count": 20,
+    "case_ids": [
+      "JD01",
+      "JD02",
+      "JD03",
+      "JD04",
+      "JD05",
+      "JD06",
+      "JD07",
+      "JD08",
+      "JD09",
+      "JD10",
+      "JD11",
+      "JD12",
+      "JD13",
+      "JD14",
+      "JD15",
+      "JD16",
+      "JD17",
+      "JD18",
+      "JD19",
+      "JD20"
+    ],
+    "frozen_free_text_expectation_count": 42,
+    "activation_assertion": {
+      "case_id": "JD08",
+      "alternatives": [
+        "激活"
+      ],
+      "included_in_frozen_denominator": false
+    },
+    "normal_case_count": 18,
+    "boundary_case_ids": [
+      "JD18",
+      "JD19"
+    ],
+    "limited_case_ids": [
+      "JD13",
+      "JD15",
+      "JD17",
+      "JD20"
+    ]
+  },
+  "summary": {
+    "run_kind": "final_count",
+    "sample_count": 20,
+    "normal_case_count": 18,
+    "normal_ready_or_limited_count": 18,
+    "boundary_correct_count": 1,
+    "boundary_case_count": 2,
+    "limited_correct_count": 4,
+    "limited_case_count": 4,
+    "frozen_free_text_expectation_count": 42,
+    "free_text_found_count": 42,
+    "free_text_major_requirement_recognition_rate": 1.0,
+    "activation_assertion_found": true,
+    "structured_explicit_requirement_count": 63,
+    "structured_covered_count": 63,
+    "structured_explicit_requirement_coverage_rate": 1.0,
+    "added_required_count": 0,
+    "obvious_duplicate_count": 0,
+    "untraceable_item_count": 0,
+    "promotion_or_benefit_misclassified_count": 0,
+    "actual_model_call_count": 20,
+    "all_metrics_satisfied": false,
+    "quality_gate_passed": false,
+    "quality_conclusion_allowed": true
+  },
+  "cases": [
+    {
+      "case_id": "JD01",
+      "title": "Python 后端工程师",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 2,
+      "free_text_found": 2,
+      "structured_value_count": 7,
+      "structured_covered_count": 7,
+      "item_count": 10,
+      "traceable_item_count": 10,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1294,
+      "output_tokens": 286,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"负责 FastAPI 服务\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"PostgreSQL 数据建模\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"必须能设计异步 API\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0003\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"熟悉 Docker\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:d548c5b83fa61d8e\"\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:responsibility:264b372c89652135",
+          "title": "开发和维护后端 API",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:11a4a60b518bf249",
+          "title": "Python",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:a478b4566be5cb00",
+          "title": "PostgreSQL",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:d548c5b83fa61d8e",
+          "title": "Docker",
+          "category": "skill",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:3c500b8bda0010b7",
+          "title": "至少 2 年工作经验",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.minimum_work_years",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:education:74920cc22bb7bcb2",
+          "title": "本科及以上学历",
+          "category": "education",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.education_requirement",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:acc6483e0288ebc8",
+          "title": "后端服务开发经历",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_experiences",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:bd2f097e4ecfcea3",
+          "title": "负责 FastAPI 服务",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责 FastAPI 服务和 PostgreSQL 数据建模；"
+        },
+        {
+          "key": "requirement:responsibility:c82f606e9cb414cc",
+          "title": "PostgreSQL 数据建模",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责 FastAPI 服务和 PostgreSQL 数据建模；"
+        },
+        {
+          "key": "requirement:skill:6b76833653a9a0a1",
+          "title": "必须能设计异步 API",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "必须能设计异步 API。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "负责 FastAPI 服务",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "PostgreSQL 数据建模",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "必须能设计异步 API",
+          "category": "skill",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "熟悉 Docker",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:d548c5b83fa61d8e"
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "负责 FastAPI 服务",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "PostgreSQL 数据建模",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "必须能设计异步 API",
+              "category": "skill",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0003",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "熟悉 Docker",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:d548c5b83fa61d8e"
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD02",
+      "title": "React 前端工程师",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 2,
+      "free_text_found": 2,
+      "structured_value_count": 5,
+      "structured_covered_count": 5,
+      "item_count": 8,
+      "traceable_item_count": 8,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1182,
+      "output_tokens": 202,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"Build accessible React interfaces with TypeScript.\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"必须具备复杂表单开发经验\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"具备性能优化经验优先\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:responsibility:ed95f8b484fb2bc5",
+          "title": "交付可访问的业务前端",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:275976081ce1abf6",
+          "title": "React",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:969545dde1584d88",
+          "title": "TypeScript",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:158cb423fb3fdc46",
+          "title": "Ant Design",
+          "category": "skill",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:3c500b8bda0010b7",
+          "title": "至少 2 年工作经验",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.minimum_work_years",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:0687b31eb5785bca",
+          "title": "Build accessible React interfaces with TypeScript.",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "Build accessible React interfaces with TypeScript."
+        },
+        {
+          "key": "requirement:experience:3484347b3c522ca3",
+          "title": "必须具备复杂表单开发经验",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "必须具备复杂表单开发经验，具备性能优化经验优先。"
+        },
+        {
+          "key": "requirement:experience:50b3ce31646573c1",
+          "title": "具备性能优化经验优先",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "必须具备复杂表单开发经验，具备性能优化经验优先。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "Build accessible React interfaces with TypeScript.",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "必须具备复杂表单开发经验",
+          "category": "experience",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "具备性能优化经验优先",
+          "category": "experience",
+          "equivalent_structured_item_key": null
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "Build accessible React interfaces with TypeScript.",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "必须具备复杂表单开发经验",
+              "category": "experience",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "具备性能优化经验优先",
+              "category": "experience",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD03",
+      "title": "测试开发工程师",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 2,
+      "free_text_found": 2,
+      "structured_value_count": 4,
+      "structured_covered_count": 4,
+      "item_count": 8,
+      "traceable_item_count": 8,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1159,
+      "output_tokens": 269,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"负责接口自动化\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"持续集成质量门禁\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"pytest 实战\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0003\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"性能测试经验\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:responsibility:e25cb239b7992b55",
+          "title": "建设自动化测试体系",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:11a4a60b518bf249",
+          "title": "Python",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:efae715a21c59881",
+          "title": "JMeter",
+          "category": "skill",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:63cdec2c8e3e5561",
+          "title": "接口自动化测试经历",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_experiences",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:208256a0d181e854",
+          "title": "负责接口自动化",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责接口自动化和持续集成质量门禁。"
+        },
+        {
+          "key": "requirement:responsibility:53273aaafd162cba",
+          "title": "持续集成质量门禁",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责接口自动化和持续集成质量门禁。"
+        },
+        {
+          "key": "requirement:skill:874178e822a9fac6",
+          "title": "pytest 实战",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "要求有 pytest 实战；"
+        },
+        {
+          "key": "requirement:experience:7c185a12004ed29d",
+          "title": "性能测试经验",
+          "category": "experience",
+          "priority": "preferred",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "有性能测试经验加分。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "负责接口自动化",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "持续集成质量门禁",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "pytest 实战",
+          "category": "skill",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "性能测试经验",
+          "category": "experience",
+          "equivalent_structured_item_key": null
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "负责接口自动化",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "持续集成质量门禁",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "pytest 实战",
+              "category": "skill",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0003",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "性能测试经验",
+              "category": "experience",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD04",
+      "title": "AI 应用工程师",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 2,
+      "free_text_found": 2,
+      "structured_value_count": 5,
+      "structured_covered_count": 5,
+      "item_count": 9,
+      "traceable_item_count": 9,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1209,
+      "output_tokens": 273,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"Design LLM applications\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"evaluation pipelines\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"必须理解 prompt injection 防护\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0003\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"RAG 项目经历优先\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:responsibility:d0e7ee4ad05fcaf1",
+          "title": "开发大模型应用",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:11a4a60b518bf249",
+          "title": "Python",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:e1b8e6fc1a4d859b",
+          "title": "LLM API",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:a3e690053061793b",
+          "title": "RAG",
+          "category": "skill",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:3c500b8bda0010b7",
+          "title": "至少 2 年工作经验",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.minimum_work_years",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:5d8f04d92663a563",
+          "title": "Design LLM applications",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "Design LLM applications and evaluation pipelines."
+        },
+        {
+          "key": "requirement:responsibility:59e2886e164fd19e",
+          "title": "evaluation pipelines",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "Design LLM applications and evaluation pipelines."
+        },
+        {
+          "key": "requirement:skill:6af6ad0bd48eba22",
+          "title": "必须理解 prompt injection 防护",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "必须理解 prompt injection 防护；"
+        },
+        {
+          "key": "requirement:experience:c053c5ce778e4c6c",
+          "title": "RAG 项目经历优先",
+          "category": "experience",
+          "priority": "preferred",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "RAG 项目经历优先。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "Design LLM applications",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "evaluation pipelines",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "必须理解 prompt injection 防护",
+          "category": "skill",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "RAG 项目经历优先",
+          "category": "experience",
+          "equivalent_structured_item_key": null
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "Design LLM applications",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "evaluation pipelines",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "必须理解 prompt injection 防护",
+              "category": "skill",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0003",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "RAG 项目经历优先",
+              "category": "experience",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD05",
+      "title": "数据分析师",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 2,
+      "free_text_found": 2,
+      "structured_value_count": 4,
+      "structured_covered_count": 4,
+      "item_count": 7,
+      "traceable_item_count": 7,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1161,
+      "output_tokens": 330,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"负责业务指标体系\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": \"requirement:responsibility:43dfe284b4dc99cc\"\n        },\n        {\n          \"title\": \"实验分析\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"可视化\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"能用 SQL 独立取数\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:4ec7c53222c8a758\"\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0003\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"具备 A/B 测试经验\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:responsibility:43dfe284b4dc99cc",
+          "title": "搭建业务指标体系",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:4ec7c53222c8a758",
+          "title": "SQL",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:5f0974ee455c4cd5",
+          "title": "Tableau",
+          "category": "skill",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:education:74920cc22bb7bcb2",
+          "title": "本科及以上学历",
+          "category": "education",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.education_requirement",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:61e48e6b50830360",
+          "title": "实验分析",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责业务指标体系、实验分析和可视化。"
+        },
+        {
+          "key": "requirement:responsibility:9af64ccc359b745b",
+          "title": "可视化",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责业务指标体系、实验分析和可视化。"
+        },
+        {
+          "key": "requirement:experience:0eda9fee4847d4fb",
+          "title": "具备 A/B 测试经验",
+          "category": "experience",
+          "priority": "preferred",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "最好具备 A/B 测试经验。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "负责业务指标体系",
+          "category": "responsibility",
+          "equivalent_structured_item_key": "requirement:responsibility:43dfe284b4dc99cc"
+        },
+        {
+          "title": "实验分析",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "可视化",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "能用 SQL 独立取数",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:4ec7c53222c8a758"
+        },
+        {
+          "title": "具备 A/B 测试经验",
+          "category": "experience",
+          "equivalent_structured_item_key": null
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "负责业务指标体系",
+              "category": "responsibility",
+              "equivalent_structured_item_key": "requirement:responsibility:43dfe284b4dc99cc"
+            },
+            {
+              "title": "实验分析",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "可视化",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "能用 SQL 独立取数",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:4ec7c53222c8a758"
+            }
+          ]
+        },
+        {
+          "source_id": "description:0003",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "具备 A/B 测试经验",
+              "category": "experience",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD06",
+      "title": "B 端产品经理",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 2,
+      "free_text_found": 2,
+      "structured_value_count": 4,
+      "structured_covered_count": 4,
+      "item_count": 8,
+      "traceable_item_count": 8,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1182,
+      "output_tokens": 316,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"负责企业客户需求调研\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"PRD\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"迭代复盘\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"必须有跨部门推动上线经历\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0003\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"懂数据分析优先\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:5d8ec6f62009eef7\"\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:responsibility:4a84386fafe84d36",
+          "title": "负责产品需求到上线的全流程",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:5d8ec6f62009eef7",
+          "title": "数据分析",
+          "category": "skill",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:fb5175a4aa7b4631",
+          "title": "至少 3 年工作经验",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.minimum_work_years",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:cb2809a05b2d5136",
+          "title": "B 端产品经历",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_experiences",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:f0c6caed5d7171d4",
+          "title": "负责企业客户需求调研",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责企业客户需求调研、PRD 和迭代复盘。"
+        },
+        {
+          "key": "requirement:responsibility:ea7e4017f6d750b4",
+          "title": "PRD",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责企业客户需求调研、PRD 和迭代复盘。"
+        },
+        {
+          "key": "requirement:responsibility:ea0ce1f0c79800c5",
+          "title": "迭代复盘",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责企业客户需求调研、PRD 和迭代复盘。"
+        },
+        {
+          "key": "requirement:experience:d32748ccc7d2d296",
+          "title": "必须有跨部门推动上线经历",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "必须有跨部门推动上线经历；"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "负责企业客户需求调研",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "PRD",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "迭代复盘",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "必须有跨部门推动上线经历",
+          "category": "experience",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "懂数据分析优先",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:5d8ec6f62009eef7"
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "负责企业客户需求调研",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "PRD",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "迭代复盘",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "必须有跨部门推动上线经历",
+              "category": "experience",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0003",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "懂数据分析优先",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:5d8ec6f62009eef7"
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD07",
+      "title": "产品助理（应届）",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 2,
+      "free_text_found": 2,
+      "structured_value_count": 4,
+      "structured_covered_count": 4,
+      "item_count": 6,
+      "traceable_item_count": 6,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1168,
+      "output_tokens": 297,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"整理用户反馈\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": \"requirement:responsibility:73ee1e9b689b2450\"\n        },\n        {\n          \"title\": \"编写需求文档\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"逻辑清晰\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0003\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"校园产品项目\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": \"requirement:experience:2be6d1a333ff76e8\"\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:responsibility:73ee1e9b689b2450",
+          "title": "整理用户反馈",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:aaab2f12caf419b5",
+          "title": "工作经验不限",
+          "category": "experience",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.minimum_work_years",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:education:74920cc22bb7bcb2",
+          "title": "本科及以上学历",
+          "category": "education",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.education_requirement",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:2be6d1a333ff76e8",
+          "title": "校园产品项目",
+          "category": "experience",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_experiences",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:7aa23bd66372aee2",
+          "title": "编写需求文档",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "面向应届生，协助整理用户反馈和编写需求文档。"
+        },
+        {
+          "key": "requirement:skill:49af266c9843423f",
+          "title": "逻辑清晰",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "要求逻辑清晰；"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "整理用户反馈",
+          "category": "responsibility",
+          "equivalent_structured_item_key": "requirement:responsibility:73ee1e9b689b2450"
+        },
+        {
+          "title": "编写需求文档",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "逻辑清晰",
+          "category": "skill",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "校园产品项目",
+          "category": "experience",
+          "equivalent_structured_item_key": "requirement:experience:2be6d1a333ff76e8"
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "整理用户反馈",
+              "category": "responsibility",
+              "equivalent_structured_item_key": "requirement:responsibility:73ee1e9b689b2450"
+            },
+            {
+              "title": "编写需求文档",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "逻辑清晰",
+              "category": "skill",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0003",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "校园产品项目",
+              "category": "experience",
+              "equivalent_structured_item_key": "requirement:experience:2be6d1a333ff76e8"
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD08",
+      "title": "增长运营",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 3,
+      "free_text_found": 3,
+      "structured_value_count": 4,
+      "structured_covered_count": 4,
+      "item_count": 8,
+      "traceable_item_count": 8,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": true,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1156,
+      "output_tokens": 313,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"拉新\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"激活\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"留存实验\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"独立设计活动\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"复盘数据\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:2a6c80305518efb8\"\n        },\n        {\n          \"title\": \"社群裂变经验\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": \"requirement:experience:efc3ef7f6058612c\"\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:responsibility:6e0c9bce36e653e1",
+          "title": "制定增长运营方案",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:2a6c80305518efb8",
+          "title": "数据复盘",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:3c500b8bda0010b7",
+          "title": "至少 2 年工作经验",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.minimum_work_years",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:efc3ef7f6058612c",
+          "title": "社群运营经历",
+          "category": "experience",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_experiences",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:524d4dcc8d77b67b",
+          "title": "拉新",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责拉新、激活和留存实验。"
+        },
+        {
+          "key": "requirement:responsibility:dd1286c29e9b158b",
+          "title": "激活",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责拉新、激活和留存实验。"
+        },
+        {
+          "key": "requirement:responsibility:5c2591894a1debde",
+          "title": "留存实验",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责拉新、激活和留存实验。"
+        },
+        {
+          "key": "requirement:responsibility:fc261b254612bf6e",
+          "title": "独立设计活动",
+          "category": "responsibility",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "必须能独立设计活动并复盘数据，有社群裂变经验优先。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "拉新",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "激活",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "留存实验",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "独立设计活动",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "复盘数据",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:2a6c80305518efb8"
+        },
+        {
+          "title": "社群裂变经验",
+          "category": "experience",
+          "equivalent_structured_item_key": "requirement:experience:efc3ef7f6058612c"
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "拉新",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "激活",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "留存实验",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "独立设计活动",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "复盘数据",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:2a6c80305518efb8"
+            },
+            {
+              "title": "社群裂变经验",
+              "category": "experience",
+              "equivalent_structured_item_key": "requirement:experience:efc3ef7f6058612c"
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD09",
+      "title": "内容运营",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 2,
+      "free_text_found": 2,
+      "structured_value_count": 3,
+      "structured_covered_count": 3,
+      "item_count": 5,
+      "traceable_item_count": 5,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1092,
+      "output_tokens": 255,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"规划公众号和短视频选题\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"持续分析内容数据\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"独立撰稿能力\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:96f9110d320c3696\"\n        },\n        {\n          \"title\": \"基础图片编辑\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:d721fd5257b8d814\"\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:responsibility:ce0cca25607f4715",
+          "title": "制定内容计划",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:96f9110d320c3696",
+          "title": "内容写作",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:d721fd5257b8d814",
+          "title": "图片编辑",
+          "category": "skill",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:67713329afebb4ca",
+          "title": "规划公众号和短视频选题",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "规划公众号和短视频选题，持续分析内容数据。"
+        },
+        {
+          "key": "requirement:responsibility:6baa5df5b960ca81",
+          "title": "持续分析内容数据",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "规划公众号和短视频选题，持续分析内容数据。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "规划公众号和短视频选题",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "持续分析内容数据",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "独立撰稿能力",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:96f9110d320c3696"
+        },
+        {
+          "title": "基础图片编辑",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:d721fd5257b8d814"
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "规划公众号和短视频选题",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "持续分析内容数据",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "独立撰稿能力",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:96f9110d320c3696"
+            },
+            {
+              "title": "基础图片编辑",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:d721fd5257b8d814"
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD10",
+      "title": "高级平台架构师",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 3,
+      "free_text_found": 3,
+      "structured_value_count": 6,
+      "structured_covered_count": 6,
+      "item_count": 9,
+      "traceable_item_count": 9,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1263,
+      "output_tokens": 334,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"主导高并发平台架构演进\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": \"requirement:responsibility:f6a1662f28551c63\"\n        },\n        {\n          \"title\": \"容量规划\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"故障复盘\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"至少 8 年研发经验\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": \"requirement:experience:7152c14635d24bbf\"\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0003\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"必须有跨团队技术决策经历\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:responsibility:f6a1662f28551c63",
+          "title": "主导平台架构演进",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:75f62aa4789629ba",
+          "title": "分布式系统",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:2dcf747298135832",
+          "title": "可观测性",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:7152c14635d24bbf",
+          "title": "至少 8 年工作经验",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.minimum_work_years",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:education:74920cc22bb7bcb2",
+          "title": "本科及以上学历",
+          "category": "education",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.education_requirement",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:5756d529b00d19cd",
+          "title": "大型系统架构经历",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_experiences",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:1338a6666db5a34d",
+          "title": "容量规划",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "主导高并发平台架构演进、容量规划和故障复盘。"
+        },
+        {
+          "key": "requirement:responsibility:2c87657732c87c70",
+          "title": "故障复盘",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "主导高并发平台架构演进、容量规划和故障复盘。"
+        },
+        {
+          "key": "requirement:experience:39174429ab278f31",
+          "title": "必须有跨团队技术决策经历",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "必须有跨团队技术决策经历。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "主导高并发平台架构演进",
+          "category": "responsibility",
+          "equivalent_structured_item_key": "requirement:responsibility:f6a1662f28551c63"
+        },
+        {
+          "title": "容量规划",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "故障复盘",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "至少 8 年研发经验",
+          "category": "experience",
+          "equivalent_structured_item_key": "requirement:experience:7152c14635d24bbf"
+        },
+        {
+          "title": "必须有跨团队技术决策经历",
+          "category": "experience",
+          "equivalent_structured_item_key": null
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "主导高并发平台架构演进",
+              "category": "responsibility",
+              "equivalent_structured_item_key": "requirement:responsibility:f6a1662f28551c63"
+            },
+            {
+              "title": "容量规划",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "故障复盘",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "至少 8 年研发经验",
+              "category": "experience",
+              "equivalent_structured_item_key": "requirement:experience:7152c14635d24bbf"
+            }
+          ]
+        },
+        {
+          "source_id": "description:0003",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "必须有跨团队技术决策经历",
+              "category": "experience",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD11",
+      "title": "Customer Success Manager",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 3,
+      "free_text_found": 3,
+      "structured_value_count": 4,
+      "structured_covered_count": 4,
+      "item_count": 6,
+      "traceable_item_count": 6,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1171,
+      "output_tokens": 258,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"Own onboarding and renewal for enterprise customers.\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"必须可使用 English 进行客户会议\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0003\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"SaaS implementation experience preferred\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": \"requirement:experience:d04aa17641b6cc21\"\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:responsibility:fd1e2a71fe2bc93d",
+          "title": "负责企业客户成功",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:8e71c07b996bc95a",
+          "title": "英语沟通",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:fb5175a4aa7b4631",
+          "title": "至少 3 年工作经验",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.minimum_work_years",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:d04aa17641b6cc21",
+          "title": "SaaS 实施经历",
+          "category": "experience",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_experiences",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:9bcade81c19d608e",
+          "title": "Own onboarding and renewal for enterprise customers.",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "Own onboarding and renewal for enterprise customers."
+        },
+        {
+          "key": "requirement:skill:71a8c8d952bebe69",
+          "title": "必须可使用 English 进行客户会议",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "必须可使用 English 进行客户会议；"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "Own onboarding and renewal for enterprise customers.",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "必须可使用 English 进行客户会议",
+          "category": "skill",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "SaaS implementation experience preferred",
+          "category": "experience",
+          "equivalent_structured_item_key": "requirement:experience:d04aa17641b6cc21"
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "Own onboarding and renewal for enterprise customers.",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "必须可使用 English 进行客户会议",
+              "category": "skill",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0003",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "SaaS implementation experience preferred",
+              "category": "experience",
+              "equivalent_structured_item_key": "requirement:experience:d04aa17641b6cc21"
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD12",
+      "title": "供应链项目经理",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 5,
+      "free_text_found": 5,
+      "structured_value_count": 4,
+      "structured_covered_count": 4,
+      "item_count": 13,
+      "traceable_item_count": 13,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1241,
+      "output_tokens": 478,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"梳理采购、库存与交付全链路\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"识别瓶颈\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"推动多个团队改进\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"制定里程碑\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"维护风险清单\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"组织周会\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"跟踪供应商交付\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"在延期时协调替代方案\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0003\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"复杂项目从计划到落地的完整经历\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"熟悉 ERP\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:d24f1f612642b77b\"\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:responsibility:82819c0e23c3d792",
+          "title": "管理供应链改善项目",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:d24f1f612642b77b",
+          "title": "ERP",
+          "category": "skill",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:79aab100f666a4a9",
+          "title": "至少 4 年工作经验",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.minimum_work_years",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:4d7cb1308787bdd0",
+          "title": "跨部门项目管理经历",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_experiences",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:bedba58dce8819ef",
+          "title": "梳理采购、库存与交付全链路",
+          "category": "responsibility",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "该岗位需要梳理采购、库存与交付全链路，识别瓶颈并推动多个团队改进。"
+        },
+        {
+          "key": "requirement:responsibility:323e3bc1d139c3c6",
+          "title": "识别瓶颈",
+          "category": "responsibility",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "该岗位需要梳理采购、库存与交付全链路，识别瓶颈并推动多个团队改进。"
+        },
+        {
+          "key": "requirement:responsibility:01d41bfed6652d99",
+          "title": "推动多个团队改进",
+          "category": "responsibility",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "该岗位需要梳理采购、库存与交付全链路，识别瓶颈并推动多个团队改进。"
+        },
+        {
+          "key": "requirement:responsibility:c0774a3845b01138",
+          "title": "制定里程碑",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "日常工作包括制定里程碑、维护风险清单、组织周会、跟踪供应商交付，并在延期时协调替代方案。"
+        },
+        {
+          "key": "requirement:responsibility:a98e012c602d17fa",
+          "title": "维护风险清单",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "日常工作包括制定里程碑、维护风险清单、组织周会、跟踪供应商交付，并在延期时协调替代方案。"
+        },
+        {
+          "key": "requirement:responsibility:7e4a0bd9f44fb9d4",
+          "title": "组织周会",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "日常工作包括制定里程碑、维护风险清单、组织周会、跟踪供应商交付，并在延期时协调替代方案。"
+        },
+        {
+          "key": "requirement:responsibility:505499cc50e8296b",
+          "title": "跟踪供应商交付",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "日常工作包括制定里程碑、维护风险清单、组织周会、跟踪供应商交付，并在延期时协调替代方案。"
+        },
+        {
+          "key": "requirement:responsibility:e36a39b169674804",
+          "title": "在延期时协调替代方案",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "日常工作包括制定里程碑、维护风险清单、组织周会、跟踪供应商交付，并在延期时协调替代方案。"
+        },
+        {
+          "key": "requirement:experience:e5e5f8fe6f269f42",
+          "title": "复杂项目从计划到落地的完整经历",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "必须有复杂项目从计划到落地的完整经历，熟悉 ERP 者优先。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "梳理采购、库存与交付全链路",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "识别瓶颈",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "推动多个团队改进",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "制定里程碑",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "维护风险清单",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "组织周会",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "跟踪供应商交付",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "在延期时协调替代方案",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "复杂项目从计划到落地的完整经历",
+          "category": "experience",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "熟悉 ERP",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:d24f1f612642b77b"
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "梳理采购、库存与交付全链路",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "识别瓶颈",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "推动多个团队改进",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "制定里程碑",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "维护风险清单",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "组织周会",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "跟踪供应商交付",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "在延期时协调替代方案",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0003",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "复杂项目从计划到落地的完整经历",
+              "category": "experience",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "熟悉 ERP",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:d24f1f612642b77b"
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD13",
+      "title": "用户研究员",
+      "expected_outcome": "limited_basis",
+      "actual_model_call_count": 1,
+      "free_text_expected": 3,
+      "free_text_found": 3,
+      "structured_value_count": 0,
+      "structured_covered_count": 0,
+      "item_count": 3,
+      "traceable_item_count": 3,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 959,
+      "output_tokens": 205,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"独立设计访谈和可用性测试\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"沉淀洞察并推动产品改进\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"要求能清楚说明研究限制\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "limited_basis",
+      "structured_coverage_all": true,
+      "warnings": [
+        "limited_basis"
+      ],
+      "items": [
+        {
+          "key": "requirement:responsibility:23fb8f3c76c0994c",
+          "title": "独立设计访谈和可用性测试",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "独立设计访谈和可用性测试，沉淀洞察并推动产品改进。"
+        },
+        {
+          "key": "requirement:responsibility:795e84e9f3cc7a66",
+          "title": "沉淀洞察并推动产品改进",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "独立设计访谈和可用性测试，沉淀洞察并推动产品改进。"
+        },
+        {
+          "key": "requirement:skill:e41de68849045958",
+          "title": "要求能清楚说明研究限制",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "要求能清楚说明研究限制。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "独立设计访谈和可用性测试",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "沉淀洞察并推动产品改进",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "要求能清楚说明研究限制",
+          "category": "skill",
+          "equivalent_structured_item_key": null
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "独立设计访谈和可用性测试",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "沉淀洞察并推动产品改进",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "要求能清楚说明研究限制",
+              "category": "skill",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD14",
+      "title": "Java 工程师",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 1,
+      "free_text_found": 1,
+      "structured_value_count": 5,
+      "structured_covered_count": 5,
+      "item_count": 6,
+      "traceable_item_count": 6,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1198,
+      "output_tokens": 392,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"Java\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:38a0963a6364b09a\"\n        },\n        {\n          \"title\": \"Spring Boot\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:7e901df4274b02f7\"\n        },\n        {\n          \"title\": \"MySQL\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:430005175c4c7810\"\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"必须有微服务故障排查经历\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0003\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"Kafka\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:cbbf241eebedba6f\"\n        },\n        {\n          \"title\": \"Kubernetes\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:94abcb2d2773df65\"\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "ready",
+      "structured_coverage_all": true,
+      "warnings": [],
+      "items": [
+        {
+          "key": "requirement:skill:38a0963a6364b09a",
+          "title": "Java",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:7e901df4274b02f7",
+          "title": "Spring Boot",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:430005175c4c7810",
+          "title": "MySQL",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:cbbf241eebedba6f",
+          "title": "Kafka",
+          "category": "skill",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:94abcb2d2773df65",
+          "title": "Kubernetes",
+          "category": "skill",
+          "priority": "preferred",
+          "source_type": "structured",
+          "source_field": "requirements.preferred_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:0da3ec03de953c52",
+          "title": "必须有微服务故障排查经历",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "必须有微服务故障排查经历。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "Java",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:38a0963a6364b09a"
+        },
+        {
+          "title": "Spring Boot",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:7e901df4274b02f7"
+        },
+        {
+          "title": "MySQL",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:430005175c4c7810"
+        },
+        {
+          "title": "必须有微服务故障排查经历",
+          "category": "experience",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "Kafka",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:cbbf241eebedba6f"
+        },
+        {
+          "title": "Kubernetes",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:94abcb2d2773df65"
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "Java",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:38a0963a6364b09a"
+            },
+            {
+              "title": "Spring Boot",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:7e901df4274b02f7"
+            },
+            {
+              "title": "MySQL",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:430005175c4c7810"
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "必须有微服务故障排查经历",
+              "category": "experience",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0003",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "Kafka",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:cbbf241eebedba6f"
+            },
+            {
+              "title": "Kubernetes",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:94abcb2d2773df65"
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD15",
+      "title": "客户运营",
+      "expected_outcome": "limited_basis",
+      "actual_model_call_count": 1,
+      "free_text_expected": 1,
+      "free_text_found": 1,
+      "structured_value_count": 1,
+      "structured_covered_count": 1,
+      "item_count": 3,
+      "traceable_item_count": 3,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1054,
+      "output_tokens": 213,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"non_requirement\",\n      \"non_requirement_reason\": \"company_info\",\n      \"items\": []\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"负责客户分层触达\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0003\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"要求能分析续费原因\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "limited_basis",
+      "structured_coverage_all": true,
+      "warnings": [
+        "limited_basis"
+      ],
+      "items": [
+        {
+          "key": "requirement:responsibility:c28ef90f3d4c9ba8",
+          "title": "负责客户分层运营",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:responsibility:00b5266315f3d57e",
+          "title": "负责客户分层触达",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "岗位负责客户分层触达，"
+        },
+        {
+          "key": "requirement:skill:f44a0c15f4529d92",
+          "title": "要求能分析续费原因",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "要求能分析续费原因。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "负责客户分层触达",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "要求能分析续费原因",
+          "category": "skill",
+          "equivalent_structured_item_key": null
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "non_requirement",
+          "non_requirement_reason": "company_info",
+          "items": []
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "负责客户分层触达",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0003",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "要求能分析续费原因",
+              "category": "skill",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD16",
+      "title": "DevOps 工程师",
+      "expected_outcome": "ready",
+      "actual_model_call_count": 1,
+      "free_text_expected": 2,
+      "free_text_found": 2,
+      "structured_value_count": 3,
+      "structured_covered_count": 3,
+      "item_count": 3,
+      "traceable_item_count": 3,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 1135,
+      "output_tokens": 337,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"负责 CI/CD 流水线建设\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": \"requirement:responsibility:7cf05e07211f6351\"\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"建设持续集成与持续交付流水线\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": \"requirement:responsibility:7cf05e07211f6351\"\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0003\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"必须掌握 Docker\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": \"requirement:skill:d548c5b83fa61d8e\"\n        },\n        {\n          \"title\": \"容器化经验必须具备\",\n          \"category\": \"experience\",\n          \"equivalent_structured_item_key\": \"requirement:experience:7b3d5e46e6036954\"\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "limited_basis",
+      "structured_coverage_all": true,
+      "warnings": [
+        "limited_basis"
+      ],
+      "items": [
+        {
+          "key": "requirement:responsibility:7cf05e07211f6351",
+          "title": "建设 CI/CD 流水线",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "structured",
+          "source_field": "requirements.responsibilities",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:skill:d548c5b83fa61d8e",
+          "title": "Docker",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_skills",
+          "source_quote": null
+        },
+        {
+          "key": "requirement:experience:7b3d5e46e6036954",
+          "title": "容器化实践经历",
+          "category": "experience",
+          "priority": "required",
+          "source_type": "structured",
+          "source_field": "requirements.required_experiences",
+          "source_quote": null
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "负责 CI/CD 流水线建设",
+          "category": "responsibility",
+          "equivalent_structured_item_key": "requirement:responsibility:7cf05e07211f6351"
+        },
+        {
+          "title": "建设持续集成与持续交付流水线",
+          "category": "responsibility",
+          "equivalent_structured_item_key": "requirement:responsibility:7cf05e07211f6351"
+        },
+        {
+          "title": "必须掌握 Docker",
+          "category": "skill",
+          "equivalent_structured_item_key": "requirement:skill:d548c5b83fa61d8e"
+        },
+        {
+          "title": "容器化经验必须具备",
+          "category": "experience",
+          "equivalent_structured_item_key": "requirement:experience:7b3d5e46e6036954"
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "负责 CI/CD 流水线建设",
+              "category": "responsibility",
+              "equivalent_structured_item_key": "requirement:responsibility:7cf05e07211f6351"
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "建设持续集成与持续交付流水线",
+              "category": "responsibility",
+              "equivalent_structured_item_key": "requirement:responsibility:7cf05e07211f6351"
+            }
+          ]
+        },
+        {
+          "source_id": "description:0003",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "必须掌握 Docker",
+              "category": "skill",
+              "equivalent_structured_item_key": "requirement:skill:d548c5b83fa61d8e"
+            },
+            {
+              "title": "容器化经验必须具备",
+              "category": "experience",
+              "equivalent_structured_item_key": "requirement:experience:7b3d5e46e6036954"
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [
+        "actual_outcome_mismatch"
+      ],
+      "contract_satisfied": false,
+      "rejection_layer": null,
+      "failure_classification": "model_noncompliance"
+    },
+    {
+      "case_id": "JD17",
+      "title": "行政助理",
+      "expected_outcome": "limited_basis",
+      "actual_model_call_count": 1,
+      "free_text_expected": 2,
+      "free_text_found": 2,
+      "structured_value_count": 0,
+      "structured_covered_count": 0,
+      "item_count": 2,
+      "traceable_item_count": 2,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 914,
+      "output_tokens": 124,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"负责会议室安排\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"办公用品登记\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "limited_basis",
+      "structured_coverage_all": true,
+      "warnings": [
+        "limited_basis"
+      ],
+      "items": [
+        {
+          "key": "requirement:responsibility:e85519d82ff030b9",
+          "title": "负责会议室安排",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责会议室安排和办公用品登记。"
+        },
+        {
+          "key": "requirement:responsibility:2c36ec809bc0338d",
+          "title": "办公用品登记",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "负责会议室安排和办公用品登记。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "负责会议室安排",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "办公用品登记",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "负责会议室安排",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "办公用品登记",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    },
+    {
+      "case_id": "JD18",
+      "title": "复杂集成专家",
+      "expected_outcome": "too_many_items",
+      "actual_model_call_count": 1,
+      "free_text_expected": 0,
+      "free_text_found": 0,
+      "structured_value_count": 0,
+      "structured_covered_count": 0,
+      "item_count": 0,
+      "traceable_item_count": 0,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 2330,
+      "output_tokens": 64,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"non_requirement\",\n      \"non_requirement_reason\": \"context\",\n      \"items\": []\n    }\n  ]\n}",
+      "actual_outcome": "content_failure",
+      "error_code": "JOB_EVALUATION_PLAN_BUSINESS_VALIDATION_FAILED",
+      "safe_error": "AI 把明确岗位要求误判为非要求内容",
+      "model_extracted_items": [],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "non_requirement",
+          "non_requirement_reason": "context",
+          "items": []
+        }
+      ],
+      "rejection_layer": "service",
+      "failure_classification": "model_noncompliance",
+      "contract_failure_reasons": [
+        "actual_outcome_mismatch"
+      ],
+      "contract_satisfied": false
+    },
+    {
+      "case_id": "JD19",
+      "title": "品牌展示专员",
+      "expected_outcome": "no_items",
+      "actual_model_call_count": 1,
+      "free_text_expected": 0,
+      "free_text_found": 0,
+      "structured_value_count": 0,
+      "structured_covered_count": 0,
+      "item_count": 0,
+      "traceable_item_count": 0,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 939,
+      "output_tokens": 65,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"non_requirement\",\n      \"non_requirement_reason\": \"company_info\",\n      \"items\": []\n    }\n  ]\n}",
+      "actual_outcome": "no_items",
+      "error_code": "JOB_EVALUATION_PLAN_NO_ITEMS",
+      "safe_error": "没有识别到可评价的岗位要求",
+      "model_extracted_items": [],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "non_requirement",
+          "non_requirement_reason": "company_info",
+          "items": []
+        }
+      ],
+      "rejection_layer": null,
+      "failure_classification": null,
+      "contract_failure_reasons": [],
+      "contract_satisfied": true
+    },
+    {
+      "case_id": "JD20",
+      "title": "仓库盘点员",
+      "expected_outcome": "limited_basis",
+      "actual_model_call_count": 1,
+      "free_text_expected": 3,
+      "free_text_found": 3,
+      "structured_value_count": 0,
+      "structured_covered_count": 0,
+      "item_count": 3,
+      "traceable_item_count": 3,
+      "added_required_count": 0,
+      "obvious_duplicate_count": 0,
+      "promotion_item_count": 0,
+      "activation_assertion_found": false,
+      "model": "deepseek-v4-flash",
+      "input_tokens": 954,
+      "output_tokens": 201,
+      "model_raw_structured_response": "{\n  \"schema_version\": \"2.0\",\n  \"source_reviews\": [\n    {\n      \"source_id\": \"description:0001\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"核对每日出入库记录\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        },\n        {\n          \"title\": \"发现差异后登记并上报\",\n          \"category\": \"responsibility\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    },\n    {\n      \"source_id\": \"description:0002\",\n      \"disposition\": \"requirements\",\n      \"non_requirement_reason\": null,\n      \"items\": [\n        {\n          \"title\": \"会使用电子表格\",\n          \"category\": \"skill\",\n          \"equivalent_structured_item_key\": null\n        }\n      ]\n    }\n  ]\n}",
+      "actual_outcome": "limited_basis",
+      "structured_coverage_all": true,
+      "warnings": [
+        "limited_basis"
+      ],
+      "items": [
+        {
+          "key": "requirement:responsibility:b5571f1a246335de",
+          "title": "核对每日出入库记录",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "核对每日出入库记录，发现差异后登记并上报。"
+        },
+        {
+          "key": "requirement:responsibility:0da5bcb834c4ace5",
+          "title": "发现差异后登记并上报",
+          "category": "responsibility",
+          "priority": "general",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "核对每日出入库记录，发现差异后登记并上报。"
+        },
+        {
+          "key": "requirement:skill:75d69a89e803af28",
+          "title": "会使用电子表格",
+          "category": "skill",
+          "priority": "required",
+          "source_type": "ai_extracted",
+          "source_field": "description",
+          "source_quote": "要求会使用电子表格。"
+        }
+      ],
+      "model_extracted_items": [
+        {
+          "title": "核对每日出入库记录",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "发现差异后登记并上报",
+          "category": "responsibility",
+          "equivalent_structured_item_key": null
+        },
+        {
+          "title": "会使用电子表格",
+          "category": "skill",
+          "equivalent_structured_item_key": null
+        }
+      ],
+      "model_source_reviews": [
+        {
+          "source_id": "description:0001",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "核对每日出入库记录",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            },
+            {
+              "title": "发现差异后登记并上报",
+              "category": "responsibility",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        },
+        {
+          "source_id": "description:0002",
+          "disposition": "requirements",
+          "non_requirement_reason": null,
+          "items": [
+            {
+              "title": "会使用电子表格",
+              "category": "skill",
+              "equivalent_structured_item_key": null
+            }
+          ]
+        }
+      ],
+      "contract_failure_reasons": [],
+      "contract_satisfied": true,
+      "rejection_layer": null,
+      "failure_classification": null
+    }
+  ],
+  "quality_statement": "This complete 20-call final-count run may support a pass/fail conclusion."
+}

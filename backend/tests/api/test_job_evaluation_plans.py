@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from app.api.job_evaluation_plans import router
 from app.core.database import get_db
 from app.models.job_evaluation_plan import JobEvaluationPlan
+from app.schemas.job_evaluation_plan import JobEvaluationPlanInputSnapshot
 from app.services.job_evaluation_plan_service import (
     JobEvaluationPlanJobNotFoundError,
     JobEvaluationPlanJobNotOpenError,
@@ -97,17 +98,29 @@ class JobEvaluationPlanApiTest(TestCase):
 
     def test_read_returns_current_plan_and_not_found_code(self) -> None:
         service_mock = AsyncMock(return_value=make_plan())
-        with patch.object(
-            job_evaluation_plan_service,
-            "get_current_plan",
-            service_mock,
+        with (
+            patch.object(
+                job_evaluation_plan_service,
+                "get_current_plan",
+                service_mock,
+            ),
+            patch.object(
+                job_evaluation_plan_service,
+                "generate_for_job",
+                AsyncMock(),
+            ) as generate_mock,
         ):
             response = self.client.get("/jobs/1/evaluation-plan")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ready")
+        self.assertTrue(response.json()["contract_outdated"])
         self.assertEqual(response.json()["items"][0]["priority"], "required")
+        self.assertNotIn("free_text_coverage", response.json())
         service_mock.assert_awaited_once_with(self.db, 1)
+        generate_mock.assert_not_awaited()
+        self.db.commit.assert_not_called()
+        self.db.add.assert_not_called()
 
         with patch.object(
             job_evaluation_plan_service,
@@ -137,6 +150,27 @@ class JobEvaluationPlanApiTest(TestCase):
         self.assertEqual(regenerated.status_code, 200)
         generate_mock.assert_awaited_once_with(self.db, 1)
         regenerate_mock.assert_awaited_once_with(self.db, 1)
+
+    def test_read_current_contract_returns_not_outdated(self) -> None:
+        plan = make_plan()
+        snapshot = JobEvaluationPlanInputSnapshot.model_validate(
+            plan.input_snapshot
+        )
+        plan.prompt_version = "job_evaluation_plan_v4"
+        plan.schema_version = "2.0"
+        plan.input_fingerprint = job_evaluation_plan_service.fingerprint_input(
+            snapshot
+        )
+
+        with patch.object(
+            job_evaluation_plan_service,
+            "get_current_plan",
+            AsyncMock(return_value=plan),
+        ):
+            response = self.client.get("/jobs/1/evaluation-plan")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["contract_outdated"])
 
     def test_business_errors_have_stable_status_and_safe_messages(self) -> None:
         cases = (

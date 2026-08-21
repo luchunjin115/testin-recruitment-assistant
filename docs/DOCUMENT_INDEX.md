@@ -59,14 +59,16 @@ docs/
 
 - `stages/stage6/2026-08-15-stage6-structured-job-management-design.md`
 - `stages/stage6/2026-08-17-stage6-acceptance.md`
+- `stages/stage6/2026-08-21-stage6-five-section-jd-remediation-design.md`
 
-只有修改 JobRequirements、岗位状态或排查阶段 6 回归时阅读。
+第三份是当前五段式 JD 字段、开放校验、空库迁移、阶段 7 暂停边界和 6R-A—6R-D 实施顺序的权威设计补充。修改岗位 Schema、表单、数据库或恢复阶段 7 前，必须同时阅读原阶段 6 设计和该补充；原验收记录只证明旧 `description + JobRequirementsV1` 合同曾通过。
 
 ### 阶段 7：Application 与 AI 初筛
 
 - `stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`
+- `stages/stage7/2026-08-21-stage7-step9-jd-decomposition-quality-remediation-design.md`
 
-这是当前阶段的权威业务和技术合同。修改阶段 7 业务前必须完整阅读。
+第一份记录阶段 7 已实现的业务和技术合同；第二份记录小步骤 9 及 9-I 的正式复验与下游诊断。当前两者均因阶段 6 五段式 JD 上游整改而暂停，保留为历史实现和质量基线；恢复阶段 7 前必须先阅读阶段 6 五段式补充，并重新完成阶段 7 输入设计门禁，不能继续按旧 `description + JobRequirementsV1` 执行。
 
 ## 5. 研究资料
 
@@ -111,7 +113,7 @@ docs/
 | 修改阶段 7 | 当前阶段 7 设计 + 相关代码和测试 |
 | 盘点旧 Rubric | 当前阶段 7 设计第 2、19、23 节 + 旧阶段 7 归档 |
 | 修改简历处理 | 对应阶段 4/5 资料 |
-| 修改岗位管理 | 阶段 6 设计与验收记录 |
+| 修改岗位管理 | 阶段 6 原设计 + 五段式 JD 整改补充；旧验收仅作历史基线 |
 | 调整总体架构 | architecture + planning 两份现行文档 |
 | 启动新阶段 | 产品路线 + 实施计划 + 新阶段专项设计 |
 | 追溯旧系统 | 对应 archive 子目录，不读取全部归档 |

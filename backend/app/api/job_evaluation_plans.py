@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.models.job_evaluation_plan import JobEvaluationPlan
 from app.schemas.job_evaluation_plan import JobEvaluationPlanRead
 from app.services.job_evaluation_plan_service import (
     JobEvaluationPlanConfigurationError,
@@ -75,7 +74,7 @@ def _map_expected_error(exc: Exception) -> HTTPException:
 async def get_current_evaluation_plan(
     job_id: int,
     db: AsyncSession = Depends(get_db),
-) -> JobEvaluationPlan:
+) -> JobEvaluationPlanRead:
     try:
         plan = await job_evaluation_plan_service.get_current_plan(db, job_id)
     except Exception as exc:
@@ -84,7 +83,7 @@ async def get_current_evaluation_plan(
         raise _map_expected_error(
             JobEvaluationPlanNotFoundError("当前岗位还没有评价计划")
         )
-    return plan
+    return job_evaluation_plan_service.build_read_model(plan)
 
 
 @router.post(
@@ -94,7 +93,7 @@ async def get_current_evaluation_plan(
 async def generate_current_evaluation_plan(
     job_id: int,
     db: AsyncSession = Depends(get_db),
-) -> JobEvaluationPlan:
+) -> JobEvaluationPlanRead:
     try:
         plan = await job_evaluation_plan_service.generate_for_job(db, job_id)
         try:
@@ -105,7 +104,7 @@ async def generate_current_evaluation_plan(
             )
         except Exception:
             pass
-        return plan
+        return job_evaluation_plan_service.build_read_model(plan)
     except Exception as exc:
         raise _map_expected_error(exc) from exc
 
@@ -117,7 +116,7 @@ async def generate_current_evaluation_plan(
 async def regenerate_failed_evaluation_plan(
     job_id: int,
     db: AsyncSession = Depends(get_db),
-) -> JobEvaluationPlan:
+) -> JobEvaluationPlanRead:
     try:
         plan = await job_evaluation_plan_service.regenerate_failed_plan(db, job_id)
         try:
@@ -128,6 +127,6 @@ async def regenerate_failed_evaluation_plan(
             )
         except Exception:
             pass
-        return plan
+        return job_evaluation_plan_service.build_read_model(plan)
     except Exception as exc:
         raise _map_expected_error(exc) from exc

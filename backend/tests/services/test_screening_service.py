@@ -13,6 +13,10 @@ from app.adapters.screening_evaluation import (
     ScreeningEvaluationAdapterResult,
     ScreeningEvaluationTimeoutError,
 )
+from app.adapters.job_evaluation_plan import (
+    FakeJobEvaluationPlanAdapter,
+    JobEvaluationPlanAdapterResult,
+)
 from app.core.config import Settings
 from app.models.application import Application
 from app.models.candidate import Candidate
@@ -27,6 +31,7 @@ from app.services.screening_service import (
     ScreeningBatchLimitError,
     screening_service,
 )
+from app.services.job_evaluation_plan_service import job_evaluation_plan_service
 
 
 NOW = datetime(2026, 8, 20, 12, 0, tzinfo=timezone.utc)
@@ -786,6 +791,91 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         )
         self.assertIn("evaluation_plan_changed", report.outdated_reasons)
         self.assertEqual(before, after)
+
+    async def test_plan_contract_upgrade_keeps_historical_report_foreign_key(
+        self,
+    ) -> None:
+        await self._complete_success()
+        report = await self.db.scalar(
+            select(ScreeningReport).where(
+                ScreeningReport.application_id == self.application.id
+            )
+        )
+        old_plan_id = report.job_evaluation_plan_id
+        before_runs = len(
+            (
+                await self.db.scalars(
+                    select(ScreeningRun).where(
+                        ScreeningRun.application_id == self.application.id
+                    )
+                )
+            ).all()
+        )
+        adapter = FakeJobEvaluationPlanAdapter(
+            [
+                JobEvaluationPlanAdapterResult(
+                    content=json.dumps(
+                        {
+                            "schema_version": "2.0",
+                            "source_reviews": [
+                                {
+                                    "source_id": "description:0001",
+                                    "disposition": "requirements",
+                                    "non_requirement_reason": None,
+                                    "items": [
+                                        {
+                                            "title": "Python API 开发",
+                                            "category": "responsibility",
+                                            "equivalent_structured_item_key": None,
+                                        }
+                                    ],
+                                }
+                            ],
+                        },
+                        ensure_ascii=False,
+                    ),
+                    model="fake-plan-model-v2",
+                    finish_reason="stop",
+                )
+            ]
+        )
+        settings = Settings(
+            _env_file=None,
+            DEEPSEEK_API_KEY="test-key",
+            JOB_EVALUATION_PLAN_MODEL="fake-plan-model-v2",
+        )
+
+        new_plan = await job_evaluation_plan_service.generate_for_job(
+            self.db,
+            self.application.job_id,
+            adapter=adapter,
+            settings=settings,
+            clock=lambda: NOW,
+        )
+        await screening_service.after_plan_changed(
+            self.db,
+            self.application.job_id,
+            plan_ready=True,
+        )
+        await self.db.refresh(report)
+        old_plan = await self.db.get(JobEvaluationPlan, old_plan_id)
+        after_runs = len(
+            (
+                await self.db.scalars(
+                    select(ScreeningRun).where(
+                        ScreeningRun.application_id == self.application.id
+                    )
+                )
+            ).all()
+        )
+
+        self.assertNotEqual(new_plan.id, old_plan_id)
+        self.assertEqual(old_plan.status, "outdated")
+        self.assertFalse(old_plan.is_current)
+        self.assertEqual(report.job_evaluation_plan_id, old_plan_id)
+        self.assertTrue(report.is_outdated)
+        self.assertIn("evaluation_plan_changed", report.outdated_reasons)
+        self.assertEqual(before_runs, after_runs)
 
     async def test_failed_reassessment_can_be_requested_again(self) -> None:
         application_id = self.application.id

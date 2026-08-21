@@ -3,13 +3,13 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Protocol
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import null, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.job_evaluation_plan import (
@@ -25,13 +25,20 @@ from app.schemas.job import JobRequirementsV1
 from app.schemas.job_evaluation_plan import (
     AIExtractedEvaluationItem,
     AIExtractedEvaluationPlan,
+    AIExtractedEvaluationPlanV2,
+    JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION,
+    JOB_EVALUATION_PLAN_BREAKING_CONTRACT_VERSION,
     JOB_EVALUATION_PLAN_MAX_ITEMS,
     JOB_EVALUATION_PLAN_SCHEMA_VERSION,
+    JOB_EVALUATION_PLAN_SOURCE_UNIT_RULE_VERSION,
     EvaluationItemCategory,
     EvaluationItemPriority,
     EvaluationItemSourceType,
+    JobEvaluationPlanAIInput,
     JobEvaluationItem,
+    JobEvaluationPlanFreeTextCoverage,
     JobEvaluationPlanInputSnapshot,
+    JobEvaluationPlanRead,
     JobEvaluationPlanStatus,
     JobEvaluationPlanWarning,
     StructuredCoverageResult,
@@ -79,7 +86,7 @@ class JobEvaluationPlanContentError(JobEvaluationPlanServiceError):
 class JobEvaluationPlanAdapter(Protocol):
     async def extract(
         self,
-        input_snapshot: dict[str, Any],
+        extraction_input: dict[str, Any],
     ) -> JobEvaluationPlanAdapterResult: ...
 
 
@@ -88,6 +95,14 @@ class GeneratedPlanContent:
     items: list[JobEvaluationItem]
     structured_coverage: StructuredCoverageResult
     warnings: list[JobEvaluationPlanWarning]
+    free_text_coverage: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class DescriptionSourceUnit:
+    source_id: str
+    source_field: str
+    source_text: str
 
 
 @dataclass(slots=True)
@@ -97,6 +112,30 @@ class _CandidateItem:
 
 
 class JobEvaluationPlanService:
+    # Reuse the existing Job description and AI extraction safety boundaries.
+    _DESCRIPTION_MAX_LENGTH = 20_000
+    _DESCRIPTION_MAX_SOURCE_UNITS = 100
+    _SOURCE_SENTENCE_BOUNDARY_RE = re.compile(
+        r"[。！？!?；;]+|\.(?=(?:\s|$|[A-Z\u4e00-\u9fff]))"
+    )
+    _SOURCE_PRIORITY_BOUNDARY_RE = re.compile(
+        r"(?P<separator>[，,:：]\s*)"
+        r"(?=(?:必须|至少|要求具备|要求|需具备|硬性要求|优先|加分|最好具备|"
+        r"required\b|must\b|preferred\b|plus\b))",
+        re.IGNORECASE,
+    )
+    _SOURCE_LIST_PREFIX_RE = re.compile(
+        r"^(?:(?:[-*•●▪◦·])|"
+        r"(?:\d{1,4}[.)、．])|"
+        r"(?:[（(]\d{1,4}[）)])|"
+        r"(?:[一二三四五六七八九十百]+[、.．]))\s*"
+    )
+    _SOURCE_WRAPPERS = (
+        ("（", "）"),
+        ("(", ")"),
+        ("【", "】"),
+        ("[", "]"),
+    )
     _PROMOTION_TERMS = (
         "公司介绍",
         "公司简介",
@@ -106,9 +145,20 @@ class JobEvaluationPlanService:
         "员工福利",
         "福利待遇",
         "团建活动",
+        "组织团建",
         "下午茶",
+        "年度旅游",
+        "带薪年假",
+        "免费零食",
         "办公环境",
         "薪资待遇",
+    )
+    _REQUIREMENT_ACTION_RE = re.compile(
+        r"(?:负责|参与|主导|设计|开发|维护|优化|分析|制定|执行|搭建|推动|管理|"
+        r"协作|支持|具备|熟悉|掌握|能够|经验|学历|职责)|"
+        r"\b(?:design|own|build|develop|maintain|optimi[sz]e|analy[sz]e|lead|"
+        r"manage|drive|support|responsible|experience|proficient|familiar)\b",
+        re.IGNORECASE,
     )
     _REQUIRED_TERMS = (
         "必须",
@@ -172,6 +222,28 @@ class JobEvaluationPlanService:
             )
         )
 
+    def is_contract_outdated(self, plan: JobEvaluationPlan) -> bool:
+        """Compare a stored plan with the current extraction contract without writes."""
+        if (
+            plan.prompt_version != JOB_EVALUATION_PLAN_PROMPT_VERSION
+            or plan.schema_version != JOB_EVALUATION_PLAN_SCHEMA_VERSION
+        ):
+            return True
+        try:
+            snapshot = JobEvaluationPlanInputSnapshot.model_validate(
+                plan.input_snapshot
+            )
+            expected_fingerprint = self.fingerprint_input(snapshot)
+        except (AttributeError, TypeError, ValueError, ValidationError):
+            return True
+        return plan.input_fingerprint != expected_fingerprint
+
+    def build_read_model(self, plan: JobEvaluationPlan) -> JobEvaluationPlanRead:
+        read_model = JobEvaluationPlanRead.model_validate(plan)
+        return read_model.model_copy(
+            update={"contract_outdated": self.is_contract_outdated(plan)}
+        )
+
     async def regenerate_failed_plan(
         self,
         db: AsyncSession,
@@ -223,12 +295,14 @@ class JobEvaluationPlanService:
 
             snapshot = self.build_input_snapshot(job)
             snapshot_payload = snapshot.model_dump(mode="json")
-            fingerprint = self.fingerprint_snapshot(snapshot)
+            jd_fingerprint = self.fingerprint_snapshot(snapshot)
+            input_fingerprint = self.fingerprint_input(snapshot)
             plan, should_generate = await self._prepare_plan(
                 db,
                 job,
                 snapshot_payload,
-                fingerprint,
+                jd_fingerprint,
+                input_fingerprint,
                 force=force,
                 settings=resolved_settings,
                 started_at=started_at,
@@ -249,16 +323,22 @@ class JobEvaluationPlanService:
             resolved_adapter = adapter or DeepSeekJobEvaluationPlanAdapter(
                 settings=resolved_settings
             )
+            extraction_input = self.build_ai_extraction_input(snapshot)
             adapter_result = await self._extract_with_retry(
                 resolved_adapter,
-                snapshot_payload,
+                extraction_input,
             )
             content = self.build_plan_content(snapshot, adapter_result.content)
+            if content.free_text_coverage is None:
+                raise JobEvaluationPlanContentError(
+                    "新合同成功计划缺少自由文本覆盖审计",
+                    code="JOB_EVALUATION_PLAN_INCOMPLETE_FREE_TEXT_COVERAGE",
+                )
         except JobEvaluationPlanAdapterError as exc:
             return await self._save_failure(
                 db,
                 plan.id,
-                fingerprint,
+                input_fingerprint,
                 code=exc.code,
                 message=self._safe_adapter_message(exc),
                 completed_at=self._aware_time(now_provider()),
@@ -267,7 +347,7 @@ class JobEvaluationPlanService:
             return await self._save_failure(
                 db,
                 plan.id,
-                fingerprint,
+                input_fingerprint,
                 code=exc.code,
                 message=str(exc),
                 completed_at=self._aware_time(now_provider()),
@@ -276,7 +356,7 @@ class JobEvaluationPlanService:
             return await self._save_failure(
                 db,
                 plan.id,
-                fingerprint,
+                input_fingerprint,
                 code="JOB_EVALUATION_PLAN_UNEXPECTED_ERROR",
                 message="岗位评价计划生成发生未预期错误",
                 completed_at=self._aware_time(now_provider()),
@@ -285,7 +365,7 @@ class JobEvaluationPlanService:
         return await self._save_success(
             db,
             plan.id,
-            fingerprint,
+            input_fingerprint,
             content,
             model_version=adapter_result.model,
             completed_at=self._aware_time(now_provider()),
@@ -296,7 +376,8 @@ class JobEvaluationPlanService:
         db: AsyncSession,
         job: Job,
         snapshot_payload: dict[str, Any],
-        fingerprint: str,
+        jd_fingerprint: str,
+        input_fingerprint: str,
         *,
         force: bool,
         settings: Settings,
@@ -310,13 +391,14 @@ class JobEvaluationPlanService:
             )
             .with_for_update()
         )
-        if current is not None and current.jd_fingerprint == fingerprint:
+        if current is not None and current.input_fingerprint == input_fingerprint:
             if not force or current.status == JobEvaluationPlanStatus.GENERATING.value:
                 return current, False
             self._reset_generating_plan(
                 current,
                 snapshot_payload,
-                fingerprint,
+                jd_fingerprint,
+                input_fingerprint,
                 settings,
             )
             return current, True
@@ -332,7 +414,7 @@ class JobEvaluationPlanService:
             select(JobEvaluationPlan)
             .where(
                 JobEvaluationPlan.job_id == job.id,
-                JobEvaluationPlan.jd_fingerprint == fingerprint,
+                JobEvaluationPlan.input_fingerprint == input_fingerprint,
             )
             .with_for_update()
         )
@@ -341,23 +423,25 @@ class JobEvaluationPlanService:
             self._reset_generating_plan(
                 existing,
                 snapshot_payload,
-                fingerprint,
+                jd_fingerprint,
+                input_fingerprint,
                 settings,
             )
             return existing, True
 
         plan = JobEvaluationPlan(
             job_id=job.id,
-            jd_fingerprint=fingerprint,
+            jd_fingerprint=jd_fingerprint,
             status=JobEvaluationPlanStatus.GENERATING.value,
             is_current=True,
             items=[],
             structured_coverage=self._empty_coverage(),
+            free_text_coverage=null(),
             warnings=[],
             prompt_version=settings.JOB_EVALUATION_PLAN_PROMPT_VERSION,
             model_version=settings.JOB_EVALUATION_PLAN_MODEL,
             schema_version=settings.JOB_EVALUATION_PLAN_SCHEMA_VERSION,
-            input_fingerprint=fingerprint,
+            input_fingerprint=input_fingerprint,
             input_snapshot=snapshot_payload,
             error_code=None,
             error_message=None,
@@ -370,18 +454,21 @@ class JobEvaluationPlanService:
     def _reset_generating_plan(
         plan: JobEvaluationPlan,
         snapshot_payload: dict[str, Any],
-        fingerprint: str,
+        jd_fingerprint: str,
+        input_fingerprint: str,
         settings: Settings,
     ) -> None:
         plan.status = JobEvaluationPlanStatus.GENERATING.value
         plan.is_current = True
         plan.items = []
         plan.structured_coverage = JobEvaluationPlanService._empty_coverage()
+        plan.free_text_coverage = null()
         plan.warnings = []
         plan.prompt_version = settings.JOB_EVALUATION_PLAN_PROMPT_VERSION
         plan.model_version = settings.JOB_EVALUATION_PLAN_MODEL
         plan.schema_version = settings.JOB_EVALUATION_PLAN_SCHEMA_VERSION
-        plan.input_fingerprint = fingerprint
+        plan.jd_fingerprint = jd_fingerprint
+        plan.input_fingerprint = input_fingerprint
         plan.input_snapshot = snapshot_payload
         plan.error_code = None
         plan.error_message = None
@@ -390,11 +477,11 @@ class JobEvaluationPlanService:
     async def _extract_with_retry(
         self,
         adapter: JobEvaluationPlanAdapter,
-        snapshot_payload: dict[str, Any],
+        extraction_input: dict[str, Any],
     ) -> JobEvaluationPlanAdapterResult:
         for attempt in range(2):
             try:
-                return await adapter.extract(snapshot_payload)
+                return await adapter.extract(extraction_input)
             except JobEvaluationPlanAdapterError as exc:
                 if not exc.retryable or attempt == 1:
                     raise
@@ -416,10 +503,200 @@ class JobEvaluationPlanService:
                 code="JOB_EVALUATION_PLAN_INVALID_JOB_INPUT",
             ) from None
 
+    def build_description_source_units(
+        self,
+        description: str | None,
+    ) -> tuple[DescriptionSourceUnit, ...]:
+        """Split description into stable, reviewable, continuous source fragments."""
+        if (
+            description is None
+            or not isinstance(description, str)
+            or not description.strip()
+        ):
+            raise JobEvaluationPlanContentError(
+                "岗位 description 不能为空",
+                code="JOB_EVALUATION_PLAN_EMPTY_DESCRIPTION",
+            )
+        if len(description) > self._DESCRIPTION_MAX_LENGTH:
+            raise JobEvaluationPlanContentError(
+                "岗位 description 超过安全长度上限",
+                code="JOB_EVALUATION_PLAN_DESCRIPTION_TOO_LONG",
+            )
+        if self._contains_unsafe_source_text(description):
+            raise JobEvaluationPlanContentError(
+                "岗位 description 包含无法安全处理的字符",
+                code="JOB_EVALUATION_PLAN_UNSAFE_DESCRIPTION",
+            )
+
+        fragments: list[str] = []
+        for line in re.split(r"\r\n?|\n", description):
+            cleaned_line = self._strip_source_unit_formatting(line)
+            if not cleaned_line:
+                continue
+            for sentence in self._split_source_sentences(cleaned_line):
+                fragments.extend(self._split_source_priority_boundaries(sentence))
+                if len(fragments) > self._DESCRIPTION_MAX_SOURCE_UNITS:
+                    raise JobEvaluationPlanContentError(
+                        "岗位 description 片段超过安全数量上限",
+                        code="JOB_EVALUATION_PLAN_TOO_MANY_SOURCE_UNITS",
+                    )
+
+        if not fragments:
+            raise JobEvaluationPlanContentError(
+                "岗位 description 不能为空",
+                code="JOB_EVALUATION_PLAN_EMPTY_DESCRIPTION",
+            )
+        return tuple(
+            DescriptionSourceUnit(
+                source_id=f"description:{index:04d}",
+                source_field="description",
+                source_text=fragment,
+            )
+            for index, fragment in enumerate(fragments, start=1)
+        )
+
+    def build_ai_extraction_input(
+        self,
+        snapshot: JobEvaluationPlanInputSnapshot,
+    ) -> dict[str, Any]:
+        """Build the complete, program-owned input contract for AI extraction."""
+        try:
+            requirements = JobRequirementsV1.model_validate(snapshot.requirements)
+            source_units = self.build_description_source_units(snapshot.description)
+            structured_candidates, _ = self._build_structured_candidates(requirements)
+            extraction_input = JobEvaluationPlanAIInput.model_validate(
+                {
+                    "input_snapshot": snapshot.model_dump(mode="json"),
+                    "source_units": [
+                        {
+                            "source_id": unit.source_id,
+                            "source_field": unit.source_field,
+                            "source_text": unit.source_text,
+                        }
+                        for unit in source_units
+                    ],
+                    "structured_candidates": [
+                        {
+                            "key": candidate.item.key,
+                            "title": candidate.item.title,
+                            "category": candidate.item.category,
+                            "priority": candidate.item.priority,
+                            "source_field": candidate.item.source_field,
+                        }
+                        for candidate in structured_candidates
+                    ],
+                }
+            )
+        except JobEvaluationPlanContentError:
+            raise
+        except (ValidationError, TypeError, ValueError):
+            raise JobEvaluationPlanContentError(
+                "岗位评价计划 AI 输入未通过业务校验",
+                code="JOB_EVALUATION_PLAN_INVALID_JOB_INPUT",
+            ) from None
+        return extraction_input.model_dump(mode="json")
+
+    @staticmethod
+    def _contains_unsafe_source_text(value: str) -> bool:
+        if any(
+            (ord(character) < 32 and character not in "\r\n\t")
+            or ord(character) == 127
+            for character in value
+        ):
+            return True
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError:
+            return True
+        return False
+
+    def _strip_source_unit_formatting(self, value: str) -> str:
+        cleaned = value.strip()
+        while cleaned:
+            matched = self._SOURCE_LIST_PREFIX_RE.match(cleaned)
+            if matched is None:
+                break
+            cleaned = cleaned[matched.end() :].lstrip()
+        for opening, closing in self._SOURCE_WRAPPERS:
+            if cleaned.startswith(opening) and cleaned.endswith(closing):
+                cleaned = cleaned[len(opening) : -len(closing)].strip()
+                break
+        return cleaned
+
+    def _split_source_sentences(self, value: str) -> list[str]:
+        fragments: list[str] = []
+        start = 0
+        for matched in self._SOURCE_SENTENCE_BOUNDARY_RE.finditer(value):
+            fragment = value[start : matched.end()].strip()
+            if fragment:
+                fragments.append(fragment)
+            start = matched.end()
+        tail = value[start:].strip()
+        if tail:
+            fragments.append(tail)
+        return fragments
+
+    def _split_source_priority_boundaries(self, value: str) -> list[str]:
+        fragments: list[str] = []
+        start = 0
+        for matched in self._SOURCE_PRIORITY_BOUNDARY_RE.finditer(value):
+            fragment = value[start : matched.end()].strip()
+            if fragment:
+                fragments.append(fragment)
+            start = matched.end()
+        tail = value[start:].strip()
+        if tail:
+            fragments.append(tail)
+        return fragments
+
     @staticmethod
     def fingerprint_snapshot(snapshot: JobEvaluationPlanInputSnapshot) -> str:
         serialized = json.dumps(
             snapshot.model_dump(mode="json"),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
+
+    def fingerprint_input(
+        self,
+        snapshot: JobEvaluationPlanInputSnapshot,
+        contract: Mapping[str, str] | None = None,
+    ) -> str:
+        resolved_contract: Mapping[str, str] = contract or {
+            "breaking_contract_version": (
+                JOB_EVALUATION_PLAN_BREAKING_CONTRACT_VERSION
+            ),
+            "ai_schema_version": JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION,
+            "plan_schema_version": JOB_EVALUATION_PLAN_SCHEMA_VERSION,
+            "source_unit_rule_version": JOB_EVALUATION_PLAN_SOURCE_UNIT_RULE_VERSION,
+        }
+        contract_keys = (
+            "breaking_contract_version",
+            "ai_schema_version",
+            "plan_schema_version",
+            "source_unit_rule_version",
+        )
+        try:
+            breaking_contract = {
+                key: resolved_contract[key]
+                for key in contract_keys
+                if isinstance(resolved_contract[key], str)
+                and resolved_contract[key].strip()
+            }
+        except KeyError:
+            breaking_contract = {}
+        if len(breaking_contract) != len(contract_keys):
+            raise JobEvaluationPlanContentError(
+                "岗位评价计划破坏性合同版本不完整",
+                code="JOB_EVALUATION_PLAN_CONFIGURATION_ERROR",
+            )
+        serialized = json.dumps(
+            {
+                "input_snapshot": snapshot.model_dump(mode="json"),
+                "breaking_contract": breaking_contract,
+            },
             ensure_ascii=False,
             sort_keys=True,
             separators=(",", ":"),
@@ -441,8 +718,31 @@ class JobEvaluationPlanService:
             ) from None
 
         candidates, coverage_sources = self._build_structured_candidates(requirements)
+        if isinstance(extracted, AIExtractedEvaluationPlanV2):
+            free_text_coverage = self._apply_source_reviews(
+                snapshot,
+                extracted,
+                candidates,
+            )
+        else:
+            self._apply_legacy_extracted_items(snapshot, extracted.items, candidates)
+            free_text_coverage = None
+
+        return self._finalize_plan_content(
+            candidates,
+            coverage_sources,
+            requirements,
+            free_text_coverage=free_text_coverage,
+        )
+
+    def _apply_legacy_extracted_items(
+        self,
+        snapshot: JobEvaluationPlanInputSnapshot,
+        extracted_items: list[AIExtractedEvaluationItem],
+        candidates: list[_CandidateItem],
+    ) -> None:
         source_text = self._snapshot_source_text(snapshot)
-        for extracted_item in extracted.items:
+        for extracted_item in extracted_items:
             if self._is_promotional(extracted_item):
                 continue
             if extracted_item.source_quote not in source_text:
@@ -467,6 +767,112 @@ class JobEvaluationPlanService:
                 )
                 self._merge_candidate(candidates, _CandidateItem(item, []))
 
+    def _apply_source_reviews(
+        self,
+        snapshot: JobEvaluationPlanInputSnapshot,
+        extracted: AIExtractedEvaluationPlanV2,
+        candidates: list[_CandidateItem],
+    ) -> dict[str, Any]:
+        source_units = self.build_description_source_units(snapshot.description)
+        expected_ids = [unit.source_id for unit in source_units]
+        review_by_id: dict[str, Any] = {}
+        for review in extracted.source_reviews:
+            if review.source_id in review_by_id:
+                self._raise_business_validation("AI 重复审阅了同一个 JD 原文片段")
+            review_by_id[review.source_id] = review
+        if set(review_by_id) != set(expected_ids) or len(review_by_id) != len(
+            expected_ids
+        ):
+            self._raise_business_validation("AI 未完整审阅指定的 JD 原文片段")
+
+        structured_by_key = {candidate.item.key: candidate for candidate in candidates}
+        coverage_units: list[dict[str, Any]] = []
+        for source_unit in source_units:
+            review = review_by_id[source_unit.source_id]
+            if (
+                review.disposition == "non_requirement"
+                and self._has_requirement_signal(source_unit.source_text)
+            ):
+                self._raise_business_validation("AI 把明确岗位要求误判为非要求内容")
+
+            item_keys: list[str] = []
+            equivalent_keys: list[str] = []
+            for reviewed_item in review.items:
+                if reviewed_item.title not in source_unit.source_text:
+                    self._raise_business_validation("AI 评价事项不是来源片段的连续原文")
+                if self._is_promotional_text(reviewed_item.title):
+                    self._raise_business_validation("AI 把宣传或福利内容识别成了评价事项")
+
+                ai_item = JobEvaluationItem(
+                    key=self._item_key(reviewed_item.category, reviewed_item.title),
+                    title=reviewed_item.title,
+                    category=reviewed_item.category,
+                    priority=self._priority_from_quote(source_unit.source_text),
+                    source_type=EvaluationItemSourceType.AI_EXTRACTED,
+                    source_field="description",
+                    source_quote=source_unit.source_text,
+                )
+                equivalent_key = reviewed_item.equivalent_structured_item_key
+                if equivalent_key is not None:
+                    equivalent = structured_by_key.get(equivalent_key)
+                    if (
+                        equivalent is None
+                        or equivalent.item.category is not reviewed_item.category
+                    ):
+                        self._raise_business_validation(
+                            "AI 引用了未知或跨类别的结构化评价事项"
+                        )
+                    kept_key = equivalent.item.key
+                    self._append_unique(equivalent_keys, kept_key)
+                else:
+                    existing = self._find_conservative_match(candidates, ai_item)
+                    if existing is None:
+                        candidates.append(_CandidateItem(ai_item, []))
+                        kept_key = ai_item.key
+                    else:
+                        kept_key = existing.item.key
+                        if (
+                            existing.item.source_type
+                            is EvaluationItemSourceType.AI_EXTRACTED
+                            and self._PRIORITY_RANK[ai_item.priority]
+                            > self._PRIORITY_RANK[existing.item.priority]
+                        ):
+                            existing.item = ai_item
+                            kept_key = ai_item.key
+                self._append_unique(item_keys, kept_key)
+
+            coverage_units.append(
+                {
+                    "source_id": source_unit.source_id,
+                    "disposition": review.disposition,
+                    "item_keys": item_keys,
+                    "equivalent_structured_item_keys": equivalent_keys,
+                }
+            )
+
+        try:
+            coverage = JobEvaluationPlanFreeTextCoverage.model_validate(
+                {
+                    "rule_version": JOB_EVALUATION_PLAN_SOURCE_UNIT_RULE_VERSION,
+                    "all_reviewed": True,
+                    "units": coverage_units,
+                }
+            )
+        except ValidationError:
+            raise JobEvaluationPlanContentError(
+                "自由文本覆盖审计未通过 Schema 校验",
+                code="JOB_EVALUATION_PLAN_INCOMPLETE_FREE_TEXT_COVERAGE",
+            ) from None
+        return coverage.model_dump(mode="json")
+
+    def _finalize_plan_content(
+        self,
+        candidates: list[_CandidateItem],
+        coverage_sources: list[tuple[str, list[str]]],
+        requirements: JobRequirementsV1,
+        *,
+        free_text_coverage: dict[str, Any] | None,
+    ) -> GeneratedPlanContent:
         items = [candidate.item for candidate in candidates]
         if not items:
             raise JobEvaluationPlanContentError(
@@ -514,6 +920,40 @@ class JobEvaluationPlanService:
             items=items,
             structured_coverage=coverage,
             warnings=warnings,
+            free_text_coverage=free_text_coverage,
+        )
+
+    def _find_conservative_match(
+        self,
+        candidates: list[_CandidateItem],
+        incoming: JobEvaluationItem,
+    ) -> _CandidateItem | None:
+        incoming_text = self._semantic_text(incoming.title)
+        for existing in candidates:
+            if existing.item.category is not incoming.category:
+                continue
+            if self._semantic_text(existing.item.title) == incoming_text:
+                return existing
+        return None
+
+    def _has_requirement_signal(self, value: str) -> bool:
+        if self._priority_from_quote(value) is not EvaluationItemPriority.GENERAL:
+            return True
+        return self._REQUIREMENT_ACTION_RE.search(value) is not None
+
+    def _is_promotional_text(self, value: str) -> bool:
+        return any(term in value for term in self._PROMOTION_TERMS)
+
+    @staticmethod
+    def _append_unique(values: list[str], value: str) -> None:
+        if value not in values:
+            values.append(value)
+
+    @staticmethod
+    def _raise_business_validation(message: str) -> None:
+        raise JobEvaluationPlanContentError(
+            message,
+            code="JOB_EVALUATION_PLAN_BUSINESS_VALIDATION_FAILED",
         )
 
     def _build_structured_candidates(
@@ -763,7 +1203,7 @@ class JobEvaluationPlanService:
         self,
         db: AsyncSession,
         plan_id: int,
-        fingerprint: str,
+        input_fingerprint: str,
         content: GeneratedPlanContent,
         *,
         model_version: str,
@@ -776,7 +1216,9 @@ class JobEvaluationPlanService:
             job = await self._get_locked_job(db, plan.job_id)
             if (
                 job is None
-                or self.fingerprint_snapshot(self.build_input_snapshot(job)) != fingerprint
+                or self.fingerprint_input(self.build_input_snapshot(job))
+                != input_fingerprint
+                or plan.input_fingerprint != input_fingerprint
                 or not plan.is_current
             ):
                 plan.status = JobEvaluationPlanStatus.OUTDATED.value
@@ -789,6 +1231,7 @@ class JobEvaluationPlanService:
             plan.status = JobEvaluationPlanStatus.READY.value
             plan.items = [item.model_dump(mode="json") for item in content.items]
             plan.structured_coverage = content.structured_coverage.model_dump(mode="json")
+            plan.free_text_coverage = content.free_text_coverage
             plan.warnings = [warning.value for warning in content.warnings]
             plan.model_version = model_version
             plan.error_code = None
@@ -805,7 +1248,7 @@ class JobEvaluationPlanService:
         self,
         db: AsyncSession,
         plan_id: int,
-        fingerprint: str,
+        input_fingerprint: str,
         *,
         code: str,
         message: str,
@@ -818,7 +1261,9 @@ class JobEvaluationPlanService:
             job = await self._get_locked_job(db, plan.job_id)
             if (
                 job is None
-                or self.fingerprint_snapshot(self.build_input_snapshot(job)) != fingerprint
+                or self.fingerprint_input(self.build_input_snapshot(job))
+                != input_fingerprint
+                or plan.input_fingerprint != input_fingerprint
                 or not plan.is_current
             ):
                 plan.status = JobEvaluationPlanStatus.OUTDATED.value
@@ -862,6 +1307,13 @@ class JobEvaluationPlanService:
         ):
             raise JobEvaluationPlanConfigurationError(
                 "岗位评价计划 Prompt 版本与当前代码不一致"
+            )
+        if (
+            settings.JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION
+            != JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION
+        ):
+            raise JobEvaluationPlanConfigurationError(
+                "岗位评价计划 AI Schema 版本与当前代码不一致"
             )
         if (
             settings.JOB_EVALUATION_PLAN_SCHEMA_VERSION
