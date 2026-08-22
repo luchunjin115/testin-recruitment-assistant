@@ -21,7 +21,6 @@ from app.core.config import Settings, get_settings
 from app.models.job import Job
 from app.models.job_evaluation_plan import JobEvaluationPlan
 from app.prompts.job_evaluation_plan import JOB_EVALUATION_PLAN_PROMPT_VERSION
-from app.schemas.job import JobRequirementsV1
 from app.schemas.job_evaluation_plan import (
     AIExtractedEvaluationItem,
     AIExtractedEvaluationPlan,
@@ -41,6 +40,7 @@ from app.schemas.job_evaluation_plan import (
     JobEvaluationPlanRead,
     JobEvaluationPlanStatus,
     JobEvaluationPlanWarning,
+    LegacyEvaluationPlanRequirements,
     StructuredCoverageResult,
     StructuredFieldCoverage,
 )
@@ -489,7 +489,9 @@ class JobEvaluationPlanService:
 
     def build_input_snapshot(self, job: Job) -> JobEvaluationPlanInputSnapshot:
         try:
-            requirements = JobRequirementsV1.model_validate(job.requirements)
+            requirements = LegacyEvaluationPlanRequirements.model_validate(
+                job.requirements
+            )
             return JobEvaluationPlanInputSnapshot(
                 job_id=job.id,
                 title=job.title,
@@ -561,7 +563,9 @@ class JobEvaluationPlanService:
     ) -> dict[str, Any]:
         """Build the complete, program-owned input contract for AI extraction."""
         try:
-            requirements = JobRequirementsV1.model_validate(snapshot.requirements)
+            requirements = LegacyEvaluationPlanRequirements.model_validate(
+                snapshot.requirements
+            )
             source_units = self.build_description_source_units(snapshot.description)
             structured_candidates, _ = self._build_structured_candidates(requirements)
             extraction_input = JobEvaluationPlanAIInput.model_validate(
@@ -711,7 +715,9 @@ class JobEvaluationPlanService:
         try:
             payload = json.loads(raw_content)
             extracted = AIExtractedEvaluationPlan.model_validate(payload)
-            requirements = JobRequirementsV1.model_validate(snapshot.requirements)
+            requirements = LegacyEvaluationPlanRequirements.model_validate(
+                snapshot.requirements
+            )
         except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
             raise JobEvaluationPlanContentError(
                 "DeepSeek 返回内容未通过岗位评价计划 Schema 校验"
@@ -869,7 +875,7 @@ class JobEvaluationPlanService:
         self,
         candidates: list[_CandidateItem],
         coverage_sources: list[tuple[str, list[str]]],
-        requirements: JobRequirementsV1,
+        requirements: LegacyEvaluationPlanRequirements,
         *,
         free_text_coverage: dict[str, Any] | None,
     ) -> GeneratedPlanContent:
@@ -958,7 +964,7 @@ class JobEvaluationPlanService:
 
     def _build_structured_candidates(
         self,
-        requirements: JobRequirementsV1,
+        requirements: LegacyEvaluationPlanRequirements,
     ) -> tuple[list[_CandidateItem], list[tuple[str, list[str]]]]:
         candidates: list[_CandidateItem] = []
         coverage: list[tuple[str, list[str]]] = []

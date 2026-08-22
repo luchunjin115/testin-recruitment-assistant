@@ -60,15 +60,17 @@ docs/
 - `stages/stage6/2026-08-15-stage6-structured-job-management-design.md`
 - `stages/stage6/2026-08-17-stage6-acceptance.md`
 - `stages/stage6/2026-08-21-stage6-five-section-jd-remediation-design.md`
+- `stages/stage6/2026-08-22-stage6-five-section-jd-remediation-acceptance.md`
 
-第三份是当前五段式 JD 字段、开放校验、空库迁移、阶段 7 暂停边界和 6R-A—6R-D 实施顺序的权威设计补充。修改岗位 Schema、表单、数据库或恢复阶段 7 前，必须同时阅读原阶段 6 设计和该补充；原验收记录只证明旧 `description + JobRequirementsV1` 合同曾通过。
+第三份是五段式 JD 字段、开放校验、空库迁移、阶段 7 暂停边界和 6R-A—6R-D 实施顺序的权威设计补充；第四份记录 6R-D 的自动化、真实 PostgreSQL、API、浏览器和截图结果。修改岗位 Schema、表单、数据库或恢复阶段 7 前，必须同时阅读原阶段 6 设计和五段式补充；2026-08-17 原验收只证明旧 `description + JobRequirementsV1` 合同曾通过。
 
 ### 阶段 7：Application 与 AI 初筛
 
 - `stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`
 - `stages/stage7/2026-08-21-stage7-step9-jd-decomposition-quality-remediation-design.md`
+- `stages/stage7/2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md`
 
-第一份记录阶段 7 已实现的业务和技术合同；第二份记录小步骤 9 及 9-I 的正式复验与下游诊断。当前两者均因阶段 6 五段式 JD 上游整改而暂停，保留为历史实现和质量基线；恢复阶段 7 前必须先阅读阶段 6 五段式补充，并重新完成阶段 7 输入设计门禁，不能继续按旧 `description + JobRequirementsV1` 执行。
+第一份记录阶段 7 已实现并继续保留的 Application、Resume、报告、异步运行、时间事实和 HR 决策边界；第二份记录旧输入合同下的小步骤 9、9-I 正式复验与下游诊断；第三份是五段式 JobEvaluationPlan 3.0、恢复门禁、质量样本和 7R-A—7R-H 的新设计草案，当前等待用户最终复核。恢复阶段 7 前必须同时阅读阶段 6 五段式补充、第一份阶段 7 基础设计和第三份新补充，不能继续按旧 `description + JobRequirementsV1` 执行。
 
 ## 5. 研究资料
 
@@ -110,7 +112,7 @@ docs/
 | 任务 | 补充阅读 |
 | --- | --- |
 | 查看当前进度 | 不补充；读取 `CLAUDE.md` 和 `PROJECT_STATE.md` 即可 |
-| 修改阶段 7 | 当前阶段 7 设计 + 相关代码和测试 |
+| 修改阶段 7 | 阶段 7 五段式评价计划新补充 + 原阶段 7 基础设计 + 阶段 6 五段式补充 + 相关代码和测试 |
 | 盘点旧 Rubric | 当前阶段 7 设计第 2、19、23 节 + 旧阶段 7 归档 |
 | 修改简历处理 | 对应阶段 4/5 资料 |
 | 修改岗位管理 | 阶段 6 原设计 + 五段式 JD 整改补充；旧验收仅作历史基线 |

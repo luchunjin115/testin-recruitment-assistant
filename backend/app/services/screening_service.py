@@ -877,6 +877,14 @@ class ScreeningService:
         resume = await db.get(Resume, application.current_resume_id)
         if job is None or resume is None:
             raise ScreeningResumeNotFoundError("Application 的岗位或 Resume 不存在")
+        if not hasattr(job, "description") or not hasattr(job, "requirements"):
+            return self._build_contract_upgrade_pause_context(
+                application,
+                job,
+                resume,
+                settings,
+                allow_closed=allow_closed,
+            )
         snapshot = job_evaluation_plan_service.build_input_snapshot(job)
         jd_fingerprint = job_evaluation_plan_service.fingerprint_snapshot(snapshot)
         plan = await db.scalar(
@@ -986,6 +994,75 @@ class ScreeningService:
             sanitized_resume=sanitized_resume if resume_ready else None,
         )
 
+    def _build_contract_upgrade_pause_context(
+        self,
+        application: Application,
+        job: Job,
+        resume: Resume,
+        settings: Settings,
+        *,
+        allow_closed: bool,
+    ) -> ScreeningInputContext:
+        """Pause Stage 7 until it has a confirmed five-section input contract."""
+        if application.applied_at is None:
+            raise ScreeningServiceError("Application 投递时间缺失")
+        jd_payload = {
+            "job_id": job.id,
+            "title": job.title,
+            "department": job.department,
+            "job_background": job.job_background,
+            "job_responsibilities": job.job_responsibilities,
+            "candidate_requirements": job.candidate_requirements,
+            "preferred_qualifications": job.preferred_qualifications,
+        }
+        jd_fingerprint = self._sha256(jd_payload)
+        resume_fingerprint = self._sha256({"state": "stage7_contract_upgrade"})
+        plan_fingerprint = self._sha256({"state": "stage7_contract_upgrade"})
+        experience_period_facts = experience_period_service.build(
+            "",
+            evaluation_reference_at=application.applied_at,
+            evaluation_timezone=settings.SCREENING_EVALUATION_TIMEZONE,
+            rule_version=settings.EXPERIENCE_PERIOD_FACTS_RULE_VERSION,
+        )
+        facts_fingerprint = experience_period_service.fingerprint(
+            experience_period_facts
+        )
+        desired = (
+            ScreeningRunStatus.PAUSED
+            if job.status != "open" and not allow_closed
+            else ScreeningRunStatus.WAITING_PLAN
+        )
+        input_fingerprint = self._sha256(
+            {
+                "application_id": application.id,
+                "job_id": job.id,
+                "resume_id": resume.id,
+                "jd_fingerprint": jd_fingerprint,
+                "state": "stage7_contract_upgrade",
+            }
+        )
+        return ScreeningInputContext(
+            application_id=application.id,
+            job_id=job.id,
+            resume_id=resume.id,
+            plan_id=None,
+            desired_status=desired,
+            input_fingerprint=input_fingerprint,
+            jd_fingerprint=jd_fingerprint,
+            plan_fingerprint=plan_fingerprint,
+            resume_fingerprint=resume_fingerprint,
+            evaluation_reference_at=application.applied_at,
+            evaluation_timezone=settings.SCREENING_EVALUATION_TIMEZONE,
+            experience_period_facts_rule_version=(
+                settings.EXPERIENCE_PERIOD_FACTS_RULE_VERSION
+            ),
+            experience_period_facts_fingerprint=facts_fingerprint,
+            experience_period_facts=experience_period_facts,
+            job_snapshot=None,
+            evaluation_plan=None,
+            sanitized_resume=None,
+        )
+
     async def _reconcile_report_outdated(
         self,
         db: AsyncSession,
@@ -1000,9 +1077,22 @@ class ScreeningService:
             )
         job = await db.get(Job, application.job_id)
         if job is not None:
-            current_jd = job_evaluation_plan_service.fingerprint_snapshot(
-                job_evaluation_plan_service.build_input_snapshot(job)
-            )
+            if hasattr(job, "description") and hasattr(job, "requirements"):
+                current_jd = job_evaluation_plan_service.fingerprint_snapshot(
+                    job_evaluation_plan_service.build_input_snapshot(job)
+                )
+            else:
+                current_jd = self._sha256(
+                    {
+                        "job_id": job.id,
+                        "title": job.title,
+                        "department": job.department,
+                        "job_background": job.job_background,
+                        "job_responsibilities": job.job_responsibilities,
+                        "candidate_requirements": job.candidate_requirements,
+                        "preferred_qualifications": job.preferred_qualifications,
+                    }
+                )
             if report.jd_fingerprint != current_jd:
                 changed |= self._add_outdated_reason(
                     report, ScreeningOutdatedReason.JD_CHANGED, now

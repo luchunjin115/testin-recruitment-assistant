@@ -25,16 +25,12 @@ for (const expectedText of [
   '工作地点',
   '用工类型',
   '招聘人数',
-  '岗位描述',
+  '岗位背景',
   '岗位职责',
-  '必备技能',
-  '加分技能',
-  '最低工作年限',
-  '学历要求',
-  '必备经历',
-  '加分经历',
-  '岗位关键词',
-  '其他要求',
+  '任职要求',
+  '加分项',
+  '备注',
+  '候选人可见，请勿填写内部招聘信息',
   '不会删除历史候选人和初筛结果',
   '岗位已有历史业务数据，不能删除',
 ]) {
@@ -47,13 +43,38 @@ for (const removedText of [
   '保存岗位 · 后续',
   '当前不会保存',
   '不会修改 PostgreSQL',
+  '岗位描述',
+  '必备技能',
+  '加分技能',
+  '最低工作年限',
+  '学历要求',
+  '必备经历',
+  '加分经历',
+  '岗位关键词',
+  '其他要求',
 ]) {
   assert.equal(source.includes(removedText), false, `岗位页面仍存在骨架文案：${removedText}`);
 }
 
-assert.ok(source.includes('Modal.confirm'), '关闭、重新开放和删除必须提供二次确认');
+assert.ok(source.includes('Modal.useModal'), '确认框必须使用可消费 React 上下文的 Modal 实例');
+assert.ok(source.includes('modalApi.confirm'), '关闭、重新开放和删除必须提供二次确认');
+assert.equal(source.includes('Modal.confirm'), false, '岗位页面不能使用丢失主题上下文的静态确认框');
 assert.ok(source.includes('isFieldsTouched'), '关闭抽屉前必须检查未保存修改');
 assert.ok(source.includes('scrollToField'), '开放校验失败后必须定位第一个字段');
+assert.ok(
+  source.includes("loadState.status !== 'ready' || !pendingSuccessMessage"),
+  '成功通知必须等待岗位列表重新挂载后再显示，避免 React 渲染期调用 Ant Design message',
+);
+assert.equal(
+  /await loadJobs\(\);\s*messageApi\.success/.test(source),
+  false,
+  '刷新列表后不能同步调用已卸载上下文中的成功通知',
+);
+assert.equal(
+  /const closeFormNow[\s\S]*?form\.resetFields\(\);[\s\S]*?};/.test(source),
+  false,
+  '列表状态操作关闭未挂载表单时不能调用 resetFields',
+);
 assert.match(
   styles,
   /\.recruitment-job-form-footer\s*\{[^}]*display:\s*flex;/s,
@@ -62,7 +83,7 @@ assert.match(
 assert.match(
   styles,
   /\.recruitment-job-form-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s,
-  '岗位表单两列必须允许收缩，不能被超长技能标签挤坏',
+  '岗位表单两列必须允许收缩，不能被长文本挤坏',
 );
 assert.match(
   styles,

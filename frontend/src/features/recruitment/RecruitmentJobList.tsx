@@ -30,7 +30,6 @@ import {
   closeRecruitmentJob,
   createRecruitmentJob,
   deleteRecruitmentJob,
-  EducationRequirement,
   EmploymentType,
   getRecruitmentJobApiError,
   getRecruitmentJobs,
@@ -57,16 +56,11 @@ type JobFormValues = {
   location?: string;
   employmentType?: EmploymentType;
   headcount?: number;
-  description?: string;
-  responsibilities?: string;
-  requiredSkills?: string[];
-  preferredSkills?: string[];
-  minimumWorkYears?: number;
-  educationRequirement?: EducationRequirement;
-  requiredExperiences?: string;
-  preferredExperiences?: string;
-  keywords?: string[];
-  additionalRequirements?: string;
+  jobBackground?: string;
+  jobResponsibilities?: string;
+  candidateRequirements?: string;
+  preferredQualifications?: string;
+  publicNotes?: string;
 };
 
 const statusOptions: { value: 'all' | JobStatus; label: string }[] = [
@@ -83,31 +77,17 @@ const employmentOptions = [
   { value: 'contract', label: '合同制' },
 ];
 
-const educationOptions = [
-  { value: 'none', label: '不限学历' },
-  { value: 'associate_or_above', label: '大专及以上' },
-  { value: 'bachelor_or_above', label: '本科及以上' },
-  { value: 'master_or_above', label: '硕士及以上' },
-  { value: 'doctorate', label: '博士' },
-];
-
 const backendFieldToFormField: Record<string, keyof JobFormValues> = {
   title: 'title',
   department: 'department',
   location: 'location',
   employment_type: 'employmentType',
   headcount: 'headcount',
-  description: 'description',
-  requirements: 'responsibilities',
-  'requirements.responsibilities': 'responsibilities',
-  'requirements.required_skills': 'requiredSkills',
-  'requirements.preferred_skills': 'preferredSkills',
-  'requirements.minimum_work_years': 'minimumWorkYears',
-  'requirements.education_requirement': 'educationRequirement',
-  'requirements.required_experiences': 'requiredExperiences',
-  'requirements.preferred_experiences': 'preferredExperiences',
-  'requirements.keywords': 'keywords',
-  'requirements.additional_requirements': 'additionalRequirements',
+  job_background: 'jobBackground',
+  job_responsibilities: 'jobResponsibilities',
+  candidate_requirements: 'candidateRequirements',
+  preferred_qualifications: 'preferredQualifications',
+  public_notes: 'publicNotes',
 };
 
 const getStatusMeta = (status: JobStatus) => {
@@ -121,12 +101,6 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat('zh-CN', {
   hour: '2-digit', minute: '2-digit', hour12: false,
 }).format(new Date(value));
 
-const toLines = (value?: string) => (value || '')
-  .split(/\r?\n/)
-  .map(item => item.trim())
-  .filter(Boolean);
-
-const fromLines = (value: string[]) => value.join('\n');
 const optionalText = (value?: string) => value?.trim() || null;
 
 const formatReferenceCounts = (references: Record<string, number> | null) => {
@@ -149,19 +123,11 @@ const buildJobInput = (values: JobFormValues): RecruitmentJobInput => ({
   location: optionalText(values.location),
   employment_type: values.employmentType || null,
   headcount: values.headcount ?? null,
-  description: optionalText(values.description),
-  requirements: {
-    schema_version: '1.0',
-    responsibilities: toLines(values.responsibilities),
-    required_skills: values.requiredSkills || [],
-    preferred_skills: values.preferredSkills || [],
-    minimum_work_years: values.minimumWorkYears ?? null,
-    education_requirement: values.educationRequirement || null,
-    required_experiences: toLines(values.requiredExperiences),
-    preferred_experiences: toLines(values.preferredExperiences),
-    keywords: values.keywords || [],
-    additional_requirements: toLines(values.additionalRequirements),
-  },
+  job_background: optionalText(values.jobBackground),
+  job_responsibilities: optionalText(values.jobResponsibilities),
+  candidate_requirements: optionalText(values.candidateRequirements),
+  preferred_qualifications: optionalText(values.preferredQualifications),
+  public_notes: optionalText(values.publicNotes),
 });
 
 const formValuesFromJob = (job: RecruitmentJob): JobFormValues => ({
@@ -170,16 +136,11 @@ const formValuesFromJob = (job: RecruitmentJob): JobFormValues => ({
   location: job.location || undefined,
   employmentType: job.employmentType || undefined,
   headcount: job.headcount || undefined,
-  description: job.description || undefined,
-  responsibilities: fromLines(job.requirements.responsibilities),
-  requiredSkills: job.requirements.required_skills,
-  preferredSkills: job.requirements.preferred_skills,
-  minimumWorkYears: job.requirements.minimum_work_years ?? undefined,
-  educationRequirement: job.requirements.education_requirement || undefined,
-  requiredExperiences: fromLines(job.requirements.required_experiences),
-  preferredExperiences: fromLines(job.requirements.preferred_experiences),
-  keywords: job.requirements.keywords,
-  additionalRequirements: fromLines(job.requirements.additional_requirements),
+  jobBackground: job.jobBackground || undefined,
+  jobResponsibilities: job.jobResponsibilities || undefined,
+  candidateRequirements: job.candidateRequirements || undefined,
+  preferredQualifications: job.preferredQualifications || undefined,
+  publicNotes: job.publicNotes || undefined,
 });
 
 const RecruitmentJobList: React.FC = () => {
@@ -193,8 +154,10 @@ const RecruitmentJobList: React.FC = () => {
   const [operationPending, setOperationPending] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [pendingSuccessMessage, setPendingSuccessMessage] = useState<string | null>(null);
   const [form] = Form.useForm<JobFormValues>();
   const [messageApi, messageContext] = message.useMessage();
+  const [modalApi, modalContext] = Modal.useModal();
 
   const loadJobs = useCallback(async () => {
     setLoadState({ status: 'loading' });
@@ -207,6 +170,12 @@ const RecruitmentJobList: React.FC = () => {
 
   useEffect(() => { void loadJobs(); }, [loadJobs]);
 
+  useEffect(() => {
+    if (loadState.status !== 'ready' || !pendingSuccessMessage) return;
+    messageApi.success(pendingSuccessMessage);
+    setPendingSuccessMessage(null);
+  }, [loadState.status, messageApi, pendingSuccessMessage]);
+
   const filteredItems = useMemo(() => {
     if (loadState.status !== 'ready') return [];
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -216,10 +185,11 @@ const RecruitmentJobList: React.FC = () => {
         item.title,
         item.department,
         item.location,
-        item.description,
-        ...item.requirements.responsibilities,
-        ...item.requirements.required_skills,
-        ...item.requirements.keywords,
+        item.jobBackground,
+        item.jobResponsibilities,
+        item.candidateRequirements,
+        item.preferredQualifications,
+        item.publicNotes,
       ].some(value => value?.toLowerCase().includes(normalizedKeyword));
       return matchesStatus && matchesKeyword;
     });
@@ -239,7 +209,6 @@ const RecruitmentJobList: React.FC = () => {
     setSelectedJob(null);
     setOperationError(null);
     setDirty(false);
-    form.resetFields();
   };
 
   const requestCloseForm = () => {
@@ -247,7 +216,7 @@ const RecruitmentJobList: React.FC = () => {
       closeFormNow();
       return;
     }
-    Modal.confirm({
+    modalApi.confirm({
       title: '放弃未保存的修改？',
       content: '关闭后，本次尚未保存的表单内容会丢失。',
       okText: '放弃修改',
@@ -277,8 +246,8 @@ const RecruitmentJobList: React.FC = () => {
 
   const refreshAfterSuccess = async (successMessage: string) => {
     closeFormNow();
+    setPendingSuccessMessage(successMessage);
     await loadJobs();
-    messageApi.success(successMessage);
   };
 
   const saveNewJob = async (status: 'draft' | 'open') => {
@@ -328,7 +297,7 @@ const RecruitmentJobList: React.FC = () => {
   const confirmStatusAction = (job: RecruitmentJob) => {
     const action = job.status === 'draft' ? 'open' : job.status === 'open' ? 'close' : 'reopen';
     const actionLabel = action === 'open' ? '开放岗位' : action === 'close' ? '关闭岗位' : '重新开放';
-    Modal.confirm({
+    modalApi.confirm({
       title: `确认${actionLabel}？`,
       content: action === 'close'
         ? '关闭后，新申请不能再选择该岗位；此操作不会删除历史候选人和初筛结果。'
@@ -340,7 +309,7 @@ const RecruitmentJobList: React.FC = () => {
   };
 
   const confirmDelete = (job: RecruitmentJob) => {
-    Modal.confirm({
+    modalApi.confirm({
       title: '确认删除岗位？',
       content: '只能删除没有候选人、申请或初筛记录的草稿或已关闭岗位。删除后无法恢复。',
       okText: '删除岗位',
@@ -405,6 +374,7 @@ const RecruitmentJobList: React.FC = () => {
   return (
     <main className="recruitment-main">
       {messageContext}
+      {modalContext}
       <section className="recruitment-page-heading">
         <div>
           <span className="recruitment-section-kicker">新版岗位库 · 数据来源 /api/v2</span>
@@ -441,7 +411,7 @@ const RecruitmentJobList: React.FC = () => {
           <div className="recruitment-job-filter-controls">
             <Input
               allowClear aria-label="搜索岗位" onChange={event => setKeyword(event.target.value)}
-              placeholder="搜索岗位、部门、地点、职责或技能" prefix={<SearchOutlined />} value={keyword}
+              placeholder="搜索岗位、部门、地点或五段式 JD" prefix={<SearchOutlined />} value={keyword}
             />
             <Select aria-label="按岗位状态筛选" onChange={setStatusFilter} options={statusOptions} value={statusFilter} />
             <Button aria-label="刷新岗位列表" icon={<ReloadOutlined />} onClick={() => void loadJobs()} />
@@ -463,7 +433,7 @@ const RecruitmentJobList: React.FC = () => {
         ) : (
           <div aria-label="新版岗位列表" className="recruitment-table" role="table">
             <div className="recruitment-table-head recruitment-job-table-columns" role="row">
-              <span>岗位</span><span>部门 / 地点</span><span>岗位要求</span><span>人数</span><span>状态</span><span>更新时间</span><span>操作</span>
+              <span>岗位</span><span>部门 / 地点</span><span>岗位职责</span><span>人数</span><span>状态</span><span>更新时间</span><span>操作</span>
             </div>
             {filteredItems.map(item => {
               const statusMeta = getStatusMeta(item.status);
@@ -476,11 +446,8 @@ const RecruitmentJobList: React.FC = () => {
                   </div>
                   <div className="recruitment-job-location-cell"><strong>{item.department || '部门未填写'}</strong><span>{item.location || '地点未填写'}</span></div>
                   <div className="recruitment-job-requirement-cell">
-                    <strong>{item.requirements.responsibilities[0] || item.description || '岗位要求未填写'}</strong>
-                    <div>
-                      {item.requirements.required_skills.slice(0, 3).map(skill => <Tag bordered={false} key={skill}>{skill}</Tag>)}
-                      {item.requirements.required_skills.length > 3 && <span>+{item.requirements.required_skills.length - 3}</span>}
-                    </div>
+                    <strong>{item.jobResponsibilities || '岗位职责未填写'}</strong>
+                    <div><span>{item.candidateRequirements || '任职要求未填写'}</span></div>
                   </div>
                   <div className="recruitment-job-candidate-count"><strong>{item.headcount ?? '—'}</strong><span>招聘 / {item.candidateCount} 候选</span></div>
                   <div><Tag bordered={false} className={`recruitment-status-tag is-${statusMeta.tone}`}>{statusMeta.label}</Tag></div>
@@ -555,51 +522,28 @@ const RecruitmentJobList: React.FC = () => {
               <Form.Item label="用工类型" name="employmentType"><Select allowClear options={employmentOptions} placeholder="请选择" /></Form.Item>
               <Form.Item label="招聘人数" name="headcount"><InputNumber min={1} max={999} precision={0} placeholder="例如：2" /></Form.Item>
             </div>
-            <Form.Item label="岗位描述" name="description" rules={[{ max: 20000 }]}>
-              <Input.TextArea autoSize={{ minRows: 4, maxRows: 8 }} placeholder="介绍岗位目标、团队和工作内容" />
+            <Form.Item label="岗位背景" name="jobBackground" rules={[{ max: 5000, message: '岗位背景不能超过 5000 个字符' }]} extra="选填。介绍招聘背景、团队使命或岗位目标。">
+              <Input.TextArea autoSize={{ minRows: 6, maxRows: 14 }} placeholder={'例如：\n为支持 AI 招聘平台升级，团队计划新增该岗位。'} />
             </Form.Item>
           </section>
 
           <section className="recruitment-job-form-section">
-            <h3>岗位职责</h3>
-            <Form.Item extra="每行一项，开放岗位时至少填写一项。" label="岗位职责" name="responsibilities">
-              <Input.TextArea autoSize={{ minRows: 3, maxRows: 8 }} placeholder={'负责招聘平台岗位管理\n与产品和后端协作交付功能'} />
+            <h3>职责与要求</h3>
+            <Form.Item label="岗位职责" name="jobResponsibilities" rules={[{ max: 10000, message: '岗位职责不能超过 10000 个字符' }]} extra="开放岗位时必填。可保留换行、编号和项目符号。">
+              <Input.TextArea autoSize={{ minRows: 6, maxRows: 16 }} placeholder={'例如：\n1. 负责 AI 应用设计与交付\n2. 与产品和后端协作推进上线'} />
             </Form.Item>
-          </section>
-
-          <section className="recruitment-job-form-section">
-            <h3>必备要求</h3>
-            <div className="recruitment-job-form-grid">
-              <Form.Item extra="输入后按回车添加。" label="必备技能" name="requiredSkills">
-                <Select mode="tags" placeholder="例如：React" tokenSeparators={[',', '，', '、']} />
-              </Form.Item>
-              <Form.Item label="最低工作年限" name="minimumWorkYears">
-                <InputNumber min={0} max={80} precision={0} placeholder="0 表示不限经验" />
-              </Form.Item>
-              <Form.Item label="学历要求" name="educationRequirement">
-                <Select allowClear options={educationOptions} placeholder="请选择" />
-              </Form.Item>
-            </div>
-            <Form.Item extra="每行一项。" label="必备经历" name="requiredExperiences">
-              <Input.TextArea autoSize={{ minRows: 3, maxRows: 7 }} placeholder="例如：有 B 端系统开发经历" />
+            <Form.Item label="任职要求" name="candidateRequirements" rules={[{ max: 10000, message: '任职要求不能超过 10000 个字符' }]} extra="开放岗位时必填。请直接写明必要能力、经验或其他条件。">
+              <Input.TextArea autoSize={{ minRows: 6, maxRows: 16 }} placeholder={'例如：\n- 具备后端开发经验\n- 熟悉 PostgreSQL'} />
             </Form.Item>
           </section>
 
           <section className="recruitment-job-form-section">
             <h3>加分与补充</h3>
-            <div className="recruitment-job-form-grid">
-              <Form.Item extra="输入后按回车添加。" label="加分技能" name="preferredSkills">
-                <Select mode="tags" placeholder="例如：TypeScript" tokenSeparators={[',', '，', '、']} />
-              </Form.Item>
-              <Form.Item extra="每行一项。" label="加分经历" name="preferredExperiences">
-                <Input.TextArea autoSize={{ minRows: 3, maxRows: 7 }} placeholder="例如：有招聘产品经验" />
-              </Form.Item>
-            </div>
-            <Form.Item extra="输入后按回车添加。" label="岗位关键词" name="keywords">
-              <Select mode="tags" placeholder="例如：招聘、SaaS" tokenSeparators={[',', '，', '、']} />
+            <Form.Item label="加分项" name="preferredQualifications" rules={[{ max: 5000, message: '加分项不能超过 5000 个字符' }]} extra="选填。填写优先考虑但不是开放岗位硬性门槛的条件。">
+              <Input.TextArea autoSize={{ minRows: 6, maxRows: 14 }} placeholder={'例如：\n- 有 RAG 项目经验\n- 有招聘系统建设经验'} />
             </Form.Item>
-            <Form.Item extra="每行一项。" label="其他要求" name="additionalRequirements">
-              <Input.TextArea autoSize={{ minRows: 3, maxRows: 7 }} placeholder="例如：能够接受偶尔出差" />
+            <Form.Item label="备注" name="publicNotes" rules={[{ max: 5000, message: '备注不能超过 5000 个字符' }]} extra="选填。候选人可见，请勿填写内部招聘信息；该字段不参与 AI 评价。">
+              <Input.TextArea autoSize={{ minRows: 6, maxRows: 14 }} placeholder="例如：候选人可提前准备项目介绍" />
             </Form.Item>
           </section>
         </Form>

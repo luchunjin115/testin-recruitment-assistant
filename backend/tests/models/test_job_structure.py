@@ -12,9 +12,16 @@ class JobStructureModelTest(TestCase):
         self.assertEqual(table.c.employment_type.type.length, 30)
         self.assertTrue(table.c.employment_type.nullable)
         self.assertTrue(table.c.headcount.nullable)
-        self.assertFalse(table.c.requirements.nullable)
-        self.assertTrue(table.c.legacy_requirements.nullable)
-        self.assertTrue(table.c.legacy_requirements.type.none_as_null)
+        for field in (
+            "job_background",
+            "job_responsibilities",
+            "candidate_requirements",
+            "preferred_qualifications",
+            "public_notes",
+        ):
+            self.assertTrue(table.c[field].nullable)
+        for old_field in ("description", "requirements", "legacy_requirements"):
+            self.assertNotIn(old_field, table.c)
         self.assertEqual(table.c.status.default.arg, "draft")
         self.assertEqual(table.c.status.server_default.arg, "draft")
 

@@ -2,11 +2,17 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
-
-from app.schemas.job import JobRequirementsV1
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictInt,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
 
 JOB_EVALUATION_PLAN_SCHEMA_VERSION = "2.0"
@@ -15,6 +21,69 @@ JOB_EVALUATION_PLAN_BREAKING_CONTRACT_VERSION = "jd_extraction_v2"
 JOB_EVALUATION_PLAN_SOURCE_UNIT_RULE_VERSION = "jd_source_units_v1"
 JOB_EVALUATION_PLAN_MAX_ITEMS = 30
 JOB_EVALUATION_PLAN_MAX_SOURCE_UNITS = 100
+
+
+class LegacyEvaluationPlanEducationRequirement(str, Enum):
+    NONE = "none"
+    ASSOCIATE_OR_ABOVE = "associate_or_above"
+    BACHELOR_OR_ABOVE = "bachelor_or_above"
+    MASTER_OR_ABOVE = "master_or_above"
+    DOCTORATE = "doctorate"
+
+
+LegacyShortText = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=100),
+]
+LegacyLongText = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=1_000),
+]
+LegacyMinimumWorkYears = Annotated[StrictInt, Field(ge=0, le=80)]
+
+
+class LegacyEvaluationPlanRequirements(BaseModel):
+    """Frozen Stage 7 read model; it is not accepted by the Job API."""
+
+    schema_version: Literal["1.0"]
+    responsibilities: list[LegacyLongText] = Field(max_length=50)
+    required_skills: list[LegacyShortText] = Field(max_length=100)
+    preferred_skills: list[LegacyShortText] = Field(max_length=100)
+    minimum_work_years: LegacyMinimumWorkYears | None
+    education_requirement: LegacyEvaluationPlanEducationRequirement | None
+    required_experiences: list[LegacyLongText] = Field(max_length=50)
+    preferred_experiences: list[LegacyLongText] = Field(max_length=50)
+    keywords: list[LegacyShortText] = Field(max_length=100)
+    additional_requirements: list[LegacyLongText] = Field(max_length=50)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator(
+        "responsibilities",
+        "required_skills",
+        "preferred_skills",
+        "required_experiences",
+        "preferred_experiences",
+        "keywords",
+        "additional_requirements",
+        mode="before",
+    )
+    @classmethod
+    def normalize_text_lists(cls, value: Any) -> Any:
+        if not isinstance(value, list):
+            return value
+        normalized: list[Any] = []
+        seen: set[str] = set()
+        for item in value:
+            if not isinstance(item, str):
+                normalized.append(item)
+                continue
+            cleaned = item.strip()
+            if not cleaned or cleaned in seen:
+                continue
+            seen.add(cleaned)
+            normalized.append(cleaned)
+        return normalized
 
 
 class JobEvaluationPlanStatus(str, Enum):
@@ -199,7 +268,7 @@ class JobEvaluationPlanInputSnapshot(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     department: str | None = Field(default=None, max_length=100)
     description: str | None = Field(default=None, max_length=20_000)
-    requirements: JobRequirementsV1
+    requirements: LegacyEvaluationPlanRequirements
 
     model_config = ConfigDict(extra="forbid")
 

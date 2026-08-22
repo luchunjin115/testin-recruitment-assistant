@@ -130,7 +130,7 @@ class JobEvaluationPlanApiTest(TestCase):
             response = self.client.get("/jobs/1/evaluation-plan")
         self.assert_error(response, 404, "JOB_EVALUATION_PLAN_NOT_FOUND")
 
-    def test_generate_and_regenerate_use_separate_stable_actions(self) -> None:
+    def test_generate_and_regenerate_are_both_controlled_pauses(self) -> None:
         generate_mock = AsyncMock(return_value=make_plan())
         regenerate_mock = AsyncMock(return_value=make_plan())
         with patch.object(
@@ -146,10 +146,18 @@ class JobEvaluationPlanApiTest(TestCase):
         ):
             regenerated = self.client.post("/jobs/1/evaluation-plan/regenerate")
 
-        self.assertEqual(generated.status_code, 200)
-        self.assertEqual(regenerated.status_code, 200)
-        generate_mock.assert_awaited_once_with(self.db, 1)
-        regenerate_mock.assert_awaited_once_with(self.db, 1)
+        self.assert_error(
+            generated,
+            503,
+            "JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS",
+        )
+        self.assert_error(
+            regenerated,
+            503,
+            "JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS",
+        )
+        generate_mock.assert_not_awaited()
+        regenerate_mock.assert_not_awaited()
 
     def test_read_current_contract_returns_not_outdated(self) -> None:
         plan = make_plan()
@@ -172,54 +180,56 @@ class JobEvaluationPlanApiTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(response.json()["contract_outdated"])
 
-    def test_business_errors_have_stable_status_and_safe_messages(self) -> None:
+    def test_pause_precedes_legacy_business_errors(self) -> None:
         cases = (
             (
                 "/jobs/99/evaluation-plan/generate",
                 "generate_for_job",
                 JobEvaluationPlanJobNotFoundError("postgresql://private"),
-                404,
-                "JOB_NOT_FOUND",
             ),
             (
                 "/jobs/1/evaluation-plan/generate",
                 "generate_for_job",
                 JobEvaluationPlanJobNotOpenError("private"),
-                409,
-                "JOB_EVALUATION_PLAN_JOB_NOT_OPEN",
             ),
             (
                 "/jobs/1/evaluation-plan/regenerate",
                 "regenerate_failed_plan",
                 JobEvaluationPlanNotRegenerableError("private"),
-                409,
-                "JOB_EVALUATION_PLAN_NOT_REGENERABLE",
             ),
         )
-        for path, method, error, status_code, code in cases:
-            with self.subTest(code=code), patch.object(
+        for path, method, error in cases:
+            legacy_mock = AsyncMock(side_effect=error)
+            with self.subTest(path=path), patch.object(
                 job_evaluation_plan_service,
                 method,
-                AsyncMock(side_effect=error),
+                legacy_mock,
             ):
                 response = self.client.post(path)
-            self.assert_error(response, status_code, code)
+            self.assert_error(
+                response,
+                503,
+                "JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS",
+            )
+            legacy_mock.assert_not_awaited()
             self.assertNotIn("private", response.text)
             self.assertNotIn("postgresql", response.text)
 
     def test_unexpected_errors_are_sanitized(self) -> None:
+        legacy_mock = AsyncMock(side_effect=RuntimeError("api-key=secret"))
         with patch.object(
             job_evaluation_plan_service,
             "generate_for_job",
-            AsyncMock(side_effect=RuntimeError("api-key=secret")),
+            legacy_mock,
         ):
             response = self.client.post("/jobs/1/evaluation-plan/generate")
 
         self.assert_error(
             response,
-            500,
-            "JOB_EVALUATION_PLAN_OPERATION_FAILED",
+            503,
+            "JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS",
         )
+        legacy_mock.assert_not_awaited()
         self.assertNotIn("secret", response.text)
 
     def test_openapi_and_main_app_use_nested_api_v2_job_style(self) -> None:

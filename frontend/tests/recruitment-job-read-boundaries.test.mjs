@@ -2,17 +2,16 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'vite';
 
-const requirements = {
-  schema_version: '1.0', responsibilities: ['负责业务系统开发'], required_skills: ['React'],
-  preferred_skills: [], minimum_work_years: 1, education_requirement: 'bachelor_or_above',
-  required_experiences: [], preferred_experiences: [], keywords: [], additional_requirements: [],
-};
 const jobs = [
   { id: 1, title: '开放岗位', department: '研发部', location: '上海',
-    employment_type: 'full_time', headcount: 2, description: '开放岗位说明', requirements,
+    employment_type: 'full_time', headcount: 2, job_background: '开放岗位背景',
+    job_responsibilities: '负责业务系统开发', candidate_requirements: '熟悉 React',
+    preferred_qualifications: null, public_notes: '候选人可见说明',
     status: 'open', created_at: '2026-08-15T08:00:00Z', updated_at: '2026-08-15T09:00:00Z' },
   { id: 2, title: '历史关闭岗位', department: '产品部', location: '北京',
-    employment_type: 'full_time', headcount: 1, description: '关闭岗位说明', requirements,
+    employment_type: 'full_time', headcount: 1, job_background: '关闭岗位背景',
+    job_responsibilities: '负责历史产品', candidate_requirements: '具备产品经验',
+    preferred_qualifications: null, public_notes: null,
     status: 'closed', created_at: '2026-08-14T08:00:00Z', updated_at: '2026-08-14T09:00:00Z' },
 ];
 const candidates = [{
@@ -48,7 +47,8 @@ try {
   };
   const applicationJobs = await application.getRecruitmentApplicationJobs();
   assert.deepEqual(applicationJobs.map(job => job.id), [1]);
-  assert.equal(applicationJobs[0].requirementSummary, '负责业务系统开发');
+  assert.equal(applicationJobs[0].jobResponsibilities, '负责业务系统开发');
+  assert.equal(applicationJobs[0].candidateRequirements, '熟悉 React');
   assert.deepEqual((await candidate.getRecruitmentCandidateJobs()).map(job => job.id), [1]);
   const candidateSnapshot = await candidate.getRecruitmentCandidates();
   assert.equal(candidateSnapshot.items[0].jobTitle, '历史关闭岗位');

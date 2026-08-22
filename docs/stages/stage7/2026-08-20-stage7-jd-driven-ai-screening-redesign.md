@@ -2,9 +2,9 @@
 
 > 日期：2026-08-20
 >
-> 状态：原阶段 7 方案及 `Application.applied_at` 固定评价基准整改已实现，9-I 已完成但 JD 门禁未通过。2026-08-21 已确认先返回阶段 6 建立五段式 JD，阶段 7 现暂停；阶段 6 验收和新的阶段 7 输入设计确认前，不得继续小步骤 9、进入步骤 10—13 或调用真实模型
+> 状态：原阶段 7 方案及 `Application.applied_at` 固定评价基准整改已实现，9-I 已完成但 JD 门禁未通过。阶段 6 五段式 JD 已于 2026-08-22 完成 6R-A—6R-D 并通过验收；五段式评价计划 3.0 与 7R-A—7R-H 已写入 `2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md` 草案，当前等待用户最终复核，确认前不得实施 7R-A、恢复旧步骤 9—13 或调用真实模型
 >
-> 当前权威性：本文替代 `../../archive/superseded/2026-08-17-stage7-application-ai-screening-design.md` 中的 Rubric、五维权重、确定性评分、`unknown`、证据覆盖率、评分历史和报告展示方案；旧文档只保留为历史实现记录
+> 当前权威性：本文继续负责已实现的 Application、Resume、报告、异步运行、时间事实和 HR 决策边界；五段式 JobEvaluationPlan 输入、生成、恢复门禁、质量样本和后续顺序以待最终确认的 `2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md` 为准。本文仍替代 `../../archive/superseded/2026-08-17-stage7-application-ai-screening-design.md` 中的旧 Rubric 方案
 >
 > 上游依据：`../../architecture/2026-07-15-hr-agent-platform-design.md`、`../../planning/2026-08-14-post-stage5-product-roadmap.md`、`../../planning/implementation-plan.md`
 
@@ -40,7 +40,7 @@ React 渲染完整报告，HR 独立作出招聘决定
 
 该变化会使本文第 4.1、5.1、6、20.1、21.1 和小步骤 9 中依赖旧 Job 输入的合同失效，但不会自动推翻已经完成的 Application、Resume、投递时间、异步运行、报告替换、证据安全和 HR 决策边界。
 
-阶段 6 整改期间采用受控暂停：岗位管理可以继续保存和开放，但旧 JobEvaluationPlan 不得读取新 Job 后继续生成计划。阶段 6 通过后，必须另行讨论并更新本文，至少确认：
+阶段 6 已完成五段式 Job、空库 migration、React 页面和真实浏览器验收。受控暂停继续有效：岗位管理可以正常保存和开放，但旧 JobEvaluationPlan 不得读取新 Job 后继续生成计划；后端生成/重新生成固定返回合同升级中的 503，页面也不再提供旧写入口。下列业务问题已经完成讨论并写入新的独立草案：
 
 - 岗位背景只作上下文；
 - 岗位职责产生 `general` 事项；
@@ -49,7 +49,7 @@ React 渲染完整报告，HR 独立作出招聘决定
 - 候选人可见备注不进入 Prompt、不参与评价；
 - 新的原文切片、追溯、去重、数量边界、指纹、计划过期与质量样本。
 
-详细上游合同和 6R-A—6R-D 实施顺序见 `../stage6/2026-08-21-stage6-five-section-jd-remediation-design.md`。新的阶段 7 设计获得用户确认前，本文后续旧 JD 细节只保留为已实现历史，不得直接作为新代码依据。
+详细上游合同和 6R-A—6R-D 实施结果见 `../stage6/2026-08-21-stage6-five-section-jd-remediation-design.md` 与 `../stage6/2026-08-22-stage6-five-section-jd-remediation-acceptance.md`；五段式新合同见 `2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md`。新草案获得用户最终确认前，本文后续旧 JD 细节只保留为已实现历史，不得直接作为新代码依据。
 
 ## 2. 已废弃的阶段 7 评分方案
 
@@ -821,6 +821,8 @@ JD 形成可用评价计划
 17. 切换到更新 Resume 后评价基准仍为原 `applied_at`；投递后的经历不冒充投递时事实，页面可查看本报告的评价基准日期。
 
 ## 23. 实施顺序
+
+> 继承说明：本节小步骤 1—13 记录旧 `description + JobRequirementsV1` 合同的历史实施顺序，不能继续作为五段式恢复计划。新的实施顺序是待用户最终确认的 `2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md` 第 17 节 7R-A—7R-H；确认后也必须逐批执行和停止。
 
 ### 小步骤 1：文档门禁
 

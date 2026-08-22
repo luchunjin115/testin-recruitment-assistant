@@ -2,7 +2,7 @@
 
 > 日期：2026-08-21
 >
-> 状态：业务需求、异常流程、验收范围和实施顺序已完成讨论；等待用户最终复核本文实施批次后，才允许进入 6R-A
+> 状态：业务需求与 6R-A—6R-D 顺序已获用户最终确认；6R-A—6R-D 已于 2026-08-22 完成并通过验收，阶段 7 继续受控暂停
 >
 > 上游权威文档：`2026-08-15-stage6-structured-job-management-design.md`
 >
@@ -457,6 +457,17 @@ public_notes           → 不进入 Prompt，不参与指纹和评价
 
 验证：测试必须被正常收集，不能使用 `skip/xfail`、删断言或导入错误冒充红灯。完成标志是合同矩阵完整、既有无关测试没有新增回归。失败时留在测试层修正夹具或需求映射。停止并等待用户确认 6R-B。
 
+实施结果（2026-08-21）：
+
+- 修改前确认分支 `2lcj`、HEAD 与 `origin/2lcj` 均为 `c169c55`，工作树没有已有差异或未跟踪文件；本批未覆盖用户修改。
+- 代码 Alembic head 为 `e4c7a1b9d632`，但当前开发 PostgreSQL 仍在 `c8e1a6f4d205`。只读计数为 `jobs=1`、`candidates=2`、`resumes=9`；`applications/job_evaluation_plans/screening_reports/screening_runs/stage_histories` 因数据库尚未升级而不存在。现有 Job 状态为 `open`。本批没有升级数据库、执行 migration 或修改这些业务数据。
+- 新增 6 个后端合同测试文件和 2 个前端合同测试文件。后端 23 个测试方法被正常收集，无导入、语法或夹具错误，产生 42 个断言红灯；前端 13 项正常收集，2 项通过、11 项红灯。未使用 `skip/xfail`，没有删除旧断言。
+- 42 个后端红灯全部归 6R-B：14 个 Schema 字段/归一/长度/旧字段红灯，8 个 Model 列红灯，7 个 Service 创建并开放、开放草稿、重新开放、开放完整性与原子保存红灯，3 个 API 请求响应红灯，4 个 migration 空表保护红灯，以及 6 个阶段 7 受控暂停红灯。阶段 7 暂停错误固定为 HTTP `503` + `JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS`，岗位开放仍成功，旧评价计划 Service 和 Adapter 均不得调用。
+- 11 个前端红灯全部归 6R-C：1 个响应映射红灯和 10 个五文本框、错误定位、旧控件退出、列表摘要、搜索及现有读取方红灯。已通过的 2 项只证明现有 HTTP 封装会原样发送五字段请求、错误解析器会保留新字段名，不证明前端合同已切换。
+- 修改前旧 Job 合同 69 项、旧 JobEvaluationPlan 28 项通过。完成合同测试后，Job/计划既有回归 97 项、Application/HR 决策 43 项、Resume/报告 76 项和前端全部 19 个既有 Node 脚本均通过，证明本批新增测试没有制造无关回归。
+- 当前数据库落后代码且已有 1 条 Job；依据第 7.3 节，6R-B 的正式 migration 不得在该库执行。进入 6R-B 前必须重新预检，并由用户明确决定这条开发数据的处理方式；不得自动删除、覆盖或转换。
+- 本批没有修改任何生产 Schema、Service、Model、API、React、Prompt 或 Adapter，没有新增 migration，没有调用真实 DeepSeek。完成后停在 6R-A，等待用户明确确认是否进入 6R-B。
+
 ### 12.3 6R-B：后端与 PostgreSQL 原子合同切换
 
 唯一目标：让“API → Schema → Service → Model → PostgreSQL”同时切换到五字段，并确保阶段 7 旧逻辑不会误用新 Job。
@@ -490,6 +501,17 @@ public_notes           → 不进入 Prompt，不参与指纹和评价
 
 验证：定向和后端全量 pytest、真实 PostgreSQL 预检、临时库 migration 往返、正式开发库向前升级、`alembic check`、OpenAPI 路由唯一性和 `git diff --check`。完成标志是后端只接受/返回五字段、数据库只保留五段式 JD 列、阶段 7 旧调用被明确阻止。失败分别返回 Schema、Service、migration 或暂停门禁层，不进入前端。停止并等待用户确认 6R-C。
 
+实施结果（2026-08-22）：
+
+- 用户明确确认开发库唯一 Job #19 无需备份、可以直接删除。删除前再次核对 `id=19/title=AI招聘平台全栈工程师/status=open` 且 Candidate、Resume、Report 引用均为 0；随后精确删除 1 行并确认 `jobs=0`。该 Job 没有备份，不能从当前数据库直接恢复；Candidate 和 Resume 数据未删除。
+- `JobCreate/JobUpdate/JobRead`、Job Model、Job Service 与 Job API 已同时切换为 `job_background/job_responsibilities/candidate_requirements/preferred_qualifications/public_notes`。五字段外层空白裁剪、纯空白归一为 null、长度限制、草稿只要求标题、开放时职责和任职要求必填、开放岗位编辑原子失败、旧字段和未知字段拒绝均由 6R-A 合同测试覆盖。
+- 新增唯一 revision `f2b8c6d1a940`，在任何 DDL 前检查 `jobs` 行数。临时 PostgreSQL 空库完成 `upgrade -> downgrade e4c7a1b9d632 -> upgrade`；升级态只有五个可空 TEXT JD 列，降级态恢复旧三列。临时库插入一条虚构 Job 后，升级以 `STAGE6_FIVE_SECTION_JD_REQUIRES_EMPTY_JOBS` 主动失败，旧列仍在、新列未出现、行数仍为 1，证明事务没有留下部分结构；清空夹具后恢复 head，并删除临时库。
+- 正式开发 PostgreSQL 只做向前 `upgrade head`，由 `c8e1a6f4d205` 升至 `f2b8c6d1a940`。最终 `current=head=f2b8c6d1a940`，`alembic check` 返回 `No new upgrade operations detected`；`jobs=0/applications=0/candidates=2/resumes=9/job_evaluation_plans=0/screening_reports=0/screening_runs=0/stage_histories=0`，jobs 只保留五个新 JD 列。
+- Job 创建、更新、开放和重新开放不再触发旧 JobEvaluationPlan；显式 generate/regenerate 固定返回 HTTP 503 + `JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS`。Screening 对真实五段式 Job 只形成 `waiting_plan`（关闭岗位为 `paused`）上下文，`job_snapshot/evaluation_plan/sanitized_resume` 均为空，不会调用 Adapter。旧 Prompt、Adapter 和新五段式拆解逻辑均未修改，也没有调用真实 DeepSeek。
+- 6R-A 后端合同 23/23 通过；旧 Job 核心回归 45/45、历史 JobEvaluationPlan Service 22/22、历史 ScreeningService 27/27 通过。后端全量为 694 passed、411 subtests passed，只有 1 条既有 PyPDF2 弃用 warning；OpenAPI 唯一路由测试包含在全量中。
+- 为运行完整 pytest，仅在本地 `.venv` 安装 pytest 9.1.1，没有修改依赖清单。10 个只含 `__pycache__/*.pyc` 的退休 `rebuilt` 缓存目录被可恢复地移动到忽略目录 `tmp/6rb-retired-rebuilt-cache/`，没有删除源码或业务数据。
+- 本批没有修改 React、JobEvaluationPlan Prompt、Adapter 或真实 AI 合同；6R-A 的 2 个前端合同通过项和 11 个 6R-C 预期红灯继续保留。`git diff --check` 通过。6R-B 到此停止，唯一下一步是等待用户明确确认 6R-C。
+
 ### 12.4 6R-C：React 五段式岗位体验
 
 唯一目标：把岗位创建、编辑、列表和现有读取方全部切换到五个大型文本框和新 API。
@@ -518,6 +540,15 @@ public_notes           → 不进入 Prompt，不参与指纹和评价
 
 验证：前端定向测试、全部 Node 测试、TypeScript 严格检查、Vite 生产构建和 `git diff --check`。完成标志是前端运行边界不含旧 JobRequirements，所有请求与新后端一致。失败返回组件、Service 类型或样式层，不修改后端合同。停止并等待用户确认 6R-D。
 
+实施结果（2026-08-22）：
+
+- `jobs.ts` 的响应、页面模型和写请求只保留五段式字段；岗位页面的创建、编辑、搜索、列表摘要和后端字段错误定位全部切换到新合同。五个字段按“岗位背景 → 岗位职责 → 任职要求 → 加分项 → 备注”排列，均使用大型普通多行文本框并声明 5000/10000/10000/5000/5000 字符上限；职责和任职要求明确提示开放时必填，备注明确提示候选人可见且不参与 AI。
+- 岗位页面已删除岗位描述、技能标签、工作年限、学历、经历、关键词和其他要求等旧控件。申请岗位读取 Service 和申请页预览改用五段式字段，通过 React 文本插值和 `white-space: pre-wrap` 保留换行，不引入 HTML 渲染。
+- 阶段 7 历史评价计划快照仍需只读解释旧数据，因此其旧结构被收口为阶段 7 自有的 `LegacyJobEvaluationPlanRequirements`，不再从当前 Job Service 导入或进入新 Job 请求边界；本批没有恢复计划生成、修改 Prompt/Adapter 或调用真实模型。
+- 6R-A 的前端五段式合同由原 2 项通过、11 项预期红灯转为 13/13 通过。更新 3 个既有前端测试的虚构 Job 夹具和断言后，定向测试 16/16、前端全量 32/32 通过；TypeScript 严格检查和 Vite 5.4.21 生产构建通过，共转换 3121 个模块。
+- 本批没有修改后端 Schema、Service、Model、API、migration 或 PostgreSQL 业务数据，也没有执行 migration。正式库沿用 6R-B 基线：`current=head=f2b8c6d1a940`，`jobs=0/applications=0/candidates=2/resumes=9/job_evaluation_plans=0/screening_reports=0/screening_runs=0/stage_histories=0`。`git diff --check` 通过。
+- 自动化结果证明前端编译边界、请求映射和静态交互合同已与五段式后端一致，且简历、申请、HR 决策及阶段 7 既有前端测试没有新增回归；尚不能证明真实浏览器尺寸、真实 PostgreSQL 页面操作或前后端完整人工主链，这些留给 6R-D。6R-C 到此停止，唯一下一步是等待用户明确确认 6R-D。
+
 ### 12.5 6R-D：完整验收与阶段 7 交接
 
 唯一目标：证明五段式岗位管理可真实操作、旧 AI 合同安全暂停，并形成恢复阶段 7 所需的准确交接。
@@ -545,6 +576,14 @@ public_notes           → 不进入 Prompt，不参与指纹和评价
 - 验收能证明与不能证明的书面记录。
 
 完成标志：阶段 6 五段式整改通过，岗位主链可用，阶段 7 保持受控暂停。失败回到实际责任层修复并重验，不提前恢复 AI。结束后停止，唯一下一步是讨论并编写阶段 7 五段式 JD 评价计划整改设计，获得用户确认后才能编码。
+
+实施结果（2026-08-22）：
+
+- 后端全量 694 passed（411 个子用例通过），五段式定向 19 passed（48 个参数化子用例通过），migration 合同 4 passed；前端 6R-D 定向 12/12、全量 32/32、TypeScript 与 Vite 生产构建均通过，转换 3121 个模块。
+- 正式 PostgreSQL `current=head=f2b8c6d1a940`，`alembic check` 无待生成操作。真实 API 和 Microsoft Playwright 页面完成草稿、开放校验、五段保存、非法开放编辑回滚、关闭、关闭态编辑、重新开放与删除；验收后八张业务表恢复到原计数。
+- 1440×900、820×1180、390×844 三档页面均无整页横向溢出，底部操作区可见；五段普通文本保留换行和项目符号，HTML-like 文本只按字面显示。截图和完整矩阵见 `2026-08-22-stage6-five-section-jd-remediation-acceptance.md`。
+- 验收修复了成功通知上下文、静态 Modal、未挂载 Form reset 三个 React/Ant Design 警告，并把评价计划页面改为直接暂停、移除旧生成/重新生成写入口；历史计划仍只读。阶段 7 Adapter 调用为 0，未调用真实 DeepSeek。
+- 阶段 6 五段式整改至此完成。唯一下一步是讨论并编写阶段 7 五段式 JD 评价计划整改设计；获得用户确认前不得实现新 Prompt、Schema、Service、Adapter 或调用真实模型。
 
 ## 13. 未来 Agent 边界
 

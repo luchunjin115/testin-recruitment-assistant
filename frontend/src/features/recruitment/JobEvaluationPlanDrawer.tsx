@@ -1,15 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  FileSearchOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { Alert, Button, Drawer, Empty, Skeleton, Tag } from 'antd';
 import {
-  generateJobEvaluationPlan,
   getAIScreeningApiError,
   getJobEvaluationPlan,
-  regenerateJobEvaluationPlan,
 } from './services/aiScreening';
 import type { RecruitmentJob } from './services/jobs';
 import {
@@ -44,7 +41,6 @@ const formatDateTime = (value: string | null) => {
 
 const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose }) => {
   const [loadState, setLoadState] = useState<LoadState>({ status: 'idle' });
-  const [operationPending, setOperationPending] = useState(false);
   const requestIdRef = useRef(0);
 
   const load = useCallback(async () => {
@@ -72,28 +68,7 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose }) => {
     return () => { requestIdRef.current += 1; };
   }, [load, open]);
 
-  const runGeneration = async (mode: 'generate' | 'regenerate') => {
-    if (!job || operationPending) return;
-    setOperationPending(true);
-    try {
-      const plan = mode === 'generate'
-        ? await generateJobEvaluationPlan(job.id)
-        : await regenerateJobEvaluationPlan(job.id);
-      setLoadState({ status: 'ready', plan });
-    } catch (error) {
-      const parsed = getAIScreeningApiError(error);
-      setLoadState({ status: 'error', message: parsed.message, code: parsed.code });
-    } finally {
-      setOperationPending(false);
-    }
-  };
-
   const plan = loadState.status === 'ready' ? loadState.plan : null;
-  const canGenerate = job?.status === 'open' && loadState.status === 'empty';
-  const canRegenerate = job?.status === 'open' && plan?.status === 'failed';
-  const canUpgrade = job?.status === 'open'
-    && plan?.status === 'ready'
-    && plan.contractOutdated;
 
   return (
     <Drawer
@@ -128,19 +103,13 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose }) => {
       )}
 
       {loadState.status === 'empty' && (
-        <Empty
-          className="recruitment-plan-empty"
-          description={job?.status === 'open'
-            ? '当前开放岗位还没有评价计划，可以发起一次幂等生成。'
-            : '草稿或关闭岗位当前没有可用评价计划。'}
-          image={<FileSearchOutlined />}
-        >
-          {canGenerate && (
-            <Button loading={operationPending} onClick={() => void runGeneration('generate')} type="primary">
-              生成评价计划
-            </Button>
-          )}
-        </Empty>
+        <Alert
+          className="recruitment-plan-state"
+          description="阶段 7 正在适配新的五段式 JD；当前不会生成或重新生成评价计划，也不会调用 AI。历史评价计划仍可只读查看。"
+          message="五段式评价计划升级中"
+          showIcon
+          type="warning"
+        />
       )}
 
       {plan && (
@@ -157,11 +126,7 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose }) => {
 
           {plan.contractOutdated && plan.status === 'ready' && (
             <Alert
-              action={canUpgrade ? (
-                <Button loading={operationPending} onClick={() => void runGeneration('generate')}>
-                  按新规则重新生成
-                </Button>
-              ) : undefined}
+              description="该历史计划仅用于解释已有结果；五段式评价计划设计确认前不会重新生成，也不能用于新申请。"
               message="当前评价计划使用旧规则"
               showIcon
               type="warning"
@@ -179,12 +144,7 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose }) => {
 
           {plan.status === 'failed' && (
             <Alert
-              action={canRegenerate ? (
-                <Button loading={operationPending} onClick={() => void runGeneration('regenerate')}>
-                  重新生成
-                </Button>
-              ) : undefined}
-              description={plan.errorMessage || '评价计划未能生成，请检查岗位状态后重试。'}
+              description={`${plan.errorMessage || '历史评价计划未能生成。'} 五段式评价计划设计确认前不会重新生成。`}
               message={plan.errorCode ? `生成失败 · ${plan.errorCode}` : '生成失败'}
               showIcon
               type="error"

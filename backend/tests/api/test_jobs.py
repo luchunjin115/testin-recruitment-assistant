@@ -22,21 +22,6 @@ from app.services.job_service import (
 TEST_TIME = datetime(2026, 7, 20, 12, 0, tzinfo=timezone.utc)
 
 
-def make_requirements() -> dict:
-    return {
-        "schema_version": "1.0",
-        "responsibilities": ["负责岗位相关工作"],
-        "required_skills": ["Python", "PostgreSQL"],
-        "preferred_skills": [],
-        "minimum_work_years": 1,
-        "education_requirement": "bachelor_or_above",
-        "required_experiences": [],
-        "preferred_experiences": [],
-        "keywords": [],
-        "additional_requirements": [],
-    }
-
-
 def make_job(
     job_id: int,
     title: str,
@@ -51,8 +36,11 @@ def make_job(
         location="上海",
         employment_type="full_time",
         headcount=2,
-        description=f"{title}岗位描述",
-        requirements=make_requirements(),
+        job_background=f"{title}岗位背景",
+        job_responsibilities=f"负责{title}相关工作",
+        candidate_requirements="具备岗位所需经验",
+        preferred_qualifications=None,
+        public_notes=None,
         status=status,
         created_at=TEST_TIME,
         updated_at=TEST_TIME,
@@ -86,8 +74,8 @@ class JobApiTest(TestCase):
                 json={
                     "title": "后端开发工程师",
                     "department": "研发部",
-                    "description": "负责招聘平台后端开发",
-                    "requirements": make_requirements(),
+                    "job_responsibilities": "负责招聘平台后端开发",
+                    "candidate_requirements": "具备 Python 与 PostgreSQL 经验",
                 },
             )
 
@@ -98,16 +86,16 @@ class JobApiTest(TestCase):
         self.assertIs(passed_db, self.db)
         self.assertIsInstance(passed_data, JobCreate)
 
-    def test_open_job_plan_failure_does_not_rollback_published_job(self) -> None:
+    def test_open_job_does_not_trigger_legacy_plan_generation(self) -> None:
         opened_job = make_job(1, "后端开发工程师", status="open")
         open_mock = AsyncMock(return_value=opened_job)
-        plan_mock = AsyncMock(side_effect=RuntimeError("model unavailable"))
-        self.db.rollback = AsyncMock()
+        plan_mock = AsyncMock(side_effect=AssertionError("不应进入旧计划生成"))
 
         with (
             patch.object(job_service, "open_job", open_mock),
             patch(
-                "app.api.jobs.job_evaluation_plan_service.generate_for_job",
+                "app.services.job_evaluation_plan_service."
+                "job_evaluation_plan_service.generate_for_job",
                 plan_mock,
             ),
         ):
@@ -116,13 +104,12 @@ class JobApiTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "open")
         open_mock.assert_awaited_once_with(self.db, 1)
-        plan_mock.assert_awaited_once_with(self.db, 1)
-        self.db.rollback.assert_awaited_once()
+        plan_mock.assert_not_awaited()
 
     def test_create_open_validation_error_has_stable_422_detail(self) -> None:
         create_job_mock = AsyncMock(
             side_effect=JobOpenValidationError(
-                ("location", "requirements.required_skills")
+                ("location", "candidate_requirements")
             )
         )
 
@@ -136,7 +123,7 @@ class JobApiTest(TestCase):
             response,
             422,
             "JOB_OPEN_VALIDATION_FAILED",
-            fields=["location", "requirements.required_skills"],
+            fields=["location", "candidate_requirements"],
         )
 
     def test_create_schema_error_keeps_fastapi_default_422(self) -> None:

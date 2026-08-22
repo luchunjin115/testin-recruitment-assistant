@@ -14,10 +14,13 @@ from app.services.job_evaluation_plan_service import (
     JobEvaluationPlanNotRegenerableError,
     job_evaluation_plan_service,
 )
-from app.services.screening_service import screening_service
 
 
 router = APIRouter(prefix="/jobs", tags=["job-evaluation-plans"])
+JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS = {
+    "code": "JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS",
+    "message": "岗位评价计划合同升级中，当前不能生成或重新生成",
+}
 
 
 def _error(status_code: int, code: str, message: str) -> HTTPException:
@@ -94,19 +97,10 @@ async def generate_current_evaluation_plan(
     job_id: int,
     db: AsyncSession = Depends(get_db),
 ) -> JobEvaluationPlanRead:
-    try:
-        plan = await job_evaluation_plan_service.generate_for_job(db, job_id)
-        try:
-            await screening_service.after_plan_changed(
-                db,
-                job_id,
-                plan_ready=plan.status == "ready" and plan.is_current,
-            )
-        except Exception:
-            pass
-        return job_evaluation_plan_service.build_read_model(plan)
-    except Exception as exc:
-        raise _map_expected_error(exc) from exc
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS,
+    )
 
 
 @router.post(
@@ -117,16 +111,7 @@ async def regenerate_failed_evaluation_plan(
     job_id: int,
     db: AsyncSession = Depends(get_db),
 ) -> JobEvaluationPlanRead:
-    try:
-        plan = await job_evaluation_plan_service.regenerate_failed_plan(db, job_id)
-        try:
-            await screening_service.after_plan_changed(
-                db,
-                job_id,
-                plan_ready=plan.status == "ready" and plan.is_current,
-            )
-        except Exception:
-            pass
-        return job_evaluation_plan_service.build_read_model(plan)
-    except Exception as exc:
-        raise _map_expected_error(exc) from exc
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail=JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS,
+    )

@@ -16,23 +16,6 @@ from app.services.job_service import (
 )
 
 
-def make_requirements(**overrides) -> dict:
-    requirements = {
-        "schema_version": "1.0",
-        "responsibilities": ["负责招聘平台核心服务"],
-        "required_skills": ["Python", "PostgreSQL"],
-        "preferred_skills": [],
-        "minimum_work_years": 2,
-        "education_requirement": "bachelor_or_above",
-        "required_experiences": [],
-        "preferred_experiences": [],
-        "keywords": [],
-        "additional_requirements": [],
-    }
-    requirements.update(overrides)
-    return requirements
-
-
 def make_job(*, job_id: int = 1, status: str = "draft", **overrides) -> Job:
     values = {
         "id": job_id,
@@ -41,8 +24,11 @@ def make_job(*, job_id: int = 1, status: str = "draft", **overrides) -> Job:
         "location": "上海",
         "employment_type": "full_time",
         "headcount": 2,
-        "description": "负责招聘平台后端开发",
-        "requirements": make_requirements(),
+        "job_background": "建设招聘平台",
+        "job_responsibilities": "负责招聘平台后端开发",
+        "candidate_requirements": "具备 Python 与 PostgreSQL 经验",
+        "preferred_qualifications": "有异步服务经验优先",
+        "public_notes": None,
         "status": status,
     }
     values.update(overrides)
@@ -85,7 +71,7 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         self.service = JobService()
         self.db = make_session()
 
-    async def test_create_draft_commits_complete_empty_v1(self) -> None:
+    async def test_create_draft_commits_empty_five_sections(self) -> None:
         job = await self.service.create_job(
             self.db,
             JobCreate(title="后端开发工程师", department="研发部"),
@@ -93,7 +79,11 @@ class JobServiceTest(IsolatedAsyncioTestCase):
 
         self.assertEqual(job.title, "后端开发工程师")
         self.assertEqual(job.status, "draft")
-        self.assertEqual(job.requirements["schema_version"], "1.0")
+        self.assertIsNone(job.job_background)
+        self.assertIsNone(job.job_responsibilities)
+        self.assertIsNone(job.candidate_requirements)
+        self.assertIsNone(job.preferred_qualifications)
+        self.assertIsNone(job.public_notes)
         self.db.add.assert_called_once_with(job)
         self.db.commit.assert_awaited_once()
         self.db.refresh.assert_awaited_once_with(job)
@@ -106,8 +96,8 @@ class JobServiceTest(IsolatedAsyncioTestCase):
             location="上海",
             employment_type="full_time",
             headcount=2,
-            description="负责招聘平台后端开发",
-            requirements=make_requirements(),
+            job_responsibilities="负责招聘平台后端开发",
+            candidate_requirements="具备 Python 与 PostgreSQL 经验",
             status="open",
         )
 
@@ -130,11 +120,8 @@ class JobServiceTest(IsolatedAsyncioTestCase):
                 "location",
                 "employment_type",
                 "headcount",
-                "description",
-                "requirements.responsibilities",
-                "requirements.required_skills",
-                "requirements.minimum_work_years",
-                "requirements.education_requirement",
+                "job_responsibilities",
+                "candidate_requirements",
             ),
         )
         self.db.add.assert_not_called()
@@ -165,18 +152,18 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         self.assertIn("jobs.updated_at DESC, jobs.id DESC", compiled)
 
     async def test_update_uses_row_lock_and_allows_incomplete_closed_job(self) -> None:
-        existing = make_job(status="closed", description="原描述")
+        existing = make_job(status="closed", job_background="原背景")
         self.db.scalar.return_value = existing
 
         job = await self.service.update_job(
             self.db,
             1,
-            JobUpdate(department=None, description=None),
+            JobUpdate(department=None, job_background=None),
         )
 
         self.assertIs(job, existing)
         self.assertIsNone(existing.department)
-        self.assertIsNone(existing.description)
+        self.assertIsNone(existing.job_background)
         self.assertEqual(existing.status, "closed")
         self.assert_locked_query()
         self.db.commit.assert_awaited_once()
@@ -189,12 +176,15 @@ class JobServiceTest(IsolatedAsyncioTestCase):
             await self.service.update_job(
                 self.db,
                 1,
-                JobUpdate(location=None, description=None),
+                JobUpdate(location=None, job_responsibilities=None),
             )
 
-        self.assertEqual(raised.exception.fields, ("location", "description"))
+        self.assertEqual(
+            raised.exception.fields,
+            ("location", "job_responsibilities"),
+        )
         self.assertEqual(existing.location, "上海")
-        self.assertEqual(existing.description, "负责招聘平台后端开发")
+        self.assertEqual(existing.job_responsibilities, "负责招聘平台后端开发")
         self.db.commit.assert_not_awaited()
         self.db.rollback.assert_awaited_once()
 
@@ -286,7 +276,7 @@ class JobServiceTest(IsolatedAsyncioTestCase):
         for method_name, status in (("open_job", "draft"), ("reopen_job", "closed")):
             with self.subTest(method_name=method_name):
                 db = make_session()
-                job = make_job(status=status, requirements=make_requirements(required_skills=[]))
+                job = make_job(status=status, candidate_requirements=None)
                 db.scalar.return_value = job
 
                 with self.assertRaises(JobOpenValidationError) as raised:
@@ -294,7 +284,7 @@ class JobServiceTest(IsolatedAsyncioTestCase):
 
                 self.assertEqual(
                     raised.exception.fields,
-                    ("requirements.required_skills",),
+                    ("candidate_requirements",),
                 )
                 self.assertEqual(job.status, status)
                 db.rollback.assert_awaited_once()

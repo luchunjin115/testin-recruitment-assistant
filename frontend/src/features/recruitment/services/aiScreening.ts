@@ -9,6 +9,7 @@ import type {
   JobEvaluationPlan,
   JobEvaluationPlanStatus,
   JobEvaluationPlanWarning,
+  LegacyJobEvaluationPlanRequirements,
   RequirementAssessment,
   ScreeningBatchReassessmentResult,
   ScreeningEvidence,
@@ -20,7 +21,6 @@ import type {
   ScreeningState,
   ScreeningTriggerResult,
 } from '../types/aiScreening';
-import type { JobRequirementsV1 } from './jobs';
 
 type JobEvaluationItemResponse = {
   key: string;
@@ -55,7 +55,7 @@ type JobEvaluationPlanResponse = {
     title: string;
     department: string | null;
     description: string | null;
-    requirements: JobRequirementsV1;
+    requirements: LegacyJobEvaluationPlanRequirements;
   };
   error_code: string | null;
   error_message: string | null;

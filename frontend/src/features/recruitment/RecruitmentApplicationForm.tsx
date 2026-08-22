@@ -259,16 +259,11 @@ const RecruitmentApplicationForm: React.FC = () => {
                     <Tag>招聘中</Tag>
                   </div>
                   <div className="recruitment-apply-selected-job-copy">
-                    <div><span>岗位说明</span><p>{selectedJob.description || '该岗位暂未填写岗位说明。'}</p></div>
-                    <div>
-                      <span>任职要求</span>
-                      <p>{selectedJob.requirementSummary || '该岗位暂未填写任职要求。'}</p>
-                      {selectedJob.requiredSkills.length > 0 && (
-                        <div className="recruitment-apply-selected-job-skills">
-                          {selectedJob.requiredSkills.map(skill => <Tag key={skill}>{skill}</Tag>)}
-                        </div>
-                      )}
-                    </div>
+                    <div><span>岗位背景</span><p>{selectedJob.jobBackground || '该岗位暂未填写岗位背景。'}</p></div>
+                    <div><span>岗位职责</span><p>{selectedJob.jobResponsibilities || '该岗位暂未填写岗位职责。'}</p></div>
+                    <div><span>任职要求</span><p>{selectedJob.candidateRequirements || '该岗位暂未填写任职要求。'}</p></div>
+                    <div><span>加分项</span><p>{selectedJob.preferredQualifications || '该岗位暂未填写加分项。'}</p></div>
+                    <div><span>候选人可见备注</span><p>{selectedJob.publicNotes || '该岗位暂未填写候选人可见备注。'}</p></div>
                   </div>
                 </div>
               )}

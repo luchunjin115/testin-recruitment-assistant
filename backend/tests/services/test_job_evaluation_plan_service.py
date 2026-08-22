@@ -42,19 +42,30 @@ def make_requirements(**overrides) -> dict:
 
 
 def make_job(**overrides) -> Job:
+    legacy_description = overrides.pop(
+        "description",
+        (
+            "参与性能优化。熟悉 Redis、Kafka 优先。"
+            "公司介绍：我们提供五险一金和团建活动。"
+        ),
+    )
+    legacy_requirements = overrides.pop("requirements", make_requirements())
     values = {
         "id": 1,
         "title": "后端工程师",
         "department": "研发部",
-        "description": (
-            "参与性能优化。熟悉 Redis、Kafka 优先。"
-            "公司介绍：我们提供五险一金和团建活动。"
-        ),
-        "requirements": make_requirements(),
+        "job_background": None,
+        "job_responsibilities": "历史阶段 7 测试专用职责",
+        "candidate_requirements": "历史阶段 7 测试专用要求",
+        "preferred_qualifications": None,
+        "public_notes": None,
         "status": "open",
     }
     values.update(overrides)
-    return Job(**values)
+    job = Job(**values)
+    job.description = legacy_description
+    job.requirements = legacy_requirements
+    return job
 
 
 def ai_content(items: list[dict]) -> str:

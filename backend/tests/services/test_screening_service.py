@@ -111,6 +111,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             expire_on_commit=False,
             join_transaction_mode="create_savepoint",
         )
+        self._legacy_job_refs: list[Job] = []
         self.application = await self._create_application()
 
     async def asyncTearDown(self) -> None:
@@ -138,10 +139,18 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
                 location="上海",
                 employment_type="full_time",
                 headcount=1,
-                description="负责 Python API 开发",
-                requirements=requirements(),
+                job_background=None,
+                job_responsibilities="负责 Python API 开发",
+                candidate_requirements="具备 Python 开发经验",
+                preferred_qualifications=None,
+                public_notes=None,
                 status="open",
             )
+            job.description = "负责 Python API 开发"
+            job.requirements = requirements()
+            # Keep the test-only legacy attributes alive in SQLAlchemy's weak
+            # identity map. Production Job instances never receive them.
+            self._legacy_job_refs.append(job)
             self.db.add(job)
             await self.db.flush()
             snapshot = screening_service._sha256(

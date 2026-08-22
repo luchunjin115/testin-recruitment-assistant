@@ -1,4 +1,15 @@
-import type { JobRequirementsV1 } from '../services/jobs';
+export type LegacyJobEvaluationPlanRequirements = {
+  schema_version: '1.0';
+  responsibilities: string[];
+  required_skills: string[];
+  preferred_skills: string[];
+  minimum_work_years: number | null;
+  education_requirement: string | null;
+  required_experiences: string[];
+  preferred_experiences: string[];
+  keywords: string[];
+  additional_requirements: string[];
+};
 
 export type JobEvaluationPlanStatus = 'generating' | 'ready' | 'failed' | 'outdated';
 export type EvaluationItemCategory =
@@ -50,7 +61,7 @@ export type JobEvaluationPlan = {
     title: string;
     department: string | null;
     description: string | null;
-    requirements: JobRequirementsV1;
+    requirements: LegacyJobEvaluationPlanRequirements;
   };
   errorCode: string | null;
   errorMessage: string | null;

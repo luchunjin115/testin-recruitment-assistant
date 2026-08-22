@@ -3,25 +3,6 @@ import { v2Http } from '../../../services/http';
 
 export type JobStatus = 'draft' | 'open' | 'closed';
 export type EmploymentType = 'full_time' | 'part_time' | 'internship' | 'contract';
-export type EducationRequirement =
-  | 'none'
-  | 'associate_or_above'
-  | 'bachelor_or_above'
-  | 'master_or_above'
-  | 'doctorate';
-
-export type JobRequirementsV1 = {
-  schema_version: '1.0';
-  responsibilities: string[];
-  required_skills: string[];
-  preferred_skills: string[];
-  minimum_work_years: number | null;
-  education_requirement: EducationRequirement | null;
-  required_experiences: string[];
-  preferred_experiences: string[];
-  keywords: string[];
-  additional_requirements: string[];
-};
 
 type JobResponse = {
   id: number;
@@ -30,8 +11,11 @@ type JobResponse = {
   location: string | null;
   employment_type: EmploymentType | null;
   headcount: number | null;
-  description: string | null;
-  requirements: JobRequirementsV1;
+  job_background: string | null;
+  job_responsibilities: string | null;
+  candidate_requirements: string | null;
+  preferred_qualifications: string | null;
+  public_notes: string | null;
   status: JobStatus;
   created_at: string;
   updated_at: string;
@@ -46,8 +30,11 @@ export type RecruitmentJob = {
   location: string | null;
   employmentType: EmploymentType | null;
   headcount: number | null;
-  description: string | null;
-  requirements: JobRequirementsV1;
+  jobBackground: string | null;
+  jobResponsibilities: string | null;
+  candidateRequirements: string | null;
+  preferredQualifications: string | null;
+  publicNotes: string | null;
   status: JobStatus;
   candidateCount: number;
   createdAt: string;
@@ -69,8 +56,11 @@ export type RecruitmentJobInput = {
   location: string | null;
   employment_type: EmploymentType | null;
   headcount: number | null;
-  description: string | null;
-  requirements: JobRequirementsV1;
+  job_background: string | null;
+  job_responsibilities: string | null;
+  candidate_requirements: string | null;
+  preferred_qualifications: string | null;
+  public_notes: string | null;
 };
 
 export type RecruitmentJobCreateInput = RecruitmentJobInput & { status: 'draft' | 'open' };
@@ -90,8 +80,11 @@ const mapJob = (job: JobResponse, candidateCount = 0): RecruitmentJob => ({
   location: job.location,
   employmentType: job.employment_type,
   headcount: job.headcount,
-  description: job.description,
-  requirements: job.requirements,
+  jobBackground: job.job_background,
+  jobResponsibilities: job.job_responsibilities,
+  candidateRequirements: job.candidate_requirements,
+  preferredQualifications: job.preferred_qualifications,
+  publicNotes: job.public_notes,
   status: job.status,
   candidateCount,
   createdAt: job.created_at,

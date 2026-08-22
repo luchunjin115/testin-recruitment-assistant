@@ -27,8 +27,8 @@ def make_job(job_id: int = 1, status: str = "open") -> Job:
         location="上海",
         employment_type="full_time",
         headcount=1,
-        description="负责后端开发",
-        requirements={},
+        job_responsibilities="负责后端开发",
+        candidate_requirements="具备后端经验",
         status=status,
     )
 

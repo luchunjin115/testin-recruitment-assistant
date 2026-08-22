@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,7 +16,6 @@ from app.models.screening_report import ScreeningReport
 from app.models.screening_run import ScreeningRun
 from app.schemas.job import (
     JobCreate,
-    JobRequirementsV1,
     JobStatus,
     JobUpdate,
 )
@@ -92,8 +90,11 @@ class JobService:
         "location",
         "employment_type",
         "headcount",
-        "description",
-        "requirements",
+        "job_background",
+        "job_responsibilities",
+        "candidate_requirements",
+        "preferred_qualifications",
+        "public_notes",
     )
     _EMPLOYMENT_TYPES = {"full_time", "part_time", "internship", "contract"}
 
@@ -275,27 +276,9 @@ class JobService:
         ):
             missing.append("headcount")
 
-        if not self._is_nonempty_text(values.get("description")):
-            missing.append("description")
-
-        requirements_value = values.get("requirements")
-        if isinstance(requirements_value, JobRequirementsV1):
-            requirements = requirements_value
-        else:
-            try:
-                requirements = JobRequirementsV1.model_validate(requirements_value)
-            except ValidationError:
-                missing.append("requirements")
-                return tuple(missing)
-
-        if not requirements.responsibilities:
-            missing.append("requirements.responsibilities")
-        if not requirements.required_skills:
-            missing.append("requirements.required_skills")
-        if requirements.minimum_work_years is None:
-            missing.append("requirements.minimum_work_years")
-        if requirements.education_requirement is None:
-            missing.append("requirements.education_requirement")
+        for field in ("job_responsibilities", "candidate_requirements"):
+            if not self._is_nonempty_text(values.get(field)):
+                missing.append(field)
 
         return tuple(missing)
 

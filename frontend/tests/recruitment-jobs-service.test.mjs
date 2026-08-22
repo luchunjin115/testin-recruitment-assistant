@@ -2,19 +2,6 @@ import assert from 'node:assert/strict';
 import { createServer } from 'vite';
 
 
-const requirements = {
-  schema_version: '1.0',
-  responsibilities: ['负责岗位管理'],
-  required_skills: ['React'],
-  preferred_skills: ['TypeScript'],
-  minimum_work_years: 1,
-  education_requirement: 'bachelor_or_above',
-  required_experiences: [],
-  preferred_experiences: [],
-  keywords: ['招聘'],
-  additional_requirements: [],
-};
-
 const job = {
   id: 8,
   title: '前端工程师',
@@ -22,8 +9,11 @@ const job = {
   location: '上海',
   employment_type: 'full_time',
   headcount: 2,
-  description: '负责招聘平台前端',
-  requirements,
+  job_background: '建设新一代招聘平台',
+  job_responsibilities: '1. 负责招聘平台前端\n2. 保障交付质量',
+  candidate_requirements: '- 熟悉 React\n- 具备协作意识',
+  preferred_qualifications: '熟悉 TypeScript',
+  public_notes: '面试安排将通过邮件通知',
   status: 'draft',
   created_at: '2026-08-15T08:00:00Z',
   updated_at: '2026-08-15T09:00:00Z',
@@ -76,7 +66,11 @@ try {
   assert.equal(snapshot.draftCount, 1);
   assert.equal(snapshot.openCount, 0);
   assert.equal(snapshot.items[0].candidateCount, 1);
-  assert.deepEqual(snapshot.items[0].requirements, requirements);
+  assert.equal(snapshot.items[0].jobBackground, '建设新一代招聘平台');
+  assert.equal(snapshot.items[0].jobResponsibilities, '1. 负责招聘平台前端\n2. 保障交付质量');
+  assert.equal(snapshot.items[0].candidateRequirements, '- 熟悉 React\n- 具备协作意识');
+  assert.equal(snapshot.items[0].preferredQualifications, '熟悉 TypeScript');
+  assert.equal(snapshot.items[0].publicNotes, '面试安排将通过邮件通知');
 
   const input = {
     title: '前端工程师',
@@ -84,8 +78,11 @@ try {
     location: '上海',
     employment_type: 'full_time',
     headcount: 2,
-    description: '负责招聘平台前端',
-    requirements,
+    job_background: '建设新一代招聘平台',
+    job_responsibilities: '1. 负责招聘平台前端\n2. 保障交付质量',
+    candidate_requirements: '- 熟悉 React\n- 具备协作意识',
+    preferred_qualifications: '熟悉 TypeScript',
+    public_notes: '面试安排将通过邮件通知',
   };
   await jobsService.createRecruitmentJob({ ...input, status: 'draft' });
   await jobsService.updateRecruitmentJob(8, input);
@@ -117,13 +114,13 @@ try {
         detail: {
           code: 'JOB_OPEN_VALIDATION_FAILED',
           message: '岗位信息不完整，暂时不能开放',
-          fields: ['location', 'requirements.required_skills'],
+          fields: ['location', 'job_responsibilities', 'candidate_requirements'],
         },
       },
     },
   });
   assert.equal(parsed.code, 'JOB_OPEN_VALIDATION_FAILED');
-  assert.deepEqual(parsed.fields, ['location', 'requirements.required_skills']);
+  assert.deepEqual(parsed.fields, ['location', 'job_responsibilities', 'candidate_requirements']);
 
   console.log('RECRUITMENT_JOBS_SERVICE_TEST_OK');
 } finally {

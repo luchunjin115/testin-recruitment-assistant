@@ -3,7 +3,6 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import CheckConstraint, DateTime, Integer, String, Text, func
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -28,11 +27,11 @@ class Job(Base):
     location: Mapped[str | None] = mapped_column(String(100))
     employment_type: Mapped[str | None] = mapped_column(String(30))
     headcount: Mapped[int | None] = mapped_column(Integer)
-    description: Mapped[str | None] = mapped_column(Text)
-    requirements: Mapped[dict] = mapped_column(JSONB, nullable=False)
-    legacy_requirements: Mapped[dict | list | str | int | float | bool | None] = mapped_column(
-        JSONB(none_as_null=True),
-    )
+    job_background: Mapped[str | None] = mapped_column(Text)
+    job_responsibilities: Mapped[str | None] = mapped_column(Text)
+    candidate_requirements: Mapped[str | None] = mapped_column(Text)
+    preferred_qualifications: Mapped[str | None] = mapped_column(Text)
+    public_notes: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(
         String(20),
         default="draft",

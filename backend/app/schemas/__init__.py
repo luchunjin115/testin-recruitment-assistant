@@ -17,15 +17,11 @@ from app.schemas.candidate import CandidateCreate, CandidateRead, CandidateUpdat
 from app.schemas.education import EducationCreate, EducationRead, EducationUpdate
 from app.schemas.fairness import FAIRNESS_PROHIBITED_TERMS
 from app.schemas.job import (
-    JOB_REQUIREMENTS_SCHEMA_VERSION,
-    EducationRequirement,
     EmploymentType,
     JobCreate,
     JobRead,
-    JobRequirementsV1,
     JobStatus,
     JobUpdate,
-    empty_job_requirements_v1,
 )
 from app.schemas.project_experience import (
     ProjectExperienceCreate,

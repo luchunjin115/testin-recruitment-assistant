@@ -372,6 +372,7 @@
   color: #515e74;
   font-size: 11px;
   line-height: 1.7;
+  white-space: pre-wrap;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
 }
