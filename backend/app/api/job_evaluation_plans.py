@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import inspect
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,13 +16,28 @@ from app.services.job_evaluation_plan_service import (
     JobEvaluationPlanNotRegenerableError,
     job_evaluation_plan_service,
 )
+from app.services.screening_service import screening_service
 
 
 router = APIRouter(prefix="/jobs", tags=["job-evaluation-plans"])
-JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS = {
-    "code": "JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS",
-    "message": "岗位评价计划合同升级中，当前不能生成或重新生成",
-}
+
+
+async def _notify_screening_plan_changed(
+    db: AsyncSession,
+    job_id: int,
+    *,
+    plan_ready: bool,
+) -> None:
+    try:
+        await screening_service.after_plan_changed(
+            db,
+            job_id,
+            plan_ready=plan_ready,
+        )
+    except Exception:
+        rollback_result = db.rollback()
+        if inspect.isawaitable(rollback_result):
+            await rollback_result
 
 
 def _error(status_code: int, code: str, message: str) -> HTTPException:
@@ -79,7 +96,7 @@ async def get_current_evaluation_plan(
     db: AsyncSession = Depends(get_db),
 ) -> JobEvaluationPlanRead:
     try:
-        plan = await job_evaluation_plan_service.get_current_plan(db, job_id)
+        plan = await job_evaluation_plan_service.get_plan_for_display(db, job_id)
     except Exception as exc:
         raise _map_expected_error(exc) from exc
     if plan is None:
@@ -97,10 +114,17 @@ async def generate_current_evaluation_plan(
     job_id: int,
     db: AsyncSession = Depends(get_db),
 ) -> JobEvaluationPlanRead:
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail=JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS,
-    )
+    try:
+        plan = await job_evaluation_plan_service.generate_for_job(db, job_id)
+        response = job_evaluation_plan_service.build_read_model(plan)
+        await _notify_screening_plan_changed(
+            db,
+            job_id,
+            plan_ready=getattr(plan, "status", None) == "ready",
+        )
+        return response
+    except Exception as exc:
+        raise _map_expected_error(exc) from exc
 
 
 @router.post(
@@ -111,7 +135,14 @@ async def regenerate_failed_evaluation_plan(
     job_id: int,
     db: AsyncSession = Depends(get_db),
 ) -> JobEvaluationPlanRead:
-    raise HTTPException(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        detail=JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS,
-    )
+    try:
+        plan = await job_evaluation_plan_service.regenerate_failed_plan(db, job_id)
+        response = job_evaluation_plan_service.build_read_model(plan)
+        await _notify_screening_plan_changed(
+            db,
+            job_id,
+            plan_ready=getattr(plan, "status", None) == "ready",
+        )
+        return response
+    except Exception as exc:
+        raise _map_expected_error(exc) from exc

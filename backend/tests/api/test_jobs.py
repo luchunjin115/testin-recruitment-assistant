@@ -86,10 +86,10 @@ class JobApiTest(TestCase):
         self.assertIs(passed_db, self.db)
         self.assertIsInstance(passed_data, JobCreate)
 
-    def test_open_job_does_not_trigger_legacy_plan_generation(self) -> None:
+    def test_open_job_schedules_current_plan_generation_after_commit(self) -> None:
         opened_job = make_job(1, "后端开发工程师", status="open")
         open_mock = AsyncMock(return_value=opened_job)
-        plan_mock = AsyncMock(side_effect=AssertionError("不应进入旧计划生成"))
+        plan_mock = AsyncMock(return_value=Mock(status="ready"))
 
         with (
             patch.object(job_service, "open_job", open_mock),
@@ -104,7 +104,7 @@ class JobApiTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "open")
         open_mock.assert_awaited_once_with(self.db, 1)
-        plan_mock.assert_not_awaited()
+        plan_mock.assert_awaited_once()
 
     def test_create_open_validation_error_has_stable_422_detail(self) -> None:
         create_job_mock = AsyncMock(
@@ -240,7 +240,13 @@ class JobApiTest(TestCase):
                 action_mock = AsyncMock(
                     return_value=make_job(5, "状态岗位", status=expected_status)
                 )
-                with patch.object(job_service, method_name, action_mock):
+                with (
+                    patch.object(job_service, method_name, action_mock),
+                    patch(
+                        "app.api.jobs.generate_evaluation_plan_after_job_commit",
+                        AsyncMock(),
+                    ),
+                ):
                     response = self.client.post(f"/jobs/5/{path}")
 
                 self.assertEqual(response.status_code, 200)

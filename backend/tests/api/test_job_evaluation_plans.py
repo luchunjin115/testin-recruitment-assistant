@@ -85,6 +85,7 @@ class JobEvaluationPlanApiTest(TestCase):
         self.app = FastAPI()
         self.app.include_router(router)
         self.db = Mock()
+        self.db.rollback = AsyncMock()
 
         async def override_get_db():
             yield self.db
@@ -101,7 +102,7 @@ class JobEvaluationPlanApiTest(TestCase):
         with (
             patch.object(
                 job_evaluation_plan_service,
-                "get_current_plan",
+                "get_plan_for_display",
                 service_mock,
             ),
             patch.object(
@@ -124,13 +125,13 @@ class JobEvaluationPlanApiTest(TestCase):
 
         with patch.object(
             job_evaluation_plan_service,
-            "get_current_plan",
+            "get_plan_for_display",
             AsyncMock(return_value=None),
         ):
             response = self.client.get("/jobs/1/evaluation-plan")
         self.assert_error(response, 404, "JOB_EVALUATION_PLAN_NOT_FOUND")
 
-    def test_generate_and_regenerate_are_both_controlled_pauses(self) -> None:
+    def test_generate_and_regenerate_call_current_v3_services(self) -> None:
         generate_mock = AsyncMock(return_value=make_plan())
         regenerate_mock = AsyncMock(return_value=make_plan())
         with patch.object(
@@ -146,20 +147,12 @@ class JobEvaluationPlanApiTest(TestCase):
         ):
             regenerated = self.client.post("/jobs/1/evaluation-plan/regenerate")
 
-        self.assert_error(
-            generated,
-            503,
-            "JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS",
-        )
-        self.assert_error(
-            regenerated,
-            503,
-            "JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS",
-        )
-        generate_mock.assert_not_awaited()
-        regenerate_mock.assert_not_awaited()
+        self.assertEqual(generated.status_code, 200)
+        self.assertEqual(regenerated.status_code, 200)
+        generate_mock.assert_awaited_once_with(self.db, 1)
+        regenerate_mock.assert_awaited_once_with(self.db, 1)
 
-    def test_read_current_contract_returns_not_outdated(self) -> None:
+    def test_read_legacy_contract_returns_outdated_under_v3(self) -> None:
         plan = make_plan()
         snapshot = JobEvaluationPlanInputSnapshot.model_validate(
             plan.input_snapshot
@@ -172,33 +165,39 @@ class JobEvaluationPlanApiTest(TestCase):
 
         with patch.object(
             job_evaluation_plan_service,
-            "get_current_plan",
+            "get_plan_for_display",
             AsyncMock(return_value=plan),
         ):
             response = self.client.get("/jobs/1/evaluation-plan")
 
         self.assertEqual(response.status_code, 200)
-        self.assertFalse(response.json()["contract_outdated"])
+        self.assertTrue(response.json()["contract_outdated"])
 
-    def test_pause_precedes_legacy_business_errors(self) -> None:
+    def test_current_business_errors_are_safely_mapped(self) -> None:
         cases = (
             (
                 "/jobs/99/evaluation-plan/generate",
                 "generate_for_job",
                 JobEvaluationPlanJobNotFoundError("postgresql://private"),
+                404,
+                "JOB_NOT_FOUND",
             ),
             (
                 "/jobs/1/evaluation-plan/generate",
                 "generate_for_job",
                 JobEvaluationPlanJobNotOpenError("private"),
+                409,
+                "JOB_EVALUATION_PLAN_JOB_NOT_OPEN",
             ),
             (
                 "/jobs/1/evaluation-plan/regenerate",
                 "regenerate_failed_plan",
                 JobEvaluationPlanNotRegenerableError("private"),
+                409,
+                "JOB_EVALUATION_PLAN_NOT_REGENERABLE",
             ),
         )
-        for path, method, error in cases:
+        for path, method, error, status_code, code in cases:
             legacy_mock = AsyncMock(side_effect=error)
             with self.subTest(path=path), patch.object(
                 job_evaluation_plan_service,
@@ -206,12 +205,8 @@ class JobEvaluationPlanApiTest(TestCase):
                 legacy_mock,
             ):
                 response = self.client.post(path)
-            self.assert_error(
-                response,
-                503,
-                "JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS",
-            )
-            legacy_mock.assert_not_awaited()
+            self.assert_error(response, status_code, code)
+            legacy_mock.assert_awaited_once()
             self.assertNotIn("private", response.text)
             self.assertNotIn("postgresql", response.text)
 
@@ -224,12 +219,8 @@ class JobEvaluationPlanApiTest(TestCase):
         ):
             response = self.client.post("/jobs/1/evaluation-plan/generate")
 
-        self.assert_error(
-            response,
-            503,
-            "JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS",
-        )
-        legacy_mock.assert_not_awaited()
+        self.assert_error(response, 500, "JOB_EVALUATION_PLAN_OPERATION_FAILED")
+        legacy_mock.assert_awaited_once()
         self.assertNotIn("secret", response.text)
 
     def test_openapi_and_main_app_use_nested_api_v2_job_style(self) -> None:

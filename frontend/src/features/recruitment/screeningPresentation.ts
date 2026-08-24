@@ -6,6 +6,7 @@ import type {
   ScreeningOutdatedReason,
   ScreeningRunStatus,
   ScreeningState,
+  ScreeningWaitingReason,
 } from './types/aiScreening';
 
 export const SCREENING_POLL_INTERVAL_MS = 4_000;
@@ -80,7 +81,38 @@ export const SCREENING_STATUS_META: Record<
 export const OUTDATED_REASON_LABELS: Record<ScreeningOutdatedReason, string> = {
   resume_changed: '当前 Resume 已变化',
   jd_changed: '岗位 JD 已变化',
+  job_evaluation_input_changed: '岗位评价输入已变化',
   evaluation_plan_changed: '当前评价计划已变化',
+};
+
+export const SCREENING_WAITING_REASON_META: Record<
+  ScreeningWaitingReason,
+  { label: string; description: string }
+> = {
+  job_closed: {
+    label: '岗位已关闭',
+    description: '岗位关闭后不会开始新的 AI 评估，已有历史报告仍可查看。',
+  },
+  plan_missing: {
+    label: '尚无评价计划',
+    description: '请先到岗位页面生成当前 JD 的五段式评价计划。',
+  },
+  plan_generating: {
+    label: '评价计划生成中',
+    description: '计划完成后系统会自动续跑等待中的申请，无需重复点击。',
+  },
+  plan_failed: {
+    label: '评价计划生成失败',
+    description: '请到岗位页面查看安全错误提示，重试生成或修改 JD。',
+  },
+  plan_outdated: {
+    label: '评价计划基于旧 JD',
+    description: '请按当前 JD 生成新计划；旧计划只用于解释历史结果。',
+  },
+  plan_contract_outdated: {
+    label: '评价计划使用旧合同',
+    description: '请按五段式新规则生成 3.0 计划，旧合同计划不能用于新申请。',
+  },
 };
 
 export const PRIORITY_LABELS: Record<EvaluationItemPriority, string> = {

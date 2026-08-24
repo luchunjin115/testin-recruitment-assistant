@@ -13,12 +13,16 @@ from app.adapters.job_evaluation_plan import (
 from app.core.config import Settings
 from app.models.job import Job
 from app.models.job_evaluation_plan import JobEvaluationPlan
-from app.schemas.job_evaluation_plan import JobEvaluationPlanWarning
+from app.schemas.job_evaluation_plan import (
+    JobEvaluationPlanInputSnapshot,
+    JobEvaluationPlanWarning,
+)
 from app.services.job_evaluation_plan_service import (
     JobEvaluationPlanContentError,
     JobEvaluationPlanNotRegenerableError,
     JobEvaluationPlanService,
 )
+from tests.fixtures.job_evaluation_plan_v3 import make_plan_read
 
 
 NOW = datetime(2026, 8, 20, 12, 0, tzinfo=timezone.utc)
@@ -162,6 +166,9 @@ def make_settings() -> Settings:
         _env_file=None,
         DEEPSEEK_API_KEY="test-key",
         JOB_EVALUATION_PLAN_MODEL="fake-deepseek",
+        JOB_EVALUATION_PLAN_PROMPT_VERSION="job_evaluation_plan_v4",
+        JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION="2.0",
+        JOB_EVALUATION_PLAN_SCHEMA_VERSION="2.0",
     )
 
 
@@ -594,8 +601,9 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
 
         self.assertIs(result, existing)
         self.assertEqual(adapter.calls, [])
-        db.commit.assert_not_awaited()
-        db.rollback.assert_awaited_once()
+        db.commit.assert_awaited_once()
+        db.refresh.assert_awaited_once_with(existing)
+        db.rollback.assert_not_awaited()
 
     async def test_same_jd_new_breaking_contract_creates_new_plan_row(self) -> None:
         job = make_job()
@@ -991,10 +999,10 @@ class JobEvaluationPlanContractOutdatedTest(IsolatedAsyncioTestCase):
         values.update(overrides)
         return JobEvaluationPlan(**values)
 
-    def test_current_contract_is_not_outdated_and_each_legacy_axis_is_outdated(
+    def test_every_legacy_contract_axis_is_outdated_under_v3(
         self,
     ) -> None:
-        self.assertFalse(
+        self.assertTrue(
             self.service.is_contract_outdated(self.make_contract_plan())
         )
         self.assertTrue(
@@ -1013,6 +1021,23 @@ class JobEvaluationPlanContractOutdatedTest(IsolatedAsyncioTestCase):
             )
         )
 
+    def test_current_v3_plan_reads_without_rewriting_history(self) -> None:
+        payload = make_plan_read()
+        payload.pop("contract_outdated")
+        snapshot = JobEvaluationPlanInputSnapshot.model_validate(
+            payload["input_snapshot"]
+        )
+        payload["input_fingerprint"] = self.service.fingerprint_input(snapshot)
+        plan = JobEvaluationPlan(**payload)
+
+        read_model = self.service.build_read_model(plan)
+
+        self.assertEqual(read_model.schema_version, "3.0")
+        self.assertFalse(read_model.contract_outdated)
+        self.assertTrue(read_model.source_review_summary.all_reviewed)
+        self.assertIsNone(plan.structured_coverage)
+        self.assertIsNone(plan.free_text_coverage)
+
     async def test_read_only_lookup_does_not_write_or_generate(self) -> None:
         job = make_job()
         plan = self.make_contract_plan()
@@ -1022,6 +1047,23 @@ class JobEvaluationPlanContractOutdatedTest(IsolatedAsyncioTestCase):
         result = await self.service.get_current_plan(db, job.id)
 
         self.assertIs(result, plan)
+        db.add.assert_not_called()
+        db.flush.assert_not_awaited()
+        db.commit.assert_not_awaited()
+        db.rollback.assert_not_awaited()
+
+    async def test_display_lookup_falls_back_to_latest_historical_plan(self) -> None:
+        job = make_job()
+        historical = self.make_contract_plan()
+        historical.status = "outdated"
+        historical.is_current = False
+        db = make_session(None, historical)
+        db.get.return_value = job
+
+        result = await self.service.get_plan_for_display(db, job.id)
+
+        self.assertIs(result, historical)
+        self.assertEqual(db.scalar.await_count, 2)
         db.add.assert_not_called()
         db.flush.assert_not_awaited()
         db.commit.assert_not_awaited()

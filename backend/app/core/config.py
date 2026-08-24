@@ -87,17 +87,17 @@ class Settings(BaseSettings):
         le=384_000,
     )
     JOB_EVALUATION_PLAN_PROMPT_VERSION: str = Field(
-        default="job_evaluation_plan_v4",
+        default="job_evaluation_plan_v5",
         min_length=1,
         max_length=100,
     )
     JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION: str = Field(
-        default="2.0",
+        default="3.0",
         min_length=1,
         max_length=20,
     )
     JOB_EVALUATION_PLAN_SCHEMA_VERSION: str = Field(
-        default="2.0",
+        default="3.0",
         min_length=1,
         max_length=20,
     )

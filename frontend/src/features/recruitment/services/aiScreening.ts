@@ -6,9 +6,12 @@ import type {
   EvaluationItemCategory,
   EvaluationItemPriority,
   EvaluationItemSourceType,
+  FiveSectionSourceField,
   JobEvaluationPlan,
+  JobEvaluationPlanInputSnapshot,
   JobEvaluationPlanStatus,
   JobEvaluationPlanWarning,
+  JobEvaluationPlanWarningCode,
   LegacyJobEvaluationPlanRequirements,
   RequirementAssessment,
   ScreeningBatchReassessmentResult,
@@ -20,16 +23,81 @@ import type {
   ScreeningRunTriggerType,
   ScreeningState,
   ScreeningTriggerResult,
+  ScreeningWaitingReason,
 } from '../types/aiScreening';
+
+type JobEvaluationItemSourceResponse = {
+  source_field: FiveSectionSourceField;
+  source_unit_id: string;
+  source_quote: string;
+};
 
 type JobEvaluationItemResponse = {
   key: string;
   title: string;
   category: EvaluationItemCategory;
   priority: EvaluationItemPriority;
-  source_type: EvaluationItemSourceType;
-  source_field: string | null;
-  source_quote: string | null;
+  sources?: JobEvaluationItemSourceResponse[];
+  source_type?: EvaluationItemSourceType | null;
+  source_field?: string | null;
+  source_quote?: string | null;
+};
+
+type JobEvaluationPlanWarningResponse = 'limited_basis' | {
+  code: JobEvaluationPlanWarningCode;
+  message: string;
+  source_unit_ids: string[];
+};
+
+type JobEvaluationPlanSourceReviewSummaryResponse = {
+  rule_version: 'five_section_source_units_v1';
+  total_units: number;
+  reviewed_units: number;
+  evaluation_units: number;
+  non_evaluation_units: number;
+  all_reviewed: boolean;
+  units: Array<{
+    source_unit_id: string;
+    disposition: 'evaluation' | 'non_evaluation';
+    non_evaluation_reason:
+      | 'company_info'
+      | 'benefit'
+      | 'promotion'
+      | 'recruitment_process'
+      | 'candidate_note'
+      | 'context'
+      | 'other'
+      | null;
+    item_keys: string[];
+  }>;
+};
+
+type LegacyJobEvaluationPlanInputSnapshotResponse = {
+  job_id: number;
+  title: string;
+  department: string | null;
+  description: string | null;
+  requirements: LegacyJobEvaluationPlanRequirements;
+};
+
+type JobEvaluationPlanInputSnapshotV3Response = {
+  schema_version: '3.0';
+  job_context: {
+    title: string;
+    department: string | null;
+    job_background: string | null;
+  };
+  evaluation_fields: {
+    job_responsibilities: string | null;
+    candidate_requirements: string | null;
+    preferred_qualifications: string | null;
+  };
+  source_units: Array<{
+    source_unit_id: string;
+    source_field: FiveSectionSourceField;
+    ordinal: number;
+    source_text: string;
+  }>;
 };
 
 type JobEvaluationPlanResponse = {
@@ -39,24 +107,21 @@ type JobEvaluationPlanResponse = {
   status: JobEvaluationPlanStatus;
   is_current: boolean;
   items: JobEvaluationItemResponse[];
-  structured_coverage: {
+  structured_coverage?: {
     source_schema_version: string;
     fields: Array<{ source_field: string; source_value_count: number; item_keys: string[] }>;
     all_covered: boolean;
   };
-  warnings: JobEvaluationPlanWarning[];
+  source_review_summary?: JobEvaluationPlanSourceReviewSummaryResponse;
+  warnings: JobEvaluationPlanWarningResponse[];
   prompt_version: string;
   model_version: string;
-  schema_version: '1.0' | '2.0';
+  schema_version: '1.0' | '2.0' | '3.0';
   input_fingerprint: string;
   contract_outdated: boolean;
-  input_snapshot: {
-    job_id: number;
-    title: string;
-    department: string | null;
-    description: string | null;
-    requirements: LegacyJobEvaluationPlanRequirements;
-  };
+  input_snapshot:
+    | LegacyJobEvaluationPlanInputSnapshotResponse
+    | JobEvaluationPlanInputSnapshotV3Response;
   error_code: string | null;
   error_message: string | null;
   created_at: string;
@@ -117,6 +182,7 @@ type ScreeningRunResponse = {
   job_evaluation_plan_id: number | null;
   trigger_type: ScreeningRunTriggerType;
   status: ScreeningRunStatus;
+  waiting_reason: ScreeningWaitingReason | null;
   input_fingerprint: string;
   prompt_version: string;
   model_version: string;
@@ -174,6 +240,40 @@ const mapBonusHighlight = (value: BonusHighlightResponse): BonusHighlight => ({
   evidence: value.evidence.map(mapEvidence),
 });
 
+const mapInputSnapshot = (
+  value: JobEvaluationPlanResponse['input_snapshot'],
+): JobEvaluationPlanInputSnapshot => {
+  if ('schema_version' in value && value.schema_version === '3.0') {
+    return {
+      schemaVersion: value.schema_version,
+      jobContext: {
+        title: value.job_context.title,
+        department: value.job_context.department,
+        jobBackground: value.job_context.job_background,
+      },
+      evaluationFields: {
+        jobResponsibilities: value.evaluation_fields.job_responsibilities,
+        candidateRequirements: value.evaluation_fields.candidate_requirements,
+        preferredQualifications: value.evaluation_fields.preferred_qualifications,
+      },
+      sourceUnits: value.source_units.map(unit => ({
+        sourceUnitId: unit.source_unit_id,
+        sourceField: unit.source_field,
+        ordinal: unit.ordinal,
+        sourceText: unit.source_text,
+      })),
+    };
+  }
+  const legacy = value as LegacyJobEvaluationPlanInputSnapshotResponse;
+  return {
+    jobId: legacy.job_id,
+    title: legacy.title,
+    department: legacy.department,
+    description: legacy.description,
+    requirements: legacy.requirements,
+  };
+};
+
 export const mapJobEvaluationPlan = (value: JobEvaluationPlanResponse): JobEvaluationPlan => ({
   id: value.id,
   jobId: value.job_id,
@@ -185,11 +285,18 @@ export const mapJobEvaluationPlan = (value: JobEvaluationPlanResponse): JobEvalu
     title: item.title,
     category: item.category,
     priority: item.priority,
-    sourceType: item.source_type,
-    sourceField: item.source_field,
-    sourceQuote: item.source_quote,
+    sources: (item.sources ?? []).map(source => ({
+      sourceField: source.source_field,
+      sourceUnitId: source.source_unit_id,
+      sourceQuote: source.source_quote,
+    })),
+    historicalSource: item.source_type ? {
+      kind: item.source_type,
+      field: item.source_field ?? null,
+      quote: item.source_quote ?? null,
+    } : null,
   })),
-  structuredCoverage: {
+  structuredCoverage: value.structured_coverage ? {
     sourceSchemaVersion: value.structured_coverage.source_schema_version,
     fields: value.structured_coverage.fields.map(field => ({
       sourceField: field.source_field,
@@ -197,20 +304,36 @@ export const mapJobEvaluationPlan = (value: JobEvaluationPlanResponse): JobEvalu
       itemKeys: field.item_keys,
     })),
     allCovered: value.structured_coverage.all_covered,
-  },
-  warnings: value.warnings,
+  } : null,
+  sourceReviewSummary: value.source_review_summary ? {
+    ruleVersion: value.source_review_summary.rule_version,
+    totalUnits: value.source_review_summary.total_units,
+    reviewedUnits: value.source_review_summary.reviewed_units,
+    evaluationUnits: value.source_review_summary.evaluation_units,
+    nonEvaluationUnits: value.source_review_summary.non_evaluation_units,
+    allReviewed: value.source_review_summary.all_reviewed,
+    units: value.source_review_summary.units.map(unit => ({
+      sourceUnitId: unit.source_unit_id,
+      disposition: unit.disposition,
+      nonEvaluationReason: unit.non_evaluation_reason,
+      itemKeys: unit.item_keys,
+    })),
+  } : null,
+  warnings: value.warnings.map((warning): JobEvaluationPlanWarning => (
+    typeof warning === 'string'
+      ? warning
+      : {
+        code: warning.code,
+        message: warning.message,
+        sourceUnitIds: warning.source_unit_ids,
+      }
+  )),
   promptVersion: value.prompt_version,
   modelVersion: value.model_version,
   schemaVersion: value.schema_version,
   inputFingerprint: value.input_fingerprint,
   contractOutdated: value.contract_outdated,
-  inputSnapshot: {
-    jobId: value.input_snapshot.job_id,
-    title: value.input_snapshot.title,
-    department: value.input_snapshot.department,
-    description: value.input_snapshot.description,
-    requirements: value.input_snapshot.requirements,
-  },
+  inputSnapshot: mapInputSnapshot(value.input_snapshot),
   errorCode: value.error_code,
   errorMessage: value.error_message,
   createdAt: value.created_at,
@@ -257,6 +380,7 @@ const mapScreeningRun = (value: ScreeningRunResponse): ScreeningRun => ({
   jobEvaluationPlanId: value.job_evaluation_plan_id,
   triggerType: value.trigger_type,
   status: value.status,
+  waitingReason: value.waiting_reason,
   inputFingerprint: value.input_fingerprint,
   promptVersion: value.prompt_version,
   modelVersion: value.model_version,

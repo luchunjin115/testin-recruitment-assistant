@@ -47,7 +47,7 @@ const report = {
 };
 const run = {
   id: 61, application_id: 11, job_id: 7, resume_id: 5, job_evaluation_plan_id: 41,
-  trigger_type: 'single_reassessment', status: 'queued', input_fingerprint: 'f'.repeat(64),
+  trigger_type: 'single_reassessment', status: 'queued', waiting_reason: null, input_fingerprint: 'f'.repeat(64),
   prompt_version: 'screening_evaluation_v3', model_version: 'fake-screen', schema_version: '2.0', redaction_version: 'redact-v1',
   evaluation_reference_at: '2026-08-19T16:00:00Z', evaluation_timezone: 'Asia/Shanghai',
   experience_period_facts_rule_version: 'experience_period_facts_v1',
@@ -91,7 +91,8 @@ try {
   };
 
   const mappedPlan = await service.getJobEvaluationPlan(7);
-  assert.equal(mappedPlan.items[0].sourceField, 'requirements.required_skills');
+  assert.equal(mappedPlan.items[0].historicalSource.field, 'requirements.required_skills');
+  assert.deepEqual(mappedPlan.items[0].sources, []);
   assert.equal(mappedPlan.structuredCoverage.allCovered, true);
   assert.equal(mappedPlan.contractOutdated, true);
   assert.equal('freeTextCoverage' in mappedPlan, false);
@@ -110,6 +111,7 @@ try {
   assert.equal(state.report.bonusHighlights[0].evidence[0].section, '项目经历');
   assert.deepEqual(state.report.outdatedReasons, ['resume_changed']);
   assert.equal(state.latestRun.status, 'queued');
+  assert.equal(state.latestRun.waitingReason, null);
   assert.equal(state.latestRun.triggerType, 'single_reassessment');
   assert.equal(state.latestRun.evaluationReferenceAt, '2026-08-19T16:00:00Z');
   assert.equal(state.latestRun.experiencePeriodFactsFingerprint, '1'.repeat(64));

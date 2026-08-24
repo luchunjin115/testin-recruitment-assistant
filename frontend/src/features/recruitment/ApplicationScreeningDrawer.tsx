@@ -17,6 +17,7 @@ import type { JobStatus } from './services/jobs';
 import {
   SCREENING_POLL_INTERVAL_MS,
   SCREENING_STATUS_META,
+  SCREENING_WAITING_REASON_META,
   shouldApplyScreeningResponse,
   shouldPollScreeningStatus,
 } from './screeningPresentation';
@@ -156,6 +157,10 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
   const run = state?.latestRun ?? null;
   const report = state?.report ?? null;
   const polling = shouldPollScreeningStatus(run?.status);
+  const waitingReason = run?.waitingReason ?? null;
+  const waitingReasonMeta = waitingReason
+    ? SCREENING_WAITING_REASON_META[waitingReason]
+    : null;
   const actionDisabled = jobStatus === 'closed' || polling;
   const actionDisabledReason = jobStatus === 'closed'
     ? '岗位关闭时不能开始或重新评估'
@@ -223,6 +228,9 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
           description={(
             <div className="recruitment-run-state-copy">
               <span>{SCREENING_STATUS_META[run.status].description}</span>
+              {waitingReasonMeta && (
+                <strong>{waitingReasonMeta.label}：{waitingReasonMeta.description}</strong>
+              )}
               {run.errorCode && <Tag>{run.errorCode}</Tag>}
               {run.errorMessage && <span>{run.errorMessage}</span>}
               {report && (run.status === 'queued' || run.status === 'running' || run.status === 'failed') && (

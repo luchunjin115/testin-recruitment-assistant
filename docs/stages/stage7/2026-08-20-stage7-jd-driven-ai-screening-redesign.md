@@ -2,9 +2,9 @@
 
 > 日期：2026-08-20
 >
-> 状态：原阶段 7 方案及 `Application.applied_at` 固定评价基准整改已实现，9-I 已完成但 JD 门禁未通过。阶段 6 五段式 JD 已于 2026-08-22 完成 6R-A—6R-D 并通过验收；五段式评价计划 3.0 与 7R-A—7R-H 已写入 `2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md` 草案，当前等待用户最终复核，确认前不得实施 7R-A、恢复旧步骤 9—13 或调用真实模型
+> 状态：原阶段 7 方案及 `Application.applied_at` 固定评价基准整改已实现，9-I 已完成但旧 JD 门禁未通过。阶段 6 五段式 JD 已完成并通过验收；五段式评价计划 3.0 与 7R-A—7R-H 已由 `2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md` 接管。7R-A—7R-D 已完成，7R-E 已按“浏览器门禁延期至 7R-H”有条件结束；当前停止并等待用户重新确认后进入 7R-F
 >
-> 当前权威性：本文继续负责已实现的 Application、Resume、报告、异步运行、时间事实和 HR 决策边界；五段式 JobEvaluationPlan 输入、生成、恢复门禁、质量样本和后续顺序以待最终确认的 `2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md` 为准。本文仍替代 `../../archive/superseded/2026-08-17-stage7-application-ai-screening-design.md` 中的旧 Rubric 方案
+> 当前权威性：本文继续负责已实现的 Application、Resume、报告、异步运行、时间事实和 HR 决策边界；五段式 JobEvaluationPlan 输入、生成、恢复门禁、质量样本、7R-E 浏览器欠账和后续顺序以已确认的 `2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md` 为准。本文仍替代 `../../archive/superseded/2026-08-17-stage7-application-ai-screening-design.md` 中的旧 Rubric 方案
 >
 > 上游依据：`../../architecture/2026-07-15-hr-agent-platform-design.md`、`../../planning/2026-08-14-post-stage5-product-roadmap.md`、`../../planning/implementation-plan.md`
 
@@ -40,7 +40,7 @@ React 渲染完整报告，HR 独立作出招聘决定
 
 该变化会使本文第 4.1、5.1、6、20.1、21.1 和小步骤 9 中依赖旧 Job 输入的合同失效，但不会自动推翻已经完成的 Application、Resume、投递时间、异步运行、报告替换、证据安全和 HR 决策边界。
 
-阶段 6 已完成五段式 Job、空库 migration、React 页面和真实浏览器验收。受控暂停继续有效：岗位管理可以正常保存和开放，但旧 JobEvaluationPlan 不得读取新 Job 后继续生成计划；后端生成/重新生成固定返回合同升级中的 503，页面也不再提供旧写入口。下列业务问题已经完成讨论并写入新的独立草案：
+阶段 6 已完成五段式 Job、空库 migration、React 页面和真实浏览器验收。旧 JobEvaluationPlan 暂停方式已完成历史使命，当前生成、Screening 和 React 恢复进度由五段式新设计记录。下列业务问题已经完成讨论并写入新的独立权威补充：
 
 - 岗位背景只作上下文；
 - 岗位职责产生 `general` 事项；
@@ -49,7 +49,7 @@ React 渲染完整报告，HR 独立作出招聘决定
 - 候选人可见备注不进入 Prompt、不参与评价；
 - 新的原文切片、追溯、去重、数量边界、指纹、计划过期与质量样本。
 
-详细上游合同和 6R-A—6R-D 实施结果见 `../stage6/2026-08-21-stage6-five-section-jd-remediation-design.md` 与 `../stage6/2026-08-22-stage6-five-section-jd-remediation-acceptance.md`；五段式新合同见 `2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md`。新草案获得用户最终确认前，本文后续旧 JD 细节只保留为已实现历史，不得直接作为新代码依据。
+详细上游合同和 6R-A—6R-D 实施结果见 `../stage6/2026-08-21-stage6-five-section-jd-remediation-design.md` 与 `../stage6/2026-08-22-stage6-five-section-jd-remediation-acceptance.md`；五段式当前合同见 `2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md`。本文后续旧 JD 细节只保留为已实现历史，不得直接作为新代码依据。
 
 ## 2. 已废弃的阶段 7 评分方案
 
@@ -822,7 +822,9 @@ JD 形成可用评价计划
 
 ## 23. 实施顺序
 
-> 继承说明：本节小步骤 1—13 记录旧 `description + JobRequirementsV1` 合同的历史实施顺序，不能继续作为五段式恢复计划。新的实施顺序是待用户最终确认的 `2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md` 第 17 节 7R-A—7R-H；确认后也必须逐批执行和停止。
+> 继承说明：本节小步骤 1—13 记录旧 `description + JobRequirementsV1` 合同的历史实施顺序，不能继续作为五段式恢复计划。当前实施顺序以已确认的 `2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md` 第 17 节 7R-A—7R-H 为准；仍必须逐批执行和停止。
+
+2026-08-22 门槛调整：7R-E 的代码、自动化、构建和真实 PostgreSQL/API 验证结果已接受，7R-E 以“浏览器门禁延期至 7R-H”的方式有条件结束。三档尺寸、draft/open missing/generating/ready/failed/outdated/legacy/closed 八种状态、键盘/焦点、实际轮询停止、页面溢出和危险文本浏览器验收均未执行，必须继续记录为“未验证”，不得写成通过或永久删除。7R-H 必须逐项补回全部欠账，任何失败、未验证或阻塞都会阻止阶段 7 完成。当前唯一下一步是停止并等待用户重新确认后进入 7R-F；本轮不进入 7R-F，不调用真实 DeepSeek。
 
 ### 小步骤 1：文档门禁
 

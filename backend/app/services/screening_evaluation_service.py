@@ -791,8 +791,24 @@ class ScreeningEvaluationService:
         snapshot: JobEvaluationPlanInputSnapshot,
         evaluation_plan: list[JobEvaluationItem],
     ) -> str:
-        values = [snapshot.title, snapshot.department or "", snapshot.description or ""]
-        requirements = snapshot.requirements.model_dump(mode="json")
+        if snapshot.schema_version == "3.0":
+            assert snapshot.job_context is not None
+            assert snapshot.evaluation_fields is not None
+            values = [
+                snapshot.job_context.title,
+                snapshot.job_context.department or "",
+                snapshot.job_context.job_background or "",
+            ]
+            requirements: Any = snapshot.evaluation_fields.model_dump(mode="json")
+        else:
+            assert snapshot.title is not None
+            assert snapshot.requirements is not None
+            values = [
+                snapshot.title,
+                snapshot.department or "",
+                snapshot.description or "",
+            ]
+            requirements = snapshot.requirements.model_dump(mode="json")
 
         def collect(value: Any) -> None:
             if isinstance(value, str):

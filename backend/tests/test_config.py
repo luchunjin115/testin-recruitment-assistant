@@ -56,10 +56,10 @@ class SettingsTest(TestCase):
         self.assertEqual(settings.JOB_EVALUATION_PLAN_MAX_OUTPUT_TOKENS, 8_000)
         self.assertEqual(
             settings.JOB_EVALUATION_PLAN_PROMPT_VERSION,
-            "job_evaluation_plan_v4",
+            "job_evaluation_plan_v5",
         )
-        self.assertEqual(settings.JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION, "2.0")
-        self.assertEqual(settings.JOB_EVALUATION_PLAN_SCHEMA_VERSION, "2.0")
+        self.assertEqual(settings.JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION, "3.0")
+        self.assertEqual(settings.JOB_EVALUATION_PLAN_SCHEMA_VERSION, "3.0")
 
     def test_job_evaluation_plan_rejects_unsafe_numeric_configuration(self) -> None:
         invalid_values = {

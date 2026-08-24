@@ -41,9 +41,28 @@ class JobEvaluationPlan(Base):
             name="ck_job_evaluation_plans_free_text_coverage_object",
         ),
         CheckConstraint(
+            "source_review_summary IS NULL "
+            "OR jsonb_typeof(source_review_summary) = 'object'",
+            name="ck_job_evaluation_plans_source_review_summary_object",
+        ),
+        CheckConstraint(
+            "schema_version IN ('1.0', '2.0', '3.0')",
+            name="ck_job_evaluation_plans_schema_version_allowed",
+        ),
+        CheckConstraint(
             "schema_version <> '2.0' OR status <> 'ready' "
             "OR free_text_coverage IS NOT NULL",
             name="ck_job_evaluation_plans_v2_ready_has_free_text_coverage",
+        ),
+        CheckConstraint(
+            "schema_version <> '3.0' OR status <> 'ready' "
+            "OR source_review_summary IS NOT NULL",
+            name="ck_job_evaluation_plans_v3_ready_has_source_review_summary",
+        ),
+        CheckConstraint(
+            "schema_version <> '3.0' OR "
+            "(structured_coverage IS NULL AND free_text_coverage IS NULL)",
+            name="ck_job_evaluation_plans_v3_has_no_legacy_coverage",
         ),
         Index("ix_job_evaluation_plans_job_id", "job_id"),
         Index("ix_job_evaluation_plans_status", "status"),
@@ -79,14 +98,13 @@ class JobEvaluationPlan(Base):
         default=list,
         server_default=text("'[]'::jsonb"),
     )
-    structured_coverage: Mapped[dict] = mapped_column(
+    structured_coverage: Mapped[dict | None] = mapped_column(
         JSONB,
-        nullable=False,
-        default=dict,
-        server_default=text("'{}'::jsonb"),
+        nullable=True,
     )
     free_text_coverage: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    warnings: Mapped[list[str]] = mapped_column(
+    source_review_summary: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    warnings: Mapped[list[str | dict]] = mapped_column(
         JSONB,
         nullable=False,
         default=list,

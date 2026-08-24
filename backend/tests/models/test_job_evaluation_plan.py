@@ -15,8 +15,9 @@ class JobEvaluationPlanModelTest(TestCase):
             "jobs.id",
         )
         self.assertFalse(table.c["items"].nullable)
-        self.assertFalse(table.c.structured_coverage.nullable)
+        self.assertTrue(table.c.structured_coverage.nullable)
         self.assertTrue(table.c.free_text_coverage.nullable)
+        self.assertTrue(table.c.source_review_summary.nullable)
         self.assertNotIn("contract_outdated", table.c)
         self.assertFalse(table.c.input_snapshot.nullable)
         self.assertEqual(table.c.jd_fingerprint.type.length, 64)
@@ -40,6 +41,22 @@ class JobEvaluationPlanModelTest(TestCase):
         )
         self.assertIn(
             "ck_job_evaluation_plans_v2_ready_has_free_text_coverage",
+            constraint_names,
+        )
+        self.assertIn(
+            "ck_job_evaluation_plans_source_review_summary_object",
+            constraint_names,
+        )
+        self.assertIn(
+            "ck_job_evaluation_plans_schema_version_allowed",
+            constraint_names,
+        )
+        self.assertIn(
+            "ck_job_evaluation_plans_v3_ready_has_source_review_summary",
+            constraint_names,
+        )
+        self.assertIn(
+            "ck_job_evaluation_plans_v3_has_no_legacy_coverage",
             constraint_names,
         )
         self.assertIn(

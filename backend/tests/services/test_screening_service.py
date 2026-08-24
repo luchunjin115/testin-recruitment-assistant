@@ -649,7 +649,10 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             settings=self.settings,
             clock=lambda: NOW,
         )
-        self.assertEqual(failed.error_code, "SCREENING_RUN_SUPERSEDED")
+        self.assertEqual(
+            failed.error_code,
+            "SCREENING_INPUT_OUTDATED_DURING_RUN",
+        )
         self.assertEqual(len(adapter.calls), 0)
         self.assertIsNone(
             await self.db.scalar(
@@ -852,6 +855,9 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             _env_file=None,
             DEEPSEEK_API_KEY="test-key",
             JOB_EVALUATION_PLAN_MODEL="fake-plan-model-v2",
+            JOB_EVALUATION_PLAN_PROMPT_VERSION="job_evaluation_plan_v4",
+            JOB_EVALUATION_PLAN_SCHEMA_VERSION="2.0",
+            JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION="2.0",
         )
 
         new_plan = await job_evaluation_plan_service.generate_for_job(

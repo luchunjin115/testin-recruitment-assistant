@@ -41,6 +41,14 @@ class ScreeningRun(Base):
             name="ck_screening_runs_status_allowed",
         ),
         CheckConstraint(
+            "waiting_reason IS NULL OR "
+            "(status = 'waiting_plan' AND waiting_reason IN "
+            "('plan_missing', 'plan_generating', 'plan_failed', "
+            "'plan_outdated', 'plan_contract_outdated')) OR "
+            "(status = 'paused' AND waiting_reason = 'job_closed')",
+            name="ck_screening_runs_waiting_reason_matches_status",
+        ),
+        CheckConstraint(
             "attempt_count BETWEEN 0 AND 2",
             name="ck_screening_runs_attempt_count_range",
         ),
@@ -97,6 +105,7 @@ class ScreeningRun(Base):
     )
     trigger_type: Mapped[str] = mapped_column(String(30), nullable=False)
     status: Mapped[str] = mapped_column(String(30), nullable=False, index=True)
+    waiting_reason: Mapped[str | None] = mapped_column(String(50))
     input_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(100), nullable=False)
     model_version: Mapped[str] = mapped_column(String(100), nullable=False)

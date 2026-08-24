@@ -26,9 +26,19 @@ class ScreeningRunStatus(str, Enum):
     PAUSED = "paused"
 
 
+class ScreeningWaitingReason(str, Enum):
+    JOB_CLOSED = "job_closed"
+    PLAN_MISSING = "plan_missing"
+    PLAN_GENERATING = "plan_generating"
+    PLAN_FAILED = "plan_failed"
+    PLAN_OUTDATED = "plan_outdated"
+    PLAN_CONTRACT_OUTDATED = "plan_contract_outdated"
+
+
 class ScreeningOutdatedReason(str, Enum):
     RESUME_CHANGED = "resume_changed"
     JD_CHANGED = "jd_changed"
+    JOB_EVALUATION_INPUT_CHANGED = "job_evaluation_input_changed"
     EVALUATION_PLAN_CHANGED = "evaluation_plan_changed"
 
 
@@ -105,6 +115,7 @@ class ScreeningRunRead(BaseModel):
     job_evaluation_plan_id: PositiveId | None
     trigger_type: ScreeningRunTriggerType
     status: ScreeningRunStatus
+    waiting_reason: ScreeningWaitingReason | None = None
     input_fingerprint: Fingerprint
     prompt_version: VersionText
     model_version: VersionText
@@ -130,6 +141,29 @@ class ScreeningRunRead(BaseModel):
         extra="forbid",
         protected_namespaces=(),
     )
+
+    @model_validator(mode="after")
+    def validate_waiting_reason(self) -> ScreeningRunRead:
+        plan_reasons = {
+            ScreeningWaitingReason.PLAN_MISSING,
+            ScreeningWaitingReason.PLAN_GENERATING,
+            ScreeningWaitingReason.PLAN_FAILED,
+            ScreeningWaitingReason.PLAN_OUTDATED,
+            ScreeningWaitingReason.PLAN_CONTRACT_OUTDATED,
+        }
+        if self.waiting_reason in plan_reasons:
+            if self.status is not ScreeningRunStatus.WAITING_PLAN:
+                raise ValueError("评价计划等待原因只能用于 waiting_plan")
+        elif self.waiting_reason is ScreeningWaitingReason.JOB_CLOSED:
+            if self.status is not ScreeningRunStatus.PAUSED:
+                raise ValueError("job_closed 只能用于 paused")
+        elif self.status in {
+            ScreeningRunStatus.WAITING_PLAN,
+            ScreeningRunStatus.PAUSED,
+        }:
+            # Historical rows created before 7R-D may not have a reason.
+            return self
+        return self
 
 
 class ScreeningStateRead(BaseModel):

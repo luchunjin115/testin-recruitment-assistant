@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock, patch
 
-from fastapi import HTTPException
+from fastapi import BackgroundTasks
 
 from app.api.job_evaluation_plans import (
     generate_current_evaluation_plan,
@@ -10,9 +10,8 @@ from app.api.job_evaluation_plans import (
 )
 from app.api.jobs import create_job, open_job, reopen_job, update_job
 from app.schemas.job import JobCreate, JobStatus, JobUpdate
-
-
-PAUSE_CODE = "JOB_EVALUATION_PLAN_CONTRACT_UPGRADE_IN_PROGRESS"
+from app.schemas.job_evaluation_plan import JobEvaluationPlanRead
+from tests.fixtures.job_evaluation_plan_v3 import make_plan_read
 
 
 def open_job_record():
@@ -32,13 +31,9 @@ def open_job_record():
     )
 
 
-class Stage7JobContractPauseTest(IsolatedAsyncioTestCase):
-    async def test_open_job_writes_do_not_enter_old_plan_generation(self) -> None:
+class Stage7JobContractGenerationTest(IsolatedAsyncioTestCase):
+    async def test_open_transitions_schedule_generation_but_open_edit_only_outdates(self) -> None:
         db = Mock()
-        legacy_plan_entry = AsyncMock(
-            return_value=SimpleNamespace(status="ready", is_current=True)
-        )
-        adapter_extract = AsyncMock()
         job = open_job_record()
         create_data = JobCreate.model_construct(
             title=job.title,
@@ -51,84 +46,59 @@ class Stage7JobContractPauseTest(IsolatedAsyncioTestCase):
             _fields_set={"job_background"},
         )
 
+        operations = (
+            ("create_open", create_job, (create_data,), "create_job"),
+            ("open_draft", open_job, (job.id,), "open_job"),
+            ("reopen_closed", reopen_job, (job.id,), "reopen_job"),
+        )
+        for name, operation, args, service_method in operations:
+            background = BackgroundTasks()
+            with self.subTest(operation=name), patch(
+                f"app.api.jobs.job_service.{service_method}",
+                AsyncMock(return_value=job),
+            ):
+                await operation(*args, background, db)
+            self.assertEqual(len(background.tasks), 1)
+
+        outdate = AsyncMock(return_value=None)
+        background = BackgroundTasks()
         with (
+            patch("app.api.jobs.job_service.update_job", AsyncMock(return_value=job)),
             patch(
-                "app.services.job_evaluation_plan_service."
-                "job_evaluation_plan_service.generate_for_job",
-                legacy_plan_entry,
-            ),
-            patch("app.api.jobs.screening_service.after_plan_changed", AsyncMock()),
-            patch(
-                "app.adapters.job_evaluation_plan.DeepSeekJobEvaluationPlanAdapter.extract",
-                adapter_extract,
+                "app.api.jobs.mark_evaluation_plan_outdated_after_job_commit",
+                outdate,
             ),
         ):
-            operations = (
-                (
-                    "create_open",
-                    create_job,
-                    (create_data, db),
-                    patch("app.api.jobs.job_service.create_job", AsyncMock(return_value=job)),
-                ),
-                (
-                    "update_open",
-                    update_job,
-                    (job.id, update_data, db),
-                    patch("app.api.jobs.job_service.update_job", AsyncMock(return_value=job)),
-                ),
-                (
-                    "open_draft",
-                    open_job,
-                    (job.id, db),
-                    patch("app.api.jobs.job_service.open_job", AsyncMock(return_value=job)),
-                ),
-                (
-                    "reopen_closed",
-                    reopen_job,
-                    (job.id, db),
-                    patch("app.api.jobs.job_service.reopen_job", AsyncMock(return_value=job)),
-                ),
-            )
-            for name, operation, args, service_patch in operations:
-                with self.subTest(operation=name), service_patch:
-                    legacy_plan_entry.reset_mock()
-                    adapter_extract.reset_mock()
-                    await operation(*args)
-                    legacy_plan_entry.assert_not_awaited()
-                    adapter_extract.assert_not_awaited()
+            await update_job(job.id, update_data, db)
+        outdate.assert_awaited_once_with(job.id)
+        self.assertEqual(len(background.tasks), 0)
 
-    async def test_explicit_generate_and_regenerate_return_controlled_pause(self) -> None:
+    async def test_explicit_generate_and_regenerate_call_v3_services_once(self) -> None:
         db = Mock()
-        adapter_extract = AsyncMock()
-
-        for name, operation, service_path in (
-            (
-                "generate",
-                generate_current_evaluation_plan,
-                "app.api.job_evaluation_plans.job_evaluation_plan_service.generate_for_job",
-            ),
-            (
-                "regenerate",
-                regenerate_failed_evaluation_plan,
-                "app.api.job_evaluation_plans.job_evaluation_plan_service.regenerate_failed_plan",
-            ),
+        db.rollback = AsyncMock()
+        plan = SimpleNamespace(status="ready")
+        read_model = JobEvaluationPlanRead.model_validate(make_plan_read())
+        for operation, service_name in (
+            (generate_current_evaluation_plan, "generate_for_job"),
+            (regenerate_failed_evaluation_plan, "regenerate_failed_plan"),
         ):
-            with self.subTest(operation=name):
-                legacy_plan_entry = AsyncMock(
-                    side_effect=AssertionError("旧评价计划入口不应执行")
-                )
-                with (
-                    patch(service_path, legacy_plan_entry),
-                    patch(
-                        "app.adapters.job_evaluation_plan.DeepSeekJobEvaluationPlanAdapter.extract",
-                        adapter_extract,
-                    ),
-                ):
-                    with self.assertRaises(HTTPException) as raised:
-                        await operation(11, db)
-
-                self.assertEqual(raised.exception.status_code, 503)
-                self.assertEqual(raised.exception.detail["code"], PAUSE_CODE)
-                self.assertIn("合同升级", raised.exception.detail["message"])
-                legacy_plan_entry.assert_not_awaited()
-                adapter_extract.assert_not_awaited()
+            service = AsyncMock(return_value=plan)
+            notify = AsyncMock(return_value=None)
+            with (
+                patch(
+                    f"app.api.job_evaluation_plans.job_evaluation_plan_service.{service_name}",
+                    service,
+                ),
+                patch(
+                    "app.api.job_evaluation_plans.job_evaluation_plan_service.build_read_model",
+                    Mock(return_value=read_model),
+                ),
+                patch(
+                    "app.api.job_evaluation_plans._notify_screening_plan_changed",
+                    notify,
+                ),
+            ):
+                result = await operation(11, db)
+            self.assertEqual(result.schema_version, "3.0")
+            service.assert_awaited_once_with(db, 11)
+            notify.assert_awaited_once_with(db, 11, plan_ready=True)

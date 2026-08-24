@@ -13,13 +13,13 @@ const [plan, drawer, report, center, jobs, styles] = await Promise.all([
 
 for (const text of [
   'AI 初筛的只读评价依据', '评价计划只把当前 JD',
-  '五段式评价计划升级中', '当前不会生成或重新生成评价计划',
-  '历史评价计划仍可只读查看', '当前评价计划使用旧规则',
-  'limited_basis', 'structuredCoverage.allCovered', 'PLAN_STATUS_META',
+  '生成评价计划', '重试生成', '按当前 JD 生成', '修改 JD',
+  '历史只读', '当前评价计划使用旧规则',
+  'limited_basis', 'sourceReviewSummary', 'PLAN_STATUS_META',
 ]) assert.ok(plan.includes(text), `评价计划预览缺少：${text}`);
-assert.ok(plan.includes("plan.contractOutdated && plan.status === 'ready'"));
-assert.equal(plan.includes('generateJobEvaluationPlan'), false, '暂停期页面不能触发旧合同评价计划生成');
-assert.equal(plan.includes('regenerateJobEvaluationPlan'), false, '暂停期页面不能触发旧合同评价计划重新生成');
+assert.ok(plan.includes('plan.contractOutdated'));
+assert.equal(plan.includes('generateJobEvaluationPlan'), true, '开放岗位应能触发五段式评价计划生成');
+assert.equal(plan.includes('regenerateJobEvaluationPlan'), true, '失败计划应能受控重试');
 assert.equal(plan.includes('runGeneration'), false, '暂停期页面不能保留旧生成动作');
 
 for (const text of [

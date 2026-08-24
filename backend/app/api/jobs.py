@@ -5,6 +5,7 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     FastAPI,
     HTTPException,
@@ -18,7 +19,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_db, get_sessionmaker
 from app.models.job import Job
 from app.schemas.job import JobCreate, JobRead, JobStatus, JobUpdate
 from app.services.job_service import (
@@ -29,6 +30,7 @@ from app.services.job_service import (
     job_service,
 )
 from app.services.screening_service import screening_service
+from app.services.job_evaluation_plan_service import job_evaluation_plan_service
 
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -98,6 +100,37 @@ def _open_validation_failed(exc: JobOpenValidationError) -> HTTPException:
     )
 
 
+async def generate_evaluation_plan_after_job_commit(job_id: int) -> None:
+    """Use a fresh session so plan failure can never roll back the committed Job."""
+    async with get_sessionmaker()() as session:
+        try:
+            plan = await job_evaluation_plan_service.generate_for_job(session, job_id)
+            await screening_service.after_plan_changed(
+                session,
+                job_id,
+                plan_ready=plan.status == "ready",
+            )
+        except Exception:
+            await session.rollback()
+
+
+async def mark_evaluation_plan_outdated_after_job_commit(job_id: int) -> None:
+    """Keep plan invalidation failure isolated from the already committed Job edit."""
+    async with get_sessionmaker()() as session:
+        try:
+            await job_evaluation_plan_service.mark_current_plan_outdated_if_input_changed(
+                session,
+                job_id,
+            )
+            await screening_service.after_plan_changed(
+                session,
+                job_id,
+                plan_ready=False,
+            )
+        except Exception:
+            await session.rollback()
+
+
 async def _run_status_action(
     action: _StatusAction,
     db: AsyncSession,
@@ -121,13 +154,19 @@ async def _run_status_action(
 
 
 @router.post("", response_model=JobRead, status_code=status.HTTP_201_CREATED)
-async def create_job(data: JobCreate, db: AsyncSession = Depends(get_db)) -> Job:
+async def create_job(
+    data: JobCreate,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+) -> Job:
     try:
         job = await job_service.create_job(db, data)
     except JobOpenValidationError as exc:
         raise _open_validation_failed(exc) from exc
     except Exception as exc:
         raise _operation_failed() from exc
+    if str(getattr(job.status, "value", job.status)) == JobStatus.OPEN.value:
+        background_tasks.add_task(generate_evaluation_plan_after_job_commit, job.id)
     return job
 
 
@@ -167,12 +206,19 @@ async def update_job(
         raise _operation_failed() from exc
     if job is None:
         raise _not_found()
+    if str(getattr(job.status, "value", job.status)) == JobStatus.OPEN.value:
+        await mark_evaluation_plan_outdated_after_job_commit(job.id)
     return job
 
 
 @router.post("/{job_id}/open", response_model=JobRead)
-async def open_job(job_id: int, db: AsyncSession = Depends(get_db)) -> Job:
+async def open_job(
+    job_id: int,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+) -> Job:
     job = await _run_status_action(job_service.open_job, db, job_id)
+    background_tasks.add_task(generate_evaluation_plan_after_job_commit, job.id)
     return job
 
 
@@ -187,8 +233,17 @@ async def close_job(job_id: int, db: AsyncSession = Depends(get_db)) -> Job:
 
 
 @router.post("/{job_id}/reopen", response_model=JobRead)
-async def reopen_job(job_id: int, db: AsyncSession = Depends(get_db)) -> Job:
+async def reopen_job(
+    job_id: int,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+) -> Job:
     job = await _run_status_action(job_service.reopen_job, db, job_id)
+    try:
+        await screening_service.after_job_reopened(db, job.id)
+    except Exception:
+        pass
+    background_tasks.add_task(generate_evaluation_plan_after_job_commit, job.id)
     return job
 
 

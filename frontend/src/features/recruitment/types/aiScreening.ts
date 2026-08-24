@@ -20,16 +20,38 @@ export type EvaluationItemCategory =
   | 'other';
 export type EvaluationItemPriority = 'required' | 'preferred' | 'general';
 export type EvaluationItemSourceType = 'structured' | 'ai_extracted';
-export type JobEvaluationPlanWarning = 'limited_basis';
+export type FiveSectionSourceField =
+  | 'job_responsibilities'
+  | 'candidate_requirements'
+  | 'preferred_qualifications';
+export type JobEvaluationPlanWarningCode =
+  | 'limited_basis'
+  | 'priority_signal_conflict'
+  | 'misplaced_non_evaluation_content';
+
+export type JobEvaluationPlanWarningDetail = {
+  code: JobEvaluationPlanWarningCode;
+  message: string;
+  sourceUnitIds: string[];
+};
+
+export type JobEvaluationPlanWarning = 'limited_basis' | JobEvaluationPlanWarningDetail;
 
 export type JobEvaluationItem = {
   key: string;
   title: string;
   category: EvaluationItemCategory;
   priority: EvaluationItemPriority;
-  sourceType: EvaluationItemSourceType;
-  sourceField: string | null;
-  sourceQuote: string | null;
+  sources: Array<{
+    sourceField: FiveSectionSourceField;
+    sourceUnitId: string;
+    sourceQuote: string;
+  }>;
+  historicalSource: {
+    kind: EvaluationItemSourceType;
+    field: string | null;
+    quote: string | null;
+  } | null;
 };
 
 export type StructuredFieldCoverage = {
@@ -37,6 +59,61 @@ export type StructuredFieldCoverage = {
   sourceValueCount: number;
   itemKeys: string[];
 };
+
+export type JobEvaluationPlanSourceReviewSummary = {
+  ruleVersion: 'five_section_source_units_v1';
+  totalUnits: number;
+  reviewedUnits: number;
+  evaluationUnits: number;
+  nonEvaluationUnits: number;
+  allReviewed: boolean;
+  units: Array<{
+    sourceUnitId: string;
+    disposition: 'evaluation' | 'non_evaluation';
+    nonEvaluationReason:
+      | 'company_info'
+      | 'benefit'
+      | 'promotion'
+      | 'recruitment_process'
+      | 'candidate_note'
+      | 'context'
+      | 'other'
+      | null;
+    itemKeys: string[];
+  }>;
+};
+
+export type LegacyJobEvaluationPlanInputSnapshot = {
+  jobId: number;
+  title: string;
+  department: string | null;
+  description: string | null;
+  requirements: LegacyJobEvaluationPlanRequirements;
+};
+
+export type JobEvaluationPlanInputSnapshotV3 = {
+  schemaVersion: '3.0';
+  jobContext: {
+    title: string;
+    department: string | null;
+    jobBackground: string | null;
+  };
+  evaluationFields: {
+    jobResponsibilities: string | null;
+    candidateRequirements: string | null;
+    preferredQualifications: string | null;
+  };
+  sourceUnits: Array<{
+    sourceUnitId: string;
+    sourceField: FiveSectionSourceField;
+    ordinal: number;
+    sourceText: string;
+  }>;
+};
+
+export type JobEvaluationPlanInputSnapshot =
+  | LegacyJobEvaluationPlanInputSnapshot
+  | JobEvaluationPlanInputSnapshotV3;
 
 export type JobEvaluationPlan = {
   id: number;
@@ -49,20 +126,15 @@ export type JobEvaluationPlan = {
     sourceSchemaVersion: string;
     fields: StructuredFieldCoverage[];
     allCovered: boolean;
-  };
+  } | null;
+  sourceReviewSummary: JobEvaluationPlanSourceReviewSummary | null;
   warnings: JobEvaluationPlanWarning[];
   promptVersion: string;
   modelVersion: string;
-  schemaVersion: '1.0' | '2.0';
+  schemaVersion: '1.0' | '2.0' | '3.0';
   inputFingerprint: string;
   contractOutdated: boolean;
-  inputSnapshot: {
-    jobId: number;
-    title: string;
-    department: string | null;
-    description: string | null;
-    requirements: LegacyJobEvaluationPlanRequirements;
-  };
+  inputSnapshot: JobEvaluationPlanInputSnapshot;
   errorCode: string | null;
   errorMessage: string | null;
   createdAt: string;
@@ -85,7 +157,15 @@ export type ScreeningRunStatus =
 export type ScreeningOutdatedReason =
   | 'resume_changed'
   | 'jd_changed'
+  | 'job_evaluation_input_changed'
   | 'evaluation_plan_changed';
+export type ScreeningWaitingReason =
+  | 'job_closed'
+  | 'plan_missing'
+  | 'plan_generating'
+  | 'plan_failed'
+  | 'plan_outdated'
+  | 'plan_contract_outdated';
 
 export type ScreeningEvidence = {
   quote: string;
@@ -147,6 +227,7 @@ export type ScreeningRun = {
   jobEvaluationPlanId: number | null;
   triggerType: ScreeningRunTriggerType;
   status: ScreeningRunStatus;
+  waitingReason: ScreeningWaitingReason | null;
   inputFingerprint: string;
   promptVersion: string;
   modelVersion: string;

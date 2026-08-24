@@ -22,10 +22,10 @@ from app.prompts.job_evaluation_plan import (
     build_job_evaluation_plan_messages,
 )
 from app.schemas.job_evaluation_plan import (
-    AIExtractedEvaluationPlanV2,
+    AIExtractedEvaluationPlanV3,
     JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION,
     JOB_EVALUATION_PLAN_SCHEMA_VERSION,
-    JobEvaluationPlanAIInput,
+    JobEvaluationPlanAIInputV3,
 )
 
 
@@ -132,7 +132,7 @@ class DeepSeekJobEvaluationPlanAdapter:
         input_snapshot: dict[str, Any],
     ) -> JobEvaluationPlanAdapterResult:
         try:
-            validated_input = JobEvaluationPlanAIInput.model_validate(input_snapshot)
+            validated_input = JobEvaluationPlanAIInputV3.model_validate(input_snapshot)
         except (ValidationError, TypeError, ValueError):
             raise JobEvaluationPlanInputError(
                 "岗位评价计划 AI 输入未通过 Schema 校验"
@@ -220,10 +220,10 @@ class DeepSeekJobEvaluationPlanAdapter:
                 content,
                 object_pairs_hook=self._object_without_duplicate_keys,
             )
-            AIExtractedEvaluationPlanV2.model_validate(payload)
+            AIExtractedEvaluationPlanV3.model_validate(payload)
         except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
             raise JobEvaluationPlanInvalidResponseError(
-                "DeepSeek 返回内容未通过 AI 提取 Schema 2.0 校验"
+                "DeepSeek 返回内容未通过 AI 提取 Schema 3.0 校验"
             ) from None
 
         usage = getattr(response, "usage", None)

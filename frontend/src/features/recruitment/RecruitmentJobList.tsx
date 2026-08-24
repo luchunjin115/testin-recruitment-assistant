@@ -478,6 +478,10 @@ const RecruitmentJobList: React.FC = () => {
 
       <JobEvaluationPlanDrawer
         job={planJob}
+        onEditJob={job => {
+          setPlanJob(null);
+          openForm(job);
+        }}
         onClose={() => {
           planTriggerRef.current?.focus();
           setPlanJob(null);

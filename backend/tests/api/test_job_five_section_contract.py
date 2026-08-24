@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest import IsolatedAsyncioTestCase, TestCase
 from unittest.mock import AsyncMock, Mock, patch
 
-from fastapi import FastAPI, HTTPException
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.testclient import TestClient
 
 from app.api.jobs import create_job, install_job_exception_handlers, router
@@ -141,6 +141,7 @@ class JobFiveSectionApiErrorMappingContractTest(IsolatedAsyncioTestCase):
                         status="open",
                         **FIVE_FIELDS,
                     ),
+                    BackgroundTasks(),
                     Mock(name="test_database_session"),
                 )
 
