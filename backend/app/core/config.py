@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o-mini"
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
-    DEEPSEEK_MODEL: str = "deepseek-chat"
+    DEEPSEEK_MODEL: str = "deepseek-v4-flash"
 
     RESUME_STRUCTURE_ENABLED: bool = True
     RESUME_STRUCTURE_MODEL: str = "deepseek-v4-flash"
@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     )
     JOB_EVALUATION_PLAN_ENABLED: bool = True
     JOB_EVALUATION_PLAN_MODEL: str = Field(
-        default="deepseek-chat",
+        default="deepseek-v4-flash",
         min_length=1,
         max_length=100,
     )
@@ -103,7 +103,7 @@ class Settings(BaseSettings):
     )
     SCREENING_EVALUATION_ENABLED: bool = True
     SCREENING_EVALUATION_MODEL: str = Field(
-        default="deepseek-chat",
+        default="deepseek-v4-flash",
         min_length=1,
         max_length=100,
     )

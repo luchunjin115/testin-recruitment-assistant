@@ -2,7 +2,7 @@
 
 > 日期：2026-08-24
 >
-> 状态：业务规则与 7R4-A—7R4-J 实施顺序已获用户最终确认；7R4-A—7R4-F 已于 2026-08-24 完成。当前停止等待用户确认 7R4-G，不得提前进入 7R4-H—J，真实 DeepSeek 调用必须为 0
+> 状态：业务规则与 7R4-A—7R4-J 实施顺序已获用户最终确认；7R4-A—7R4-G、7R4-H0 已完成，7R4-H1 六份定向真实验证已执行并以 `4/6` 失败。正式 20 份被门禁阻断；当前停止，等待讨论多来源事实合并、优先级信号 warning 和 16 次合法基线审计缺口，不得补跑或进入 7R4-I—J
 >
 > 直接上游：`../stage6/2026-08-21-stage6-five-section-jd-remediation-design.md`
 >
@@ -944,3 +944,173 @@ Service 会重新验证 source unit ID、逐字连续 quote、candidate/review �
 当前剩余风险主要是历史计划与报告组合很多：若报告绑定的计划不可读取或 ID 不一致，页面会有意回退到旧的逐项显示；这能避免错误关联，但仍需 7R4-J 用真实浏览器状态矩阵确认交互细节。若待确认按钮返回冲突，应首先检查岗位是否关闭、JD 或计划指纹是否已变化，而不是在前端绕过后端门禁。
 
 7R4-F 到此停止。唯一下一步是等待用户明确确认 7R4-G 零调用门禁；不得自动进入 7R4-G，更不得进入 7R4-H—J、调用真实 DeepSeek 或进入阶段 8。
+
+## 25. 7R4-G 实施结果（2026-08-25）
+
+### 25.1 修改边界与运行器职责
+
+本批补齐的是“质量夹具 → Prompt/Adapter 合同 → 4.0 Service 实际审计 → 统计与硬门禁”，并用 Fake 把该链延伸到 API/PostgreSQL；没有修改生产 Prompt、Schema、Service、Model、API、migration 或 React。冻结 JD 原文和人工标签文件没有修改，计划质量继续复用既有 20 份 J5 夹具及其 SHA-256。
+
+- `scripts/stage7_7r4_quality_contract.py` 统一保存冻结样本 ID、分母、调用预算、候选模型/费用输入、历史结果清单、新 4.0 结果路径、只写新文件规则和定向硬门禁。
+- `scripts/run_stage7_7r4_plan_quality.py` 提供计划 dry-run、Fake 正常/局部修复以及后续 7R4-H 才可授权的定向/正式入口。正式模式先读取并完整校验固定路径下的新 4.0 定向结果，之后才允许创建 Adapter；没有 `skip gate` 或自定义定向结果路径参数。
+- `scripts/run_stage7_7r4_report_quality.py` 只实现本批允许的报告零调用准备，固定报告样本、人工标签分母、三次稳定性预算和 7R4-H 正式计划结果前提，不产生报告质量结论。
+- `backend/tests/test_stage7_7r4g_quality_runner.py` 验证冻结分母、dry-run、预算、三/四调用、基础设施重试与内容错误分离、硬门禁和历史路径隔离。
+- `backend/tests/api/test_stage7_7r4g_fake_api_postgres.py` 使用真实 AsyncSession/API/Service/PostgreSQL 和 Fake Adapter 验证等待计划、`pending_confirmation → ready`、逐 `fact_id` 报告、内容错误不重试及事务回滚后零夹具。
+
+独立新路径固定为：
+
+- `2026-08-25-stage7-7r4h-plan-quality-targeted-results.json`
+- `2026-08-25-stage7-7r4h-plan-quality-formal-results.json`
+- `2026-08-25-stage7-7r4i-report-quality-targeted-results.json`
+- `2026-08-25-stage7-7r4i-report-quality-formal-results.json`
+- `2026-08-25-stage7-7r4i-report-quality-formal-results.md`
+
+写入函数只接受上述登记路径且拒绝覆盖已存在文件。dry-run 只读校验 3.0 的 7R-F、step9 和既有质量 JSON/Markdown 的 hash，不写这些文件，也不创建新的正式结果文件。
+
+### 25.2 冻结样本、预算与 dry-run 结果
+
+计划 dry-run 实际固定正式样本 J5-01—J5-20，定向样本 J5-03/J5-07/J5-14/J5-17/J5-19/J5-20，冻结 SHA-256 为 `23651a92bb68602f096cf30519d5c11cd2ce6e724950f158587ba201e41fdfe0`。统计分母为 245 条人工 facts、97 条明确必测；定向分母为 80/23；正式与定向 source units 分别为 255/90。`public_notes` 在全部输入中继续排除，4.0 Schema、指纹、破坏性合同、四角色 Prompt 版本和 16,000 output tokens 边界均完成检查。
+
+每份正常计划固定 3 次业务调用，每份最多一次局部修复后为 4 次；每个业务调用遇到基础设施瞬时错误最多额外尝试 1 次。因此：
+
+| 轮次 | 正常业务调用 | 含局部修复最大业务调用 | 含基础设施重试最大 API 尝试 |
+| --- | ---: | ---: | ---: |
+| 6 份定向 | 18 | 24 | 48 |
+| 20 份正式 | 60 | 80 | 160 |
+| 两轮合计（均另行授权时） | 78 | 104 | 208 |
+
+当前配置候选模型记录为 `deepseek-v4-flash`，temperature=0.1、JSON object、thinking disabled、SDK 自动重试 0、单次最大输出 16,000 tokens。2026-08-25 根据 DeepSeek 当前官方 API 名称，将已退役、此前指向 V4 Flash 非思考模式的兼容别名 `deepseek-chat` 明确改为正式模型 ID `deepseek-v4-flash`；这不改变原模型档位或思考模式。它仍只是 7R4-H 费用估算输入，不是本批对真实模型的授权；官方 cache hit/cache miss/output 单价保持空值，并明确要求 7R4-H 前重新查询和由用户确认。
+
+计划与报告 dry-run 的共同结果为：真实模型调用 0、正式质量结果写入 0、真实 Adapter 未实例化、真实 API Key 不是运行前提、历史结果 hash 前后不变、新正式路径当前均不存在。报告侧另固定 SR01—SR20、high/partial/low 人工标签分母 8/6/6、每组 3 次和正式 60 次业务调用（含基础设施重试最大 120 次尝试）；失败样本继续留在统计分母中。
+
+### 25.3 Fake 调用、硬门禁与 API/PostgreSQL 全链
+
+Fake 正常分支从生产 Service 的 `generation_audit` 实际得到 3 次 Adapter 尝试、3 次业务调用、0 次内容修复、0 次基础设施重试，角色顺序为 fact extraction → coverage review → criterion grouping。Fake 局部修复分支实际得到 4/4/1/0，角色顺序在 coverage review 后只增加一次 local repair。基础设施超时样例实际为 4 次 Adapter 尝试、3 次业务调用、0 次内容修复、1 次基础设施重试。
+
+认证、非法 JSON、Schema 版本和非法 fact 原文引用在计划侧均只尝试 1 次，审计为 1 次业务调用、0 次内容修复、0 次基础设施重试；报告侧不可定位证据和敏感属性安全错误也各只尝试 1 次。它们不会被错误当成网络抖动重复请求。
+
+正式 20 份门禁只接受固定新路径上的 `stage=7R4-H`、`result_kind=plan_quality_targeted`、`status=formal`、Schema 4.0、冻结 SHA、完整且有序的 6 个定向 ID、6/6 样本合同、80/23 与 90 source units 分母，以及两个明确 `true` 的通过标记。定向与正式还必须保持同一个 `deepseek-v4-flash`、`thinking disabled`、temperature/JSON/16,000 tokens/SDK 重试配置和四个 Prompt 版本；切换 Pro、thinking 或 Prompt 后，旧定向结果不能放行新配置。门禁还会从实际分子/分母重新计算主要语义召回、明确必测召回、source review、来源追溯、priority、criterion 覆盖和 warning 命中率，并逐项检查新增要求、缺失多来源、错误合并、明显重复、背景/公开备注污染、宣传福利误识别都为 0；结果文件只写一个伪造的 `1.0` 或 `targeted_gate_passed=true` 无法绕过。定向结果缺失、失败、3.0 版本、模型/参数/Prompt 版本、样本不一致、分母/分子异常或历史路径均受控拒绝；测试把 Adapter factory 设为一旦调用即失败的哨兵，证明阻断发生在任何模型实例化/调用之前。J5-19 即使预期为 0 facts，也必须从事实提取原始响应证明全部 source units 已审阅；发生技术重试时只取成功的 fact extraction 尝试。
+
+受控 PostgreSQL 测试从 API 触发缺计划的 `waiting_plan/plan_missing`，Fake 计划经过 3 次实际调用落为 `pending_confirmation`，筛选等待原因转为 `plan_pending_confirmation`；无正文确认后计划转为 `ready`，原运行入队并生成逐 `fact:0001` 报告。计划确认没有增加 Adapter 调用，Screening 使用 1 次 Fake 调用，Application 的 `recruitment_stage=applied` 与 `hr_decision=pending` 未被 AI 修改。整个夹具位于外层事务，结束后另开连接确认九张相关业务表计数与测试前完全一致。
+
+### 25.4 自动化、数据库、证明边界与停止点
+
+- 7R4-G 运行器合同：11 passed；API/PostgreSQL Fake 集成：1 passed。
+- 2026-08-25 模型别名兼容修正后，配置、计划/筛选 Adapter 与 7R4-G 门禁定向为 36 passed、29 subtests passed；dry-run 为 `deepseek-v4-flash / thinking disabled / 0 次真实调用 / 0 次正式写入`。
+- 计划生成、Screening、API 和 migration 受影响定向：129 passed、22 subtests passed，1 条既有 PyPDF2 弃用 warning。
+- 后端全量：896 passed、408 subtests passed，模型别名修正后最终重跑用时 49.63 秒；另有既有 PyPDF2 弃用 warning和旧 API 测试清理阶段的 asyncpg cancel RuntimeWarning，没有断言失败。
+- Alembic 代码 head 与正式 PostgreSQL current 均为 `d6f4a2b8e913`；最终 `jobs/candidates/resumes/applications/job_evaluation_plans/screening_runs/screening_reports/stage_histories/reports` 均为 0，没有遗留业务夹具。
+- `git diff --check` 通过。冻结夹具文本未修改，历史结果未覆盖、未重命名、未删除，新正式结果文件未创建。
+- 本批没有修改前端，因此没有重复浏览器、TypeScript 或 Vite 验收；7R4-F 的前端历史基线只作为上游证据，不冒充本轮重跑。
+- 真实 DeepSeek 调用最终为 0。
+
+这些结果能证明：4.0 样本选择和统计分母不会静默漂移；dry-run 可以在无 Key、无真实 Adapter、无结果写入下完成配置/版本/预算/路径预检；业务调用、内容修复和基础设施重试是三套独立实际计数；定向失败或不属于新 4.0 的结果不能通过参数绕过并启动正式调用；Fake 能衔接现有 API/Service/PostgreSQL 的待确认、确认和逐 fact 链路；3.0、step9 与既有结果继续隔离。
+
+这些结果不能证明：`deepseek-v4-flash + thinking disabled` 已经通过 7R4-H 真实定向质量，V4 Pro 或 thinking 模式一定不需要，当前官方单价或费用上限已经确认，真实 DeepSeek 能在 6/20 份 JD 上满足质量门槛，报告 20 组三次稳定性合格，或真实浏览器/API 端到端验收完成。若后续门禁异常，先检查定向结果路径、版本、冻结 SHA、样本顺序和统计分母；若调用数异常，分别检查 generation audit 的 business/content repair/infrastructure retry；若数据库状态异常，检查外层事务、计划确认通知和 Screening waiting reason，不得通过放宽门槛或改样本文本解决。
+
+7R4-G 到此完成并停止。唯一下一步是等待用户单独确认 7R4-H 的真实模型、官方费用和定向/正式调用上限；未经确认不得执行 7R4-H，不得进入 7R4-I—J，不得调用真实 DeepSeek，也不得进入阶段 8。
+
+## 26. 7R4-H 付费预检与审计补充顺序（2026-08-25，已确认）
+
+### 26.1 为什么不能直接开始付费调用
+
+7R4-H 首次付费预检完成了官方价格、模型配置、dry-run、冻结样本、结果路径、历史 hash、Alembic 和业务表计数检查，没有发起真实调用。预检发现两个必须先处理的事实：
+
+1. DeepSeek 官方已经启用工作日峰谷价；`deepseek-v4-flash` 的高峰单价是空闲时段的 2 倍。原 7R4-G 只保留空价格输入，不能冒充本轮最新官方价格。
+2. 当前计划质量运行器只保存总 input/output tokens 和成功内容，没有完整保存 `finish_reason`、cache hit/cache miss tokens、逐 attempt 费用；非法 JSON/Schema 等响应在 Adapter 抛错后也没有原始内容可供复核。因此当前结果文件不能满足本轮已经确认的逐调用审计和失败证据合同。
+
+用户随后明确提出“先补齐审计，再开始测试”，并取消本次 6 份定向轮的金额上限。金额上限取消不取消调用次数、样本、模型、参数、内容错误不重试和失败后停止等安全边界，也不授权正式 20 份。
+
+### 26.2 修订后的固定子批次
+
+7R4-H 拆成三个不能连续越过的子批次：
+
+| 子批次 | 唯一目标 | DeepSeek | 完成后停止点 |
+| --- | --- | --- | --- |
+| 7R4-H0 | 补齐质量运行器逐 attempt 审计与费用记录 | 0 次 | 报告自动化结果，等待 7R4-H1 确认 |
+| 7R4-H1 | 只执行 J5-03/07/14/17/19/20 六份定向真实质量 | 允许，最多 24 次业务调用、48 次 API 尝试 | 无论通过或失败都停止，不执行正式 20 份 |
+| 7R4-H2 | 正式 20 份计划质量 | 本轮不授权 | 只有 H1 门禁通过且用户另行授权后才可讨论 |
+
+### 26.3 7R4-H0：逐 attempt 审计补齐
+
+- 唯一目标：确保每一笔真实请求都有可核对的“调用小票”，内容失败也保留原始证据。
+- 通俗解释：先补齐第几次调用、为什么停止、哪些 token 走缓存、花费多少以及失败时模型原话，再允许付费考试。
+- 允许修改：`scripts/run_stage7_7r4_plan_quality.py`、`scripts/stage7_7r4_quality_contract.py`、`backend/tests/test_stage7_7r4g_quality_runner.py`，以及仅在无法通过客户端记录层取得元数据时才允许的最小 `backend/app/adapters/job_evaluation_plan.py` 审计字段；同步本文和 `PROJECT_STATE.md`。
+- 链路位置：Prompt/Adapter 响应元数据 → 质量运行器 → 结果 JSON；不进入前端、API、业务 Schema、Service、Model 或 PostgreSQL。
+- 禁止修改：四个生产 Prompt、4.0 AI/业务 Schema、生成 Service、事实/criterion 规则、质量门槛、冻结 JD/人工标签、Model、migration、API、React 和历史结果。
+- 每个实际 attempt 必须记录：`case_id`、role、attempt number、实际 model、thinking、temperature、JSON 模式、max tokens、Prompt version、input tokens、cache-hit input tokens、cache-miss input tokens、output tokens、finish reason、duration、是否基础设施重试、错误码、原始响应和按本轮官方单价计算的费用估算。
+- 原始响应规则：API 已返回响应时，即使非法 JSON、Schema 或业务内容失败也必须保留原始内容；网络/超时等未收到响应时明确记录 `raw_response=null`，不得伪造。
+- 价格规则：真实调用前仍须重新查询官方 cache hit/cache miss/output 的空闲与高峰单价、检查时间和适用时段，并写入结果。7R4-H1 不设金额硬上限，但费用必须逐 attempt 和汇总记录。
+- 调用门禁：H0 的所有测试、Fake 和 dry-run 必须是 0 次真实调用、0 个正式结果写入、0 个真实 Adapter 实例化；不得以 API Key 是否存在作为 dry-run 前提。
+- 自动化：新增成功、`finish_reason=length`、cache hit/miss 混合、非法 JSON、Schema 失败、内容错误不重试、一次基础设施重试、费用汇总、48 尝试硬停止、旧结果隔离和拒绝覆盖测试；运行配置/Adapter/质量运行器定向、受影响后端回归和 `git diff --check`。
+- 完成标志：Fake 响应能证明所有字段来自实际响应/异常记录而不是写死；失败原始证据可读取；费用分项与汇总可重算；0 调用/0 写入门禁保持有效。
+- 失败处理：缺口仍在客户端记录层就返回 H0，不修改 Prompt/Schema/Service，也不开始付费测试。
+- 停止点：H0 验证完成后必须停止并报告；不得在同一小步自动执行 H1。
+
+### 26.4 7R4-H1：六份定向真实质量
+
+- 唯一目标：使用 `deepseek-v4-flash + thinking disabled` 对固定六份样本执行一次新的 4.0 定向真实验证。
+- 固定模型参数：temperature `0.1`、`response_format=json_object`、单次 max tokens `16,000`、SDK 自动重试 `0`。
+- 固定样本与顺序：J5-03、J5-07、J5-14、J5-17、J5-19、J5-20；冻结 SHA、80 条人工 facts、23 条明确必测和 90 个 source units 分母保持不变。
+- 调用上限：正常 18 次业务调用；有局部修复最多 24 次业务调用；每个业务调用最多额外 1 次基础设施重试；全部最多 48 次 API 尝试。达到任一上限立即停止。
+- 费用边界：本次定向不设置美元或人民币金额硬上限；仍必须在调用前记录官方峰谷价，并按实际 cache hit/cache miss/output tokens 逐次计算和汇总费用。
+- 禁止：内容错误重试、额外试跑、A/B、补跑、挑选最好响应、删除失败样本、修改冻结样本/Prompt/Schema/Service/门槛，以及创建正式 20 份结果。
+- 结果：只允许创建固定的新 4.0 定向结果文件且拒绝覆盖；6/6 和聚合门槛按第 15.2 节从实际分子/分母重算。
+- 完成/失败/停止：无论 `targeted_gate_passed` 为 true 或 false，都保留全部样本和证据并停止。通过只允许后续讨论 H2，不等于 H2 已获授权；失败则返回具体责任层讨论。
+
+### 26.5 本补充的确认门禁
+
+用户已于 2026-08-25 明确确认 7R4-H0，并且本轮只能实施 H0；完成并报告后再次停止。未经用户对 H1 的独立确认，不得调用真实 DeepSeek。正式 20 份、7R4-I、7R4-J 和阶段 8 均不在本次授权内。
+
+## 27. 7R4-H0 实施结果（2026-08-25）
+
+### 27.1 实际修改与链路位置
+
+- `backend/app/adapters/job_evaluation_plan.py` 只补充响应审计元数据：成功或已经收到响应后再失败时，均保留实际 model、`finish_reason`、总 input、cache hit、cache miss、output tokens 和原始内容。非法 JSON、Schema 错误与 `length` 中断不再因抛错丢失模型原话。
+- `scripts/run_stage7_7r4_plan_quality.py` 增加跨六份样本共享的逐 attempt ledger（审计账本）。每次 Adapter 尝试统一登记样本、角色、全局/样本内/业务调用编号、模型参数、Prompt 版本、耗时、重试属性、错误、原始响应和费用；24 次业务调用、48 次 API 尝试以及每个业务调用最多一次基础设施重试都在下一次调用前阻断。
+- `scripts/stage7_7r4_quality_contract.py` 增加官方价格快照、cache hit/cache miss/output 分项费用重算与定向结果逐 attempt 门禁。真实模式必须显式确认没有金额上限，并拒绝缺字段、超过 1 小时或明显来自未来的价格检查时间；历史结果回放只校验当轮已保存快照，不用今天的价格篡改过去费用。
+- `backend/tests/adapters/test_job_evaluation_plan_adapter.py` 与 `backend/tests/test_stage7_7r4g_quality_runner.py` 覆盖成功、`length`、非法 JSON、4.0 Schema 失败、cache 分账、费用重算、一次技术重试、第三次重试阻断、24/48 上限、审计篡改拒绝、旧结果隔离和拒绝覆盖。
+- 本批链路仍是“Prompt/Adapter 响应元数据 → 质量运行器 → 新结果 JSON”。没有修改四个 Prompt、4.0 Schema、Service、Model、migration、API、React 或 PostgreSQL，也没有创建任何质量结果文件。
+
+### 27.2 实际验证
+
+- Adapter 与质量运行器专项：`26 passed + 7 subtests`；受影响配置、Adapter、4.0 纯生成和质量运行器回归：`60 passed + 23 subtests`。只有既有 PyPDF2 弃用 warning，没有失败。
+- `py_compile` 覆盖 Adapter、质量合同、计划质量运行器及其测试；`git diff --check` 通过。
+- 计划 CLI dry-run：真实模型调用 `0`、正式结果写入 `0`、真实 Adapter 未实例化、API Key 不是前提。Fake normal/repair 分别实际走 3/4 次 Fake attempt，真实调用均为 `0`。
+- 新 4.0 定向与正式计划质量结果路径均不存在；测试确认历史结果 hash 不变、旧路径不可写、新路径存在时不可覆盖。
+
+### 27.3 能证明、不能证明与停止点
+
+这些结果证明 H1 运行器已经能为每次真实 API 尝试开出可重算的“调用小票”，模型返回非法 JSON/Schema 或被 token 上限截断时也能保存原始证据；调用次数和重试上限不依赖金额上限。它也证明 H0 没有花费模型费用、没有污染正式结果和历史结果。
+
+这些结果不能证明 DeepSeek 真实响应一定包含完整 cache 分账，不能证明六份定向质量合格，也不能证明本轮官方价格在 H1 开始时仍未变化。若真实响应缺少计费字段，逐 attempt 会明确标为不可完整计价且定向门禁不通过；若价格快照过期，真实 Adapter 创建前就会停止；若模型内容质量失败，保留原始响应并返回 Prompt/Schema/Service 对应责任层讨论，不允许偷偷补跑。
+
+7R4-H0 到此完成并停止。唯一下一步是等待用户独立确认 7R4-H1；H1 只允许六份固定定向样本，无论通过或失败都停止，不执行正式 20 份。
+
+## 28. 7R4-H1 六份定向真实质量结果（2026-08-25）
+
+### 28.1 调用、费用与不可变证据
+
+用户于 2026-08-25 独立确认 7R4-H1。运行前重新核对 DeepSeek 官方价格页、模型列表、工作区、新结果路径、历史结果 hash、Alembic 和业务表基线；北京时间 12:23 属于空闲时段，官方 `deepseek-v4-flash` 每百万 token 美元单价记录为 cache hit `$0.007`、cache miss `$0.22`、output `$0.66`，高峰单价为 `$0.014/$0.44/$1.32`。API Key 认证和模型可用性检查通过，未输出 Key。
+
+- 只执行 J5-03、J5-07、J5-14、J5-17、J5-19、J5-20，模型 `deepseek-v4-flash`、thinking disabled、temperature `0.1`、JSON object、max tokens `16,000`、SDK 自动重试 `0` 均未改变。
+- 实际 Adapter/API attempt 为 `16`：fact extraction 6 次、coverage review 5 次、criterion grouping 5 次。J5-19 按预期得到 `no_facts`，第一次事实提取后合法结束，因此没有继续进行无意义的 review/grouping；其余五份各 3 次。没有局部修复和基础设施重试，16 次全部 `finish_reason=stop`，全部有原始响应和完整计费 token。
+- 实际总 input tokens `31,946`，其中 cache hit `3,584`、cache miss `28,362`；output tokens `13,233`。逐 attempt 分项和总费用均从保存的官方价格快照重算一致，估算总费用 `$0.014998508`；它是 API token 估算，不冒充最终账单。
+- 新结果只创建 `docs/stages/stage7/2026-08-25-stage7-7r4h-plan-quality-targeted-results.json`，大小 `522,918` bytes，SHA-256 `ada6cbc91c21e7f4f341eee587259676579c9c2770af3a220277ff32a5e47a6f`。历史结果 hash 不变，正式 4.0 结果未创建，数据库九张业务表运行前后均为 0。
+
+### 28.2 质量结论
+
+`targeted_gate_passed=false`、`quality_conclusion_allowed=false`，逐样本合同只有 `4/6`：J5-03、J5-07、J5-19、J5-20 通过；J5-14、J5-17 失败。因此正式 20 份严格阻断。
+
+通过项同样必须保留：人工主要事实召回 `80/80 = 100%`，明确必测事实 `23/23 = 100%`，source unit 审阅 `90/90 = 100%`；83 个生成 facts 的原文追溯、priority 一致和 criterion 唯一覆盖均为 `100%`。正常输出 `4/4`、边界结果 `2/2` 正确；擅自新增、错误合并、明显重复、背景/public notes 污染和宣传福利误识别均为 0。
+
+两个失败责任不同：
+
+1. J5-14 的“客户访谈”分别出现在两条职责、必备要求和加分项。模型抽成了四条单来源事实，coverage review 仍返回 passed，没有形成合同要求的至少两来源事实，因此 `source_merge_failure_count=1`。这是 fact extraction/coverage review 的跨 source unit 语义合并缺口。
+2. J5-17 在 `candidate_requirements` 中写“SQL 数据核查经验优先”，在 `preferred_qualifications` 中写“必须具备审计项目经验”。实际 warnings 为空，没有命中预期 `conflicting_requirements`，所以 warning 命中为 `1/2 = 50%`。这暴露当前确定性 warning 只在同一 fact 已经合并了不同优先级来源时触发，尚不能独立识别字段内“必须/优先”信号与字段语义冲突。
+
+### 28.3 新发现的审计合同缺口与停止点
+
+H0 把定向 attempt 下界写成 18，但 J5-19 是事先固定的 `no_facts` 边界，按 Service 合同只允许第一次提取后停止，因此本轮合法基线实际是 16。结果文件本身完整保存了 16 次真实证据、费用和停止原因，质量失败也无需作为正式门禁输入；但 `validate_plan_attempt_audit()` 的 `18—48` 下界不能正确审计这种预期边界结果，后续复用前必须通过新的已确认整改批次修正，不能靠补两次无意义调用凑数。
+
+这些结果不能证明正式 20 份质量，也不授权立即修改 Prompt/Service、覆盖结果或重跑六份。7R4-H1 到此失败并停止。下一步必须先和用户讨论整改范围、实施顺序和验收方式；未经新的明确确认，不得进入正式 20 份、7R4-I、7R4-J 或阶段 8。

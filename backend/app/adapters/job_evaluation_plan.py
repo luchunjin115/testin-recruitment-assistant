@@ -77,6 +77,27 @@ class JobEvaluationPlanAdapterError(RuntimeError):
     code = "JOB_EVALUATION_PLAN_UPSTREAM_ERROR"
     retryable = False
 
+    def __init__(
+        self,
+        message: str,
+        *,
+        raw_response: str | None = None,
+        model: str | None = None,
+        finish_reason: str | None = None,
+        input_tokens: int | None = None,
+        cache_hit_input_tokens: int | None = None,
+        cache_miss_input_tokens: int | None = None,
+        output_tokens: int | None = None,
+    ) -> None:
+        super().__init__(message)
+        self.raw_response = raw_response
+        self.model = model
+        self.finish_reason = finish_reason
+        self.input_tokens = input_tokens
+        self.cache_hit_input_tokens = cache_hit_input_tokens
+        self.cache_miss_input_tokens = cache_miss_input_tokens
+        self.output_tokens = output_tokens
+
 
 class JobEvaluationPlanConfigurationError(JobEvaluationPlanAdapterError):
     code = "JOB_EVALUATION_PLAN_CONFIGURATION_ERROR"
@@ -131,6 +152,8 @@ class JobEvaluationPlanAdapterResult:
     model: str
     finish_reason: str
     input_tokens: int | None = None
+    cache_hit_input_tokens: int | None = None
+    cache_miss_input_tokens: int | None = None
     output_tokens: int | None = None
 
 
@@ -303,9 +326,12 @@ class DeepSeekJobEvaluationPlanAdapter:
         raise JobEvaluationPlanUpstreamError("DeepSeek 拒绝了岗位拆解请求") from None
 
     def _read_response(self, response: Any) -> JobEvaluationPlanAdapterResult:
+        response_audit = self._response_audit(response)
         choices = getattr(response, "choices", None)
         if not choices:
-            raise JobEvaluationPlanEmptyResponseError("DeepSeek 未返回候选结果")
+            raise JobEvaluationPlanEmptyResponseError(
+                "DeepSeek 未返回候选结果", **response_audit
+            )
         choice = choices[0]
         finish_reason = getattr(choice, "finish_reason", None)
         if finish_reason != "stop":
@@ -314,11 +340,15 @@ class DeepSeekJobEvaluationPlanAdapter:
                 if finish_reason == "length"
                 else "DeepSeek 输出未正常完成"
             )
-            raise JobEvaluationPlanResponseInterruptedError(message)
+            raise JobEvaluationPlanResponseInterruptedError(
+                message, **response_audit
+            )
         message = getattr(choice, "message", None)
         content = getattr(message, "content", None)
         if not isinstance(content, str) or not content.strip():
-            raise JobEvaluationPlanEmptyResponseError("DeepSeek 返回了空内容")
+            raise JobEvaluationPlanEmptyResponseError(
+                "DeepSeek 返回了空内容", **response_audit
+            )
         try:
             payload = json.loads(
                 content,
@@ -327,23 +357,18 @@ class DeepSeekJobEvaluationPlanAdapter:
             AIExtractedEvaluationPlanV3.model_validate(payload)
         except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
             raise JobEvaluationPlanInvalidResponseError(
-                "DeepSeek 返回内容未通过 AI 提取 Schema 3.0 校验"
+                "DeepSeek 返回内容未通过 AI 提取 Schema 3.0 校验",
+                **response_audit,
             ) from None
 
-        usage = getattr(response, "usage", None)
-        model = getattr(response, "model", None)
         return JobEvaluationPlanAdapterResult(
             content=content,
-            model=(
-                model
-                if isinstance(model, str) and model
-                else self.settings.JOB_EVALUATION_PLAN_MODEL
-            ),
+            model=response_audit["model"] or self.settings.JOB_EVALUATION_PLAN_MODEL,
             finish_reason=finish_reason,
-            input_tokens=self._optional_int(getattr(usage, "prompt_tokens", None)),
-            output_tokens=self._optional_int(
-                getattr(usage, "completion_tokens", None)
-            ),
+            input_tokens=response_audit["input_tokens"],
+            cache_hit_input_tokens=response_audit["cache_hit_input_tokens"],
+            cache_miss_input_tokens=response_audit["cache_miss_input_tokens"],
+            output_tokens=response_audit["output_tokens"],
         )
 
     def _read_v4_response(
@@ -354,9 +379,12 @@ class DeepSeekJobEvaluationPlanAdapter:
         output_type = _V4_OUTPUT_TYPES.get(role)
         if output_type is None:
             raise JobEvaluationPlanInputError("未知的岗位评价计划 4.0 调用角色")
+        response_audit = self._response_audit(response)
         choices = getattr(response, "choices", None)
         if not choices:
-            raise JobEvaluationPlanEmptyResponseError("DeepSeek 未返回候选结果")
+            raise JobEvaluationPlanEmptyResponseError(
+                "DeepSeek 未返回候选结果", **response_audit
+            )
         choice = choices[0]
         finish_reason = getattr(choice, "finish_reason", None)
         if finish_reason != "stop":
@@ -365,11 +393,15 @@ class DeepSeekJobEvaluationPlanAdapter:
                 if finish_reason == "length"
                 else "DeepSeek 输出未正常完成"
             )
-            raise JobEvaluationPlanResponseInterruptedError(message)
+            raise JobEvaluationPlanResponseInterruptedError(
+                message, **response_audit
+            )
         message = getattr(choice, "message", None)
         content = getattr(message, "content", None)
         if not isinstance(content, str) or not content.strip():
-            raise JobEvaluationPlanEmptyResponseError("DeepSeek 返回了空内容")
+            raise JobEvaluationPlanEmptyResponseError(
+                "DeepSeek 返回了空内容", **response_audit
+            )
         try:
             payload = json.loads(
                 content,
@@ -378,24 +410,46 @@ class DeepSeekJobEvaluationPlanAdapter:
             output_type.model_validate(payload)
         except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
             raise JobEvaluationPlanInvalidResponseError(
-                f"DeepSeek {role} 返回内容未通过独立 4.0 Schema 校验"
+                f"DeepSeek {role} 返回内容未通过独立 4.0 Schema 校验",
+                **response_audit,
             ) from None
 
-        usage = getattr(response, "usage", None)
-        model = getattr(response, "model", None)
         return JobEvaluationPlanAdapterResult(
             content=content,
-            model=(
-                model
-                if isinstance(model, str) and model
-                else self.settings.JOB_EVALUATION_PLAN_MODEL
-            ),
+            model=response_audit["model"] or self.settings.JOB_EVALUATION_PLAN_MODEL,
             finish_reason=finish_reason,
-            input_tokens=self._optional_int(getattr(usage, "prompt_tokens", None)),
-            output_tokens=self._optional_int(
+            input_tokens=response_audit["input_tokens"],
+            cache_hit_input_tokens=response_audit["cache_hit_input_tokens"],
+            cache_miss_input_tokens=response_audit["cache_miss_input_tokens"],
+            output_tokens=response_audit["output_tokens"],
+        )
+
+    def _response_audit(self, response: Any) -> dict[str, Any]:
+        choices = getattr(response, "choices", None)
+        choice = choices[0] if choices else None
+        message = getattr(choice, "message", None)
+        content = getattr(message, "content", None)
+        usage = getattr(response, "usage", None)
+        model = getattr(response, "model", None)
+        return {
+            "raw_response": content if isinstance(content, str) else None,
+            "model": model if isinstance(model, str) and model else None,
+            "finish_reason": (
+                getattr(choice, "finish_reason", None) if choice is not None else None
+            ),
+            "input_tokens": self._optional_int(
+                getattr(usage, "prompt_tokens", None)
+            ),
+            "cache_hit_input_tokens": self._optional_int(
+                getattr(usage, "prompt_cache_hit_tokens", None)
+            ),
+            "cache_miss_input_tokens": self._optional_int(
+                getattr(usage, "prompt_cache_miss_tokens", None)
+            ),
+            "output_tokens": self._optional_int(
                 getattr(usage, "completion_tokens", None)
             ),
-        )
+        }
 
     @staticmethod
     def _optional_int(value: Any) -> int | None:

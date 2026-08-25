@@ -1,6 +1,6 @@
 # 项目当前状态
 
-> 最新更新：2026-08-24
+> 最新更新：2026-08-25
 >
 > 本文件只记录“现在是什么状态、下一步做什么”。完整开发过程已归档到 `docs/archive/history/2026-08-20-project-history.md`，不再作为新对话的默认阅读材料。
 
@@ -8,7 +8,7 @@
 
 - 项目正在建设新版招聘主链，旧 React + FastAPI + SQLite + Mock LLM 演示系统已经退役。
 - 阶段 4“简历上传与原文提取”和阶段 5“AI 结构化草稿”已经完成；阶段 6 五段式 JD 整改的 6R-A—6R-D 已全部完成，自动化、真实 PostgreSQL/API 和 Microsoft Playwright 三档浏览器验收通过。
-- 阶段 7“Application 与 AI 初筛底座”已完成投递时间基准、3.0 计划生成、异步运行和 React 报告等底座，但完整真实 AI 质量与浏览器验收仍未达到完成标准。3.0 的 7R-F 首轮定向真实验证只有 3/6 满足合同，正式 20 份未执行。用户已确认改用 RequirementFact + EvaluationCriterion 双层 4.0，并最终确认 7R4-A—7R4-J 顺序；7R4-A—7R4-F 已完成合同/容量、持久化、纯生成、API 确认、Screening 逐 fact 和 React 4.0 交互，真实 DeepSeek 调用为 0。当前停止等待用户确认 7R4-G。
+- 阶段 7“Application 与 AI 初筛底座”已完成投递时间基准、3.0 计划生成、异步运行和 React 报告等底座，但完整真实 AI 质量与浏览器验收仍未达到完成标准。用户已确认 RequirementFact + EvaluationCriterion 双层 4.0 及 7R4-A—7R4-J 顺序；7R4-A—7R4-G、7R4-H0 已完成，7R4-H1 六份定向真实验证已执行并以 `4/6` 失败。人工 facts/明确必测召回均为 100%，但 J5-14 多来源事实合并失败，J5-17 优先级信号 warning 未命中；正式 20 份被门禁阻断。当前停止等待讨论整改范围和新的实施顺序。
 - 小步骤 9-I 已完成 20 次 JD 正式复验和 60 次下游真实诊断。18/18 正常 JD 可用、主要要求与结构化覆盖均为 100%，但 JD18 没有形成预期 `too_many_items`，因此 `step9_quality_gate_passed=false`，小步骤 9 仍未通过；下游诊断也仅有 9/20 至少一份合法报告、1/20 三次全部合法。
 - Application、Resume 隔离、HR 内部录入和 HR 决策等公共能力继续保留。
 - 旧 Rubric、五维权重、确定性评分、`unknown`、证据覆盖率、Python 加权总分和多报告历史方案已经废弃。
@@ -20,7 +20,7 @@
 
 当前阶段的权威顺序是：
 
-1. 阶段 7 评价计划 4.0 当前设计：`docs/stages/stage7/2026-08-24-stage7-job-evaluation-plan-v4-redesign.md`，负责 RequirementFact、EvaluationCriterion、三次调用、局部修复、HR 确认、4.0 历史兼容、质量门槛和 7R4-A—7R4-J；业务规则与顺序已确认，7R4-A—7R4-F 已完成
+1. 阶段 7 评价计划 4.0 当前设计：`docs/stages/stage7/2026-08-24-stage7-job-evaluation-plan-v4-redesign.md`，负责 RequirementFact、EvaluationCriterion、三次调用、局部修复、HR 确认、4.0 历史兼容、质量门槛和 7R4-A—7R4-J；7R4-A—7R4-G、7R4-H0 已完成，7R4-H1 已执行且门禁失败
 2. 阶段 7 五段式计划 3.0 记录：`docs/stages/stage7/2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md`，负责已完成 7R-A—7R-F 的实现事实、定向失败证据和浏览器欠账，不再授权继续按 3.0 扩展
 3. 阶段 7 原设计：`docs/stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`，除被 4.0 替代的计划与接线外，已实现的 Application、Resume、报告、时间事实和 HR 决策边界继续有效
 4. 阶段 6 五段式 JD 整改：`docs/stages/stage6/2026-08-21-stage6-five-section-jd-remediation-design.md`
@@ -35,7 +35,7 @@
 
 ## 3. 当前阶段 7 方案摘要
 
-> 当前说明：阶段 6 五段式 Job 已通过验收；3.0 历史读取仍存在，但真实计划质量门槛失败。4.0 已完成合同/容量基线、Schema/Model/PostgreSQL、Prompt/Adapter/纯生成、API 落库与 HR 确认、Screening 逐 fact 切换和 React 4.0 交互；零调用门禁、真实模型质量与完整浏览器验收尚未执行。
+> 当前说明：阶段 6 五段式 Job 已通过验收；3.0 历史读取仍存在，但真实计划质量门槛失败。4.0 已完成合同/容量基线、Schema/Model/PostgreSQL、Prompt/Adapter/纯生成、API 落库与 HR 确认、Screening 逐 fact、React 4.0 交互以及 7R4-G 零调用质量门禁；真实模型质量与完整浏览器验收尚未执行。
 
 ### 3.1 固定流程
 
@@ -192,10 +192,20 @@ Application 才可逐 fact 进入既有 AI 初筛与 HR 决策链
 
 7R4-F已完成：前端类型和API映射切换4.0；计划抽屉提供无正文HR确认、五类warning、criteria/facts、多来源、coverage/audit和历史只读；报告按criterion组织但逐fact展示分数、理由、简历证据和JD原文，criterion不评分。
 
-当前唯一下一步是等待用户明确确认7R4-G零调用门禁。未经确认不得进入7R4-G，更不得进入7R4-H—J、调用真实DeepSeek或进入阶段8。
+7R4-G已完成：计划和报告质量运行器可在不读取API Key、不实例化真实Adapter、不写正式结果的前提下冻结样本/统计分母、预算、Prompt/Schema/版本与独立结果路径；Fake实际审计证明正常3次、局部修复4次业务调用，定向结果缺失、失败、版本/样本/分母/路径不匹配均在正式Adapter创建前阻断；受控API/PostgreSQL Fake链验证`pending_confirmation → ready → 逐fact报告`并整体回滚夹具。
+
+7R4-H1 已执行。六份固定样本实际 16 次 Adapter/API attempt、0 局部修复、0 基础设施重试，全部保存原始响应和完整计费 token；总 input/output 为 `31,946/13,233`，cache hit/miss 为 `3,584/28,362`，按空闲时段官方美元价估算 `$0.014998508`。J5-19 是预期 `no_facts`，只需一次提取，因此原 H0 的“至少 18 attempts”审计下界也被证明不适用于合法边界结果。
+
+当前唯一下一步是与用户讨论 J5-14 多来源合并、J5-17 优先级信号 warning 和 16 次合法基线审计缺口的整改范围，先写入新的实施顺序并重新确认。不得补跑或覆盖 H1 结果；正式 20 份、7R4-I—J 和阶段 8 均未获授权。
 
 ## 12. 最近验证基线
 
+- 7R4-H1 新定向结果 SHA-256 为 `ada6cbc91c21e7f4f341eee587259676579c9c2770af3a220277ff32a5e47a6f`，`targeted_gate_passed=false`、逐样本 `4/6`。80/80 人工 facts、23/23 明确必测、90/90 source units 均为 100%；83 facts 的追溯、priority 和 criterion 覆盖均为 100%，正常/边界为 4/4、2/2，六类污染/错误中只有 `source_merge_failure_count=1`。预期 warning 命中 1/2。16 次真实 attempt 均为 `deepseek-v4-flash + stop`，逐次费用可重算，历史 hash 和空数据库基线不变；正式结果未创建。
+- 7R4-H0 专项为 26 passed + 7 subtests；配置、Adapter、4.0 纯生成和质量运行器受影响回归为 60 passed + 23 subtests；`py_compile`、`git diff --check` 通过。计划 dry-run/Fake 均为真实调用 0、正式结果写入 0，新 4.0 定向/正式结果文件不存在，历史结果 hash 不变。H0 没有修改 Prompt、Schema、Service、Model、migration、API、React 或 PostgreSQL；这些结果只证明审计与调用门禁已就绪，不能证明六份真实定向质量。
+- 7R4-G 计划 dry-run 固定 J5-01—J5-20、定向 J5-03/07/14/17/19/20、SHA-256 `23651a92bb68602f096cf30519d5c11cd2ce6e724950f158587ba201e41fdfe0`、245 条人工 facts、97 条明确必测、定向 80/23，以及 255/90 source units；报告 dry-run 固定 SR01—SR20、high/partial/low=8/6/6 和每组 3 次。两侧均为真实模型 0 次、正式结果写入 0 次、真实 Adapter 未实例化、API Key 非前提，既有历史结果 hash 不变。
+- 7R4-G 计划预算为定向正常/局部修复/含基础设施重试最大尝试 `18/24/48`，正式为 `60/80/160`；候选模型已从退役兼容别名 `deepseek-chat` 明确改为官方模型 ID `deepseek-v4-flash`，保持 `thinking disabled`，模型档位与官方单价仍须在 7R4-H 前另行确认，费用字段没有伪造数值。Fake 实际审计得到正常 3 次业务调用、0 内容修复、0 基础设施重试；局部修复 4 次、1 内容修复、0 基础设施重试；另有超时 4 次尝试但仍为 3 次业务调用和 1 次基础设施重试。认证、非法 JSON、Schema、事实、证据和安全错误均只尝试 1 次。
+- 2026-08-25 模型别名兼容修正后，配置、计划/筛选 Adapter 与 7R4-G 门禁定向为 36 passed + 29 subtests；后端全量仍为 896 passed + 408 subtests。dry-run 为 `deepseek-v4-flash / thinking disabled / 0 次真实调用 / 0 次正式写入`；门禁会拒绝模型、thinking、temperature/JSON/token/SDK 重试或 Prompt 版本与定向轮不一致的正式轮。
+- 7R4-G 新合同测试为 11 passed；受控 API/PostgreSQL Fake 集成 1 passed。受影响计划、Screening、API、migration 定向回归为 129 passed + 22 subtests；后端全量为 896 passed + 408 subtests，另有既有 PyPDF2 弃用 warning 与旧 API 测试清理阶段的 asyncpg cancel RuntimeWarning。正式开发库最终 `current=head=d6f4a2b8e913`，`jobs/candidates/resumes/applications/job_evaluation_plans/screening_runs/screening_reports/stage_histories/reports` 均为 0。由于没有修改前端，本批未重复浏览器、TypeScript 或 Vite 验收。
 - 7R4-A—E核心后端合同82/82 passed；旧1.0/2.0/3.0运行时拦截、31条容量、513条上限、fact来源追溯、criterion完整归组和Adapter调用前失败均有专项回归。7R4-F前端4.0合同由2 passed、10 failed转为12/12 passed。
 - PostgreSQL上的7R4-E后端全量884 passed、408 subtests passed；7R4-F受影响后端回归51 passed + 5 subtests，前端全量56/56，TypeScript与Vite 5.4.21生产构建通过（3121模块）。正式开发库`current=head=d6f4a2b8e913`，相关业务表均为0；真实DeepSeek调用0。
 - 7R4-A 新增合同测试共 63 条：8 passed、55 expected failed、0 skip、0 xfail、0 收集/导入/夹具错误；红灯责任为 7R4-B 19、7R4-C 14、7R4-D 6、7R4-E 6、7R4-F 10。既有前端 44/44、TypeScript 与 Vite 5.4.21 构建通过（3121 模块）；既有受影响后端非数据库回归 89 passed + 7 subtests。后端全量在进入 PostgreSQL 测试后因本机端口拒绝连接而不能形成有效结论，Docker Desktop Linux engine 同样未运行；这不是 4.0 红灯，也不能冒充全量通过。
@@ -236,7 +246,7 @@ Application 才可逐 fact 进入既有 AI 初筛与 HR 决策链
 - 浏览器最小修复包括计划抽屉关闭回焦、静态 Modal 改为上下文实例、空 `tradeoff_reason` 不再渲染空壳。修复后 Modal 警告为 0、回焦与空壳场景通过；仍有 1 条 Drawer 焦点哨兵 `aria-hidden` 警告，普通初筛真实数据库持久化幂等未在浏览器中验证。
 - 本轮全部最小修复还包括 required 单字误判、JD 逐字/英文约束 Prompt v3、筛选嵌套 evidence/bonus Prompt v2，以及固定投递时间整改后的筛选 Prompt v3 / Schema 2.0。完整证据见 `docs/stages/stage7/2026-08-20-stage7-quality-acceptance.md`、原质量验收 JSON、`2026-08-21-stage7-time-fact-revalidation-results.json` 与 `browser-acceptance-evidence/`。
 - `git diff --check` 通过。上述结果证明自动化、迁移、固定投递时间链路和年限事实防线稳定，并证明大部分前端状态与交互按合同工作；9-I 还证明新 JD 追溯/召回合同在 18 份正常样本上可用，但 JD18 边界、总体报告成功率和三次稳定性仍失败。它明确不能证明阶段 7 AI 质量合格、招聘准确、真实数据库端到端幂等或浏览器子验收全通过；本次没有重新执行浏览器验收。
-- 当前后续顺序为：等待单独授权7R4-G → 7R4-G零调用门禁 → 7R4-H计划质量 → 7R4-I报告质量与稳定性 → 7R4-J数据库/API/浏览器收尾。3.0和更早质量结果保持不变，只作历史对比，不作为4.0计数。
+- 当前后续顺序为：等待单独确认 7R4-H1 六份定向真实质量 → 只有门禁通过且另获授权后才能讨论正式 20 份 → 7R4-I 报告质量与稳定性 → 7R4-J 数据库/API/浏览器收尾。7R4-H0 已完成；3.0 和更早质量结果保持不变，只作历史对比，不作为 4.0 计数。
 
 开始下一步前仍须重新检查实际 Git 状态、测试数量、Alembic revision 和数据库状态，不能只依赖这里的历史基线。
 

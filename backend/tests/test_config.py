@@ -50,7 +50,7 @@ class SettingsTest(TestCase):
         settings = Settings(_env_file=None)
 
         self.assertTrue(settings.JOB_EVALUATION_PLAN_ENABLED)
-        self.assertEqual(settings.JOB_EVALUATION_PLAN_MODEL, "deepseek-chat")
+        self.assertEqual(settings.JOB_EVALUATION_PLAN_MODEL, "deepseek-v4-flash")
         self.assertEqual(settings.JOB_EVALUATION_PLAN_TIMEOUT_SECONDS, 90)
         self.assertEqual(settings.JOB_EVALUATION_PLAN_MAX_INPUT_CHARS, 100_000)
         self.assertEqual(settings.JOB_EVALUATION_PLAN_MAX_OUTPUT_TOKENS, 8_000)
@@ -75,7 +75,7 @@ class SettingsTest(TestCase):
         settings = Settings(_env_file=None)
 
         self.assertTrue(settings.SCREENING_EVALUATION_ENABLED)
-        self.assertEqual(settings.SCREENING_EVALUATION_MODEL, "deepseek-chat")
+        self.assertEqual(settings.SCREENING_EVALUATION_MODEL, "deepseek-v4-flash")
         self.assertEqual(settings.SCREENING_EVALUATION_TIMEOUT_SECONDS, 90)
         self.assertEqual(settings.SCREENING_EVALUATION_MAX_INPUT_CHARS, 150_000)
         self.assertEqual(settings.SCREENING_EVALUATION_MAX_OUTPUT_TOKENS, 12_000)

@@ -13,6 +13,7 @@ from app.adapters.job_evaluation_plan import (
     JobEvaluationPlanInputError,
     JobEvaluationPlanInvalidResponseError,
     JobEvaluationPlanRateLimitError,
+    JobEvaluationPlanResponseInterruptedError,
     JobEvaluationPlanServiceUnavailableError,
     JobEvaluationPlanTimeoutError,
 )
@@ -96,7 +97,12 @@ def make_response() -> SimpleNamespace:
             )
         ],
         model="deepseek-test-0813",
-        usage=SimpleNamespace(prompt_tokens=12, completion_tokens=8),
+        usage=SimpleNamespace(
+            prompt_tokens=12,
+            prompt_cache_hit_tokens=5,
+            prompt_cache_miss_tokens=7,
+            completion_tokens=8,
+        ),
     )
 
 
@@ -180,6 +186,8 @@ class DeepSeekJobEvaluationPlanAdapterTest(IsolatedAsyncioTestCase):
         self.assertEqual(result.content, make_response().choices[0].message.content)
         self.assertEqual(result.model, "deepseek-test-0813")
         self.assertEqual(result.input_tokens, 12)
+        self.assertEqual(result.cache_hit_input_tokens, 5)
+        self.assertEqual(result.cache_miss_input_tokens, 7)
         self.assertEqual(result.output_tokens, 8)
         request = client.chat.completions.create.await_args.kwargs
         self.assertEqual(request["response_format"], {"type": "json_object"})
@@ -228,7 +236,45 @@ class DeepSeekJobEvaluationPlanAdapterTest(IsolatedAsyncioTestCase):
                     await adapter.extract(make_extraction_input())
 
                 self.assertFalse(raised.exception.retryable)
+                self.assertEqual(raised.exception.raw_response, content)
+                self.assertEqual(raised.exception.finish_reason, "stop")
+                self.assertEqual(raised.exception.input_tokens, 12)
+                self.assertEqual(raised.exception.cache_hit_input_tokens, 5)
+                self.assertEqual(raised.exception.cache_miss_input_tokens, 7)
+                self.assertEqual(raised.exception.output_tokens, 8)
                 client.chat.completions.create.assert_awaited_once()
+
+    async def test_interrupted_response_keeps_finish_reason_and_raw_evidence(self) -> None:
+        response = make_response()
+        response.choices[0].finish_reason = "length"
+        client = Mock()
+        client.chat.completions.create = AsyncMock(return_value=response)
+        adapter = make_legacy_adapter(settings=make_settings(), client=client)
+
+        with self.assertRaises(JobEvaluationPlanResponseInterruptedError) as raised:
+            await adapter.extract(make_extraction_input())
+
+        self.assertEqual(raised.exception.finish_reason, "length")
+        self.assertEqual(
+            raised.exception.raw_response,
+            response.choices[0].message.content,
+        )
+
+    async def test_v4_schema_failure_keeps_raw_response_and_usage_evidence(self) -> None:
+        response = make_response()
+        response.choices[0].message.content = '{"schema_version":"3.0"}'
+        adapter = make_legacy_adapter(settings=make_settings(), client=Mock())
+
+        with self.assertRaises(JobEvaluationPlanInvalidResponseError) as raised:
+            adapter._read_v4_response(response, role="fact_extraction")
+
+        self.assertEqual(raised.exception.raw_response, '{"schema_version":"3.0"}')
+        self.assertEqual(raised.exception.model, "deepseek-test-0813")
+        self.assertEqual(raised.exception.finish_reason, "stop")
+        self.assertEqual(raised.exception.input_tokens, 12)
+        self.assertEqual(raised.exception.cache_hit_input_tokens, 5)
+        self.assertEqual(raised.exception.cache_miss_input_tokens, 7)
+        self.assertEqual(raised.exception.output_tokens, 8)
 
     async def test_only_retryable_transport_errors_are_marked_retryable(self) -> None:
         request = httpx.Request("POST", "https://api.deepseek.com/chat/completions")
