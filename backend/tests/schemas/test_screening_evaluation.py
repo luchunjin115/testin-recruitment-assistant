@@ -73,7 +73,7 @@ class ScreeningEvaluationSchemaTest(TestCase):
             make_output(overall_summary=""),
             make_output(overall_summary="x" * 3_001),
             make_output(interview_questions=["问题"] * 6),
-            make_output(requirement_assessments=[assessment] * 31),
+            make_output(requirement_assessments=[assessment] * 513),
             make_output(
                 requirement_assessments=[
                     {**assessment, "reason": "x" * 1_001}

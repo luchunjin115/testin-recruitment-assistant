@@ -13,6 +13,7 @@ from app.services.job_evaluation_plan_service import (
     JobEvaluationPlanJobNotFoundError,
     JobEvaluationPlanJobNotOpenError,
     JobEvaluationPlanNotFoundError,
+    JobEvaluationPlanNotConfirmableError,
     JobEvaluationPlanNotRegenerableError,
     job_evaluation_plan_service,
 )
@@ -67,6 +68,12 @@ def _map_expected_error(exc: Exception) -> HTTPException:
             status.HTTP_409_CONFLICT,
             exc.code,
             "只有失败的当前评价计划可以重新生成",
+        )
+    if isinstance(exc, JobEvaluationPlanNotConfirmableError):
+        return _error(
+            status.HTTP_409_CONFLICT,
+            exc.code,
+            "只有当前、未过期的 4.0 待确认计划可以确认",
         )
     if isinstance(exc, JobEvaluationPlanDisabledError):
         return _error(
@@ -143,6 +150,23 @@ async def regenerate_failed_evaluation_plan(
             job_id,
             plan_ready=getattr(plan, "status", None) == "ready",
         )
+        return response
+    except Exception as exc:
+        raise _map_expected_error(exc) from exc
+
+
+@router.post(
+    "/{job_id}/evaluation-plan/confirm",
+    response_model=JobEvaluationPlanRead,
+)
+async def confirm_current_evaluation_plan(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> JobEvaluationPlanRead:
+    try:
+        plan = await job_evaluation_plan_service.confirm_current_plan(db, job_id)
+        response = job_evaluation_plan_service.build_read_model(plan)
+        await _notify_screening_plan_changed(db, job_id, plan_ready=True)
         return response
     except Exception as exc:
         raise _map_expected_error(exc) from exc

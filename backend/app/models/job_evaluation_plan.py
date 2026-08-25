@@ -28,7 +28,9 @@ class JobEvaluationPlan(Base):
             name="uq_job_evaluation_plans_job_input_fingerprint",
         ),
         CheckConstraint(
-            "status IN ('generating', 'ready', 'failed', 'outdated')",
+            "status IN ("
+            "'generating', 'pending_confirmation', 'ready', 'failed', 'outdated'"
+            ")",
             name="ck_job_evaluation_plans_status_allowed",
         ),
         CheckConstraint(
@@ -46,7 +48,7 @@ class JobEvaluationPlan(Base):
             name="ck_job_evaluation_plans_source_review_summary_object",
         ),
         CheckConstraint(
-            "schema_version IN ('1.0', '2.0', '3.0')",
+            "schema_version IN ('1.0', '2.0', '3.0', '4.0')",
             name="ck_job_evaluation_plans_schema_version_allowed",
         ),
         CheckConstraint(
@@ -63,6 +65,63 @@ class JobEvaluationPlan(Base):
             "schema_version <> '3.0' OR "
             "(structured_coverage IS NULL AND free_text_coverage IS NULL)",
             name="ck_job_evaluation_plans_v3_has_no_legacy_coverage",
+        ),
+        CheckConstraint(
+            "requirement_facts IS NULL "
+            "OR jsonb_typeof(requirement_facts) = 'array'",
+            name="ck_job_evaluation_plans_requirement_facts_array",
+        ),
+        CheckConstraint(
+            "evaluation_criteria IS NULL "
+            "OR jsonb_typeof(evaluation_criteria) = 'array'",
+            name="ck_job_evaluation_plans_evaluation_criteria_array",
+        ),
+        CheckConstraint(
+            "coverage_review_summary IS NULL "
+            "OR jsonb_typeof(coverage_review_summary) = 'object'",
+            name="ck_job_evaluation_plans_coverage_review_summary_object",
+        ),
+        CheckConstraint(
+            "generation_audit IS NULL "
+            "OR jsonb_typeof(generation_audit) = 'object'",
+            name="ck_job_evaluation_plans_generation_audit_object",
+        ),
+        CheckConstraint(
+            "schema_version = '4.0' OR "
+            "(requirement_facts IS NULL "
+            "AND evaluation_criteria IS NULL "
+            "AND coverage_review_summary IS NULL "
+            "AND generation_audit IS NULL)",
+            name="ck_job_evaluation_plans_legacy_has_no_v4_payload",
+        ),
+        CheckConstraint(
+            "schema_version <> '4.0' OR "
+            "(items IS NULL "
+            "AND structured_coverage IS NULL "
+            "AND free_text_coverage IS NULL)",
+            name="ck_job_evaluation_plans_v4_has_no_legacy_payload",
+        ),
+        CheckConstraint(
+            "schema_version <> '4.0' "
+            "OR status NOT IN ('pending_confirmation', 'ready') "
+            "OR (requirement_facts IS NOT NULL "
+            "AND jsonb_array_length(requirement_facts) > 0 "
+            "AND evaluation_criteria IS NOT NULL "
+            "AND jsonb_array_length(evaluation_criteria) > 0 "
+            "AND source_review_summary IS NOT NULL "
+            "AND coverage_review_summary IS NOT NULL "
+            "AND generation_audit IS NOT NULL)",
+            name="ck_job_evaluation_plans_v4_complete_payload",
+        ),
+        CheckConstraint(
+            "schema_version <> '4.0' "
+            "OR status NOT IN ('generating', 'failed') "
+            "OR (requirement_facts IS NULL "
+            "AND evaluation_criteria IS NULL "
+            "AND source_review_summary IS NULL "
+            "AND coverage_review_summary IS NULL "
+            "AND generation_audit IS NULL)",
+            name="ck_job_evaluation_plans_v4_no_partial_failed_payload",
         ),
         Index("ix_job_evaluation_plans_job_id", "job_id"),
         Index("ix_job_evaluation_plans_status", "status"),
@@ -92,9 +151,9 @@ class JobEvaluationPlan(Base):
         default=True,
         server_default=text("true"),
     )
-    items: Mapped[list[dict]] = mapped_column(
+    items: Mapped[list[dict] | None] = mapped_column(
         JSONB,
-        nullable=False,
+        nullable=True,
         default=list,
         server_default=text("'[]'::jsonb"),
     )
@@ -104,6 +163,19 @@ class JobEvaluationPlan(Base):
     )
     free_text_coverage: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     source_review_summary: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    requirement_facts: Mapped[list[dict] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
+    evaluation_criteria: Mapped[list[dict] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
+    coverage_review_summary: Mapped[dict | None] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
+    generation_audit: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     warnings: Mapped[list[str | dict]] = mapped_column(
         JSONB,
         nullable=False,

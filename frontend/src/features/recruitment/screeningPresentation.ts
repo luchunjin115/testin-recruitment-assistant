@@ -20,6 +20,11 @@ export const PLAN_STATUS_META: Record<
     tone: 'processing',
     description: '系统正在把当前 JD 整理为稳定的初筛评价事项。',
   },
+  pending_confirmation: {
+    label: '待 HR 确认',
+    tone: 'warning',
+    description: '事实提取与完整性复核已完成，确认前不会用于候选人初筛。',
+  },
   ready: {
     label: '已就绪',
     tone: 'success',
@@ -101,6 +106,10 @@ export const SCREENING_WAITING_REASON_META: Record<
     label: '评价计划生成中',
     description: '计划完成后系统会自动续跑等待中的申请，无需重复点击。',
   },
+  plan_pending_confirmation: {
+    label: '评价计划等待 HR 确认',
+    description: '请到岗位页面核对原文事实、评价维度和 warning；确认后系统才会继续初筛。',
+  },
   plan_failed: {
     label: '评价计划生成失败',
     description: '请到岗位页面查看安全错误提示，重试生成或修改 JD。',
@@ -111,7 +120,7 @@ export const SCREENING_WAITING_REASON_META: Record<
   },
   plan_contract_outdated: {
     label: '评价计划使用旧合同',
-    description: '请按五段式新规则生成 3.0 计划，旧合同计划不能用于新申请。',
+    description: '请按当前 JD 生成并确认 4.0 计划，1.0—3.0 计划不能用于新申请。',
   },
 };
 
@@ -151,6 +160,15 @@ export const getRequirementPlanItem = (
 ) => {
   if (!plan || plan.id !== reportPlanId) return null;
   return plan.items.find(item => item.key === requirementKey) ?? null;
+};
+
+export const getRequirementPlanFact = (
+  plan: JobEvaluationPlan | null,
+  reportPlanId: number,
+  factId: string,
+) => {
+  if (!plan || plan.id !== reportPlanId || plan.schemaVersion !== '4.0') return null;
+  return plan.requirementFacts.find(fact => fact.factId === factId) ?? null;
 };
 
 export type BatchSelectionItem = { applicationId: number; jobId: number };

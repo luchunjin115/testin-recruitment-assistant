@@ -86,7 +86,7 @@ class ScreeningAdapter(Protocol):
         self,
         *,
         job_snapshot: dict[str, Any],
-        evaluation_plan: list[dict[str, Any]],
+        evaluation_plan: dict[str, Any],
         sanitized_resume: str,
         evaluation_reference_at: str,
         evaluation_timezone: str,
@@ -112,7 +112,7 @@ class ScreeningInputContext:
     experience_period_facts_fingerprint: str
     experience_period_facts: ExperiencePeriodFactsSnapshot
     job_snapshot: dict[str, Any] | None
-    evaluation_plan: list[dict[str, Any]] | None
+    evaluation_plan: dict[str, Any] | None
     sanitized_resume: str | None
 
 
@@ -902,7 +902,7 @@ class ScreeningService:
         resume = await db.get(Resume, application.current_resume_id)
         if job is None or resume is None:
             raise ScreeningResumeNotFoundError("Application 的岗位或 Resume 不存在")
-        snapshot = job_evaluation_plan_service.build_input_snapshot(job)
+        snapshot = job_evaluation_plan_service.build_v4_input_snapshot(job)
         jd_fingerprint = job_evaluation_plan_service.fingerprint_snapshot(snapshot)
         plan = await db.scalar(
             select(JobEvaluationPlan).where(
@@ -927,23 +927,12 @@ class ScreeningService:
             else ""
         )
         resume_ready = resume_ready and bool(sanitized_resume)
-        is_legacy_test_contract = snapshot.schema_version != "3.0"
-        if is_legacy_test_contract:
-            plan_ready = (
-                plan is not None
-                and plan.status == JobEvaluationPlanStatus.READY.value
-                and plan.is_current
-                and plan.jd_fingerprint == jd_fingerprint
-                and bool(plan.items)
-            )
-            plan_waiting_reason = self._legacy_plan_waiting_reason(plan, latest_plan)
-        else:
-            plan_ready, plan_waiting_reason = self._classify_v3_plan(
-                snapshot,
-                jd_fingerprint,
-                plan,
-                latest_plan,
-            )
+        plan_ready, plan_waiting_reason = self._classify_v4_plan(
+            snapshot,
+            jd_fingerprint,
+            plan,
+            latest_plan,
+        )
         if job.status != "open" and not allow_closed:
             desired = ScreeningRunStatus.PAUSED
             waiting_reason = ScreeningWaitingReason.JOB_CLOSED
@@ -962,7 +951,8 @@ class ScreeningService:
                 "id": plan.id,
                 "jd_fingerprint": plan.jd_fingerprint,
                 "input_fingerprint": plan.input_fingerprint,
-                "items": plan.items,
+                "requirement_facts": plan.requirement_facts,
+                "evaluation_criteria": plan.evaluation_criteria,
                 "prompt_version": plan.prompt_version,
                 "model_version": plan.model_version,
                 "schema_version": plan.schema_version,
@@ -1037,31 +1027,20 @@ class ScreeningService:
             ),
             experience_period_facts=experience_period_facts,
             job_snapshot=snapshot.model_dump(mode="json") if plan_ready else None,
-            evaluation_plan=list(plan.items) if plan_ready and plan is not None else None,
+            evaluation_plan=(
+                {
+                    "schema_version": "4.0",
+                    "requirement_facts": list(plan.requirement_facts or []),
+                    "evaluation_criteria": list(plan.evaluation_criteria or []),
+                }
+                if plan_ready and plan is not None
+                else None
+            ),
             sanitized_resume=sanitized_resume if resume_ready else None,
         )
 
     @staticmethod
-    def _legacy_plan_waiting_reason(
-        current: JobEvaluationPlan | None,
-        latest: JobEvaluationPlan | None,
-    ) -> ScreeningWaitingReason | None:
-        if current is None:
-            return (
-                ScreeningWaitingReason.PLAN_OUTDATED
-                if latest is not None
-                else ScreeningWaitingReason.PLAN_MISSING
-            )
-        if current.status == JobEvaluationPlanStatus.GENERATING.value:
-            return ScreeningWaitingReason.PLAN_GENERATING
-        if current.status == JobEvaluationPlanStatus.FAILED.value:
-            return ScreeningWaitingReason.PLAN_FAILED
-        if current.status == JobEvaluationPlanStatus.OUTDATED.value:
-            return ScreeningWaitingReason.PLAN_OUTDATED
-        return ScreeningWaitingReason.PLAN_CONTRACT_OUTDATED
-
-    @staticmethod
-    def _classify_v3_plan(
+    def _classify_v4_plan(
         current_snapshot: Any,
         current_jd_fingerprint: str,
         current: JobEvaluationPlan | None,
@@ -1073,7 +1052,7 @@ class ScreeningService:
                 if latest is not None
                 else ScreeningWaitingReason.PLAN_MISSING
             )
-        if current.schema_version != "3.0":
+        if current.schema_version != "4.0":
             return False, ScreeningWaitingReason.PLAN_CONTRACT_OUTDATED
         if current.jd_fingerprint != current_jd_fingerprint:
             return False, ScreeningWaitingReason.PLAN_OUTDATED
@@ -1085,6 +1064,8 @@ class ScreeningService:
             return False, ScreeningWaitingReason.PLAN_OUTDATED
         if current.status == JobEvaluationPlanStatus.GENERATING.value:
             return False, ScreeningWaitingReason.PLAN_GENERATING
+        if current.status == "pending_confirmation":
+            return False, ScreeningWaitingReason.PLAN_PENDING_CONFIRMATION
         if current.status == JobEvaluationPlanStatus.FAILED.value:
             return False, ScreeningWaitingReason.PLAN_FAILED
         if current.status == JobEvaluationPlanStatus.OUTDATED.value:
@@ -1093,33 +1074,21 @@ class ScreeningService:
             return False, ScreeningWaitingReason.PLAN_CONTRACT_OUTDATED
         try:
             read_model = job_evaluation_plan_service.build_read_model(current)
-            source_ids = {
-                unit.source_unit_id for unit in current_snapshot.source_units or []
-            }
-            summary = read_model.source_review_summary
-            reviewed_ids = {
-                unit.source_unit_id for unit in summary.units
-            } if summary is not None else set()
-            item_keys = {item.key for item in read_model.items}
-            item_source_ids = {
-                source.source_unit_id
-                for item in read_model.items
-                for source in item.sources
-            }
-            reviewed_item_keys = {
-                item_key
-                for unit in (summary.units if summary is not None else [])
-                for item_key in unit.item_keys
-            }
+            facts = read_model.requirement_facts or []
+            criteria = read_model.evaluation_criteria or []
+            fact_ids = {fact.fact_id for fact in facts}
+            grouped_fact_ids = [
+                fact_id
+                for criterion in criteria
+                for fact_id in criterion.fact_ids
+            ]
             shape_ready = (
-                1 <= len(read_model.items) <= 30
-                and summary is not None
-                and summary.all_reviewed
-                and summary.total_units == len(source_ids)
-                and summary.reviewed_units == len(source_ids)
-                and reviewed_ids == source_ids
-                and reviewed_item_keys == item_keys
-                and item_source_ids.issubset(source_ids)
+                read_model.schema_version == "4.0"
+                and read_model.input_snapshot.schema_version == "4.0"
+                and bool(facts)
+                and bool(criteria)
+                and len(grouped_fact_ids) == len(fact_ids)
+                and set(grouped_fact_ids) == fact_ids
             )
         except (AttributeError, TypeError, ValueError):
             shape_ready = False
@@ -1213,32 +1182,34 @@ class ScreeningService:
             changed |= self._add_outdated_reason(
                 report, ScreeningOutdatedReason.RESUME_CHANGED, now
             )
-        job = await db.get(Job, application.job_id)
-        if job is not None:
-            snapshot = job_evaluation_plan_service.build_input_snapshot(job)
-            current_jd = job_evaluation_plan_service.fingerprint_snapshot(snapshot)
-            if report.jd_fingerprint != current_jd:
-                changed |= self._add_outdated_reason(
-                    report,
-                    (
-                        ScreeningOutdatedReason.JOB_EVALUATION_INPUT_CHANGED
-                        if snapshot.schema_version == "3.0"
-                        else ScreeningOutdatedReason.JD_CHANGED
-                    ),
-                    now,
-                )
         plan = await db.scalar(
             select(JobEvaluationPlan).where(
                 JobEvaluationPlan.job_id == application.job_id,
                 JobEvaluationPlan.is_current.is_(True),
             )
         )
-        if plan is None or report.job_evaluation_plan_id != plan.id:
+        current_v4_plan_matches_report = (
+            plan is not None
+            and plan.schema_version == "4.0"
+            and report.job_evaluation_plan_id == plan.id
+        )
+        if not current_v4_plan_matches_report:
             changed |= self._add_outdated_reason(
                 report,
                 ScreeningOutdatedReason.EVALUATION_PLAN_CHANGED,
                 now,
             )
+        else:
+            job = await db.get(Job, application.job_id)
+            if job is not None:
+                snapshot = job_evaluation_plan_service.build_v4_input_snapshot(job)
+                current_jd = job_evaluation_plan_service.fingerprint_snapshot(snapshot)
+                if report.jd_fingerprint != current_jd:
+                    changed |= self._add_outdated_reason(
+                        report,
+                        ScreeningOutdatedReason.JD_CHANGED,
+                        now,
+                    )
         return changed
 
     @staticmethod

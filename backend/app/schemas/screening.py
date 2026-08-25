@@ -30,6 +30,7 @@ class ScreeningWaitingReason(str, Enum):
     JOB_CLOSED = "job_closed"
     PLAN_MISSING = "plan_missing"
     PLAN_GENERATING = "plan_generating"
+    PLAN_PENDING_CONFIRMATION = "plan_pending_confirmation"
     PLAN_FAILED = "plan_failed"
     PLAN_OUTDATED = "plan_outdated"
     PLAN_CONTRACT_OUTDATED = "plan_contract_outdated"
@@ -67,7 +68,7 @@ class ScreeningReportRead(BaseModel):
     overall_score: int = Field(strict=True, ge=0, le=100)
     display_label: str = Field(min_length=1, max_length=30)
     overall_summary: str = Field(min_length=1, max_length=3_000)
-    requirement_assessments: list[RequirementAssessment] = Field(max_length=30)
+    requirement_assessments: list[RequirementAssessment] = Field(max_length=512)
     bonus_highlights: list[BonusHighlight] = Field(max_length=5)
     tradeoff_reason: str | None = Field(default=None, min_length=1, max_length=2_000)
     interview_questions: list[str] = Field(max_length=5)
@@ -147,6 +148,7 @@ class ScreeningRunRead(BaseModel):
         plan_reasons = {
             ScreeningWaitingReason.PLAN_MISSING,
             ScreeningWaitingReason.PLAN_GENERATING,
+            ScreeningWaitingReason.PLAN_PENDING_CONFIRMATION,
             ScreeningWaitingReason.PLAN_FAILED,
             ScreeningWaitingReason.PLAN_OUTDATED,
             ScreeningWaitingReason.PLAN_CONTRACT_OUTDATED,

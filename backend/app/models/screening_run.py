@@ -43,7 +43,8 @@ class ScreeningRun(Base):
         CheckConstraint(
             "waiting_reason IS NULL OR "
             "(status = 'waiting_plan' AND waiting_reason IN "
-            "('plan_missing', 'plan_generating', 'plan_failed', "
+            "('plan_missing', 'plan_generating', 'plan_pending_confirmation', "
+            "'plan_failed', "
             "'plan_outdated', 'plan_contract_outdated')) OR "
             "(status = 'paused' AND waiting_reason = 'job_closed')",
             name="ck_screening_runs_waiting_reason_matches_status",

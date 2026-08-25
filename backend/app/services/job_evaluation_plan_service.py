@@ -3,12 +3,13 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from collections.abc import Callable, Mapping
+import time
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Protocol
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import null, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +17,7 @@ from app.adapters.job_evaluation_plan import (
     DeepSeekJobEvaluationPlanAdapter,
     JobEvaluationPlanAdapterError,
     JobEvaluationPlanAdapterResult,
+    V4_PROMPT_VERSIONS,
 )
 from app.core.config import Settings, get_settings
 from app.models.job import Job
@@ -24,16 +26,30 @@ from app.prompts.job_evaluation_plan import (
     JOB_EVALUATION_PLAN_PROMPT_VERSION,
 )
 from app.schemas.job_evaluation_plan import (
+    AIEvaluationCriterionGroupingOutput,
     AIExtractedEvaluationItem,
     AIExtractedEvaluationPlan,
     AIExtractedEvaluationPlanV2,
     AIExtractedEvaluationPlanV3,
+    AIRequirementCoverageReviewOutput,
+    AIRequirementFactCandidate,
+    AIRequirementFactExtractionOutput,
+    AIRequirementLocalRepairOutput,
     JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION,
     JOB_EVALUATION_PLAN_BREAKING_CONTRACT_VERSION,
     JOB_EVALUATION_PLAN_FINGERPRINT_RULE_VERSION,
     JOB_EVALUATION_PLAN_MAX_ITEMS,
     JOB_EVALUATION_PLAN_SCHEMA_VERSION,
     JOB_EVALUATION_PLAN_SOURCE_UNIT_RULE_VERSION,
+    JOB_EVALUATION_PLAN_V4_MAX_CRITERIA_JSON_CHARS,
+    JOB_EVALUATION_PLAN_V4_MAX_FACTS,
+    JOB_EVALUATION_PLAN_V4_MAX_FACTS_JSON_CHARS,
+    JOB_EVALUATION_PLAN_V4_MAX_INPUT_CHARS,
+    JOB_EVALUATION_PLAN_V4_MAX_OUTPUT_JSON_CHARS,
+    JOB_EVALUATION_PLAN_V4_MAX_SOURCE_UNITS,
+    JOB_EVALUATION_PLAN_V4_BREAKING_CONTRACT_VERSION,
+    JOB_EVALUATION_PLAN_V4_FINGERPRINT_RULE_VERSION,
+    JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION,
     LEGACY_JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION,
     LEGACY_JOB_EVALUATION_PLAN_BREAKING_CONTRACT_VERSION,
     LEGACY_JOB_EVALUATION_PLAN_SCHEMA_VERSION,
@@ -41,23 +57,38 @@ from app.schemas.job_evaluation_plan import (
     EvaluationItemCategory,
     EvaluationItemPriority,
     EvaluationItemSourceType,
+    EvaluationCriterion,
+    JobEvaluationCriterionGroupingInput,
     JobEvaluationPlanAIInput,
     JobEvaluationPlanAIInputV3,
     JobEvaluationItem,
     JobEvaluationItemSource,
     JobEvaluationPlanFreeTextCoverage,
     JobEvaluationPlanInputSnapshot,
+    JobEvaluationPlanCoverageFinding,
+    JobEvaluationPlanCoverageReviewSummary,
+    JobEvaluationPlanGenerationAudit,
+    JobEvaluationPlanGenerationCallAudit,
     JobEvaluationPlanRead,
     JobEvaluationPlanSourceReviewSummary,
+    JobEvaluationPlanSourceReviewSummaryV4,
     JobEvaluationPlanSourceReviewUnit,
+    JobEvaluationPlanSourceReviewUnitV4,
     JobEvaluationPlanSourceUnit,
     JobEvaluationPlanStatus,
     JobEvaluationPlanWarning,
     JobEvaluationPlanWarningDetail,
     JobEvaluationPlanWarningCode,
+    JobEvaluationPlanV4WarningCode,
+    JobEvaluationPlanV4WarningDetail,
+    JobRequirementCoverageReviewInput,
+    JobRequirementFactExtractionInput,
+    JobRequirementLocalRepairInput,
     LegacyEvaluationPlanRequirements,
     StructuredCoverageResult,
     StructuredFieldCoverage,
+    RequirementFact,
+    RequirementFactSource,
 )
 
 
@@ -92,6 +123,10 @@ class JobEvaluationPlanNotRegenerableError(JobEvaluationPlanServiceError):
     code = "JOB_EVALUATION_PLAN_NOT_REGENERABLE"
 
 
+class JobEvaluationPlanNotConfirmableError(JobEvaluationPlanServiceError):
+    code = "JOB_EVALUATION_PLAN_NOT_CONFIRMABLE"
+
+
 class JobEvaluationPlanContentError(JobEvaluationPlanServiceError):
     code = "JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT"
 
@@ -101,10 +136,33 @@ class JobEvaluationPlanContentError(JobEvaluationPlanServiceError):
         super().__init__(message)
 
 
+class JobEvaluationPlanV4GenerationError(JobEvaluationPlanServiceError):
+    """Safe terminal error for the pure 4.0 workflow, with no partial plan."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str,
+        generation_audit: JobEvaluationPlanGenerationAudit,
+    ) -> None:
+        self.code = code
+        self.generation_audit = generation_audit
+        self.requirement_facts = None
+        self.evaluation_criteria = None
+        super().__init__(message)
+
+
 class JobEvaluationPlanAdapter(Protocol):
     async def extract(
         self,
         extraction_input: dict[str, Any],
+    ) -> JobEvaluationPlanAdapterResult: ...
+
+    async def generate_v4(
+        self,
+        role: str,
+        generation_input: dict[str, Any],
     ) -> JobEvaluationPlanAdapterResult: ...
 
 
@@ -115,6 +173,16 @@ class GeneratedPlanContent:
     warnings: list[JobEvaluationPlanWarning | JobEvaluationPlanWarningDetail]
     free_text_coverage: dict[str, Any] | None = None
     source_review_summary: JobEvaluationPlanSourceReviewSummary | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class GeneratedPlanContentV4:
+    requirement_facts: list[RequirementFact]
+    evaluation_criteria: list[EvaluationCriterion]
+    source_review_summary: JobEvaluationPlanSourceReviewSummaryV4
+    coverage_review_summary: JobEvaluationPlanCoverageReviewSummary
+    warnings: list[JobEvaluationPlanV4WarningDetail]
+    generation_audit: JobEvaluationPlanGenerationAudit
 
 
 @dataclass(frozen=True)
@@ -131,6 +199,7 @@ class _CandidateItem:
 
 
 class JobEvaluationPlanService:
+    MAX_V4_CONTENT_REPAIRS = 1
     # Reuse the existing Job description and AI extraction safety boundaries.
     _DESCRIPTION_MAX_LENGTH = 20_000
     _DESCRIPTION_MAX_SOURCE_UNITS = 100
@@ -262,7 +331,10 @@ class JobEvaluationPlanService:
 
     def is_contract_outdated(self, plan: JobEvaluationPlan) -> bool:
         """Compare a stored plan with the current extraction contract without writes."""
-        if plan.schema_version != JOB_EVALUATION_PLAN_SCHEMA_VERSION:
+        if plan.schema_version not in {
+            JOB_EVALUATION_PLAN_SCHEMA_VERSION,
+            JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION,
+        }:
             return True
         try:
             snapshot = JobEvaluationPlanInputSnapshot.model_validate(
@@ -314,6 +386,100 @@ class JobEvaluationPlanService:
         )
 
     async def generate_for_job(
+        self,
+        db: AsyncSession,
+        job_id: int,
+        *,
+        force: bool = False,
+        adapter: JobEvaluationPlanAdapter | None = None,
+        settings: Settings | None = None,
+        clock: Callable[[], datetime] | None = None,
+    ) -> JobEvaluationPlan:
+        """Generate the only writable plan contract: JobEvaluationPlan 4.0."""
+        resolved_settings = settings or get_settings()
+        if not resolved_settings.JOB_EVALUATION_PLAN_ENABLED:
+            raise JobEvaluationPlanDisabledError("岗位评价计划功能当前未启用")
+        now_provider = clock or (lambda: datetime.now(timezone.utc))
+        started_at = self._aware_time(now_provider())
+
+        try:
+            job = await self._get_locked_job(db, job_id)
+            if job is None:
+                raise JobEvaluationPlanJobNotFoundError("岗位不存在")
+            if job.status != "open":
+                raise JobEvaluationPlanJobNotOpenError(
+                    "只有开放岗位可以生成评价计划"
+                )
+
+            snapshot = self.build_v4_input_snapshot(job)
+            snapshot_payload = snapshot.model_dump(mode="json")
+            jd_fingerprint = self.fingerprint_snapshot(snapshot)
+            input_fingerprint = self.fingerprint_input(snapshot)
+            plan, should_generate = await self._prepare_plan(
+                db,
+                job,
+                snapshot_payload,
+                jd_fingerprint,
+                input_fingerprint,
+                force=force,
+                settings=resolved_settings,
+                started_at=started_at,
+            )
+            if not should_generate:
+                await db.commit()
+                await db.refresh(plan)
+                return plan
+            await db.commit()
+            await db.refresh(plan)
+        except JobEvaluationPlanServiceError:
+            await db.rollback()
+            raise
+        except BaseException:
+            await db.rollback()
+            raise
+
+        try:
+            resolved_adapter = adapter or DeepSeekJobEvaluationPlanAdapter(
+                settings=resolved_settings
+            )
+            content = await self.build_v4_plan_content(
+                snapshot,
+                adapter=resolved_adapter,
+            )
+        except JobEvaluationPlanV4GenerationError as exc:
+            return await self._save_failure(
+                db,
+                plan.id,
+                input_fingerprint,
+                code=exc.code,
+                message=str(exc),
+                completed_at=self._aware_time(now_provider()),
+            )
+        except Exception:
+            return await self._save_failure(
+                db,
+                plan.id,
+                input_fingerprint,
+                code="JOB_EVALUATION_PLAN_UNEXPECTED_ERROR",
+                message="岗位评价计划生成发生未预期错误",
+                completed_at=self._aware_time(now_provider()),
+            )
+
+        model_version = (
+            content.generation_audit.calls[0].model
+            if content.generation_audit.calls
+            else resolved_settings.JOB_EVALUATION_PLAN_MODEL
+        )
+        return await self._save_success(
+            db,
+            plan.id,
+            input_fingerprint,
+            content,
+            model_version=model_version,
+            completed_at=self._aware_time(now_provider()),
+        )
+
+    async def _generate_legacy_for_job(
         self,
         db: AsyncSession,
         job_id: int,
@@ -410,7 +576,7 @@ class JobEvaluationPlanService:
                 completed_at=self._aware_time(now_provider()),
             )
 
-        return await self._save_success(
+        return await self._save_legacy_success(
             db,
             plan.id,
             input_fingerprint,
@@ -482,17 +648,34 @@ class JobEvaluationPlanService:
             jd_fingerprint=jd_fingerprint,
             status=JobEvaluationPlanStatus.GENERATING.value,
             is_current=True,
-            items=[],
+            items=(
+                null()
+                if snapshot_payload.get("schema_version") == "4.0"
+                else []
+            ),
             structured_coverage=(
-                null() if snapshot_payload.get("schema_version") == "3.0"
+                null()
+                if snapshot_payload.get("schema_version") in {"3.0", "4.0"}
                 else self._empty_coverage()
             ),
             free_text_coverage=null(),
             source_review_summary=null(),
+            requirement_facts=null(),
+            evaluation_criteria=null(),
+            coverage_review_summary=null(),
+            generation_audit=null(),
             warnings=[],
-            prompt_version=settings.JOB_EVALUATION_PLAN_PROMPT_VERSION,
+            prompt_version=(
+                V4_PROMPT_VERSIONS["fact_extraction"]
+                if snapshot_payload.get("schema_version") == "4.0"
+                else settings.JOB_EVALUATION_PLAN_PROMPT_VERSION
+            ),
             model_version=settings.JOB_EVALUATION_PLAN_MODEL,
-            schema_version=settings.JOB_EVALUATION_PLAN_SCHEMA_VERSION,
+            schema_version=(
+                JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION
+                if snapshot_payload.get("schema_version") == "4.0"
+                else settings.JOB_EVALUATION_PLAN_SCHEMA_VERSION
+            ),
             input_fingerprint=input_fingerprint,
             input_snapshot=snapshot_payload,
             error_code=None,
@@ -512,17 +695,32 @@ class JobEvaluationPlanService:
     ) -> None:
         plan.status = JobEvaluationPlanStatus.GENERATING.value
         plan.is_current = True
-        plan.items = []
+        is_v4 = snapshot_payload.get("schema_version") == "4.0"
+        plan.items = null() if is_v4 else []
         is_v3 = snapshot_payload.get("schema_version") == "3.0"
         plan.structured_coverage = (
-            null() if is_v3 else JobEvaluationPlanService._empty_coverage()
+            null()
+            if is_v3 or is_v4
+            else JobEvaluationPlanService._empty_coverage()
         )
         plan.free_text_coverage = null()
         plan.source_review_summary = null()
+        plan.requirement_facts = null()
+        plan.evaluation_criteria = null()
+        plan.coverage_review_summary = null()
+        plan.generation_audit = null()
         plan.warnings = []
-        plan.prompt_version = settings.JOB_EVALUATION_PLAN_PROMPT_VERSION
+        plan.prompt_version = (
+            V4_PROMPT_VERSIONS["fact_extraction"]
+            if is_v4
+            else settings.JOB_EVALUATION_PLAN_PROMPT_VERSION
+        )
         plan.model_version = settings.JOB_EVALUATION_PLAN_MODEL
-        plan.schema_version = settings.JOB_EVALUATION_PLAN_SCHEMA_VERSION
+        plan.schema_version = (
+            JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION
+            if is_v4
+            else settings.JOB_EVALUATION_PLAN_SCHEMA_VERSION
+        )
         plan.jd_fingerprint = jd_fingerprint
         plan.input_fingerprint = input_fingerprint
         plan.input_snapshot = snapshot_payload
@@ -551,9 +749,9 @@ class JobEvaluationPlanService:
             if current is None:
                 await db.rollback()
                 return None
-            snapshot = self.build_input_snapshot(job)
+            snapshot = self.build_v4_input_snapshot(job)
             if (
-                current.schema_version == JOB_EVALUATION_PLAN_SCHEMA_VERSION
+                current.schema_version == JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION
                 and current.input_fingerprint == self.fingerprint_input(snapshot)
             ):
                 await db.commit()
@@ -569,6 +767,80 @@ class JobEvaluationPlanService:
         except BaseException:
             await db.rollback()
             raise
+
+    async def confirm_current_plan(
+        self,
+        db: AsyncSession,
+        job_id: int,
+    ) -> JobEvaluationPlan:
+        """Move the current validated 4.0 pending_confirmation plan to ready."""
+        stale_plan: JobEvaluationPlan | None = None
+        try:
+            job = await self._get_locked_job(db, job_id)
+            if job is None:
+                raise JobEvaluationPlanJobNotFoundError("岗位不存在")
+            plan = await db.scalar(
+                select(JobEvaluationPlan)
+                .where(
+                    JobEvaluationPlan.job_id == job_id,
+                    JobEvaluationPlan.is_current.is_(True),
+                )
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+            if plan is None:
+                raise JobEvaluationPlanNotFoundError("当前岗位还没有评价计划")
+            if job.status != "open":
+                raise JobEvaluationPlanNotConfirmableError(
+                    "关闭岗位不能确认评价计划"
+                )
+
+            snapshot = self.build_v4_input_snapshot(job)
+            input_fingerprint = self.fingerprint_input(snapshot)
+            if (
+                not plan.is_current
+                or plan.schema_version != "4.0"
+                or plan.input_fingerprint != input_fingerprint
+                or plan.jd_fingerprint != self.fingerprint_snapshot(snapshot)
+            ):
+                plan.status = JobEvaluationPlanStatus.OUTDATED.value
+                plan.is_current = False
+                await db.commit()
+                await db.refresh(plan)
+                stale_plan = plan
+            elif plan.status == JobEvaluationPlanStatus.READY.value:
+                self.build_read_model(plan)
+                await db.commit()
+                await db.refresh(plan)
+                return plan
+            elif plan.status != "pending_confirmation":
+                raise JobEvaluationPlanNotConfirmableError(
+                    "只有当前待确认的 4.0 评价计划可以确认"
+                )
+            else:
+                self.build_read_model(plan)
+                plan.status = JobEvaluationPlanStatus.READY.value
+                await db.commit()
+                await db.refresh(plan)
+                return plan
+        except JobEvaluationPlanServiceError:
+            await db.rollback()
+            raise
+        except (AttributeError, ValidationError, TypeError, ValueError):
+            await db.rollback()
+            raise JobEvaluationPlanNotConfirmableError(
+                "待确认评价计划没有通过 4.0 完整性复核"
+            ) from None
+        except BaseException:
+            await db.rollback()
+            raise
+
+        if stale_plan is not None:
+            raise JobEvaluationPlanNotConfirmableError(
+                "岗位输入已经变化，旧评价计划已过期"
+            )
+        raise AssertionError("unreachable")
+
     async def _extract_with_retry(
         self,
         adapter: JobEvaluationPlanAdapter,
@@ -581,6 +853,963 @@ class JobEvaluationPlanService:
                 if not exc.retryable or attempt == 1:
                     raise
         raise AssertionError("unreachable")
+
+    async def build_v4_plan_content(
+        self,
+        snapshot: JobEvaluationPlanInputSnapshot | dict[str, Any],
+        *,
+        adapter: JobEvaluationPlanAdapter,
+        input_is_current: Callable[[], bool] | None = None,
+    ) -> GeneratedPlanContentV4:
+        """Build validated 4.0 content without API, Model, or PostgreSQL writes."""
+        audit_calls: list[JobEvaluationPlanGenerationCallAudit] = []
+        try:
+            validated_snapshot = JobEvaluationPlanInputSnapshot.model_validate(snapshot)
+            if validated_snapshot.schema_version != "4.0":
+                raise JobEvaluationPlanContentError(
+                    "纯生成工作流只接受 4.0 input snapshot",
+                    code="JOB_EVALUATION_PLAN_V4_INPUT_REQUIRED",
+                )
+            snapshot_payload = validated_snapshot.model_dump(mode="json")
+            self._validate_v4_serialized_size(
+                snapshot_payload,
+                JOB_EVALUATION_PLAN_V4_MAX_INPUT_CHARS,
+                "JOB_EVALUATION_PLAN_V4_INPUT_TOO_LARGE",
+            )
+            source_units = list(validated_snapshot.source_units or [])
+
+            extraction_input = JobRequirementFactExtractionInput(
+                input_snapshot=validated_snapshot,
+                source_units=source_units,
+            )
+            extraction = await self._invoke_v4_role(
+                adapter,
+                "fact_extraction",
+                extraction_input.model_dump(mode="json"),
+                AIRequirementFactExtractionOutput,
+                audit_calls,
+            )
+            facts, source_review, warning_signals = self._build_v4_extracted_facts(
+                source_units,
+                extraction,
+            )
+            self.validate_v4_fact_count(len(facts))
+            self._ensure_v4_input_current(input_is_current)
+
+            coverage_input = JobRequirementCoverageReviewInput(
+                source_units=source_units,
+                requirement_facts=facts,
+                source_review_summary=source_review,
+            )
+            coverage = await self._invoke_v4_role(
+                adapter,
+                "coverage_review",
+                coverage_input.model_dump(mode="json"),
+                AIRequirementCoverageReviewOutput,
+                audit_calls,
+            )
+            self._validate_v4_coverage_findings(source_units, facts, coverage)
+            repair_performed = False
+            if coverage.status == "needs_repair":
+                failed_source_unit_ids = sorted(
+                    {
+                        source_unit_id
+                        for finding in coverage.findings
+                        for source_unit_id in finding.source_unit_ids
+                    }
+                )
+                facts, source_review, repaired_signals = (
+                    await self.repair_v4_source_units(
+                        snapshot=validated_snapshot,
+                        requirement_facts=facts,
+                        source_review_summary=source_review,
+                        findings=coverage.findings,
+                        failed_source_unit_ids=failed_source_unit_ids,
+                        adapter=adapter,
+                        audit_calls=audit_calls,
+                    )
+                )
+                warning_signals.update(repaired_signals)
+                repair_performed = True
+                self.validate_v4_fact_count(len(facts))
+            self._ensure_v4_input_current(input_is_current)
+
+            grouping_input = JobEvaluationCriterionGroupingInput(
+                requirement_facts=facts
+            )
+            grouping = await self._invoke_v4_role(
+                adapter,
+                "criterion_grouping",
+                grouping_input.model_dump(mode="json"),
+                AIEvaluationCriterionGroupingOutput,
+                audit_calls,
+            )
+            criteria = self._build_v4_criteria(facts, grouping)
+            self._ensure_v4_input_current(input_is_current)
+
+            coverage_summary = JobEvaluationPlanCoverageReviewSummary(
+                status="passed",
+                findings=[],
+                repair_performed=repair_performed,
+                reviewed_source_unit_ids=[
+                    unit.source_unit_id for unit in source_units
+                ],
+            )
+            warnings = self._build_v4_warnings(
+                facts,
+                source_review,
+                warning_signals,
+            )
+            self._validate_v4_output_sizes(facts, criteria)
+            generation_audit = self._build_v4_generation_audit(audit_calls)
+            role_order = tuple(call.role for call in generation_audit.calls)
+            if role_order not in {
+                ("fact_extraction", "coverage_review", "criterion_grouping"),
+                (
+                    "fact_extraction",
+                    "coverage_review",
+                    "local_repair",
+                    "criterion_grouping",
+                ),
+            }:
+                raise JobEvaluationPlanContentError(
+                    "岗位评价计划 4.0 业务调用顺序不合法",
+                    code="JOB_EVALUATION_PLAN_V4_CALL_ORDER_INVALID",
+                )
+            infrastructure_retry_count = sum(
+                call.infrastructure_retry_count for call in generation_audit.calls
+            )
+            content_repair_count = sum(
+                call.role == "local_repair" for call in generation_audit.calls
+            )
+            if (
+                generation_audit.infrastructure_retry_count
+                != infrastructure_retry_count
+                or generation_audit.content_repair_count != content_repair_count
+            ):
+                raise JobEvaluationPlanContentError(
+                    "岗位评价计划 4.0 调用审计计数不一致",
+                    code="JOB_EVALUATION_PLAN_V4_AUDIT_INVALID",
+                )
+            return GeneratedPlanContentV4(
+                requirement_facts=facts,
+                evaluation_criteria=criteria,
+                source_review_summary=source_review,
+                coverage_review_summary=coverage_summary,
+                warnings=warnings,
+                generation_audit=generation_audit,
+            )
+        except JobEvaluationPlanV4GenerationError:
+            raise
+        except JobEvaluationPlanAdapterError as exc:
+            raise self._v4_generation_failure(
+                code=exc.code,
+                message=self._safe_adapter_message(exc),
+                audit_calls=audit_calls,
+            ) from None
+        except JobEvaluationPlanContentError as exc:
+            if exc.code != "JOB_EVALUATION_PLAN_INPUT_OUTDATED_DURING_GENERATION":
+                self._mark_last_v4_call_failed(audit_calls, exc.code)
+            raise self._v4_generation_failure(
+                code=exc.code,
+                message=str(exc),
+                audit_calls=audit_calls,
+            ) from None
+        except (ValidationError, TypeError, ValueError):
+            self._mark_last_v4_call_failed(
+                audit_calls,
+                "JOB_EVALUATION_PLAN_V4_BUSINESS_VALIDATION_FAILED",
+            )
+            raise self._v4_generation_failure(
+                code="JOB_EVALUATION_PLAN_V4_BUSINESS_VALIDATION_FAILED",
+                message="岗位评价计划 4.0 内容未通过确定性校验",
+                audit_calls=audit_calls,
+            ) from None
+        except Exception:
+            raise self._v4_generation_failure(
+                code="JOB_EVALUATION_PLAN_UNEXPECTED_ERROR",
+                message="岗位评价计划 4.0 生成发生未预期错误",
+                audit_calls=audit_calls,
+            ) from None
+
+    async def _invoke_v4_role(
+        self,
+        adapter: JobEvaluationPlanAdapter,
+        role: str,
+        generation_input: dict[str, Any],
+        output_type: type[BaseModel],
+        audit_calls: list[JobEvaluationPlanGenerationCallAudit],
+    ) -> Any:
+        self._validate_v4_serialized_size(
+            generation_input,
+            JOB_EVALUATION_PLAN_V4_MAX_INPUT_CHARS,
+            "JOB_EVALUATION_PLAN_V4_INPUT_TOO_LARGE",
+        )
+        started_at = time.perf_counter()
+        for attempt in range(2):
+            try:
+                result = await adapter.generate_v4(role, generation_input)
+                try:
+                    payload = json.loads(
+                        result.content,
+                        object_pairs_hook=self._json_object_without_duplicate_keys,
+                    )
+                    parsed = output_type.model_validate(payload)
+                except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
+                    audit_calls.append(
+                        self._v4_call_audit(
+                            role=role,
+                            model=result.model,
+                            result="failed",
+                            error_code="JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT",
+                            input_tokens=result.input_tokens,
+                            output_tokens=result.output_tokens,
+                            duration_ms=self._elapsed_ms(started_at),
+                            infrastructure_retry_count=attempt,
+                        )
+                    )
+                    raise JobEvaluationPlanContentError(
+                        f"{role} 输出未通过独立 JSON Schema 校验",
+                        code="JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT",
+                    ) from None
+                audit_calls.append(
+                    self._v4_call_audit(
+                        role=role,
+                        model=result.model,
+                        result="succeeded",
+                        error_code=None,
+                        input_tokens=result.input_tokens,
+                        output_tokens=result.output_tokens,
+                        duration_ms=self._elapsed_ms(started_at),
+                        infrastructure_retry_count=attempt,
+                    )
+                )
+                return parsed
+            except JobEvaluationPlanAdapterError as exc:
+                if exc.retryable and attempt == 0:
+                    continue
+                audit_calls.append(
+                    self._v4_call_audit(
+                        role=role,
+                        model=self._v4_adapter_model(adapter),
+                        result="failed",
+                        error_code=exc.code,
+                        input_tokens=None,
+                        output_tokens=None,
+                        duration_ms=self._elapsed_ms(started_at),
+                        infrastructure_retry_count=attempt,
+                    )
+                )
+                raise
+        raise AssertionError("unreachable")
+
+    async def repair_v4_source_units(
+        self,
+        *,
+        snapshot: JobEvaluationPlanInputSnapshot,
+        requirement_facts: list[RequirementFact],
+        source_review_summary: JobEvaluationPlanSourceReviewSummaryV4,
+        findings: list[JobEvaluationPlanCoverageFinding],
+        failed_source_unit_ids: list[str],
+        adapter: JobEvaluationPlanAdapter,
+        audit_calls: list[JobEvaluationPlanGenerationCallAudit],
+    ) -> tuple[
+        list[RequirementFact],
+        JobEvaluationPlanSourceReviewSummaryV4,
+        dict[str, set[str]],
+    ]:
+        if not failed_source_unit_ids:
+            raise JobEvaluationPlanContentError(
+                "coverage finding 无法定位到 source unit",
+                code="JOB_EVALUATION_PLAN_V4_REPAIR_SCOPE_INVALID",
+            )
+        source_by_id = {
+            unit.source_unit_id: unit for unit in (snapshot.source_units or [])
+        }
+        failed_ids = set(failed_source_unit_ids)
+        if not failed_ids.issubset(source_by_id):
+            raise JobEvaluationPlanContentError(
+                "局部修复引用了不存在的 source unit",
+                code="JOB_EVALUATION_PLAN_V4_REPAIR_SCOPE_INVALID",
+            )
+        cited_fact_ids = {
+            fact_id for finding in findings for fact_id in finding.fact_ids
+        }
+        related_facts = [
+            fact
+            for fact in requirement_facts
+            if fact.fact_id in cited_fact_ids
+            or any(source.source_unit_id in failed_ids for source in fact.sources)
+        ]
+        repair_input = JobRequirementLocalRepairInput(
+            source_units=[source_by_id[source_id] for source_id in failed_source_unit_ids],
+            related_facts=related_facts,
+            findings=findings,
+        )
+        repair = await self._invoke_v4_role(
+            adapter,
+            "local_repair",
+            repair_input.model_dump(mode="json"),
+            AIRequirementLocalRepairOutput,
+            audit_calls,
+        )
+        expected_indexes = set(range(len(findings)))
+        if repair.unresolved_finding_indexes or set(
+            repair.resolved_finding_indexes
+        ) != expected_indexes:
+            raise JobEvaluationPlanContentError(
+                "局部修复仍存在未解决的 coverage finding",
+                code="JOB_EVALUATION_PLAN_V4_REPAIR_UNRESOLVED",
+            )
+        review_ids = {review.source_unit_id for review in repair.source_reviews}
+        if review_ids != failed_ids:
+            raise JobEvaluationPlanContentError(
+                "局部修复没有完整且唯一地处理失败 source units",
+                code="JOB_EVALUATION_PLAN_V4_REPAIR_SCOPE_INVALID",
+            )
+        repair_candidate_ids = {
+            item.candidate_id for item in repair.replacement_candidates
+        }
+        referenced_candidate_ids = {
+            candidate_id
+            for review in repair.source_reviews
+            for candidate_id in review.candidate_ids
+        }
+        if referenced_candidate_ids != repair_candidate_ids:
+            raise JobEvaluationPlanContentError(
+                "局部修复候选事实必须且只能被 source review 引用",
+                code="JOB_EVALUATION_PLAN_V4_REPAIR_INVALID",
+            )
+        for review in repair.source_reviews:
+            if not set(review.candidate_ids).issubset(repair_candidate_ids):
+                raise JobEvaluationPlanContentError(
+                    "局部修复 source review 引用了不存在的候选事实",
+                    code="JOB_EVALUATION_PLAN_V4_REPAIR_INVALID",
+                )
+        related_fact_ids = {fact.fact_id for fact in related_facts}
+        for candidate in repair.replacement_candidates:
+            if candidate.merge_into_fact_id not in related_fact_ids | {None}:
+                raise JobEvaluationPlanContentError(
+                    "局部修复只能合并到输入中的相关 fact",
+                    code="JOB_EVALUATION_PLAN_V4_REPAIR_SCOPE_INVALID",
+                )
+            if any(source.source_unit_id not in failed_ids for source in candidate.sources):
+                raise JobEvaluationPlanContentError(
+                    "局部修复返回了失败范围之外的来源",
+                    code="JOB_EVALUATION_PLAN_V4_REPAIR_SCOPE_INVALID",
+                )
+            self._validate_v4_sources(candidate.sources, source_by_id)
+            candidate_source_ids = {
+                source.source_unit_id for source in candidate.sources
+            }
+            review_source_ids = {
+                review.source_unit_id
+                for review in repair.source_reviews
+                if candidate.candidate_id in review.candidate_ids
+            }
+            if candidate_source_ids != review_source_ids:
+                raise JobEvaluationPlanContentError(
+                    "局部修复候选来源与 source review 引用不一致",
+                    code="JOB_EVALUATION_PLAN_V4_REPAIR_INVALID",
+                )
+
+        groups: list[dict[str, Any]] = []
+        group_by_old_fact_id: dict[str, dict[str, Any]] = {}
+        for fact in requirement_facts:
+            retained_sources = [
+                source
+                for source in fact.sources
+                if source.source_unit_id not in failed_ids
+            ]
+            group = {
+                "category": fact.category,
+                "sources": retained_sources,
+                "old_fact_id": fact.fact_id,
+            }
+            groups.append(group)
+            group_by_old_fact_id[fact.fact_id] = group
+        for candidate in repair.replacement_candidates:
+            if candidate.merge_into_fact_id is not None:
+                target = group_by_old_fact_id[candidate.merge_into_fact_id]
+                target["category"] = candidate.category
+                target["sources"].extend(candidate.sources)
+            else:
+                groups.append(
+                    {
+                        "category": candidate.category,
+                        "sources": list(candidate.sources),
+                        "old_fact_id": None,
+                    }
+                )
+        facts = self._stable_v4_facts_from_groups(
+            [group for group in groups if group["sources"]],
+            list(source_by_id.values()),
+        )
+        self.validate_v4_fact_count(len(facts))
+
+        old_review_by_id = {
+            review.source_unit_id: review for review in source_review_summary.units
+        }
+        repaired_review_by_id = {
+            review.source_unit_id: review for review in repair.source_reviews
+        }
+        non_evaluation_reasons: dict[str, str | None] = {}
+        warning_signals: dict[str, set[str]] = {}
+        for source_id in source_by_id:
+            review = repaired_review_by_id.get(source_id)
+            if review is None:
+                old_review = old_review_by_id[source_id]
+                non_evaluation_reasons[source_id] = old_review.non_evaluation_reason
+            else:
+                non_evaluation_reasons[source_id] = review.non_evaluation_reason
+                warning_signals[source_id] = set(review.warning_codes)
+        source_review = self._rebuild_v4_source_review(
+            list(source_by_id.values()),
+            facts,
+            non_evaluation_reasons,
+        )
+        return facts, source_review, warning_signals
+
+    @staticmethod
+    def priority_for_v4_sources(source_fields: Iterable[str]) -> str:
+        priorities = {
+            "job_responsibilities": "general",
+            "candidate_requirements": "required",
+            "preferred_qualifications": "preferred",
+            "general": "general",
+            "required": "required",
+            "preferred": "preferred",
+        }
+        rank = {"general": 0, "preferred": 1, "required": 2}
+        resolved = [priorities[value] for value in source_fields if value in priorities]
+        if not resolved:
+            raise JobEvaluationPlanContentError(
+                "RequirementFact 缺少可计算 priority 的来源",
+                code="JOB_EVALUATION_PLAN_V4_SOURCE_INVALID",
+            )
+        return max(resolved, key=rank.__getitem__)
+
+    @staticmethod
+    def v4_quantity_warnings(fact_count: int) -> list[str]:
+        if 1 <= fact_count <= 4:
+            return ["limited_basis"]
+        if fact_count >= 31:
+            return ["overly_broad_jd"]
+        return []
+
+    @staticmethod
+    def validate_v4_fact_count(fact_count: int) -> None:
+        if fact_count == 0:
+            raise JobEvaluationPlanContentError(
+                "JOB_EVALUATION_PLAN_NO_FACTS：岗位没有形成可评价事实",
+                code="JOB_EVALUATION_PLAN_NO_FACTS",
+            )
+        if fact_count > JOB_EVALUATION_PLAN_V4_MAX_FACTS:
+            raise JobEvaluationPlanContentError(
+                "RequirementFact 数量超过技术安全边界",
+                code="JOB_EVALUATION_PLAN_V4_FACT_LIMIT_EXCEEDED",
+            )
+
+    @staticmethod
+    def clear_v4_partial_content(payload: dict[str, Any]) -> dict[str, Any]:
+        cleared = dict(payload)
+        for field in (
+            "requirement_facts",
+            "evaluation_criteria",
+            "source_review_summary",
+            "coverage_review_summary",
+        ):
+            cleared[field] = None
+        return cleared
+
+    def _build_v4_extracted_facts(
+        self,
+        source_units: list[JobEvaluationPlanSourceUnit],
+        extraction: AIRequirementFactExtractionOutput,
+    ) -> tuple[
+        list[RequirementFact],
+        JobEvaluationPlanSourceReviewSummaryV4,
+        dict[str, set[str]],
+    ]:
+        source_by_id = {unit.source_unit_id: unit for unit in source_units}
+        reviews = {review.source_unit_id: review for review in extraction.source_reviews}
+        if set(reviews) != set(source_by_id):
+            raise JobEvaluationPlanContentError(
+                "事实提取必须完整且唯一地审阅全部 source units",
+                code="JOB_EVALUATION_PLAN_V4_SOURCE_REVIEW_INCOMPLETE",
+            )
+        candidate_by_id = {
+            candidate.candidate_id: candidate
+            for candidate in extraction.fact_candidates
+        }
+        referenced_ids = {
+            candidate_id
+            for review in extraction.source_reviews
+            for candidate_id in review.candidate_ids
+        }
+        if referenced_ids != set(candidate_by_id):
+            raise JobEvaluationPlanContentError(
+                "事实候选必须且只能被 source review 引用",
+                code="JOB_EVALUATION_PLAN_V4_FACT_REFERENCE_INVALID",
+            )
+        for candidate in extraction.fact_candidates:
+            self._validate_v4_sources(candidate.sources, source_by_id)
+            candidate_source_ids = {
+                source.source_unit_id for source in candidate.sources
+            }
+            review_source_ids = {
+                review.source_unit_id
+                for review in extraction.source_reviews
+                if candidate.candidate_id in review.candidate_ids
+            }
+            if candidate_source_ids != review_source_ids:
+                raise JobEvaluationPlanContentError(
+                    "事实候选来源与 source review 引用不一致",
+                    code="JOB_EVALUATION_PLAN_V4_FACT_REFERENCE_INVALID",
+                )
+        groups = [
+            {
+                "category": candidate.category,
+                "sources": list(candidate.sources),
+                "old_fact_id": None,
+            }
+            for candidate in extraction.fact_candidates
+        ]
+        facts = self._stable_v4_facts_from_groups(groups, source_units)
+        non_evaluation_reasons = {
+            source_id: review.non_evaluation_reason
+            for source_id, review in reviews.items()
+        }
+        source_review = self._rebuild_v4_source_review(
+            source_units,
+            facts,
+            non_evaluation_reasons,
+        )
+        warning_signals = {
+            source_id: set(review.warning_codes)
+            for source_id, review in reviews.items()
+        }
+        return facts, source_review, warning_signals
+
+    def _stable_v4_facts_from_groups(
+        self,
+        groups: list[dict[str, Any]],
+        source_units: list[JobEvaluationPlanSourceUnit],
+    ) -> list[RequirementFact]:
+        source_order = {
+            unit.source_unit_id: index for index, unit in enumerate(source_units)
+        }
+        merged: list[dict[str, Any]] = []
+        for group in groups:
+            sources = self._deduplicate_v4_sources(group["sources"])
+            normalized_quotes = {
+                self._normalize_fingerprint_text(source.source_quote)
+                for source in sources
+            }
+            target = next(
+                (
+                    existing
+                    for existing in merged
+                    if existing["category"] == group["category"]
+                    and existing["normalized_quotes"] & normalized_quotes
+                ),
+                None,
+            )
+            if target is None:
+                merged.append(
+                    {
+                        "category": group["category"],
+                        "sources": sources,
+                        "normalized_quotes": normalized_quotes,
+                    }
+                )
+            else:
+                target["sources"] = self._deduplicate_v4_sources(
+                    [*target["sources"], *sources]
+                )
+                target["normalized_quotes"].update(normalized_quotes)
+        merged.sort(
+            key=lambda group: (
+                min(source_order[source.source_unit_id] for source in group["sources"]),
+                min(source.source_quote for source in group["sources"]),
+                str(group["category"]),
+            )
+        )
+        facts: list[RequirementFact] = []
+        for index, group in enumerate(merged, start=1):
+            ordered_sources = sorted(
+                group["sources"],
+                key=lambda source: (
+                    -self._v4_source_priority_rank(source.source_field),
+                    source_order[source.source_unit_id],
+                    source.source_quote,
+                ),
+            )
+            facts.append(
+                RequirementFact(
+                    fact_id=f"fact:{index:04d}",
+                    category=group["category"],
+                    priority=self.priority_for_v4_sources(
+                        source.source_field for source in ordered_sources
+                    ),
+                    sources=ordered_sources,
+                )
+            )
+        return facts
+
+    @staticmethod
+    def _deduplicate_v4_sources(
+        sources: Iterable[RequirementFactSource],
+    ) -> list[RequirementFactSource]:
+        values: list[RequirementFactSource] = []
+        seen: set[tuple[str, str, str]] = set()
+        for source in sources:
+            identity = (
+                source.source_field,
+                source.source_unit_id,
+                source.source_quote,
+            )
+            if identity not in seen:
+                seen.add(identity)
+                values.append(source)
+        return values
+
+    @staticmethod
+    def _v4_source_priority_rank(source_field: str) -> int:
+        return {
+            "job_responsibilities": 0,
+            "preferred_qualifications": 1,
+            "candidate_requirements": 2,
+        }[source_field]
+
+    def _validate_v4_sources(
+        self,
+        sources: Iterable[RequirementFactSource],
+        source_by_id: Mapping[str, JobEvaluationPlanSourceUnit],
+    ) -> None:
+        for source in sources:
+            unit = source_by_id.get(source.source_unit_id)
+            if unit is None or unit.source_field != source.source_field:
+                raise JobEvaluationPlanContentError(
+                    "RequirementFact 引用了不存在或字段不一致的 source unit",
+                    code="JOB_EVALUATION_PLAN_V4_SOURCE_INVALID",
+                )
+            if source.source_quote not in unit.source_text:
+                raise JobEvaluationPlanContentError(
+                    "RequirementFact source quote 无法在原文中连续定位",
+                    code="JOB_EVALUATION_PLAN_V4_SOURCE_QUOTE_INVALID",
+                )
+
+    def _rebuild_v4_source_review(
+        self,
+        source_units: list[JobEvaluationPlanSourceUnit],
+        facts: list[RequirementFact],
+        non_evaluation_reasons: Mapping[str, str | None],
+    ) -> JobEvaluationPlanSourceReviewSummaryV4:
+        review_units: list[JobEvaluationPlanSourceReviewUnitV4] = []
+        for unit in source_units:
+            fact_ids = [
+                fact.fact_id
+                for fact in facts
+                if any(
+                    source.source_unit_id == unit.source_unit_id
+                    for source in fact.sources
+                )
+            ]
+            if fact_ids:
+                review_units.append(
+                    JobEvaluationPlanSourceReviewUnitV4(
+                        source_unit_id=unit.source_unit_id,
+                        disposition="evaluation",
+                        fact_ids=fact_ids,
+                        non_evaluation_reason=None,
+                    )
+                )
+            else:
+                reason = non_evaluation_reasons.get(unit.source_unit_id)
+                if reason is None:
+                    raise JobEvaluationPlanContentError(
+                        "没有事实的 source unit 缺少受控排除原因",
+                        code="JOB_EVALUATION_PLAN_V4_SOURCE_REVIEW_INCOMPLETE",
+                    )
+                review_units.append(
+                    JobEvaluationPlanSourceReviewUnitV4(
+                        source_unit_id=unit.source_unit_id,
+                        disposition="non_evaluation",
+                        fact_ids=[],
+                        non_evaluation_reason=reason,
+                    )
+                )
+        evaluation_count = sum(
+            unit.disposition == "evaluation" for unit in review_units
+        )
+        return JobEvaluationPlanSourceReviewSummaryV4(
+            rule_version=JOB_EVALUATION_PLAN_SOURCE_UNIT_RULE_VERSION,
+            total_units=len(source_units),
+            reviewed_units=len(review_units),
+            evaluation_units=evaluation_count,
+            non_evaluation_units=len(review_units) - evaluation_count,
+            all_reviewed=True,
+            units=review_units,
+        )
+
+    def _validate_v4_coverage_findings(
+        self,
+        source_units: list[JobEvaluationPlanSourceUnit],
+        facts: list[RequirementFact],
+        coverage: AIRequirementCoverageReviewOutput,
+    ) -> None:
+        source_ids = {unit.source_unit_id for unit in source_units}
+        fact_ids = {fact.fact_id for fact in facts}
+        for finding in coverage.findings:
+            if not set(finding.source_unit_ids).issubset(source_ids):
+                raise JobEvaluationPlanContentError(
+                    "coverage finding 引用了不存在的 source unit",
+                    code="JOB_EVALUATION_PLAN_V4_COVERAGE_INVALID",
+                )
+            if not set(finding.fact_ids).issubset(fact_ids):
+                raise JobEvaluationPlanContentError(
+                    "coverage finding 引用了不存在的 fact",
+                    code="JOB_EVALUATION_PLAN_V4_COVERAGE_INVALID",
+                )
+
+    def _build_v4_criteria(
+        self,
+        facts: list[RequirementFact],
+        grouping: AIEvaluationCriterionGroupingOutput,
+    ) -> list[EvaluationCriterion]:
+        expected = {fact.fact_id for fact in facts}
+        grouped = [fact_id for item in grouping.criteria for fact_id in item.fact_ids]
+        if len(grouped) != len(set(grouped)):
+            raise JobEvaluationPlanContentError(
+                "每条 fact 只能属于一个 criterion",
+                code="JOB_EVALUATION_PLAN_V4_GROUPING_INVALID",
+            )
+        if set(grouped) != expected:
+            raise JobEvaluationPlanContentError(
+                "criterion grouping 必须完整覆盖全部 facts",
+                code="JOB_EVALUATION_PLAN_V4_GROUPING_INVALID",
+            )
+        return [
+            EvaluationCriterion(
+                criterion_id=f"criterion:{index:04d}",
+                name=item.name,
+                fact_ids=item.fact_ids,
+            )
+            for index, item in enumerate(grouping.criteria, start=1)
+        ]
+
+    def _build_v4_warnings(
+        self,
+        facts: list[RequirementFact],
+        source_review: JobEvaluationPlanSourceReviewSummaryV4,
+        warning_signals: Mapping[str, set[str]],
+    ) -> list[JobEvaluationPlanV4WarningDetail]:
+        review_by_id = {unit.source_unit_id: unit for unit in source_review.units}
+        warnings: list[JobEvaluationPlanV4WarningDetail] = []
+        evaluation_source_ids = [
+            unit.source_unit_id
+            for unit in source_review.units
+            if unit.disposition == "evaluation"
+        ]
+        quantity_messages = {
+            "limited_basis": "当前计划只有 1—4 条事实，评价依据有限",
+            "overly_broad_jd": "当前计划包含 31 条及以上事实，请 HR 重点复核",
+        }
+        for code in self.v4_quantity_warnings(len(facts)):
+            warnings.append(
+                JobEvaluationPlanV4WarningDetail(
+                    code=code,
+                    message=quantity_messages[code],
+                    source_unit_ids=evaluation_source_ids,
+                    fact_ids=[fact.fact_id for fact in facts],
+                )
+            )
+        for source_id, codes in warning_signals.items():
+            review = review_by_id[source_id]
+            for code in sorted(codes):
+                message = (
+                    "原文要求较模糊，未补充原文不存在的具体条件"
+                    if code == "ambiguous_requirement"
+                    else "评价字段中包含未生成事实的非评价内容"
+                )
+                warnings.append(
+                    JobEvaluationPlanV4WarningDetail(
+                        code=code,
+                        message=message,
+                        source_unit_ids=[source_id],
+                        fact_ids=review.fact_ids,
+                    )
+                )
+        for fact in facts:
+            source_priorities = {
+                self.priority_for_v4_sources([source.source_field])
+                for source in fact.sources
+            }
+            if len(source_priorities) > 1:
+                warnings.append(
+                    JobEvaluationPlanV4WarningDetail(
+                        code=JobEvaluationPlanV4WarningCode.CONFLICTING_REQUIREMENTS,
+                        message="同一事实出现在不同优先级字段，最终按最高优先级计算",
+                        source_unit_ids=list(
+                            dict.fromkeys(
+                                source.source_unit_id for source in fact.sources
+                            )
+                        ),
+                        fact_ids=[fact.fact_id],
+                    )
+                )
+        unique: list[JobEvaluationPlanV4WarningDetail] = []
+        seen: set[str] = set()
+        for warning in warnings:
+            key = json.dumps(
+                warning.model_dump(mode="json"),
+                ensure_ascii=False,
+                sort_keys=True,
+            )
+            if key not in seen:
+                seen.add(key)
+                unique.append(warning)
+        return unique
+
+    def _validate_v4_output_sizes(
+        self,
+        facts: list[RequirementFact],
+        criteria: list[EvaluationCriterion],
+    ) -> None:
+        fact_payload = [fact.model_dump(mode="json") for fact in facts]
+        criterion_payload = [item.model_dump(mode="json") for item in criteria]
+        self._validate_v4_serialized_size(
+            fact_payload,
+            JOB_EVALUATION_PLAN_V4_MAX_FACTS_JSON_CHARS,
+            "JOB_EVALUATION_PLAN_V4_FACTS_JSON_TOO_LARGE",
+        )
+        self._validate_v4_serialized_size(
+            criterion_payload,
+            JOB_EVALUATION_PLAN_V4_MAX_CRITERIA_JSON_CHARS,
+            "JOB_EVALUATION_PLAN_V4_CRITERIA_JSON_TOO_LARGE",
+        )
+        self._validate_v4_serialized_size(
+            {
+                "requirement_facts": fact_payload,
+                "evaluation_criteria": criterion_payload,
+            },
+            JOB_EVALUATION_PLAN_V4_MAX_OUTPUT_JSON_CHARS,
+            "JOB_EVALUATION_PLAN_V4_OUTPUT_JSON_TOO_LARGE",
+        )
+
+    @staticmethod
+    def _validate_v4_serialized_size(
+        payload: Any,
+        maximum: int,
+        error_code: str,
+    ) -> None:
+        serialized = json.dumps(
+            payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        if len(serialized) > maximum:
+            raise JobEvaluationPlanContentError(
+                "岗位评价计划 4.0 结构化内容超过技术安全边界",
+                code=error_code,
+            )
+
+    @staticmethod
+    def _ensure_v4_input_current(
+        input_is_current: Callable[[], bool] | None,
+    ) -> None:
+        if input_is_current is not None and not input_is_current():
+            raise JobEvaluationPlanContentError(
+                "岗位输入在 4.0 生成期间已经变化",
+                code="JOB_EVALUATION_PLAN_INPUT_OUTDATED_DURING_GENERATION",
+            )
+
+    @staticmethod
+    def _json_object_without_duplicate_keys(
+        pairs: list[tuple[str, Any]],
+    ) -> dict[str, Any]:
+        value: dict[str, Any] = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError("JSON 对象包含重复字段")
+            value[key] = item
+        return value
+
+    @staticmethod
+    def _elapsed_ms(started_at: float) -> int:
+        return max(0, int((time.perf_counter() - started_at) * 1000))
+
+    @staticmethod
+    def _v4_adapter_model(adapter: JobEvaluationPlanAdapter) -> str:
+        settings = getattr(adapter, "settings", None)
+        model = getattr(settings, "JOB_EVALUATION_PLAN_MODEL", None)
+        if isinstance(model, str) and model.strip():
+            return model
+        return "unknown-model"
+
+    @staticmethod
+    def _v4_call_audit(
+        *,
+        role: str,
+        model: str,
+        result: str,
+        error_code: str | None,
+        input_tokens: int | None,
+        output_tokens: int | None,
+        duration_ms: int,
+        infrastructure_retry_count: int,
+    ) -> JobEvaluationPlanGenerationCallAudit:
+        return JobEvaluationPlanGenerationCallAudit(
+            role=role,
+            prompt_version=V4_PROMPT_VERSIONS[role],
+            model=model,
+            input_tokens=input_tokens or 0,
+            output_tokens=output_tokens or 0,
+            duration_ms=duration_ms,
+            infrastructure_retry_count=infrastructure_retry_count,
+            result=result,
+            error_code=error_code,
+        )
+
+    @staticmethod
+    def _mark_last_v4_call_failed(
+        audit_calls: list[JobEvaluationPlanGenerationCallAudit],
+        error_code: str,
+    ) -> None:
+        if audit_calls and audit_calls[-1].result == "succeeded":
+            audit_calls[-1] = audit_calls[-1].model_copy(
+                update={"result": "failed", "error_code": error_code}
+            )
+
+    @staticmethod
+    def _build_v4_generation_audit(
+        audit_calls: list[JobEvaluationPlanGenerationCallAudit],
+    ) -> JobEvaluationPlanGenerationAudit:
+        return JobEvaluationPlanGenerationAudit(
+            business_call_count=len(audit_calls),
+            content_repair_count=sum(
+                call.role == "local_repair" for call in audit_calls
+            ),
+            infrastructure_retry_count=sum(
+                call.infrastructure_retry_count for call in audit_calls
+            ),
+            calls=audit_calls,
+        )
+
+    def _v4_generation_failure(
+        self,
+        *,
+        code: str,
+        message: str,
+        audit_calls: list[JobEvaluationPlanGenerationCallAudit],
+    ) -> JobEvaluationPlanV4GenerationError:
+        return JobEvaluationPlanV4GenerationError(
+            message,
+            code=code,
+            generation_audit=self._build_v4_generation_audit(audit_calls),
+        )
 
     def build_input_snapshot(self, job: Job) -> JobEvaluationPlanInputSnapshot:
         if not (
@@ -643,10 +1872,54 @@ class JobEvaluationPlanService:
                 code="JOB_EVALUATION_PLAN_INVALID_JOB_INPUT",
             ) from None
 
+    def build_v4_input_snapshot(self, job: Job) -> JobEvaluationPlanInputSnapshot:
+        """Build the writable 4.0 snapshot used by the current Job/API flow."""
+        try:
+            context = {
+                "title": self._normalize_fingerprint_text(job.title),
+                "department": self._normalize_optional_text(job.department),
+                "job_background": self._normalize_optional_text(job.job_background),
+            }
+            evaluation_fields = {
+                "job_responsibilities": self._normalize_optional_text(
+                    job.job_responsibilities
+                ),
+                "candidate_requirements": self._normalize_optional_text(
+                    job.candidate_requirements
+                ),
+                "preferred_qualifications": self._normalize_optional_text(
+                    job.preferred_qualifications
+                ),
+            }
+            source_units = self.build_five_section_source_units(
+                evaluation_fields,
+                max_source_units=JOB_EVALUATION_PLAN_V4_MAX_SOURCE_UNITS,
+            )
+            return JobEvaluationPlanInputSnapshot.model_validate(
+                {
+                    "schema_version": "4.0",
+                    "job_context": context,
+                    "evaluation_fields": evaluation_fields,
+                    "source_units": [
+                        unit.model_dump(mode="json") for unit in source_units
+                    ],
+                }
+            )
+        except JobEvaluationPlanContentError:
+            raise
+        except (AttributeError, ValidationError, TypeError, ValueError):
+            raise JobEvaluationPlanContentError(
+                "五段式岗位输入不符合 4.0 Schema",
+                code="JOB_EVALUATION_PLAN_INVALID_JOB_INPUT",
+            ) from None
+
     def build_five_section_source_units(
         self,
         evaluation_fields: Mapping[str, str | None],
+        *,
+        max_source_units: int | None = None,
     ) -> tuple[JobEvaluationPlanSourceUnit, ...]:
+        resolved_max_units = max_source_units or self._DESCRIPTION_MAX_SOURCE_UNITS
         units: list[JobEvaluationPlanSourceUnit] = []
         for source_field in (
             "job_responsibilities",
@@ -666,7 +1939,7 @@ class JobEvaluationPlanService:
                         source_text=source_text,
                     )
                 )
-                if len(units) > self._DESCRIPTION_MAX_SOURCE_UNITS:
+                if len(units) > resolved_max_units:
                     raise JobEvaluationPlanContentError(
                         "五段式岗位原文片段超过安全数量上限",
                         code="JOB_EVALUATION_PLAN_TOO_MANY_SOURCE_UNITS",
@@ -922,6 +2195,20 @@ class JobEvaluationPlanService:
     ) -> str:
         if contract is not None:
             resolved_contract = contract
+        elif snapshot.schema_version == "4.0":
+            resolved_contract = {
+                "breaking_contract_version": (
+                    JOB_EVALUATION_PLAN_V4_BREAKING_CONTRACT_VERSION
+                ),
+                "ai_schema_version": JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION,
+                "plan_schema_version": JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION,
+                "source_unit_rule_version": (
+                    JOB_EVALUATION_PLAN_SOURCE_UNIT_RULE_VERSION
+                ),
+                "fingerprint_rule_version": (
+                    JOB_EVALUATION_PLAN_V4_FINGERPRINT_RULE_VERSION
+                ),
+            }
         elif snapshot.schema_version == "3.0":
             resolved_contract = {
                 "breaking_contract_version": (
@@ -953,7 +2240,7 @@ class JobEvaluationPlanService:
             "plan_schema_version",
             "source_unit_rule_version",
         ]
-        if snapshot.schema_version == "3.0":
+        if snapshot.schema_version in {"3.0", "4.0"}:
             contract_keys.append("fingerprint_rule_version")
         try:
             breaking_contract = {
@@ -971,7 +2258,7 @@ class JobEvaluationPlanService:
             )
         fingerprint_payload = (
             {"jd_fingerprint": self.fingerprint_snapshot(snapshot)}
-            if snapshot.schema_version == "3.0"
+            if snapshot.schema_version in {"3.0", "4.0"}
             else {"input_snapshot": snapshot.model_dump(mode="json")}
         )
         serialized = json.dumps(
@@ -1716,6 +3003,75 @@ class JobEvaluationPlanService:
         db: AsyncSession,
         plan_id: int,
         input_fingerprint: str,
+        content: GeneratedPlanContentV4,
+        *,
+        model_version: str,
+        completed_at: datetime,
+    ) -> JobEvaluationPlan:
+        """Persist a complete 4.0 result as pending_confirmation, never ready."""
+        try:
+            plan = await self._get_locked_plan(db, plan_id)
+            if plan is None:
+                raise JobEvaluationPlanNotFoundError("评价计划不存在")
+            job = await self._get_locked_job(db, plan.job_id)
+            if plan.status != JobEvaluationPlanStatus.GENERATING.value:
+                await db.commit()
+                await db.refresh(plan)
+                return plan
+            if (
+                job is None
+                or self.fingerprint_input(self.build_v4_input_snapshot(job))
+                != input_fingerprint
+                or plan.input_fingerprint != input_fingerprint
+                or plan.schema_version != "4.0"
+                or not plan.is_current
+            ):
+                plan.status = JobEvaluationPlanStatus.OUTDATED.value
+                plan.is_current = False
+                plan.completed_at = completed_at
+                await db.commit()
+                await db.refresh(plan)
+                return plan
+
+            plan.status = "pending_confirmation"
+            plan.items = null()
+            plan.structured_coverage = null()
+            plan.free_text_coverage = null()
+            plan.requirement_facts = [
+                fact.model_dump(mode="json") for fact in content.requirement_facts
+            ]
+            plan.evaluation_criteria = [
+                criterion.model_dump(mode="json")
+                for criterion in content.evaluation_criteria
+            ]
+            plan.source_review_summary = content.source_review_summary.model_dump(
+                mode="json"
+            )
+            plan.coverage_review_summary = (
+                content.coverage_review_summary.model_dump(mode="json")
+            )
+            plan.generation_audit = content.generation_audit.model_dump(mode="json")
+            plan.warnings = [
+                warning.model_dump(mode="json") for warning in content.warnings
+            ]
+            plan.prompt_version = V4_PROMPT_VERSIONS["fact_extraction"]
+            plan.model_version = model_version
+            plan.schema_version = JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION
+            plan.error_code = None
+            plan.error_message = None
+            plan.completed_at = completed_at
+            await db.commit()
+            await db.refresh(plan)
+            return plan
+        except BaseException:
+            await db.rollback()
+            raise
+
+    async def _save_legacy_success(
+        self,
+        db: AsyncSession,
+        plan_id: int,
+        input_fingerprint: str,
         content: GeneratedPlanContent,
         *,
         model_version: str,
@@ -1789,10 +3145,21 @@ class JobEvaluationPlanService:
             if plan is None:
                 raise JobEvaluationPlanNotFoundError("评价计划不存在")
             job = await self._get_locked_job(db, plan.job_id)
+            current_snapshot = (
+                self.build_v4_input_snapshot(job)
+                if job is not None and plan.schema_version == "4.0"
+                else self.build_input_snapshot(job)
+                if job is not None
+                else None
+            )
+            if plan.status != JobEvaluationPlanStatus.GENERATING.value:
+                await db.commit()
+                await db.refresh(plan)
+                return plan
             if (
                 job is None
-                or self.fingerprint_input(self.build_input_snapshot(job))
-                != input_fingerprint
+                or current_snapshot is None
+                or self.fingerprint_input(current_snapshot) != input_fingerprint
                 or plan.input_fingerprint != input_fingerprint
                 or not plan.is_current
             ):
@@ -1800,11 +3167,16 @@ class JobEvaluationPlanService:
                 plan.is_current = False
             else:
                 plan.status = JobEvaluationPlanStatus.FAILED.value
-                plan.items = []
+                plan.items = null() if plan.schema_version == "4.0" else []
                 plan.source_review_summary = null()
-                if plan.schema_version == "3.0":
+                if plan.schema_version in {"3.0", "4.0"}:
                     plan.structured_coverage = null()
                     plan.free_text_coverage = null()
+                if plan.schema_version == "4.0":
+                    plan.requirement_facts = null()
+                    plan.evaluation_criteria = null()
+                    plan.coverage_review_summary = null()
+                    plan.generation_audit = null()
                 plan.warnings = []
                 plan.error_code = code
                 plan.error_message = message[:500]
@@ -1865,7 +3237,17 @@ class JobEvaluationPlanService:
     def _safe_adapter_message(exc: JobEvaluationPlanAdapterError) -> str:
         if exc.retryable:
             return "模型服务暂时不可用，已自动重试一次，请稍后重新生成"
-        return str(exc)[:500]
+        messages = {
+            "JOB_EVALUATION_PLAN_CONFIGURATION_ERROR": "模型服务配置不完整，请联系管理员",
+            "JOB_EVALUATION_PLAN_INPUT_ERROR": "岗位评价计划模型输入不合法",
+            "JOB_EVALUATION_PLAN_AUTHENTICATION_ERROR": "模型服务认证或授权失败，请联系管理员",
+            "JOB_EVALUATION_PLAN_QUOTA_ERROR": "模型服务余额或配额不足，请联系管理员",
+            "JOB_EVALUATION_PLAN_EMPTY_RESPONSE": "模型服务没有返回可用内容",
+            "JOB_EVALUATION_PLAN_RESPONSE_INTERRUPTED": "模型输出未完整结束，请重新生成",
+            "JOB_EVALUATION_PLAN_INVALID_RESPONSE": "模型输出未通过安全格式校验",
+            "JOB_EVALUATION_PLAN_UPSTREAM_ERROR": "模型服务返回了不可用结果",
+        }
+        return messages.get(exc.code, "岗位评价计划模型调用失败")
 
     @staticmethod
     def _empty_coverage() -> dict[str, Any]:

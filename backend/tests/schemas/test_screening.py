@@ -93,6 +93,24 @@ class ScreeningSchemaTest(TestCase):
         self.assertEqual(serialized["evaluation_timezone"], "Asia/Shanghai")
         self.assertNotIn("experience_period_facts", serialized)
 
+    def test_report_accepts_more_than_thirty_fact_assessments(self) -> None:
+        payload = report_payload()
+        payload["requirement_assessments"] = [
+            {
+                "requirement_key": f"fact:{index:04d}",
+                "score": 5,
+                "reason": "Evidence requires human review.",
+                "calculation_note": None,
+                "experience_period_fact_keys": [],
+                "evidence": [],
+            }
+            for index in range(1, 32)
+        ]
+
+        report = ScreeningReportRead.model_validate(payload)
+
+        self.assertEqual(len(report.requirement_assessments), 31)
+
     def test_report_requires_outdated_reason_and_time_together(self) -> None:
         payload = report_payload()
         payload["is_outdated"] = True

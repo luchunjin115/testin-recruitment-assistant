@@ -9,11 +9,20 @@ import {
 } from '@ant-design/icons';
 import { Alert, Collapse, Empty, Progress, Tag } from 'antd';
 import {
+  CATEGORY_LABELS,
+  getRequirementPlanFact,
   getRequirementPlanItem,
   OUTDATED_REASON_LABELS,
   PRIORITY_LABELS,
 } from './screeningPresentation';
-import type { JobEvaluationPlan, ScreeningEvidence, ScreeningReport } from './types/aiScreening';
+import type {
+  JobEvaluationItem,
+  JobEvaluationPlan,
+  RequirementAssessment,
+  RequirementFact,
+  ScreeningEvidence,
+  ScreeningReport,
+} from './types/aiScreening';
 
 type Props = {
   report: ScreeningReport;
@@ -69,7 +78,85 @@ const scoreTone = (score: number) => {
   return 'is-zero';
 };
 
-const ScreeningReportView: React.FC<Props> = ({ report, plan }) => (
+const RequirementAssessmentCard: React.FC<{
+  assessment: RequirementAssessment;
+  fact: RequirementFact | null;
+  index: number;
+  item: JobEvaluationItem | null;
+}> = ({ assessment, fact, index, item }) => (
+  <article className="recruitment-requirement-item" key={assessment.requirementKey}>
+    <div className={`recruitment-requirement-score ${scoreTone(assessment.score)}`}>
+      <strong>{assessment.score}</strong><span>/ 10</span>
+    </div>
+    <div className="recruitment-requirement-content">
+      <div className="recruitment-requirement-heading">
+        <div>
+          <span>{fact ? fact.factId : `事项 ${String(index + 1).padStart(2, '0')}`}</span>
+          <h4>{fact?.sources[0]?.sourceQuote || item?.title || assessment.requirementKey}</h4>
+        </div>
+        {fact ? (
+          <div className="recruitment-requirement-tags">
+            <Tag>{CATEGORY_LABELS[fact.category]}</Tag>
+            <Tag color={fact.priority === 'required' ? 'red' : fact.priority === 'preferred' ? 'gold' : 'default'}>
+              {PRIORITY_LABELS[fact.priority]}
+            </Tag>
+          </div>
+        ) : item ? (
+          <Tag color={item.priority === 'required' ? 'red' : item.priority === 'preferred' ? 'gold' : 'default'}>
+            {PRIORITY_LABELS[item.priority]}
+          </Tag>
+        ) : (
+          <Tag>来自原评价计划</Tag>
+        )}
+      </div>
+      {fact && (
+        <details className="recruitment-report-fact-sources">
+          <summary>查看 JD 原文依据（{fact.sources.length}）</summary>
+          {fact.sources.map(source => (
+            <blockquote key={`${source.sourceUnitId}-${source.sourceQuote}`}>
+              <span>{source.sourceField} · {source.sourceUnitId}</span>
+              <p>{source.sourceQuote}</p>
+            </blockquote>
+          ))}
+        </details>
+      )}
+      {assessment.score === 0 && (
+        <div className="recruitment-zero-score-note">0 分语义：当前可用简历未体现，不等同于候选人不会。</div>
+      )}
+      <p>{assessment.reason}</p>
+      {assessment.calculationNote && (
+        <p className="recruitment-calculation-note">判断说明：{assessment.calculationNote}</p>
+      )}
+      <Collapse
+        className="recruitment-evidence-collapse"
+        ghost
+        items={[{
+          key: 'evidence',
+          label: assessment.evidence.length > 0
+            ? `查看简历证据（${assessment.evidence.length}）`
+            : '证据说明',
+          children: <EvidenceList evidence={assessment.evidence} />,
+        }]}
+      />
+    </div>
+  </article>
+);
+
+const ScreeningReportView: React.FC<Props> = ({ report, plan }) => {
+  const matchingV4Plan = plan?.id === report.jobEvaluationPlanId && plan.schemaVersion === '4.0'
+    ? plan
+    : null;
+  const assessmentByFactId = new Map(
+    report.requirementAssessments.map(assessment => [assessment.requirementKey, assessment]),
+  );
+  const groupedFactIds = new Set(
+    matchingV4Plan?.evaluationCriteria.flatMap(criterion => criterion.factIds) ?? [],
+  );
+  const ungroupedAssessments = matchingV4Plan
+    ? report.requirementAssessments.filter(assessment => !groupedFactIds.has(assessment.requirementKey))
+    : [];
+
+  return (
   <div className="recruitment-ai-report">
     {report.isOutdated && (
       <Alert
@@ -126,55 +213,57 @@ const ScreeningReportView: React.FC<Props> = ({ report, plan }) => (
         <span>岗位要求逐项评价</span>
         <h3>{report.requirementAssessments.length} 个基础事项</h3>
         <p className="recruitment-report-section-intro">分数描述简历展示出的匹配度；0 分不代表候选人事实上不会。</p>
-        <div className="recruitment-requirement-list">
-          {report.requirementAssessments.map((assessment, index) => {
-            const item = getRequirementPlanItem(
-              plan,
-              report.jobEvaluationPlanId,
-              assessment.requirementKey,
-            );
-            return (
-              <article className="recruitment-requirement-item" key={assessment.requirementKey}>
-                <div className={`recruitment-requirement-score ${scoreTone(assessment.score)}`}>
-                  <strong>{assessment.score}</strong><span>/ 10</span>
-                </div>
-                <div className="recruitment-requirement-content">
-                  <div className="recruitment-requirement-heading">
-                    <div>
-                      <span>事项 {String(index + 1).padStart(2, '0')}</span>
-                      <h4>{item?.title || assessment.requirementKey}</h4>
-                    </div>
-                    {item ? (
-                      <Tag color={item.priority === 'required' ? 'red' : item.priority === 'preferred' ? 'gold' : 'default'}>
-                        {PRIORITY_LABELS[item.priority]}
-                      </Tag>
-                    ) : (
-                      <Tag>来自原评价计划</Tag>
-                    )}
+        {matchingV4Plan ? (
+          <div className="recruitment-report-criteria">
+            {matchingV4Plan.evaluationCriteria.map(criterion => {
+              const criterionAssessments = criterion.factIds
+                .map(factId => ({
+                  assessment: assessmentByFactId.get(factId),
+                  fact: getRequirementPlanFact(matchingV4Plan, report.jobEvaluationPlanId, factId),
+                  factId,
+                }))
+                .filter(entry => entry.assessment);
+              return (
+                <section className="recruitment-report-criterion" key={criterion.criterionId}>
+                  <header><div><span>EVALUATION CRITERION</span><h4>{criterion.name}</h4></div><Tag>{criterionAssessments.length} 条事实</Tag></header>
+                  <div className="recruitment-requirement-list">
+                    {criterionAssessments.map((entry, index) => (
+                      <RequirementAssessmentCard
+                        assessment={entry.assessment!}
+                        fact={entry.fact}
+                        index={index}
+                        item={null}
+                        key={entry.factId}
+                      />
+                    ))}
                   </div>
-                  {assessment.score === 0 && (
-                    <div className="recruitment-zero-score-note">0 分语义：当前可用简历未体现，不等同于候选人不会。</div>
-                  )}
-                  <p>{assessment.reason}</p>
-                  {assessment.calculationNote && (
-                    <p className="recruitment-calculation-note">判断说明：{assessment.calculationNote}</p>
-                  )}
-                  <Collapse
-                    className="recruitment-evidence-collapse"
-                    ghost
-                    items={[{
-                      key: 'evidence',
-                      label: assessment.evidence.length > 0
-                        ? `查看简历证据（${assessment.evidence.length}）`
-                        : '证据说明',
-                      children: <EvidenceList evidence={assessment.evidence} />,
-                    }]}
-                  />
+                </section>
+              );
+            })}
+            {ungroupedAssessments.length > 0 && (
+              <section className="recruitment-report-criterion is-historical">
+                <header><div><span>HISTORICAL FALLBACK</span><h4>原计划分组未能读取</h4></div><Tag>{ungroupedAssessments.length} 条</Tag></header>
+                <div className="recruitment-requirement-list">
+                  {ungroupedAssessments.map((assessment, index) => (
+                    <RequirementAssessmentCard assessment={assessment} fact={null} index={index} item={null} key={assessment.requirementKey} />
+                  ))}
                 </div>
-              </article>
-            );
-          })}
-        </div>
+              </section>
+            )}
+          </div>
+        ) : (
+          <div className="recruitment-requirement-list">
+            {report.requirementAssessments.map((assessment, index) => (
+              <RequirementAssessmentCard
+                assessment={assessment}
+                fact={null}
+                index={index}
+                item={getRequirementPlanItem(plan, report.jobEvaluationPlanId, assessment.requirementKey)}
+                key={assessment.requirementKey}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </section>
 
@@ -242,6 +331,7 @@ const ScreeningReportView: React.FC<Props> = ({ report, plan }) => (
       <span>时间事实 {report.experiencePeriodFactsRuleVersion || '历史版本未记录'}</span>
     </footer>
   </div>
-);
+  );
+};
 
 export default ScreeningReportView;

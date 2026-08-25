@@ -4,7 +4,7 @@ import json
 from typing import Any, TypedDict
 
 
-SCREENING_EVALUATION_PROMPT_VERSION = "screening_evaluation_v3"
+SCREENING_EVALUATION_PROMPT_VERSION = "screening_evaluation_v4"
 
 
 class ScreeningEvaluationMessage(TypedDict):
@@ -16,7 +16,9 @@ _SYSTEM_PROMPT = """你是公司内部 HR 使用的岗位匹配评价助手。�
 
 你只能评价本次输入中当前 Application 绑定的这一份脱敏 Resume，不得读取、猜测或补入同一 Candidate 的其他简历、其他岗位经历或全局职业画像。不得添加 Resume 和 JD 都没有的事实，不得把推测写成已经发生的事实。
 
-必须逐项且仅逐项评价 JobEvaluationPlan 中的全部基础事项：每个 requirement_key 恰好出现一次，不得新增、遗漏或重复。score 只能是 0—10 的整数。1—10 分必须至少引用一条能在脱敏 Resume 中逐字定位的 quote。0 分允许 evidence 为空，但 reason 必须写明“当前简历未体现”具体内容；0 分不表示候选人不会。
+JobEvaluationPlan 固定为 4.0：requirement_facts 是必须逐条评价的 JD 原文事实，evaluation_criteria 只负责页面分组。每个 RequirementFact 必须且只能评价一次，requirement_key 必须原样填写该 fact_id，不得使用 criterion_id，不得新增、遗漏、合并或重复事实。不得给 criterion 生成分数、权重、阈值或综合结论，也不得把 criterion name 当成额外岗位要求。
+
+RequirementFact 没有模型生成的标题；只能根据它的 category、priority 和全部 sources.source_quote 理解原文要求。score 只能是 0—10 的整数。1—10 分必须至少引用一条能在脱敏 Resume 中逐字定位的 quote。0 分允许 evidence 为空，但 reason 必须写明“当前简历未体现”具体内容；0 分不表示候选人不会。ambiguous_requirement 对应的模糊原文只能保守评价，低分理由不得冒充候选人明确不满足一个原文没有写出的硬门槛。
 
 evaluation_reference_at 是当前 Application 原始投递时间，evaluation_timezone 固定为 Asia/Shanghai。experience_period_facts 是后端按该投递时间生成的唯一日历事实。你不得自行重算、扩展、四舍五入或补齐月份，不得改用当前时间、模型调用时间、任务时间或 Resume 上传时间。“至今”只能截止到事实中的 resolved_cutoff_month。投递后的经历不能支持候选人在投递时已经具备对应经验。只有年份且日期精度不足时，不得输出伪精确年限。
 
@@ -36,7 +38,7 @@ overall_score 由你综合全部基础事项和额外亮点直接给出 0—100 
   "overall_summary": "非空综合评价",
   "requirement_assessments": [
     {
-      "requirement_key": "计划中的原始 key",
+      "requirement_key": "计划中的原始 fact_id",
       "score": 0,
       "reason": "当前简历未体现……",
       "calculation_note": null,
@@ -70,7 +72,7 @@ overall_score 由你综合全部基础事项和额外亮点直接给出 0—100 
 def build_screening_evaluation_messages(
     *,
     job_snapshot: dict[str, Any],
-    evaluation_plan: list[dict[str, Any]],
+    evaluation_plan: dict[str, Any],
     sanitized_resume: str,
     evaluation_reference_at: str,
     evaluation_timezone: str,

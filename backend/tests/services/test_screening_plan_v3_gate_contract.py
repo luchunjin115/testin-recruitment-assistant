@@ -29,7 +29,7 @@ from app.services.screening_service import (
 NOW = datetime(2026, 8, 22, 12, 0, tzinfo=timezone.utc)
 
 
-class ScreeningPlanV3GateContractTest(IsolatedAsyncioTestCase):
+class ScreeningPlanV4GateContractTest(IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         self.settings = Settings(_env_file=None)
         self.engine = create_async_engine(
@@ -96,10 +96,14 @@ class ScreeningPlanV3GateContractTest(IsolatedAsyncioTestCase):
         self,
         *,
         status: str = "ready",
-        schema_version: str = "3.0",
+        schema_version: str = "4.0",
         is_current: bool = True,
     ) -> JobEvaluationPlan:
-        snapshot = job_evaluation_plan_service.build_input_snapshot(self.job)
+        snapshot = (
+            job_evaluation_plan_service.build_v4_input_snapshot(self.job)
+            if schema_version == "4.0"
+            else job_evaluation_plan_service.build_input_snapshot(self.job)
+        )
         snapshot_payload = snapshot.model_dump(mode="json")
         source_units = snapshot.source_units or []
         sources = [
@@ -110,7 +114,7 @@ class ScreeningPlanV3GateContractTest(IsolatedAsyncioTestCase):
             }
             for unit in source_units
         ]
-        items = (
+        legacy_items = (
             [
                 {
                     "key": "item:0001",
@@ -120,10 +124,10 @@ class ScreeningPlanV3GateContractTest(IsolatedAsyncioTestCase):
                     "sources": sources,
                 }
             ]
-            if status == "ready"
+            if schema_version != "4.0" and status == "ready"
             else []
         )
-        summary = {
+        v3_summary = {
             "rule_version": "five_section_source_units_v1",
             "total_units": len(source_units),
             "reviewed_units": len(source_units),
@@ -140,12 +144,49 @@ class ScreeningPlanV3GateContractTest(IsolatedAsyncioTestCase):
                 for unit in source_units
             ],
         }
+        has_v4_payload = schema_version == "4.0" and status in {
+            "pending_confirmation",
+            "ready",
+            "outdated",
+        }
+        facts = [
+            {
+                "fact_id": "fact:0001",
+                "category": "experience",
+                "priority": "required",
+                "sources": sources,
+            }
+        ]
+        criteria = [
+            {
+                "criterion_id": "criterion:0001",
+                "name": "岗位综合要求",
+                "fact_ids": ["fact:0001"],
+            }
+        ]
+        v4_summary = {
+            "rule_version": "five_section_source_units_v1",
+            "total_units": len(source_units),
+            "reviewed_units": len(source_units),
+            "evaluation_units": len(source_units),
+            "non_evaluation_units": 0,
+            "all_reviewed": True,
+            "units": [
+                {
+                    "source_unit_id": unit.source_unit_id,
+                    "disposition": "evaluation",
+                    "non_evaluation_reason": None,
+                    "fact_ids": ["fact:0001"],
+                }
+                for unit in source_units
+            ],
+        }
         plan = JobEvaluationPlan(
             job_id=self.job.id,
             jd_fingerprint=job_evaluation_plan_service.fingerprint_snapshot(snapshot),
             status=status,
             is_current=is_current,
-            items=items,
+            items=legacy_items if schema_version != "4.0" else null(),
             structured_coverage={} if schema_version == "2.0" else null(),
             free_text_coverage=(
                 {
@@ -158,9 +199,9 @@ class ScreeningPlanV3GateContractTest(IsolatedAsyncioTestCase):
             ),
             warnings=[],
             prompt_version=(
-                "job_evaluation_plan_v5"
-                if schema_version == "3.0"
-                else "job_evaluation_plan_v4"
+                "job_requirement_fact_extraction_v1"
+                if schema_version == "4.0"
+                else "job_evaluation_plan_v5"
             ),
             model_version="fake-plan-model",
             schema_version=schema_version,
@@ -168,9 +209,55 @@ class ScreeningPlanV3GateContractTest(IsolatedAsyncioTestCase):
             input_snapshot=snapshot_payload,
             error_code=("JOB_EVALUATION_PLAN_FAILED" if status == "failed" else None),
             error_message=("评价计划生成失败" if status == "failed" else None),
-            completed_at=NOW,
+            completed_at=(None if status == "generating" else NOW),
         )
-        plan.source_review_summary = summary if schema_version == "3.0" and status == "ready" else null()
+        plan.source_review_summary = (
+            v4_summary
+            if has_v4_payload
+            else v3_summary
+            if schema_version == "3.0" and status == "ready"
+            else null()
+        )
+        plan.requirement_facts = facts if has_v4_payload else null()
+        plan.evaluation_criteria = criteria if has_v4_payload else null()
+        plan.coverage_review_summary = (
+            {
+                "status": "passed",
+                "findings": [],
+                "repair_performed": False,
+                "reviewed_source_unit_ids": [
+                    unit.source_unit_id for unit in source_units
+                ],
+            }
+            if has_v4_payload
+            else null()
+        )
+        plan.generation_audit = (
+            {
+                "business_call_count": 3,
+                "content_repair_count": 0,
+                "infrastructure_retry_count": 0,
+                "calls": [
+                    {
+                        "role": role,
+                        "prompt_version": prompt_version,
+                        "model": "fake-plan-model",
+                        "input_tokens": 100,
+                        "output_tokens": 50,
+                        "duration_ms": 10,
+                        "infrastructure_retry_count": 0,
+                        "result": "succeeded",
+                    }
+                    for role, prompt_version in (
+                        ("fact_extraction", "job_requirement_fact_extraction_v1"),
+                        ("coverage_review", "job_requirement_coverage_review_v1"),
+                        ("criterion_grouping", "job_evaluation_criterion_grouping_v1"),
+                    )
+                ],
+            }
+            if has_v4_payload
+            else null()
+        )
         self.db.add(plan)
         await self.db.commit()
         return plan
@@ -239,7 +326,7 @@ class ScreeningPlanV3GateContractTest(IsolatedAsyncioTestCase):
                 settings=self.settings,
             )
 
-    async def test_only_current_ready_v3_plan_can_queue_screening(self) -> None:
+    async def test_only_current_ready_v4_plan_can_queue_screening(self) -> None:
         plan = await self._add_plan()
         result = await screening_service.trigger(
             self.db,
@@ -268,6 +355,16 @@ class ScreeningPlanV3GateContractTest(IsolatedAsyncioTestCase):
         )
         self.assertEqual(result.run.status, "waiting_plan")
         self.assertEqual(result.run.waiting_reason, "plan_generating")
+
+    async def test_pending_plan_waits_for_hr_confirmation(self) -> None:
+        await self._add_plan(status="pending_confirmation")
+        result = await screening_service.trigger(
+            self.db,
+            self.application.id,
+            settings=self.settings,
+        )
+        self.assertEqual(result.run.status, "waiting_plan")
+        self.assertEqual(result.run.waiting_reason, "plan_pending_confirmation")
 
     async def test_failed_plan_waits_with_failed_reason(self) -> None:
         await self._add_plan(status="failed")
@@ -357,7 +454,7 @@ class ScreeningPlanV3GateContractTest(IsolatedAsyncioTestCase):
             before,
         )
 
-    async def test_ready_v3_plan_runs_with_fake_and_preserves_hr_state(self) -> None:
+    async def test_ready_v4_plan_runs_by_fact_and_preserves_hr_state(self) -> None:
         application_id = self.application.id
         plan = await self._add_plan()
         plan_id = plan.id
@@ -382,7 +479,7 @@ class ScreeningPlanV3GateContractTest(IsolatedAsyncioTestCase):
                             "overall_summary": "候选人的 Python 经历与岗位要求匹配。",
                             "requirement_assessments": [
                                 {
-                                    "requirement_key": "item:0001",
+                                    "requirement_key": "fact:0001",
                                     "score": 8,
                                     "reason": "简历包含 Python AI 应用开发经历。",
                                     "calculation_note": None,
@@ -428,7 +525,7 @@ class ScreeningPlanV3GateContractTest(IsolatedAsyncioTestCase):
             (completed.error_code, completed.error_message),
         )
         self.assertEqual(report.job_evaluation_plan_id, plan_id)
-        self.assertEqual(report.requirement_assessments[0]["requirement_key"], "item:0001")
+        self.assertEqual(report.requirement_assessments[0]["requirement_key"], "fact:0001")
         self.assertEqual(application.hr_decision, "pending")
         self.assertEqual(application.recruitment_stage, "applied")
         self.assertEqual(application.lifecycle_status, "active")

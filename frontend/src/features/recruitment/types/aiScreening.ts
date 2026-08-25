@@ -11,7 +11,12 @@ export type LegacyJobEvaluationPlanRequirements = {
   additional_requirements: string[];
 };
 
-export type JobEvaluationPlanStatus = 'generating' | 'ready' | 'failed' | 'outdated';
+export type JobEvaluationPlanStatus =
+  | 'generating'
+  | 'pending_confirmation'
+  | 'ready'
+  | 'failed'
+  | 'outdated';
 export type EvaluationItemCategory =
   | 'skill'
   | 'experience'
@@ -27,12 +32,17 @@ export type FiveSectionSourceField =
 export type JobEvaluationPlanWarningCode =
   | 'limited_basis'
   | 'priority_signal_conflict'
-  | 'misplaced_non_evaluation_content';
+  | 'misplaced_non_evaluation_content'
+  | 'overly_broad_jd'
+  | 'conflicting_requirements'
+  | 'ambiguous_requirement'
+  | 'non_evaluation_content';
 
 export type JobEvaluationPlanWarningDetail = {
   code: JobEvaluationPlanWarningCode;
   message: string;
   sourceUnitIds: string[];
+  factIds: string[];
 };
 
 export type JobEvaluationPlanWarning = 'limited_basis' | JobEvaluationPlanWarningDetail;
@@ -52,6 +62,25 @@ export type JobEvaluationItem = {
     field: string | null;
     quote: string | null;
   } | null;
+};
+
+export type RequirementFactSource = {
+  sourceField: FiveSectionSourceField;
+  sourceUnitId: string;
+  sourceQuote: string;
+};
+
+export type RequirementFact = {
+  factId: string;
+  category: EvaluationItemCategory;
+  priority: EvaluationItemPriority;
+  sources: RequirementFactSource[];
+};
+
+export type EvaluationCriterion = {
+  criterionId: string;
+  name: string;
+  factIds: string[];
 };
 
 export type StructuredFieldCoverage = {
@@ -80,6 +109,42 @@ export type JobEvaluationPlanSourceReviewSummary = {
       | 'other'
       | null;
     itemKeys: string[];
+    factIds: string[];
+  }>;
+};
+
+export type JobEvaluationPlanCoverageReviewSummary = {
+  status: 'passed' | 'needs_repair';
+  findings: Array<{
+    code:
+      | 'missing_fact'
+      | 'unsupported_fact'
+      | 'wrong_disposition'
+      | 'invalid_atomicity'
+      | 'missing_source_merge'
+      | 'category_mismatch';
+    sourceUnitIds: string[];
+    factIds: string[];
+    message: string;
+  }>;
+  repairPerformed: boolean;
+  reviewedSourceUnitIds: string[];
+};
+
+export type JobEvaluationPlanGenerationAudit = {
+  businessCallCount: number;
+  contentRepairCount: number;
+  infrastructureRetryCount: number;
+  calls: Array<{
+    role: 'fact_extraction' | 'coverage_review' | 'local_repair' | 'criterion_grouping';
+    promptVersion: string;
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    durationMs: number;
+    infrastructureRetryCount: number;
+    result: 'succeeded' | 'failed';
+    errorCode: string | null;
   }>;
 };
 
@@ -111,9 +176,30 @@ export type JobEvaluationPlanInputSnapshotV3 = {
   }>;
 };
 
+export type JobEvaluationPlanInputSnapshotV4 = {
+  schemaVersion: '4.0';
+  jobContext: {
+    title: string;
+    department: string | null;
+    jobBackground: string | null;
+  };
+  evaluationFields: {
+    jobResponsibilities: string | null;
+    candidateRequirements: string | null;
+    preferredQualifications: string | null;
+  };
+  sourceUnits: Array<{
+    sourceUnitId: string;
+    sourceField: FiveSectionSourceField;
+    ordinal: number;
+    sourceText: string;
+  }>;
+};
+
 export type JobEvaluationPlanInputSnapshot =
   | LegacyJobEvaluationPlanInputSnapshot
-  | JobEvaluationPlanInputSnapshotV3;
+  | JobEvaluationPlanInputSnapshotV3
+  | JobEvaluationPlanInputSnapshotV4;
 
 export type JobEvaluationPlan = {
   id: number;
@@ -128,10 +214,14 @@ export type JobEvaluationPlan = {
     allCovered: boolean;
   } | null;
   sourceReviewSummary: JobEvaluationPlanSourceReviewSummary | null;
+  requirementFacts: RequirementFact[];
+  evaluationCriteria: EvaluationCriterion[];
+  coverageReviewSummary: JobEvaluationPlanCoverageReviewSummary | null;
+  generationAudit: JobEvaluationPlanGenerationAudit | null;
   warnings: JobEvaluationPlanWarning[];
   promptVersion: string;
   modelVersion: string;
-  schemaVersion: '1.0' | '2.0' | '3.0';
+  schemaVersion: '1.0' | '2.0' | '3.0' | '4.0';
   inputFingerprint: string;
   contractOutdated: boolean;
   inputSnapshot: JobEvaluationPlanInputSnapshot;
@@ -163,6 +253,7 @@ export type ScreeningWaitingReason =
   | 'job_closed'
   | 'plan_missing'
   | 'plan_generating'
+  | 'plan_pending_confirmation'
   | 'plan_failed'
   | 'plan_outdated'
   | 'plan_contract_outdated';

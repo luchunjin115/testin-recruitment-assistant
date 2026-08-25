@@ -81,7 +81,7 @@ class SettingsTest(TestCase):
         self.assertEqual(settings.SCREENING_EVALUATION_MAX_OUTPUT_TOKENS, 12_000)
         self.assertEqual(
             settings.SCREENING_EVALUATION_PROMPT_VERSION,
-            "screening_evaluation_v3",
+            "screening_evaluation_v4",
         )
         self.assertEqual(settings.SCREENING_EVALUATION_SCHEMA_VERSION, "2.0")
         self.assertEqual(settings.SCREENING_EVALUATION_TIMEZONE, "Asia/Shanghai")

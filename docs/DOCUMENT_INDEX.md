@@ -69,8 +69,9 @@ docs/
 - `stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`
 - `stages/stage7/2026-08-21-stage7-step9-jd-decomposition-quality-remediation-design.md`
 - `stages/stage7/2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md`
+- `stages/stage7/2026-08-24-stage7-job-evaluation-plan-v4-redesign.md`
 
-第一份记录阶段 7 已实现并继续保留的 Application、Resume、报告、异步运行、时间事实和 HR 决策边界；第二份记录旧输入合同下的小步骤 9、9-I 正式复验与下游诊断；第三份是五段式 JobEvaluationPlan 3.0、恢复门禁、质量样本和 7R-A—7R-H 的新设计草案，当前等待用户最终复核。恢复阶段 7 前必须同时阅读阶段 6 五段式补充、第一份阶段 7 基础设计和第三份新补充，不能继续按旧 `description + JobRequirementsV1` 执行。
+第一份记录阶段 7 已实现并继续保留的 Application、Resume、报告、异步运行、时间事实和 HR 决策边界；第二份记录旧输入合同下的小步骤 9、9-I 正式复验与下游诊断；第三份保存 JobEvaluationPlan 3.0 的已实现合同、7R-A—7R-F 事实和定向失败证据；第四份是当前权威的 RequirementFact + EvaluationCriterion 双层 4.0 设计，业务规则已经逐项确认，7R4-A—7R4-J 实施顺序等待用户最终确认。修改阶段 7 前必须同时阅读阶段 6 五段式补充、第一份基础设计、第三份 3.0 历史事实和第四份 4.0 当前补充。
 
 ## 5. 研究资料
 
@@ -112,7 +113,7 @@ docs/
 | 任务 | 补充阅读 |
 | --- | --- |
 | 查看当前进度 | 不补充；读取 `CLAUDE.md` 和 `PROJECT_STATE.md` 即可 |
-| 修改阶段 7 | 阶段 7 五段式评价计划新补充 + 原阶段 7 基础设计 + 阶段 6 五段式补充 + 相关代码和测试 |
+| 修改阶段 7 | 阶段 7 的 4.0 当前补充 + 3.0 实施与失败记录 + 原阶段 7 保留能力 + 阶段 6 五段式补充 + 相关代码和测试 |
 | 盘点旧 Rubric | 当前阶段 7 设计第 2、19、23 节 + 旧阶段 7 归档 |
 | 修改简历处理 | 对应阶段 4/5 资料 |
 | 修改岗位管理 | 阶段 6 原设计 + 五段式 JD 整改补充；旧验收仅作历史基线 |

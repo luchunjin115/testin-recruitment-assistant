@@ -14,7 +14,8 @@ class JobEvaluationPlanModelTest(TestCase):
             next(iter(table.c.job_id.foreign_keys)).target_fullname,
             "jobs.id",
         )
-        self.assertFalse(table.c["items"].nullable)
+        # 4.0 rows store facts/criteria in dedicated columns and keep legacy items NULL.
+        self.assertTrue(table.c["items"].nullable)
         self.assertTrue(table.c.structured_coverage.nullable)
         self.assertTrue(table.c.free_text_coverage.nullable)
         self.assertTrue(table.c.source_review_summary.nullable)

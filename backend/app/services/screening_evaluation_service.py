@@ -18,16 +18,18 @@ from app.core.config import Settings, get_settings
 from app.prompts.screening_evaluation import SCREENING_EVALUATION_PROMPT_VERSION
 from app.schemas.experience_period import ExperiencePeriodFactsSnapshot
 from app.schemas.job_evaluation_plan import (
-    EvaluationItemCategory,
+    EvaluationCriterion,
     EvaluationItemPriority,
-    JobEvaluationItem,
     JobEvaluationPlanInputSnapshot,
+    RequirementFact,
+    RequirementFactCategory,
 )
 from app.schemas.screening_evaluation import (
     AIScreeningEvaluationOutput,
     SCREENING_EVALUATION_SCHEMA_VERSION,
     BonusHighlight,
     RequirementAssessment,
+    ScreeningEvaluationPlanInput,
 )
 from app.services.experience_period_service import (
     EXPERIENCE_PERIOD_FACTS_RULE_VERSION,
@@ -68,7 +70,7 @@ class ScreeningEvaluationAdapter(Protocol):
         self,
         *,
         job_snapshot: dict[str, Any],
-        evaluation_plan: list[dict[str, Any]],
+        evaluation_plan: dict[str, Any],
         sanitized_resume: str,
         evaluation_reference_at: str,
         evaluation_timezone: str,
@@ -194,7 +196,7 @@ class ScreeningEvaluationService:
         self,
         *,
         job_snapshot: JobEvaluationPlanInputSnapshot | dict[str, Any],
-        evaluation_plan: list[JobEvaluationItem | dict[str, Any]],
+        evaluation_plan: ScreeningEvaluationPlanInput | dict[str, Any],
         resume_text: str,
         evaluation_reference_at: datetime,
         evaluation_timezone: str,
@@ -204,7 +206,7 @@ class ScreeningEvaluationService:
     ) -> ScreeningEvaluationResult:
         resolved_settings = settings or get_settings()
         self._validate_configuration(resolved_settings)
-        snapshot, items, sanitized_resume = self._prepare_inputs(
+        snapshot, plan, sanitized_resume = self._prepare_inputs(
             job_snapshot,
             evaluation_plan,
             resume_text,
@@ -222,7 +224,7 @@ class ScreeningEvaluationService:
         ):
             raise ScreeningEvaluationInputError("经历时间事实与评价基准不一致")
         snapshot_payload = snapshot.model_dump(mode="json")
-        item_payloads = [item.model_dump(mode="json") for item in items]
+        plan_payload = plan.model_dump(mode="json")
         period_facts_payload = period_facts.model_dump(mode="json")
 
         try:
@@ -231,7 +233,7 @@ class ScreeningEvaluationService:
             )
             adapter_result = await resolved_adapter.evaluate(
                 job_snapshot=snapshot_payload,
-                evaluation_plan=item_payloads,
+                evaluation_plan=plan_payload,
                 sanitized_resume=sanitized_resume,
                 evaluation_reference_at=expected_reference,
                 evaluation_timezone=evaluation_timezone,
@@ -247,7 +249,7 @@ class ScreeningEvaluationService:
         report = self.parse_and_validate_output(
             adapter_result.content,
             job_snapshot=snapshot,
-            evaluation_plan=items,
+            evaluation_plan=plan,
             sanitized_resume=sanitized_resume,
             experience_period_facts=period_facts,
         )
@@ -269,7 +271,7 @@ class ScreeningEvaluationService:
         content: str,
         *,
         job_snapshot: JobEvaluationPlanInputSnapshot,
-        evaluation_plan: list[JobEvaluationItem],
+        evaluation_plan: ScreeningEvaluationPlanInput | dict[str, Any],
         sanitized_resume: str,
         experience_period_facts: ExperiencePeriodFactsSnapshot,
     ) -> AIScreeningEvaluationOutput:
@@ -281,20 +283,22 @@ class ScreeningEvaluationService:
                 "AI 初筛结果未通过严格结构校验"
             ) from None
 
-        self._validate_requirement_completeness(report, evaluation_plan)
+        plan = self._validate_plan_input(evaluation_plan)
+        requirement_facts = plan.requirement_facts
+        self._validate_requirement_completeness(report, requirement_facts)
         self._validate_assessments(
             report,
-            evaluation_plan,
+            requirement_facts,
             sanitized_resume,
             experience_period_facts,
         )
         self._validate_bonuses(
             report,
             job_snapshot,
-            evaluation_plan,
+            requirement_facts,
             sanitized_resume,
         )
-        self._validate_tradeoff(report, evaluation_plan)
+        self._validate_tradeoff(report, requirement_facts)
         self._validate_safety_and_consistency(report)
         self._validate_no_unscoped_duration_claims(report)
         return report
@@ -302,25 +306,99 @@ class ScreeningEvaluationService:
     def _prepare_inputs(
         self,
         job_snapshot: JobEvaluationPlanInputSnapshot | dict[str, Any],
-        evaluation_plan: list[JobEvaluationItem | dict[str, Any]],
+        evaluation_plan: ScreeningEvaluationPlanInput | dict[str, Any],
         resume_text: str,
-    ) -> tuple[JobEvaluationPlanInputSnapshot, list[JobEvaluationItem], str]:
+    ) -> tuple[
+        JobEvaluationPlanInputSnapshot,
+        ScreeningEvaluationPlanInput,
+        str,
+    ]:
         try:
             snapshot = JobEvaluationPlanInputSnapshot.model_validate(job_snapshot)
-            items = [JobEvaluationItem.model_validate(item) for item in evaluation_plan]
+            plan = ScreeningEvaluationPlanInput.model_validate(evaluation_plan)
+            requirement_facts: list[RequirementFact] = plan.requirement_facts
+            evaluation_criteria: list[EvaluationCriterion] = plan.evaluation_criteria
         except (ValidationError, TypeError, ValueError):
             raise ScreeningEvaluationInputError("岗位或评价计划输入无效") from None
-        if not items:
-            raise ScreeningEvaluationInputError("当前岗位评价计划没有可评价事项")
-        keys = [item.key for item in items]
-        if len(keys) != len(set(keys)):
-            raise ScreeningEvaluationInputError("当前岗位评价计划事项 key 不唯一")
+        if snapshot.schema_version != "4.0":
+            raise ScreeningEvaluationInputError("AI 初筛只接受 4.0 岗位评价计划")
+        fact_ids = [fact.fact_id for fact in requirement_facts]
+        grouped_fact_ids = [
+            fact_id
+            for criterion in evaluation_criteria
+            for fact_id in criterion.fact_ids
+        ]
+        if len(fact_ids) != len(set(fact_ids)):
+            raise ScreeningEvaluationInputError("当前岗位评价计划 fact_id 不唯一")
+        if Counter(grouped_fact_ids) != Counter({fact_id: 1 for fact_id in fact_ids}):
+            raise ScreeningEvaluationInputError(
+                "评价维度必须把每条 RequirementFact 恰好归组一次"
+            )
+        self._validate_fact_sources(snapshot, requirement_facts)
         if not isinstance(resume_text, str) or not resume_text.strip():
             raise ScreeningEvaluationInputError("当前 Resume 原文为空")
         sanitized_resume = self.sanitize_resume_text(resume_text)
         if not sanitized_resume:
             raise ScreeningEvaluationInputError("当前 Resume 脱敏后没有可评价内容")
-        return snapshot, items, sanitized_resume
+        return snapshot, plan, sanitized_resume
+
+    @staticmethod
+    def _validate_plan_input(
+        evaluation_plan: ScreeningEvaluationPlanInput | dict[str, Any],
+    ) -> ScreeningEvaluationPlanInput:
+        try:
+            plan = ScreeningEvaluationPlanInput.model_validate(evaluation_plan)
+        except (ValidationError, TypeError, ValueError):
+            raise ScreeningEvaluationInputError("岗位评价计划 4.0 输入无效") from None
+        fact_ids = [fact.fact_id for fact in plan.requirement_facts]
+        grouped_fact_ids = [
+            fact_id
+            for criterion in plan.evaluation_criteria
+            for fact_id in criterion.fact_ids
+        ]
+        if len(fact_ids) != len(set(fact_ids)) or Counter(grouped_fact_ids) != Counter(
+            {fact_id: 1 for fact_id in fact_ids}
+        ):
+            raise ScreeningEvaluationInputError(
+                "评价维度必须把每条 RequirementFact 恰好归组一次"
+            )
+        return plan
+
+    @staticmethod
+    def _validate_fact_sources(
+        snapshot: JobEvaluationPlanInputSnapshot,
+        requirement_facts: list[RequirementFact],
+    ) -> None:
+        source_units = {unit.source_unit_id: unit for unit in snapshot.source_units}
+        priority_by_field = {
+            "candidate_requirements": EvaluationItemPriority.REQUIRED,
+            "preferred_qualifications": EvaluationItemPriority.PREFERRED,
+            "job_responsibilities": EvaluationItemPriority.GENERAL,
+        }
+        priority_rank = {
+            EvaluationItemPriority.REQUIRED: 3,
+            EvaluationItemPriority.PREFERRED: 2,
+            EvaluationItemPriority.GENERAL: 1,
+        }
+        for fact in requirement_facts:
+            for source in fact.sources:
+                source_unit = source_units.get(source.source_unit_id)
+                if (
+                    source_unit is None
+                    or source.source_field != source_unit.source_field
+                    or source.source_quote not in source_unit.source_text
+                ):
+                    raise ScreeningEvaluationInputError(
+                        "RequirementFact source must be traceable to the 4.0 input snapshot"
+                    )
+            expected_priority = max(
+                (priority_by_field[source.source_field] for source in fact.sources),
+                key=priority_rank.__getitem__,
+            )
+            if fact.priority is not expected_priority:
+                raise ScreeningEvaluationInputError(
+                    "RequirementFact priority must match its source fields"
+                )
 
     @classmethod
     def sanitize_resume_text(cls, resume_text: str) -> str:
@@ -384,9 +462,9 @@ class ScreeningEvaluationService:
     @staticmethod
     def _validate_requirement_completeness(
         report: AIScreeningEvaluationOutput,
-        evaluation_plan: list[JobEvaluationItem],
+        evaluation_plan: list[RequirementFact],
     ) -> None:
-        expected = [item.key for item in evaluation_plan]
+        expected = [fact.fact_id for fact in evaluation_plan]
         actual = [item.requirement_key for item in report.requirement_assessments]
         counts = Counter(actual)
         if any(count != 1 for count in counts.values()):
@@ -401,11 +479,11 @@ class ScreeningEvaluationService:
     def _validate_assessments(
         self,
         report: AIScreeningEvaluationOutput,
-        evaluation_plan: list[JobEvaluationItem],
+        evaluation_plan: list[RequirementFact],
         sanitized_resume: str,
         experience_period_facts: ExperiencePeriodFactsSnapshot,
     ) -> None:
-        plan_by_key = {item.key: item for item in evaluation_plan}
+        plan_by_key = {fact.fact_id: fact for fact in evaluation_plan}
         for assessment in report.requirement_assessments:
             if assessment.score == 0:
                 if "当前简历未体现" not in assessment.reason:
@@ -416,7 +494,9 @@ class ScreeningEvaluationService:
                 plan_item = plan_by_key[assessment.requirement_key]
                 if (
                     assessment.evidence
-                    and self._has_semantic_anchor(plan_item.title, positive_evidence)
+                    and self._has_semantic_anchor(
+                        self._fact_text(plan_item), positive_evidence
+                    )
                     and any(
                         term in positive_evidence
                         for term in ("使用", "开发", "负责", "掌握", "熟悉", "完成", "获得")
@@ -459,7 +539,7 @@ class ScreeningEvaluationService:
         self,
         report: AIScreeningEvaluationOutput,
         job_snapshot: JobEvaluationPlanInputSnapshot,
-        evaluation_plan: list[JobEvaluationItem],
+        evaluation_plan: list[RequirementFact],
         sanitized_resume: str,
     ) -> None:
         job_context = self._job_context(job_snapshot, evaluation_plan)
@@ -469,7 +549,10 @@ class ScreeningEvaluationService:
                 raise ScreeningEvaluationInvalidOutputError(
                     "额外亮点只能表达正向价值"
                 )
-            if any(self._semantically_overlaps(bonus.title, item.title) for item in evaluation_plan):
+            if any(
+                self._semantically_overlaps(bonus.title, self._fact_text(fact))
+                for fact in evaluation_plan
+            ):
                 raise ScreeningEvaluationInvalidOutputError(
                     "额外亮点不能与岗位基础事项重复"
                 )
@@ -497,9 +580,9 @@ class ScreeningEvaluationService:
     def _validate_tradeoff(
         self,
         report: AIScreeningEvaluationOutput,
-        evaluation_plan: list[JobEvaluationItem],
+        evaluation_plan: list[RequirementFact],
     ) -> None:
-        priority_by_key = {item.key: item.priority for item in evaluation_plan}
+        priority_by_key = {fact.fact_id: fact.priority for fact in evaluation_plan}
         has_low_required = any(
             priority_by_key[item.requirement_key] is EvaluationItemPriority.REQUIRED
             and item.score <= 3
@@ -609,7 +692,7 @@ class ScreeningEvaluationService:
     def _validate_experience_fact_claims(
         self,
         assessment: RequirementAssessment,
-        plan_item: JobEvaluationItem,
+        plan_item: RequirementFact,
         snapshot: ExperiencePeriodFactsSnapshot,
     ) -> None:
         keys = list(assessment.experience_period_fact_keys)
@@ -655,7 +738,9 @@ class ScreeningEvaluationService:
         if bounds is None:
             raise ScreeningEvaluationInvalidOutputError("经历时间事实无法支持年限结论")
         lower, upper = bounds
-        threshold_months = self._duration_threshold_months(plan_item.title)
+        threshold_months = self._duration_threshold_months(
+            self._fact_text(plan_item)
+        )
         for claim in claims:
             if self._is_parenthetical_threshold_conversion(
                 combined,
@@ -744,11 +829,14 @@ class ScreeningEvaluationService:
         return float(match.group(1)) * 12 if match else None
 
     @staticmethod
-    def _allows_calculation_note(item: JobEvaluationItem) -> bool:
+    def _allows_calculation_note(item: RequirementFact) -> bool:
         return item.category in {
-            EvaluationItemCategory.EXPERIENCE,
-            EvaluationItemCategory.EDUCATION,
-        } or any(term in item.title for term in ("年限", "工作年", "学历", "学位"))
+            RequirementFactCategory.EXPERIENCE,
+            RequirementFactCategory.EDUCATION,
+        } or any(
+            term in ScreeningEvaluationService._fact_text(item)
+            for term in ("年限", "工作年", "学历", "学位")
+        )
 
     def _semantically_overlaps(self, left: str, right: str) -> bool:
         left_normalized = self._semantic_text(left)
@@ -789,9 +877,9 @@ class ScreeningEvaluationService:
     @staticmethod
     def _job_context(
         snapshot: JobEvaluationPlanInputSnapshot,
-        evaluation_plan: list[JobEvaluationItem],
+        evaluation_plan: list[RequirementFact],
     ) -> str:
-        if snapshot.schema_version == "3.0":
+        if snapshot.schema_version in {"3.0", "4.0"}:
             assert snapshot.job_context is not None
             assert snapshot.evaluation_fields is not None
             values = [
@@ -821,8 +909,15 @@ class ScreeningEvaluationService:
                     collect(item)
 
         collect(requirements)
-        values.extend(item.title for item in evaluation_plan)
+        values.extend(
+            ScreeningEvaluationService._fact_text(fact)
+            for fact in evaluation_plan
+        )
         return "\n".join(values)
+
+    @staticmethod
+    def _fact_text(fact: RequirementFact) -> str:
+        return "\n".join(source.source_quote for source in fact.sources)
 
     @staticmethod
     def _validate_configuration(settings: Settings) -> None:

@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { EditOutlined, ReloadOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
-import { Alert, Button, Drawer, Empty, Skeleton, Tag } from 'antd';
+import { CheckOutlined, EditOutlined, ReloadOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { Alert, Button, Drawer, Empty, Popconfirm, Skeleton, Tag } from 'antd';
 import {
+  confirmJobEvaluationPlan,
   generateJobEvaluationPlan,
   getAIScreeningApiError,
   getJobEvaluationPlan,
@@ -52,6 +53,22 @@ const WARNING_COPY: Record<JobEvaluationPlanWarningCode, { title: string; descri
   misplaced_non_evaluation_content: {
     title: '评价字段中包含非评价内容',
     description: 'JD 中可能混入公司宣传、福利或招聘流程，请修改 JD 后再生成，避免它们成为评价依据。',
+  },
+  overly_broad_jd: {
+    title: '岗位事实较多',
+    description: '当前 JD 形成了 31 条或更多事实，系统没有截断。请重点核对是否存在可合并的重复表述。',
+  },
+  conflicting_requirements: {
+    title: '原文要求存在冲突',
+    description: '同一事实在不同原文位置存在优先级或内容冲突。页面保留全部来源，请修改 JD 消除歧义。',
+  },
+  ambiguous_requirement: {
+    title: '部分要求含义模糊',
+    description: '这些原文没有被自行补成年限、数量或等级。请确认是否需要回到 JD 写得更明确。',
+  },
+  non_evaluation_content: {
+    title: '评价字段包含非评价内容',
+    description: '系统识别到福利、宣传或招聘流程等内容，并且没有把它们变成候选人评价事实。',
   },
 };
 
@@ -150,6 +167,20 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose, onEditJo
     }
   };
 
+  const confirmPlan = async () => {
+    if (!job || job.status !== 'open' || actionPending) return;
+    setActionPending(true);
+    setActionError(null);
+    try {
+      const next = await confirmJobEvaluationPlan(job.id);
+      setLoadState({ status: 'ready', plan: next });
+    } catch (error) {
+      setActionError(getAIScreeningApiError(error).message);
+    } finally {
+      setActionPending(false);
+    }
+  };
+
   const editJob = () => {
     if (job) onEditJob(job);
   };
@@ -165,6 +196,31 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose, onEditJo
       );
     }
     if (plan.status === 'generating') return <Button disabled loading>评价计划生成中</Button>;
+    if (plan.contractOutdated) {
+      return (
+        <Button loading={actionPending} onClick={() => void submitPlanAction('generate')} type="primary">
+          按五段式新规则生成 4.0 计划
+        </Button>
+      );
+    }
+    if (plan.status === 'pending_confirmation') {
+      return (
+        <>
+          <Button icon={<EditOutlined />} onClick={editJob}>修改 JD</Button>
+          <Popconfirm
+            cancelText="继续核对"
+            description="确认后，正在等待计划的申请可以进入 AI 初筛；事实内容不会被改动。"
+            okText="确认评价计划"
+            onConfirm={confirmPlan}
+            title="确认这份评价计划？"
+          >
+            <Button icon={<CheckOutlined />} loading={actionPending} type="primary">
+              确认评价计划
+            </Button>
+          </Popconfirm>
+        </>
+      );
+    }
     if (plan.status === 'failed') {
       return (
         <>
@@ -181,20 +237,13 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose, onEditJo
         </>
       );
     }
-    if (plan.contractOutdated) {
-      return (
-        <Button loading={actionPending} onClick={() => void submitPlanAction('generate')} type="primary">
-          按五段式新规则生成
-        </Button>
-      );
-    }
     return null;
   };
 
   const warningDetails = plan?.warnings.map(warning => (
     typeof warning === 'string'
-      ? { code: warning, sourceUnitIds: [] }
-      : { code: warning.code, sourceUnitIds: warning.sourceUnitIds }
+      ? { code: warning, sourceUnitIds: [], factIds: [] }
+      : { code: warning.code, sourceUnitIds: warning.sourceUnitIds, factIds: warning.factIds }
   )) ?? [];
 
   return (
@@ -216,7 +265,7 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose, onEditJo
       width="min(780px, 100vw)"
     >
       <Alert
-        description="评价计划只把当前 JD 整理成一致的评价事项，不设置权重或自动淘汰条件。发现不准确时，请修改原 JD。"
+        description="评价计划只把当前 JD 中可评价的内容保留为原文事实，再用评价维度组织展示；每条事实仍独立评价，不设置维度分、权重或自动淘汰条件。发现不准确时，请修改原 JD。"
         icon={<SafetyCertificateOutlined />}
         message="AI 初筛的只读评价依据"
         showIcon
@@ -242,7 +291,7 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose, onEditJo
         <Empty
           className="recruitment-plan-empty"
           description={job?.status === 'open'
-            ? '当前开放岗位还没有评价计划。生成后，页面会按任职要求、加分项和岗位职责展示。'
+            ? '当前开放岗位还没有评价计划。生成后，页面会按评价维度展示全部 JD 原文事实。'
             : '该岗位没有可查看的历史评价计划。'}
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
@@ -252,7 +301,7 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose, onEditJo
         <div className="recruitment-plan-content">
           <section className="recruitment-plan-summary" aria-label="评价计划摘要">
             <div><span>当前状态</span><Tag color={PLAN_STATUS_META[plan.status].tone}>{PLAN_STATUS_META[plan.status].label}</Tag><p>{PLAN_STATUS_META[plan.status].description}</p></div>
-            <div><span>评价事项</span><strong>{plan.items.length}</strong><p>共审阅 {plan.sourceReviewSummary?.totalUnits ?? '—'} 个 JD 片段</p></div>
+            <div><span>{plan.schemaVersion === '4.0' ? '原文事实' : '历史事项'}</span><strong>{plan.schemaVersion === '4.0' ? plan.requirementFacts.length : plan.items.length}</strong><p>共审阅 {plan.sourceReviewSummary?.totalUnits ?? '—'} 个 JD 片段</p></div>
             <div><span>当前 JD</span><strong>{plan.isCurrent ? '与当前岗位一致' : '历史输入'}</strong><p>生成于 {formatDateTime(plan.completedAt)}</p></div>
             <div><span>合同版本</span><strong>Schema {plan.schemaVersion}</strong><p>更新于 {formatDateTime(plan.updatedAt)}</p></div>
           </section>
@@ -260,11 +309,14 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose, onEditJo
           {plan.status === 'generating' && (
             <Alert description="页面每 4 秒自动刷新；关闭抽屉或离开页面后会停止轮询，但不会取消后台任务。" message="正在生成，请勿重复提交" showIcon type="info" />
           )}
+          {plan.status === 'pending_confirmation' && !plan.contractOutdated && (
+            <Alert description="请逐项核对评价维度、JD 原文和 warning。确认只改变计划状态，不会改动任何原文事实，也不会再次调用模型。" message="等待 HR 确认后才能开始初筛" showIcon type="warning" />
+          )}
           {plan.status === 'ready' && !plan.contractOutdated && (
-            <Alert description="同一份 JD 的已就绪计划保持只读，不能把反复生成当作抽卡。需要修正时请先修改 JD。" message="当前计划只读" showIcon type="success" />
+            <Alert description="同一份 JD 的已确认计划保持只读，不能把反复生成当作抽卡。需要修正时请先修改 JD。" message="当前计划已确认" showIcon type="success" />
           )}
           {plan.contractOutdated && (
-            <Alert description="该计划按旧合同生成，只能用于解释历史结果。开放岗位可按五段式新规则生成 3.0 计划。" message="历史只读 · 当前评价计划使用旧规则" showIcon type="warning" />
+            <Alert description="该计划按 1.0—3.0 旧合同生成，只能用于解释历史结果。开放岗位必须生成并确认 4.0 计划，才能继续新的 AI 初筛。" message="历史只读 · 当前评价计划使用旧规则" showIcon type="warning" />
           )}
 
           {warningDetails.map((warning, index) => {
@@ -272,7 +324,7 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose, onEditJo
             return (
               <Alert
                 className="recruitment-plan-warning"
-                description={<div><span>{copy.description}</span>{warning.sourceUnitIds.length > 0 && <code>涉及片段：{warning.sourceUnitIds.join('、')}</code>}</div>}
+                description={<div><span>{copy.description}</span>{warning.sourceUnitIds.length > 0 && <code>涉及片段：{warning.sourceUnitIds.join('、')}</code>}{warning.factIds.length > 0 && <code>涉及事实：{warning.factIds.join('、')}</code>}</div>}
                 key={`${warning.code}-${index}`}
                 message={copy.title}
                 showIcon
@@ -285,10 +337,57 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose, onEditJo
             <Alert description={plan.errorMessage || '当前评价计划未能生成。请重试生成；若仍失败，请修改 JD 后再试。'} message={plan.errorCode ? `生成失败 · ${plan.errorCode}` : '生成失败'} showIcon type="error" />
           )}
           {plan.status === 'outdated' && (
-            <Alert description="旧计划继续用于解释已有历史结果，但不能用于当前 JD 的新申请。可查看下方历史事项，并按当前 JD 生成新计划。" message="这份计划基于旧 JD" showIcon type="warning" />
+            <Alert description="旧计划继续用于解释已有历史结果，但不能用于当前 JD 的新申请。可查看下方历史内容，并按当前 JD 生成新计划。" message="这份计划基于旧 JD" showIcon type="warning" />
           )}
 
-          {plan.items.length > 0 ? PLAN_GROUPS.map(group => {
+          {plan.schemaVersion === '4.0' && plan.coverageReviewSummary && (
+            <div className="recruitment-plan-verification" aria-label="计划复核摘要">
+              <div><span>完整性复核</span><strong>{plan.coverageReviewSummary.status === 'passed' ? '已通过' : '需要修复'}</strong><p>复核 {plan.coverageReviewSummary.reviewedSourceUnitIds.length} 个原文片段</p></div>
+              <div><span>生成审计</span><strong>{plan.generationAudit?.businessCallCount ?? '—'} 次业务调用</strong><p>{plan.generationAudit?.contentRepairCount ? '执行过一次局部修复' : '未执行局部修复'}</p></div>
+            </div>
+          )}
+
+          {plan.schemaVersion === '4.0' && plan.requirementFacts.length > 0 && plan.evaluationCriteria.map(criterion => {
+            const criterionFacts = criterion.factIds
+              .map(factId => plan.requirementFacts.find(fact => fact.factId === factId))
+              .filter((fact): fact is NonNullable<typeof fact> => Boolean(fact));
+            return (
+              <section className="recruitment-plan-criterion" key={criterion.criterionId} aria-label={`${criterion.name}评价维度`}>
+                <div className="recruitment-plan-section-heading">
+                  <div><span>EVALUATION CRITERION</span><h3>{criterion.name}</h3></div>
+                  <span>{criterionFacts.length} 条事实</span>
+                </div>
+                <div className="recruitment-plan-fact-list">
+                  {criterionFacts.map((fact, index) => (
+                    <article className="recruitment-plan-fact" key={fact.factId}>
+                      <span className="recruitment-plan-index">{String(index + 1).padStart(2, '0')}</span>
+                      <div>
+                        <div className="recruitment-plan-fact-heading">
+                          <code>{fact.factId}</code>
+                          <div>
+                            <Tag>{CATEGORY_LABELS[fact.category]}</Tag>
+                            <Tag color={fact.priority === 'required' ? 'red' : fact.priority === 'preferred' ? 'gold' : 'default'}>{PRIORITY_LABELS[fact.priority]}</Tag>
+                          </div>
+                        </div>
+                        <p className="recruitment-plan-fact-quote">{fact.sources[0]?.sourceQuote || '原文依据未记录'}</p>
+                        <details className="recruitment-plan-sources">
+                          <summary>{fact.sources.length} 处 JD 原文依据</summary>
+                          {fact.sources.map(source => (
+                            <blockquote key={`${source.sourceUnitId}-${source.sourceQuote}`}>
+                              <span>{SOURCE_FIELD_LABELS[source.sourceField]} · {source.sourceUnitId}</span>
+                              <p>{source.sourceQuote}</p>
+                            </blockquote>
+                          ))}
+                        </details>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+
+          {plan.schemaVersion !== '4.0' && plan.items.length > 0 ? PLAN_GROUPS.map(group => {
             const groupItems = plan.items.filter(item => item.priority === group.priority);
             return (
               <section className="recruitment-plan-items" key={group.priority} aria-label={`${group.title}评价事项`}>
@@ -323,8 +422,12 @@ const JobEvaluationPlanDrawer: React.FC<Props> = ({ job, open, onClose, onEditJo
                 ))}
               </section>
             );
-          }) : plan.status !== 'failed' && (
+          }) : plan.schemaVersion !== '4.0' && plan.status !== 'failed' && (
             <Empty description="当前计划还没有可展示的评价事项" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+          )}
+
+          {plan.schemaVersion === '4.0' && plan.requirementFacts.length === 0 && plan.status !== 'failed' && plan.status !== 'generating' && (
+            <Empty description="当前计划还没有可展示的原文事实" image={Empty.PRESENTED_IMAGE_SIMPLE} />
           )}
 
           <footer className="recruitment-plan-meta"><span>计划 #{plan.id} · {plan.isCurrent ? '当前 JD' : '历史 JD'}</span><span>评价依据只能通过修改 JD 纠正</span></footer>

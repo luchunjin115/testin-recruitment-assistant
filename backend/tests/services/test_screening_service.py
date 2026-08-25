@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, patch
 
-from sqlalchemy import select
+from sqlalchemy import null, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
@@ -12,10 +12,6 @@ from app.adapters.screening_evaluation import (
     FakeScreeningEvaluationAdapter,
     ScreeningEvaluationAdapterResult,
     ScreeningEvaluationTimeoutError,
-)
-from app.adapters.job_evaluation_plan import (
-    FakeJobEvaluationPlanAdapter,
-    JobEvaluationPlanAdapterResult,
 )
 from app.core.config import Settings
 from app.models.application import Application
@@ -37,31 +33,100 @@ from app.services.job_evaluation_plan_service import job_evaluation_plan_service
 NOW = datetime(2026, 8, 20, 12, 0, tzinfo=timezone.utc)
 
 
-def requirements() -> dict:
-    return {
-        "schema_version": "1.0",
-        "responsibilities": ["开发后端服务"],
-        "required_skills": ["Python"],
-        "preferred_skills": [],
-        "minimum_work_years": 1,
-        "education_requirement": "bachelor_or_above",
-        "required_experiences": [],
-        "preferred_experiences": [],
-        "keywords": [],
-        "additional_requirements": [],
-    }
-
-
-def item() -> dict:
-    return {
-        "key": "requirement:skill:python",
-        "title": "Python",
-        "category": "skill",
-        "priority": "required",
-        "source_type": "structured",
-        "source_field": "requirements.required_skills",
-        "source_quote": None,
-    }
+def make_v4_plan(
+    job: Job,
+    *,
+    status: str = "ready",
+    is_current: bool = True,
+) -> JobEvaluationPlan:
+    snapshot = job_evaluation_plan_service.build_v4_input_snapshot(job)
+    units = list(snapshot.source_units or [])
+    sources = [
+        {
+            "source_field": unit.source_field,
+            "source_unit_id": unit.source_unit_id,
+            "source_quote": unit.source_text,
+        }
+        for unit in units
+    ]
+    facts = [
+        {
+            "fact_id": "fact:0001",
+            "category": "skill",
+            "priority": "required",
+            "sources": sources,
+        }
+    ]
+    criteria = [
+        {
+            "criterion_id": "criterion:0001",
+            "name": "Python 后端工程能力",
+            "fact_ids": ["fact:0001"],
+        }
+    ]
+    return JobEvaluationPlan(
+        job_id=job.id,
+        jd_fingerprint=job_evaluation_plan_service.fingerprint_snapshot(snapshot),
+        status=status,
+        is_current=is_current,
+        items=null(),
+        structured_coverage=null(),
+        free_text_coverage=null(),
+        source_review_summary={
+            "rule_version": "five_section_source_units_v1",
+            "total_units": len(units),
+            "reviewed_units": len(units),
+            "evaluation_units": len(units),
+            "non_evaluation_units": 0,
+            "all_reviewed": True,
+            "units": [
+                {
+                    "source_unit_id": unit.source_unit_id,
+                    "disposition": "evaluation",
+                    "fact_ids": ["fact:0001"],
+                    "non_evaluation_reason": None,
+                }
+                for unit in units
+            ],
+        },
+        requirement_facts=facts,
+        evaluation_criteria=criteria,
+        coverage_review_summary={
+            "status": "passed",
+            "findings": [],
+            "repair_performed": False,
+            "reviewed_source_unit_ids": [unit.source_unit_id for unit in units],
+        },
+        generation_audit={
+            "business_call_count": 3,
+            "content_repair_count": 0,
+            "infrastructure_retry_count": 0,
+            "calls": [
+                {
+                    "role": role,
+                    "prompt_version": prompt_version,
+                    "model": "fake-plan-model",
+                    "input_tokens": 100,
+                    "output_tokens": 50,
+                    "duration_ms": 10,
+                    "infrastructure_retry_count": 0,
+                    "result": "succeeded",
+                }
+                for role, prompt_version in (
+                    ("fact_extraction", "job_requirement_fact_extraction_v1"),
+                    ("coverage_review", "job_requirement_coverage_review_v1"),
+                    ("criterion_grouping", "job_evaluation_criterion_grouping_v1"),
+                )
+            ],
+        },
+        warnings=[],
+        prompt_version="job_requirement_fact_extraction_v1",
+        model_version="fake-plan-model",
+        schema_version="4.0",
+        input_fingerprint=job_evaluation_plan_service.fingerprint_input(snapshot),
+        input_snapshot=snapshot.model_dump(mode="json"),
+        completed_at=NOW,
+    )
 
 
 def valid_model_result(*, score: int = 80) -> ScreeningEvaluationAdapterResult:
@@ -72,7 +137,7 @@ def valid_model_result(*, score: int = 80) -> ScreeningEvaluationAdapterResult:
                 "overall_summary": "Python 项目经验与岗位要求整体较匹配。",
                 "requirement_assessments": [
                     {
-                        "requirement_key": "requirement:skill:python",
+                        "requirement_key": "fact:0001",
                         "score": 8,
                         "reason": "使用 Python 开发 API 服务，岗位相关经验较充分。",
                         "calculation_note": None,
@@ -111,7 +176,6 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             expire_on_commit=False,
             join_transaction_mode="create_savepoint",
         )
-        self._legacy_job_refs: list[Job] = []
         self.application = await self._create_application()
 
     async def asyncTearDown(self) -> None:
@@ -146,48 +210,9 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
                 public_notes=None,
                 status="open",
             )
-            job.description = "负责 Python API 开发"
-            job.requirements = requirements()
-            # Keep the test-only legacy attributes alive in SQLAlchemy's weak
-            # identity map. Production Job instances never receive them.
-            self._legacy_job_refs.append(job)
             self.db.add(job)
             await self.db.flush()
-            snapshot = screening_service._sha256(
-                {
-                    "job_id": job.id,
-                    "title": job.title,
-                    "department": job.department,
-                    "description": job.description,
-                    "requirements": requirements(),
-                }
-            )
-            plan = JobEvaluationPlan(
-                job_id=job.id,
-                jd_fingerprint=snapshot,
-                status="ready",
-                is_current=True,
-                items=[item()],
-                structured_coverage={
-                    "source_schema_version": "1.0",
-                    "fields": [],
-                    "all_covered": True,
-                },
-                warnings=[],
-                prompt_version="job_evaluation_plan_v1",
-                model_version="fake-plan-model",
-                schema_version="1.0",
-                input_fingerprint=snapshot,
-                input_snapshot={
-                    "job_id": job.id,
-                    "title": job.title,
-                    "department": job.department,
-                    "description": job.description,
-                    "requirements": requirements(),
-                },
-                completed_at=NOW,
-            )
-            self.db.add(plan)
+            self.db.add(make_v4_plan(job))
         if candidate is None:
             candidate = Candidate(name="测试候选人")
             self.db.add(candidate)
@@ -353,15 +378,21 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         )
         resume.raw_text = "工作经历\n使用 Python 开发 API 服务"
         job = await self.db.get(Job, self.application.job_id)
-        job.description = "负责新的 Python 平台"
+        job.job_responsibilities = "负责新的 Python 平台"
         jd_changed = await screening_service._build_context(
             self.db, self.application, self.settings
         )
-        job.description = "负责 Python API 开发"
+        job.job_responsibilities = "负责 Python API 开发"
         plan = await self.db.scalar(
             select(JobEvaluationPlan).where(JobEvaluationPlan.job_id == job.id)
         )
-        plan.items = [item() | {"title": "Python API"}]
+        plan.evaluation_criteria = [
+            {
+                "criterion_id": "criterion:0001",
+                "name": "Python API",
+                "fact_ids": ["fact:0001"],
+            }
+        ]
         plan_changed = await screening_service._build_context(
             self.db, self.application, self.settings
         )
@@ -391,6 +422,12 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             )
         )
         plan.status = "generating"
+        plan.source_review_summary = null()
+        plan.requirement_facts = null()
+        plan.evaluation_criteria = null()
+        plan.coverage_review_summary = null()
+        plan.generation_audit = null()
+        plan.completed_at = None
         await self.db.commit()
         result = await screening_service.trigger(
             self.db, self.application.id, settings=self.settings
@@ -502,21 +539,16 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         old_score = old_report.overall_score
         resume = await self.db.get(Resume, self.application.current_resume_id)
         resume.raw_text = "工作经历\n2021.07—至今，使用 Python 开发 API 服务"
-        plan = await self.db.scalar(
+        old_plan = await self.db.scalar(
             select(JobEvaluationPlan).where(
                 JobEvaluationPlan.job_id == self.application.job_id
             )
         )
-        years_item = {
-            "key": "requirement:experience:years",
-            "title": "至少 2 年工作经验",
-            "category": "experience",
-            "priority": "required",
-            "source_type": "structured",
-            "source_field": "requirements.minimum_work_years",
-            "source_quote": None,
-        }
-        plan.items = [item(), years_item]
+        old_plan.is_current = False
+        old_plan.status = "outdated"
+        job = await self.db.get(Job, self.application.job_id)
+        job.candidate_requirements = "具备 Python 开发经验\n至少 2 年工作经验"
+        self.db.add(make_v4_plan(job))
         await self.db.commit()
         context = await screening_service._build_context(
             self.db,
@@ -542,17 +574,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             "overall_summary": "Python 项目经验与岗位要求整体较匹配。",
             "requirement_assessments": [
                 {
-                    "requirement_key": "requirement:skill:python",
-                    "score": 8,
-                    "reason": "使用 Python 开发 API 服务，岗位相关经验较充分。",
-                    "calculation_note": None,
-                    "experience_period_fact_keys": [],
-                    "evidence": [
-                        {"quote": "使用 Python 开发 API 服务", "section": "工作经历"}
-                    ],
-                },
-                {
-                    "requirement_key": "requirement:experience:years",
+                    "requirement_key": "fact:0001",
                     "score": 8,
                     "reason": "相关开发经历满足至少 2 年要求。",
                     "calculation_note": "相关经历精确为 3 年，满足至少 2 年要求。",
@@ -745,7 +767,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             ).all()
         )
         job = await self.db.get(Job, self.application.job_id)
-        job.description = "负责新的 Python 平台"
+        job.job_responsibilities = "负责新的 Python 平台"
         await self.db.commit()
         await screening_service.after_plan_changed(self.db, job.id, plan_ready=False)
         report = await self.db.scalar(
@@ -760,35 +782,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         )
         old_plan.is_current = False
         old_plan.status = "outdated"
-        snapshot = {
-            "job_id": job.id,
-            "title": job.title,
-            "department": job.department,
-            "description": job.description,
-            "requirements": requirements(),
-        }
-        fingerprint = screening_service._sha256(snapshot)
-        self.db.add(
-            JobEvaluationPlan(
-                job_id=job.id,
-                jd_fingerprint=fingerprint,
-                status="ready",
-                is_current=True,
-                items=[item()],
-                structured_coverage={
-                    "source_schema_version": "1.0",
-                    "fields": [],
-                    "all_covered": True,
-                },
-                warnings=[],
-                prompt_version="job_evaluation_plan_v1",
-                model_version="fake-plan-model",
-                schema_version="1.0",
-                input_fingerprint=fingerprint,
-                input_snapshot=snapshot,
-                completed_at=NOW,
-            )
-        )
+        self.db.add(make_v4_plan(job))
         await self.db.commit()
         await screening_service.after_plan_changed(self.db, job.id, plan_ready=True)
         await self.db.refresh(report)
@@ -804,7 +798,30 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         self.assertIn("evaluation_plan_changed", report.outdated_reasons)
         self.assertEqual(before, after)
 
-    async def test_plan_contract_upgrade_keeps_historical_report_foreign_key(
+    async def test_legacy_plan_marks_only_plan_change_not_false_jd_change(self) -> None:
+        await self._complete_success()
+        report = await self.db.scalar(
+            select(ScreeningReport).where(
+                ScreeningReport.application_id == self.application.id
+            )
+        )
+        plan = await self.db.get(JobEvaluationPlan, report.job_evaluation_plan_id)
+        original_schema_version = plan.schema_version
+        plan.schema_version = "3.0"
+
+        with self.db.no_autoflush:
+            changed = await screening_service._reconcile_report_outdated(
+                self.db,
+                self.application,
+                report,
+            )
+
+        plan.schema_version = original_schema_version
+        self.assertTrue(changed)
+        self.assertIn("evaluation_plan_changed", report.outdated_reasons)
+        self.assertNotIn("jd_changed", report.outdated_reasons)
+
+    async def test_plan_replacement_keeps_historical_report_foreign_key(
         self,
     ) -> None:
         await self._complete_success()
@@ -823,50 +840,14 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
                 )
             ).all()
         )
-        adapter = FakeJobEvaluationPlanAdapter(
-            [
-                JobEvaluationPlanAdapterResult(
-                    content=json.dumps(
-                        {
-                            "schema_version": "2.0",
-                            "source_reviews": [
-                                {
-                                    "source_id": "description:0001",
-                                    "disposition": "requirements",
-                                    "non_requirement_reason": None,
-                                    "items": [
-                                        {
-                                            "title": "Python API 开发",
-                                            "category": "responsibility",
-                                            "equivalent_structured_item_key": None,
-                                        }
-                                    ],
-                                }
-                            ],
-                        },
-                        ensure_ascii=False,
-                    ),
-                    model="fake-plan-model-v2",
-                    finish_reason="stop",
-                )
-            ]
-        )
-        settings = Settings(
-            _env_file=None,
-            DEEPSEEK_API_KEY="test-key",
-            JOB_EVALUATION_PLAN_MODEL="fake-plan-model-v2",
-            JOB_EVALUATION_PLAN_PROMPT_VERSION="job_evaluation_plan_v4",
-            JOB_EVALUATION_PLAN_SCHEMA_VERSION="2.0",
-            JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION="2.0",
-        )
-
-        new_plan = await job_evaluation_plan_service.generate_for_job(
-            self.db,
-            self.application.job_id,
-            adapter=adapter,
-            settings=settings,
-            clock=lambda: NOW,
-        )
+        old_plan = await self.db.get(JobEvaluationPlan, old_plan_id)
+        old_plan.status = "outdated"
+        old_plan.is_current = False
+        job = await self.db.get(Job, self.application.job_id)
+        job.candidate_requirements = "具备 Python 后端和异步任务开发经验"
+        new_plan = make_v4_plan(job)
+        self.db.add(new_plan)
+        await self.db.commit()
         await screening_service.after_plan_changed(
             self.db,
             self.application.job_id,

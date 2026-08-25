@@ -5,10 +5,11 @@ from typing import Annotated
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 from app.schemas.experience_period import ExperiencePeriodFactKey
+from app.schemas.job_evaluation_plan import EvaluationCriterion, RequirementFact
 
 
 SCREENING_EVALUATION_SCHEMA_VERSION = "2.0"
-SCREENING_EVALUATION_MAX_REQUIREMENTS = 30
+SCREENING_EVALUATION_MAX_REQUIREMENTS = 512
 SCREENING_EVALUATION_MAX_BONUSES = 5
 SCREENING_EVALUATION_MAX_QUESTIONS = 5
 
@@ -76,6 +77,25 @@ class RequirementAssessment(BaseModel):
         max_length=100,
     )
     evidence: list[ScreeningEvidence] = Field(max_length=10)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ScreeningEvaluationPlanInput(BaseModel):
+    """The immutable 4.0 facts and their display-only criterion grouping."""
+
+    schema_version: Annotated[
+        str,
+        StringConstraints(pattern=r"^4\.0$"),
+    ]
+    requirement_facts: list[RequirementFact] = Field(
+        min_length=1,
+        max_length=SCREENING_EVALUATION_MAX_REQUIREMENTS,
+    )
+    evaluation_criteria: list[EvaluationCriterion] = Field(
+        min_length=1,
+        max_length=SCREENING_EVALUATION_MAX_REQUIREMENTS,
+    )
 
     model_config = ConfigDict(extra="forbid")
 

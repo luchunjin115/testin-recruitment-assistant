@@ -8,7 +8,9 @@ const server = await createServer({
 
 try {
   const presentation = await server.ssrLoadModule('/src/features/recruitment/screeningPresentation.ts');
-  assert.deepEqual(Object.keys(presentation.PLAN_STATUS_META).sort(), ['failed', 'generating', 'outdated', 'ready']);
+  assert.deepEqual(Object.keys(presentation.PLAN_STATUS_META).sort(), [
+    'failed', 'generating', 'outdated', 'pending_confirmation', 'ready',
+  ]);
   assert.deepEqual(Object.keys(presentation.SCREENING_STATUS_META).sort(), [
     'failed', 'paused', 'queued', 'running', 'succeeded', 'waiting_plan', 'waiting_resume',
   ]);
@@ -23,6 +25,10 @@ try {
   assert.equal(presentation.OUTDATED_REASON_LABELS.resume_changed, '当前 Resume 已变化');
   assert.equal(presentation.OUTDATED_REASON_LABELS.jd_changed, '岗位 JD 已变化');
   assert.equal(presentation.OUTDATED_REASON_LABELS.evaluation_plan_changed, '当前评价计划已变化');
+  assert.equal(
+    presentation.SCREENING_WAITING_REASON_META.plan_pending_confirmation.label,
+    '评价计划等待 HR 确认',
+  );
 
   assert.equal(presentation.validateBatchSelection([]).valid, false);
   assert.equal(presentation.validateBatchSelection([
@@ -46,6 +52,16 @@ try {
   const plan = { id: 41, items: [{ key: 'skill:react', title: 'React' }] };
   assert.equal(presentation.getRequirementPlanItem(plan, 41, 'skill:react').title, 'React');
   assert.equal(presentation.getRequirementPlanItem(plan, 42, 'skill:react'), null);
+  const v4Plan = {
+    id: 44,
+    schemaVersion: '4.0',
+    requirementFacts: [{ factId: 'fact:0001', sources: [] }],
+  };
+  assert.equal(
+    presentation.getRequirementPlanFact(v4Plan, 44, 'fact:0001').factId,
+    'fact:0001',
+  );
+  assert.equal(presentation.getRequirementPlanFact(v4Plan, 45, 'fact:0001'), null);
   assert.equal(presentation.getScreeningStateLabel(null), '尚未初筛');
   assert.equal(presentation.getScreeningStateLabel({ report: { isOutdated: true }, latestRun: null }), '报告已过期');
 

@@ -3,6 +3,7 @@ import { v2Http } from '../../../services/http';
 import type {
   AIScreeningApiError,
   BonusHighlight,
+  EvaluationCriterion,
   EvaluationItemCategory,
   EvaluationItemPriority,
   EvaluationItemSourceType,
@@ -13,6 +14,7 @@ import type {
   JobEvaluationPlanWarning,
   JobEvaluationPlanWarningCode,
   LegacyJobEvaluationPlanRequirements,
+  RequirementFact,
   RequirementAssessment,
   ScreeningBatchReassessmentResult,
   ScreeningEvidence,
@@ -47,6 +49,7 @@ type JobEvaluationPlanWarningResponse = 'limited_basis' | {
   code: JobEvaluationPlanWarningCode;
   message: string;
   source_unit_ids: string[];
+  fact_ids?: string[];
 };
 
 type JobEvaluationPlanSourceReviewSummaryResponse = {
@@ -68,7 +71,56 @@ type JobEvaluationPlanSourceReviewSummaryResponse = {
       | 'context'
       | 'other'
       | null;
-    item_keys: string[];
+    item_keys?: string[];
+    fact_ids?: string[];
+  }>;
+};
+
+type RequirementFactResponse = {
+  fact_id: string;
+  category: EvaluationItemCategory;
+  priority: EvaluationItemPriority;
+  sources: JobEvaluationItemSourceResponse[];
+};
+
+type EvaluationCriterionResponse = {
+  criterion_id: string;
+  name: string;
+  fact_ids: string[];
+};
+
+type JobEvaluationPlanCoverageReviewSummaryResponse = {
+  status: 'passed' | 'needs_repair';
+  findings: Array<{
+    code:
+      | 'missing_fact'
+      | 'unsupported_fact'
+      | 'wrong_disposition'
+      | 'invalid_atomicity'
+      | 'missing_source_merge'
+      | 'category_mismatch';
+    source_unit_ids: string[];
+    fact_ids: string[];
+    message: string;
+  }>;
+  repair_performed: boolean;
+  reviewed_source_unit_ids: string[];
+};
+
+type JobEvaluationPlanGenerationAuditResponse = {
+  business_call_count: number;
+  content_repair_count: number;
+  infrastructure_retry_count: number;
+  calls: Array<{
+    role: 'fact_extraction' | 'coverage_review' | 'local_repair' | 'criterion_grouping';
+    prompt_version: string;
+    model: string;
+    input_tokens: number;
+    output_tokens: number;
+    duration_ms: number;
+    infrastructure_retry_count: number;
+    result: 'succeeded' | 'failed';
+    error_code?: string | null;
   }>;
 };
 
@@ -81,7 +133,7 @@ type LegacyJobEvaluationPlanInputSnapshotResponse = {
 };
 
 type JobEvaluationPlanInputSnapshotV3Response = {
-  schema_version: '3.0';
+  schema_version: '3.0' | '4.0';
   job_context: {
     title: string;
     department: string | null;
@@ -106,17 +158,21 @@ type JobEvaluationPlanResponse = {
   jd_fingerprint: string;
   status: JobEvaluationPlanStatus;
   is_current: boolean;
-  items: JobEvaluationItemResponse[];
+  items: JobEvaluationItemResponse[] | null;
   structured_coverage?: {
     source_schema_version: string;
     fields: Array<{ source_field: string; source_value_count: number; item_keys: string[] }>;
     all_covered: boolean;
-  };
-  source_review_summary?: JobEvaluationPlanSourceReviewSummaryResponse;
+  } | null;
+  source_review_summary?: JobEvaluationPlanSourceReviewSummaryResponse | null;
+  requirement_facts?: RequirementFactResponse[] | null;
+  evaluation_criteria?: EvaluationCriterionResponse[] | null;
+  coverage_review_summary?: JobEvaluationPlanCoverageReviewSummaryResponse | null;
+  generation_audit?: JobEvaluationPlanGenerationAuditResponse | null;
   warnings: JobEvaluationPlanWarningResponse[];
   prompt_version: string;
   model_version: string;
-  schema_version: '1.0' | '2.0' | '3.0';
+  schema_version: '1.0' | '2.0' | '3.0' | '4.0';
   input_fingerprint: string;
   contract_outdated: boolean;
   input_snapshot:
@@ -243,6 +299,27 @@ const mapBonusHighlight = (value: BonusHighlightResponse): BonusHighlight => ({
 const mapInputSnapshot = (
   value: JobEvaluationPlanResponse['input_snapshot'],
 ): JobEvaluationPlanInputSnapshot => {
+  if ('schema_version' in value && value.schema_version === '4.0') {
+    return {
+      schemaVersion: '4.0',
+      jobContext: {
+        title: value.job_context.title,
+        department: value.job_context.department,
+        jobBackground: value.job_context.job_background,
+      },
+      evaluationFields: {
+        jobResponsibilities: value.evaluation_fields.job_responsibilities,
+        candidateRequirements: value.evaluation_fields.candidate_requirements,
+        preferredQualifications: value.evaluation_fields.preferred_qualifications,
+      },
+      sourceUnits: value.source_units.map(unit => ({
+        sourceUnitId: unit.source_unit_id,
+        sourceField: unit.source_field,
+        ordinal: unit.ordinal,
+        sourceText: unit.source_text,
+      })),
+    };
+  }
   if ('schema_version' in value && value.schema_version === '3.0') {
     return {
       schemaVersion: value.schema_version,
@@ -280,7 +357,7 @@ export const mapJobEvaluationPlan = (value: JobEvaluationPlanResponse): JobEvalu
   jdFingerprint: value.jd_fingerprint,
   status: value.status,
   isCurrent: value.is_current,
-  items: value.items.map(item => ({
+  items: (value.items ?? []).map(item => ({
     key: item.key,
     title: item.title,
     category: item.category,
@@ -316,7 +393,50 @@ export const mapJobEvaluationPlan = (value: JobEvaluationPlanResponse): JobEvalu
       sourceUnitId: unit.source_unit_id,
       disposition: unit.disposition,
       nonEvaluationReason: unit.non_evaluation_reason,
-      itemKeys: unit.item_keys,
+      itemKeys: unit.item_keys ?? [],
+      factIds: unit.fact_ids ?? [],
+    })),
+  } : null,
+  requirementFacts: (value.requirement_facts ?? []).map((fact): RequirementFact => ({
+    factId: fact.fact_id,
+    category: fact.category,
+    priority: fact.priority,
+    sources: fact.sources.map(source => ({
+      sourceField: source.source_field,
+      sourceUnitId: source.source_unit_id,
+      sourceQuote: source.source_quote,
+    })),
+  })),
+  evaluationCriteria: (value.evaluation_criteria ?? []).map((criterion): EvaluationCriterion => ({
+    criterionId: criterion.criterion_id,
+    name: criterion.name,
+    factIds: criterion.fact_ids,
+  })),
+  coverageReviewSummary: value.coverage_review_summary ? {
+    status: value.coverage_review_summary.status,
+    findings: value.coverage_review_summary.findings.map(finding => ({
+      code: finding.code,
+      sourceUnitIds: finding.source_unit_ids,
+      factIds: finding.fact_ids,
+      message: finding.message,
+    })),
+    repairPerformed: value.coverage_review_summary.repair_performed,
+    reviewedSourceUnitIds: value.coverage_review_summary.reviewed_source_unit_ids,
+  } : null,
+  generationAudit: value.generation_audit ? {
+    businessCallCount: value.generation_audit.business_call_count,
+    contentRepairCount: value.generation_audit.content_repair_count,
+    infrastructureRetryCount: value.generation_audit.infrastructure_retry_count,
+    calls: value.generation_audit.calls.map(call => ({
+      role: call.role,
+      promptVersion: call.prompt_version,
+      model: call.model,
+      inputTokens: call.input_tokens,
+      outputTokens: call.output_tokens,
+      durationMs: call.duration_ms,
+      infrastructureRetryCount: call.infrastructure_retry_count,
+      result: call.result,
+      errorCode: call.error_code ?? null,
     })),
   } : null,
   warnings: value.warnings.map((warning): JobEvaluationPlanWarning => (
@@ -326,6 +446,7 @@ export const mapJobEvaluationPlan = (value: JobEvaluationPlanResponse): JobEvalu
         code: warning.code,
         message: warning.message,
         sourceUnitIds: warning.source_unit_ids,
+        factIds: warning.fact_ids ?? [],
       }
   )),
   promptVersion: value.prompt_version,
@@ -380,7 +501,9 @@ const mapScreeningRun = (value: ScreeningRunResponse): ScreeningRun => ({
   jobEvaluationPlanId: value.job_evaluation_plan_id,
   triggerType: value.trigger_type,
   status: value.status,
-  waitingReason: value.waiting_reason,
+  waitingReason: value.waiting_reason === 'plan_pending_confirmation'
+    ? 'plan_pending_confirmation'
+    : value.waiting_reason,
   inputFingerprint: value.input_fingerprint,
   promptVersion: value.prompt_version,
   modelVersion: value.model_version,
@@ -439,6 +562,12 @@ const postEvaluationPlan = async (
 
 export const generateJobEvaluationPlan = (jobId: number) => postEvaluationPlan(jobId, 'generate');
 export const regenerateJobEvaluationPlan = (jobId: number) => postEvaluationPlan(jobId, 'regenerate');
+export const confirmJobEvaluationPlan = async (jobId: number): Promise<JobEvaluationPlan> => {
+  const response = await v2Http.post<JobEvaluationPlanResponse>(
+    `/jobs/${jobId}/evaluation-plan/confirm`,
+  );
+  return mapJobEvaluationPlan(response.data);
+};
 
 export const getApplicationScreening = async (
   applicationId: number,

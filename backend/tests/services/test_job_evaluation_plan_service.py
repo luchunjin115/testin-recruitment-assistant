@@ -553,7 +553,7 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
 
         db.scalar.side_effect = scalar
 
-        plan = await self.service.generate_for_job(
+        plan = await self.service._generate_legacy_for_job(
             db,
             job.id,
             adapter=adapter,
@@ -591,7 +591,7 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
         db = make_session(job, existing)
         adapter = FakeJobEvaluationPlanAdapter([])
 
-        result = await self.service.generate_for_job(
+        result = await self.service._generate_legacy_for_job(
             db,
             job.id,
             adapter=adapter,
@@ -637,7 +637,7 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
             [adapter_result(default_ai_v2_content())]
         )
 
-        current = await self.service.generate_for_job(
+        current = await self.service._generate_legacy_for_job(
             db,
             job.id,
             adapter=adapter,
@@ -684,7 +684,7 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
         db.scalar.side_effect = scalar
         adapter = FakeJobEvaluationPlanAdapter([adapter_result("not-json")])
 
-        failed = await self.service.generate_for_job(
+        failed = await self.service._generate_legacy_for_job(
             db,
             job.id,
             adapter=adapter,
@@ -762,7 +762,7 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
 
         adapter = BlockingAdapter()
         first = asyncio.create_task(
-            self.service.generate_for_job(
+            self.service._generate_legacy_for_job(
                 first_db,
                 job.id,
                 adapter=adapter,
@@ -774,7 +774,7 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
 
         second_db = make_session(job, holder[0])
         second_adapter = FakeJobEvaluationPlanAdapter([])
-        second = await self.service.generate_for_job(
+        second = await self.service._generate_legacy_for_job(
             second_db,
             job.id,
             adapter=second_adapter,
@@ -818,7 +818,7 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
             [adapter_result(changed_jd_ai_v2_content())]
         )
 
-        current = await self.service.generate_for_job(
+        current = await self.service._generate_legacy_for_job(
             db,
             job.id,
             adapter=adapter,
@@ -855,7 +855,7 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
             ]
         )
 
-        result = await self.service.generate_for_job(
+        result = await self.service._generate_legacy_for_job(
             db,
             job.id,
             adapter=adapter,
@@ -897,7 +897,7 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
                 db.scalar.side_effect = scalar
                 adapter = FakeJobEvaluationPlanAdapter([outcome])
 
-                result = await self.service.generate_for_job(
+                result = await self.service._generate_legacy_for_job(
                     db,
                     job.id,
                     adapter=adapter,
@@ -932,7 +932,7 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
             ]
         )
 
-        result = await self.service.generate_for_job(
+        result = await self.service._generate_legacy_for_job(
             db,
             job.id,
             adapter=adapter,
@@ -962,15 +962,16 @@ class JobEvaluationPlanWorkflowTest(IsolatedAsyncioTestCase):
             error_message="模型服务暂时不可用",
             completed_at=NOW,
         )
-        db = make_session(failed, job, failed, failed, job)
+        db = make_session(job, failed, failed, job)
         db.get.return_value = job
         adapter = FakeJobEvaluationPlanAdapter(
             [adapter_result(default_ai_v2_content())]
         )
 
-        result = await self.service.regenerate_failed_plan(
+        result = await self.service._generate_legacy_for_job(
             db,
             job.id,
+            force=True,
             adapter=adapter,
             settings=self.settings,
             clock=lambda: NOW,

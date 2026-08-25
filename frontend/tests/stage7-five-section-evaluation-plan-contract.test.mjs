@@ -11,9 +11,9 @@ const [types, service, drawer, presentation, screeningDrawer] = await Promise.al
   read('../src/features/recruitment/ApplicationScreeningDrawer.tsx'),
 ]);
 
-test('7R-E 类型合同接收 Schema 3.0 与五段式 input snapshot', () => {
+test('7R-E 历史类型继续接收 Schema 3.0 与五段式 input snapshot', () => {
   for (const token of [
-    "schemaVersion: '1.0' | '2.0' | '3.0'",
+    "schemaVersion: '1.0' | '2.0' | '3.0' | '4.0'",
     'jobContext', 'jobBackground', 'evaluationFields',
     'jobResponsibilities', 'candidateRequirements', 'preferredQualifications',
     'sourceUnits', 'sourceUnitId', 'ordinal', 'sourceText',

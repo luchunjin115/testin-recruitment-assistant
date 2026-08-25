@@ -495,6 +495,123 @@
   overflow-wrap: anywhere;
 }
 
+.recruitment-plan-verification {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #dfe6f2;
+  border-radius: 11px;
+  background: #dfe6f2;
+}
+
+.recruitment-plan-verification > div {
+  padding: 13px 15px;
+  background: #f8faff;
+}
+
+.recruitment-plan-verification span {
+  display: block;
+  color: #7183a7;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.recruitment-plan-verification strong {
+  display: block;
+  margin-top: 5px;
+  color: #30405c;
+  font-size: 12px;
+}
+
+.recruitment-plan-verification p {
+  margin: 3px 0 0;
+  color: #7a8699;
+  font-size: 10px;
+}
+
+.recruitment-plan-criterion {
+  overflow: hidden;
+  border: 1px solid #dde4ef;
+  border-radius: 13px;
+  background: #fff;
+}
+
+.recruitment-plan-criterion .recruitment-plan-section-heading {
+  margin: 0;
+  padding: 16px 18px;
+  border-bottom: 1px solid #e7ebf2;
+  background: #f8faff;
+}
+
+.recruitment-plan-fact-list {
+  display: grid;
+}
+
+.recruitment-plan-fact {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  padding: 17px 18px;
+}
+
+.recruitment-plan-fact + .recruitment-plan-fact {
+  border-top: 1px solid #edf0f4;
+}
+
+.recruitment-plan-fact::before {
+  position: absolute;
+  top: 20px;
+  bottom: 20px;
+  left: 49px;
+  width: 2px;
+  border-radius: 2px;
+  background: #d7e1f3;
+  content: "";
+}
+
+.recruitment-plan-fact > div {
+  position: relative;
+  min-width: 0;
+  padding-left: 10px;
+}
+
+.recruitment-plan-fact-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.recruitment-plan-fact-heading > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.recruitment-plan-fact-heading .ant-tag {
+  margin: 0;
+  font-size: 9px;
+}
+
+.recruitment-plan-fact-heading code {
+  color: #7183a7;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 9px;
+}
+
+.recruitment-plan-fact-quote {
+  margin: 9px 0 10px;
+  color: #354052;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.75;
+  white-space: pre-wrap;
+}
+
 .recruitment-plan-meta {
   display: flex;
   flex-wrap: wrap;
@@ -558,6 +675,10 @@
   }
 
   .recruitment-plan-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .recruitment-plan-verification {
     grid-template-columns: 1fr;
   }
 

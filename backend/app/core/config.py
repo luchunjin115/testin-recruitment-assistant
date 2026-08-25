@@ -119,7 +119,7 @@ class Settings(BaseSettings):
         le=384_000,
     )
     SCREENING_EVALUATION_PROMPT_VERSION: str = Field(
-        default="screening_evaluation_v3",
+        default="screening_evaluation_v4",
         min_length=1,
         max_length=100,
     )
