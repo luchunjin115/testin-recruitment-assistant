@@ -171,7 +171,7 @@ def dry_run_payload() -> dict[str, Any]:
     return {
         "stage": "7R4-G",
         "mode": "dry_run",
-        "status": "ready_for_7R4_H_cost_confirmation",
+        "status": "ready_for_7R4_HR1_cost_confirmation",
         "generated_at": _utc_now(),
         "fixture": fixture,
         "call_budget": plan_call_budget(),
@@ -1033,9 +1033,7 @@ async def _run_real(
     budget = plan_call_budget()[mode]
     ledger = QualityRunAuditLedger(
         pricing_snapshot,
-        maximum_business_calls=budget[
-            "maximum_business_calls_with_local_repair"
-        ],
+        maximum_business_calls=budget["safety_hard_maximum_business_calls"],
         maximum_api_attempts=budget[
             "maximum_api_attempts_with_infrastructure_retries"
         ],
@@ -1079,8 +1077,12 @@ async def _run_real(
         and plan_quality_gate_passed(summary, mode=mode)
     )
     payload = {
-        "stage": "7R4-H",
-        "result_kind": f"plan_quality_{mode}",
+        "stage": "7R4-HR1" if mode == "targeted" else "7R4-H2",
+        "result_kind": (
+            "plan_quality_targeted_revalidation"
+            if mode == "targeted"
+            else "plan_quality_formal"
+        ),
         "status": "formal",
         "generated_at": _utc_now(),
         "plan_schema_version": "4.0",
@@ -1108,7 +1110,7 @@ async def _run_real(
 
 def _pricing_snapshot_from_args(args: argparse.Namespace) -> dict[str, Any]:
     if not args.confirm_no_monetary_cap:
-        raise SystemExit("7R4-H1 必须显式确认本轮不设置金额上限")
+        raise SystemExit("7R4-HR1 必须显式确认本轮不设置金额上限")
     required = {
         "official_price_checked_at": args.official_price_checked_at,
         "pricing_tier": args.pricing_tier,
@@ -1186,7 +1188,7 @@ def main(argv: list[str] | None = None) -> None:
         payload = asyncio.run(run_fake_scenario(repair=True))
     else:
         if not args.confirm_real_model:
-            raise SystemExit("7R4-H 真实调用必须显式传入 --confirm-real-model")
+            raise SystemExit("7R4-HR1/H2 真实调用必须显式传入 --confirm-real-model")
         if args.model != PLANNED_MODEL:
             raise SystemExit("真实模型必须与本轮单独确认的 planned model 一致")
         pricing_snapshot = _pricing_snapshot_from_args(args)

@@ -13,7 +13,10 @@ from app.adapters.job_evaluation_plan import (
     JobEvaluationPlanTimeoutError,
 )
 from app.prompts import job_evaluation_plan as prompts
-from app.schemas.job_evaluation_plan import JobEvaluationPlanInputSnapshot
+from app.schemas.job_evaluation_plan import (
+    JobEvaluationPlanInputSnapshot,
+    JobEvaluationPlanSourceUnit,
+)
 from app.services.job_evaluation_plan_service import (
     JobEvaluationPlanV4GenerationError,
     job_evaluation_plan_service,
@@ -127,8 +130,8 @@ def _run(coroutine):
 @pytest.mark.parametrize(
     ("constant_name", "expected"),
     [
-        ("JOB_REQUIREMENT_FACT_EXTRACTION_PROMPT_VERSION", "job_requirement_fact_extraction_v1"),
-        ("JOB_REQUIREMENT_COVERAGE_REVIEW_PROMPT_VERSION", "job_requirement_coverage_review_v1"),
+        ("JOB_REQUIREMENT_FACT_EXTRACTION_PROMPT_VERSION", "job_requirement_fact_extraction_v2"),
+        ("JOB_REQUIREMENT_COVERAGE_REVIEW_PROMPT_VERSION", "job_requirement_coverage_review_v2"),
         ("JOB_REQUIREMENT_LOCAL_REPAIR_PROMPT_VERSION", "job_requirement_local_repair_v1"),
         ("JOB_EVALUATION_CRITERION_GROUPING_PROMPT_VERSION", "job_evaluation_criterion_grouping_v1"),
     ],
@@ -151,6 +154,19 @@ def test_v4_prompt_builders_do_not_accept_public_notes() -> None:
         builder = getattr(prompts, name, None)
         assert builder is not None, f"7R4-C 缺少 Prompt builder：{name}"
         assert "public_notes" not in inspect.signature(builder).parameters
+
+
+def test_v4_fact_and_coverage_v2_prompts_require_global_source_merge_review() -> None:
+    extraction_prompt = prompts._FACT_EXTRACTION_SYSTEM_PROMPT
+    coverage_prompt = prompts._COVERAGE_REVIEW_SYSTEM_PROMPT
+
+    assert "先完整阅读输入中的全部 source units" in extraction_prompt
+    assert "同一类简历证据" in extraction_prompt
+    assert "输出前再次扫描全部 candidates" in extraction_prompt
+    assert "只共享“客户/数据/项目”等普通词" in extraction_prompt
+    assert "missing_source_merge 是强制复核项" in coverage_prompt
+    assert "source_unit_ids 中引用全部相关来源" in coverage_prompt
+    assert "fact_ids 中引用全部相关现有 facts" in coverage_prompt
 
 
 def test_v4_service_exposes_pure_generation_workflow() -> None:
@@ -325,6 +341,365 @@ def test_v4_fake_repair_flow_is_four_calls_and_only_receives_failed_units() -> N
         and warning.source_unit_ids == ["candidate_requirements:0001"]
         for warning in content.warnings
     )
+
+
+def test_v4_missing_source_merge_repair_merges_sources_into_existing_fact() -> None:
+    snapshot = JobEvaluationPlanInputSnapshot.model_validate(
+        {
+            "schema_version": "4.0",
+            "job_context": {"title": "产品经理"},
+            "evaluation_fields": {
+                "job_responsibilities": None,
+                "candidate_requirements": "具备客户访谈经验",
+                "preferred_qualifications": "有客户访谈经验者优先",
+            },
+            "source_units": [
+                {
+                    "source_unit_id": "candidate_requirements:0001",
+                    "source_field": "candidate_requirements",
+                    "ordinal": 1,
+                    "source_text": "具备客户访谈经验",
+                },
+                {
+                    "source_unit_id": "preferred_qualifications:0001",
+                    "source_field": "preferred_qualifications",
+                    "ordinal": 1,
+                    "source_text": "有客户访谈经验者优先",
+                },
+            ],
+        }
+    )
+    extraction = {
+        "schema_version": "4.0",
+        "fact_candidates": [
+            {
+                "candidate_id": "candidate:0001",
+                "category": "experience",
+                "sources": [
+                    {
+                        "source_field": "candidate_requirements",
+                        "source_unit_id": "candidate_requirements:0001",
+                        "source_quote": "具备客户访谈经验",
+                    }
+                ],
+            },
+            {
+                "candidate_id": "candidate:0002",
+                "category": "experience",
+                "sources": [
+                    {
+                        "source_field": "preferred_qualifications",
+                        "source_unit_id": "preferred_qualifications:0001",
+                        "source_quote": "有客户访谈经验者优先",
+                    }
+                ],
+            },
+        ],
+        "source_reviews": [
+            {
+                "source_unit_id": "candidate_requirements:0001",
+                "disposition": "evaluation",
+                "candidate_ids": ["candidate:0001"],
+                "non_evaluation_reason": None,
+                "warning_codes": [],
+            },
+            {
+                "source_unit_id": "preferred_qualifications:0001",
+                "disposition": "evaluation",
+                "candidate_ids": ["candidate:0002"],
+                "non_evaluation_reason": None,
+                "warning_codes": [],
+            },
+        ],
+    }
+    coverage = {
+        "schema_version": "4.0",
+        "status": "needs_repair",
+        "findings": [
+            {
+                "code": "missing_source_merge",
+                "source_unit_ids": [
+                    "candidate_requirements:0001",
+                    "preferred_qualifications:0001",
+                ],
+                "fact_ids": ["fact:0001", "fact:0002"],
+                "message": "同一客户访谈经验被拆成两条事实",
+            }
+        ],
+    }
+    repair = {
+        "schema_version": "4.0",
+        "replacement_candidates": [
+            {
+                "candidate_id": "candidate:0001",
+                "category": "experience",
+                "sources": [
+                    {
+                        "source_field": "candidate_requirements",
+                        "source_unit_id": "candidate_requirements:0001",
+                        "source_quote": "具备客户访谈经验",
+                    },
+                    {
+                        "source_field": "preferred_qualifications",
+                        "source_unit_id": "preferred_qualifications:0001",
+                        "source_quote": "有客户访谈经验者优先",
+                    },
+                ],
+                "merge_into_fact_id": "fact:0001",
+            }
+        ],
+        "source_reviews": [
+            {
+                "source_unit_id": source_unit_id,
+                "disposition": "evaluation",
+                "candidate_ids": ["candidate:0001"],
+                "non_evaluation_reason": None,
+                "warning_codes": [],
+            }
+            for source_unit_id in (
+                "candidate_requirements:0001",
+                "preferred_qualifications:0001",
+            )
+        ],
+        "resolved_finding_indexes": [0],
+        "unresolved_finding_indexes": [],
+    }
+    adapter = FakeJobEvaluationPlanAdapter(
+        [
+            _result(extraction),
+            _result(coverage),
+            _result(repair),
+            _result(_grouping("fact:0001")),
+        ]
+    )
+
+    content = _run(
+        job_evaluation_plan_service.build_v4_plan_content(snapshot, adapter=adapter)
+    )
+
+    assert [call["role"] for call in adapter.v4_calls] == [
+        "fact_extraction",
+        "coverage_review",
+        "local_repair",
+        "criterion_grouping",
+    ]
+    assert len(content.requirement_facts) == 1
+    assert len(content.requirement_facts[0].sources) == 2
+    assert content.requirement_facts[0].priority.value == "required"
+    assert content.evaluation_criteria[0].fact_ids == ["fact:0001"]
+
+
+def test_v4_related_customer_work_stays_as_separate_facts_inside_one_criterion() -> None:
+    source_texts = [
+        "开展客户访谈",
+        "编写客户需求文档",
+        "组织客户项目版本复盘",
+    ]
+    snapshot = JobEvaluationPlanInputSnapshot.model_validate(
+        {
+            "schema_version": "4.0",
+            "job_context": {"title": "产品经理"},
+            "evaluation_fields": {
+                "job_responsibilities": "\n".join(source_texts),
+                "candidate_requirements": None,
+                "preferred_qualifications": None,
+            },
+            "source_units": [
+                {
+                    "source_unit_id": f"job_responsibilities:{index:04d}",
+                    "source_field": "job_responsibilities",
+                    "ordinal": index,
+                    "source_text": source_text,
+                }
+                for index, source_text in enumerate(source_texts, start=1)
+            ],
+        }
+    )
+    extraction = {
+        "schema_version": "4.0",
+        "fact_candidates": [
+            {
+                "candidate_id": f"candidate:{index:04d}",
+                "category": "responsibility",
+                "sources": [
+                    {
+                        "source_field": "job_responsibilities",
+                        "source_unit_id": f"job_responsibilities:{index:04d}",
+                        "source_quote": source_text,
+                    }
+                ],
+            }
+            for index, source_text in enumerate(source_texts, start=1)
+        ],
+        "source_reviews": [
+            {
+                "source_unit_id": f"job_responsibilities:{index:04d}",
+                "disposition": "evaluation",
+                "candidate_ids": [f"candidate:{index:04d}"],
+                "non_evaluation_reason": None,
+                "warning_codes": [],
+            }
+            for index in range(1, 4)
+        ],
+    }
+    adapter = FakeJobEvaluationPlanAdapter(
+        [
+            _result(extraction),
+            _result(_coverage_passed()),
+            _result(_grouping("fact:0001", "fact:0002", "fact:0003")),
+        ]
+    )
+
+    content = _run(
+        job_evaluation_plan_service.build_v4_plan_content(snapshot, adapter=adapter)
+    )
+
+    assert len(content.requirement_facts) == 3
+    assert [
+        fact.sources[0].source_quote for fact in content.requirement_facts
+    ] == source_texts
+    assert len(content.evaluation_criteria) == 1
+    assert content.evaluation_criteria[0].fact_ids == [
+        "fact:0001",
+        "fact:0002",
+        "fact:0003",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("source_field", "source_text", "expected"),
+    [
+        ("candidate_requirements", "SQL 数据核查经验优先", True),
+        ("candidate_requirements", "SQL experience is PREFERRED", True),
+        ("candidate_requirements", "SQL experience is a Plus", True),
+        ("candidate_requirements", "必须具备 SQL 数据核查经验", False),
+        ("candidate_requirements", "能够优先处理高风险告警", False),
+        ("candidate_requirements", "SQL 经验不作为加分项，仅作必备要求", False),
+        ("candidate_requirements", "负责设计积分加分规则", False),
+        ("candidate_requirements", "Implement the PLUS operator", False),
+        ("candidate_requirements", "Store the preferred name", False),
+        ("preferred_qualifications", "必须具备审计项目经验", True),
+        ("preferred_qualifications", "Audit experience is REQUIRED", True),
+        ("preferred_qualifications", "Candidates MUST have audit experience", True),
+        ("preferred_qualifications", "审计项目经验优先", False),
+        ("preferred_qualifications", "该证书不是必须条件", False),
+        ("preferred_qualifications", "Parse the REQUIRED field", False),
+        ("preferred_qualifications", "Clients must not expose a required field", False),
+    ],
+)
+def test_v4_priority_signal_conflict_detection_avoids_simple_keyword_false_positives(
+    source_field: str,
+    source_text: str,
+    expected: bool,
+) -> None:
+    source_unit = JobEvaluationPlanSourceUnit(
+        source_unit_id=f"{source_field}:0001",
+        source_field=source_field,
+        ordinal=1,
+        source_text=source_text,
+    )
+    assert (
+        job_evaluation_plan_service._v4_priority_signal_conflicts_with_field(
+            source_unit
+        )
+        is expected
+    )
+
+
+def test_v4_priority_warning_keeps_sql_check_and_audit_project_as_separate_facts() -> None:
+    snapshot = JobEvaluationPlanInputSnapshot.model_validate(
+        {
+            "schema_version": "4.0",
+            "job_context": {"title": "安全合规分析师"},
+            "evaluation_fields": {
+                "job_responsibilities": None,
+                "candidate_requirements": "SQL 数据核查经验优先",
+                "preferred_qualifications": "必须具备审计项目经验",
+            },
+            "source_units": [
+                {
+                    "source_unit_id": "candidate_requirements:0001",
+                    "source_field": "candidate_requirements",
+                    "ordinal": 1,
+                    "source_text": "SQL 数据核查经验优先",
+                },
+                {
+                    "source_unit_id": "preferred_qualifications:0001",
+                    "source_field": "preferred_qualifications",
+                    "ordinal": 1,
+                    "source_text": "必须具备审计项目经验",
+                },
+            ],
+        }
+    )
+    extraction = {
+        "schema_version": "4.0",
+        "fact_candidates": [
+            {
+                "candidate_id": "candidate:0001",
+                "category": "experience",
+                "sources": [
+                    {
+                        "source_field": "candidate_requirements",
+                        "source_unit_id": "candidate_requirements:0001",
+                        "source_quote": "SQL 数据核查经验优先",
+                    }
+                ],
+            },
+            {
+                "candidate_id": "candidate:0002",
+                "category": "experience",
+                "sources": [
+                    {
+                        "source_field": "preferred_qualifications",
+                        "source_unit_id": "preferred_qualifications:0001",
+                        "source_quote": "必须具备审计项目经验",
+                    }
+                ],
+            },
+        ],
+        "source_reviews": [
+            {
+                "source_unit_id": "candidate_requirements:0001",
+                "disposition": "evaluation",
+                "candidate_ids": ["candidate:0001"],
+                "non_evaluation_reason": None,
+                "warning_codes": [],
+            },
+            {
+                "source_unit_id": "preferred_qualifications:0001",
+                "disposition": "evaluation",
+                "candidate_ids": ["candidate:0002"],
+                "non_evaluation_reason": None,
+                "warning_codes": [],
+            },
+        ],
+    }
+    adapter = FakeJobEvaluationPlanAdapter(
+        [
+            _result(extraction),
+            _result(_coverage_passed()),
+            _result(_grouping("fact:0001", "fact:0002")),
+        ]
+    )
+
+    content = _run(
+        job_evaluation_plan_service.build_v4_plan_content(snapshot, adapter=adapter)
+    )
+
+    assert len(content.requirement_facts) == 2
+    assert [len(fact.sources) for fact in content.requirement_facts] == [1, 1]
+    conflicts = [
+        warning
+        for warning in content.warnings
+        if warning.code.value == "conflicting_requirements"
+    ]
+    assert len(conflicts) == 1
+    assert conflicts[0].source_unit_ids == [
+        "candidate_requirements:0001",
+        "preferred_qualifications:0001",
+    ]
+    assert conflicts[0].fact_ids == ["fact:0001", "fact:0002"]
 
 
 def test_v4_infrastructure_retry_adds_attempt_not_business_call() -> None:

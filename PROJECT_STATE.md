@@ -8,7 +8,7 @@
 
 - 项目正在建设新版招聘主链，旧 React + FastAPI + SQLite + Mock LLM 演示系统已经退役。
 - 阶段 4“简历上传与原文提取”和阶段 5“AI 结构化草稿”已经完成；阶段 6 五段式 JD 整改的 6R-A—6R-D 已全部完成，自动化、真实 PostgreSQL/API 和 Microsoft Playwright 三档浏览器验收通过。
-- 阶段 7“Application 与 AI 初筛底座”已完成投递时间基准、3.0 计划生成、异步运行和 React 报告等底座，但完整真实 AI 质量与浏览器验收仍未达到完成标准。用户已确认 RequirementFact + EvaluationCriterion 双层 4.0 及 7R4-A—7R4-J 顺序；7R4-A—7R4-G、7R4-H0 已完成，7R4-H1 六份定向真实验证已执行并以 `4/6` 失败。人工 facts/明确必测召回均为 100%，但 J5-14 多来源事实合并失败，J5-17 优先级信号 warning 未命中；正式 20 份被门禁阻断。当前停止等待讨论整改范围和新的实施顺序。
+- 阶段 7“Application 与 AI 初筛底座”已完成投递时间基准、3.0 计划生成、异步运行和 React 报告等底座，但完整真实 AI 质量与浏览器验收仍未达到完成标准。用户已确认 RequirementFact + EvaluationCriterion 双层 4.0 及 7R4-A—7R4-J 顺序；7R4-A—7R4-G、7R4-H0 已完成，7R4-H1 六份定向真实验证已执行并以 `4/6` 失败。7R4-HR0 零调用整改现已完成：补强多来源 Prompt/reviewer/local repair 合同、字段/措辞冲突 warning、逐样本 16/21 与 58/77 审计，并同步 `deepseek-v4-flash` 示例配置。正式 20 份仍被门禁阻断，当前只等待用户单独确认 7R4-HR1。
 - 小步骤 9-I 已完成 20 次 JD 正式复验和 60 次下游真实诊断。18/18 正常 JD 可用、主要要求与结构化覆盖均为 100%，但 JD18 没有形成预期 `too_many_items`，因此 `step9_quality_gate_passed=false`，小步骤 9 仍未通过；下游诊断也仅有 9/20 至少一份合法报告、1/20 三次全部合法。
 - Application、Resume 隔离、HR 内部录入和 HR 决策等公共能力继续保留。
 - 旧 Rubric、五维权重、确定性评分、`unknown`、证据覆盖率、Python 加权总分和多报告历史方案已经废弃。
@@ -196,10 +196,11 @@ Application 才可逐 fact 进入既有 AI 初筛与 HR 决策链
 
 7R4-H1 已执行。六份固定样本实际 16 次 Adapter/API attempt、0 局部修复、0 基础设施重试，全部保存原始响应和完整计费 token；总 input/output 为 `31,946/13,233`，cache hit/miss 为 `3,584/28,362`，按空闲时段官方美元价估算 `$0.014998508`。J5-19 是预期 `no_facts`，只需一次提取，因此原 H0 的“至少 18 attempts”审计下界也被证明不适用于合法边界结果。
 
-当前唯一下一步是与用户讨论 J5-14 多来源合并、J5-17 优先级信号 warning 和 16 次合法基线审计缺口的整改范围，先写入新的实施顺序并重新确认。不得补跑或覆盖 H1 结果；正式 20 份、7R4-I—J 和阶段 8 均未获授权。
+7R4-HR0 已完成并停止。fact extraction/coverage review 已升为 v2；Service 能按字段固定 priority 与显式强弱措辞产生可定位且去重的 warning；计划质量审计按每份 `actual_outcome`、generation audit 和逐 attempt 顺序重算，定向/正式合法业务调用边界为 `16—21/58—77`，安全硬上限仍为 `24/48、80/160`。当前唯一下一步是等待用户单独确认 7R4-HR1；不得自动调用真实 DeepSeek、补跑或覆盖 H1、执行正式 20 份、进入 7R4-I—J 或阶段 8。
 
 ## 12. 最近验证基线
 
+- 7R4-HR0 Prompt/Service 专项 `44 passed`，质量运行器专项 `19 passed`，配置专项 `11 passed + 16 subtests`；受影响后端回归 `262 passed + 48 subtests`，覆盖配置、计划 Adapter、1.0—4.0 计划 Service/Schema、source units、step9 与 4.0 Screening gate。dry-run、Fake normal 和 Fake local repair 均通过，分别证明 0、3、4 次 Fake/业务路径，真实 DeepSeek 调用 0、正式结果写入 0、真实 Adapter 未实例化。定向/正式审计基线和合法修复上界为 `16/21、58/77`，安全硬上限保持 `24/48、80/160`；少跑、乱序、no_facts 后继续、repair 错位、第三次技术尝试和汇总不一致会被拒绝。当前 H1 SHA-256 仍为 `ada6cbc91c21e7f4f341eee587259676579c9c2770af3a220277ff32a5e47a6f`，新 HR1 复验文件不存在，历史 hash 不变；PostgreSQL `current=head=d6f4a2b8e913` 且九张业务表全为 0。
 - 7R4-H1 新定向结果 SHA-256 为 `ada6cbc91c21e7f4f341eee587259676579c9c2770af3a220277ff32a5e47a6f`，`targeted_gate_passed=false`、逐样本 `4/6`。80/80 人工 facts、23/23 明确必测、90/90 source units 均为 100%；83 facts 的追溯、priority 和 criterion 覆盖均为 100%，正常/边界为 4/4、2/2，六类污染/错误中只有 `source_merge_failure_count=1`。预期 warning 命中 1/2。16 次真实 attempt 均为 `deepseek-v4-flash + stop`，逐次费用可重算，历史 hash 和空数据库基线不变；正式结果未创建。
 - 7R4-H0 专项为 26 passed + 7 subtests；配置、Adapter、4.0 纯生成和质量运行器受影响回归为 60 passed + 23 subtests；`py_compile`、`git diff --check` 通过。计划 dry-run/Fake 均为真实调用 0、正式结果写入 0，新 4.0 定向/正式结果文件不存在，历史结果 hash 不变。H0 没有修改 Prompt、Schema、Service、Model、migration、API、React 或 PostgreSQL；这些结果只证明审计与调用门禁已就绪，不能证明六份真实定向质量。
 - 7R4-G 计划 dry-run 固定 J5-01—J5-20、定向 J5-03/07/14/17/19/20、SHA-256 `23651a92bb68602f096cf30519d5c11cd2ce6e724950f158587ba201e41fdfe0`、245 条人工 facts、97 条明确必测、定向 80/23，以及 255/90 source units；报告 dry-run 固定 SR01—SR20、high/partial/low=8/6/6 和每组 3 次。两侧均为真实模型 0 次、正式结果写入 0 次、真实 Adapter 未实例化、API Key 非前提，既有历史结果 hash 不变。

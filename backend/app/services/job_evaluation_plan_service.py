@@ -266,6 +266,36 @@ class JobEvaluationPlanService:
         "preferred",
         "plus",
     )
+    _V4_WEAK_PRIORITY_SIGNAL_RE = re.compile(
+        r"优先|加分|\bpreferred\b|\bplus\b",
+        re.IGNORECASE,
+    )
+    _V4_STRONG_PRIORITY_SIGNAL_RE = re.compile(
+        r"必须|至少|\brequired\b|\bmust\b",
+        re.IGNORECASE,
+    )
+    _V4_SIGNAL_NEGATION_PREFIX_RE = re.compile(
+        r"(?:不要求|无需达到|无须达到|不作为|不属于|不能算作|不得|不必|"
+        r"不作|不算|不是|并非|取消|禁止|不|非|无|未|无需|无须|"
+        r"not(?:\s+(?:considered|treated|counted|regarded|seen|used|listed|"
+        r"marked|viewed)){0,2}(?:\s+as)?(?:\s+a)?|no|isn['’]?t|"
+        r"is\s+not|are\s+not)\s*$",
+        re.IGNORECASE,
+    )
+    _V4_WEAK_NON_STRENGTH_SUFFIX_RE = re.compile(
+        r"^(?:级|处理|支持|排序|队列|展示|策略|顺序|选择|使用|保障|完成|"
+        r"函数|逻辑|规则|机制|模块|"
+        r"响应|解决|安排|推进|分支|name\b|order\b|queue\b|route\b|"
+        r"path\b|format\b|setting\b|method\b|"
+        r"\s+(?:operator|sign|symbol|name|order|queue|route|path|format|"
+        r"setting|method)\b)",
+        re.IGNORECASE,
+    )
+    _V4_STRONG_NON_STRENGTH_SUFFIX_RE = re.compile(
+        r"^(?:\s+not\b|\s+(?:field|property|parameter|column|key|header|"
+        r"status|flag|attribute|format|mode)\b)",
+        re.IGNORECASE,
+    )
     _GENERIC_TITLE_TERMS = (
         "熟练掌握",
         "熟悉",
@@ -959,6 +989,7 @@ class JobEvaluationPlanService:
                 facts,
                 source_review,
                 warning_signals,
+                source_units,
             )
             self._validate_v4_output_sizes(facts, criteria)
             generation_audit = self._build_v4_generation_audit(audit_calls)
@@ -1604,6 +1635,7 @@ class JobEvaluationPlanService:
         facts: list[RequirementFact],
         source_review: JobEvaluationPlanSourceReviewSummaryV4,
         warning_signals: Mapping[str, set[str]],
+        source_units: list[JobEvaluationPlanSourceUnit],
     ) -> list[JobEvaluationPlanV4WarningDetail]:
         review_by_id = {unit.source_unit_id: unit for unit in source_review.units}
         warnings: list[JobEvaluationPlanV4WarningDetail] = []
@@ -1641,24 +1673,35 @@ class JobEvaluationPlanService:
                         fact_ids=review.fact_ids,
                     )
                 )
+        conflict_source_ids: list[str] = []
+        conflict_fact_ids: list[str] = []
+        for unit in source_units:
+            review = review_by_id[unit.source_unit_id]
+            if review.fact_ids and self._v4_priority_signal_conflicts_with_field(unit):
+                conflict_source_ids.append(unit.source_unit_id)
+                conflict_fact_ids.extend(review.fact_ids)
         for fact in facts:
             source_priorities = {
                 self.priority_for_v4_sources([source.source_field])
                 for source in fact.sources
             }
             if len(source_priorities) > 1:
-                warnings.append(
-                    JobEvaluationPlanV4WarningDetail(
-                        code=JobEvaluationPlanV4WarningCode.CONFLICTING_REQUIREMENTS,
-                        message="同一事实出现在不同优先级字段，最终按最高优先级计算",
-                        source_unit_ids=list(
-                            dict.fromkeys(
-                                source.source_unit_id for source in fact.sources
-                            )
-                        ),
-                        fact_ids=[fact.fact_id],
-                    )
+                conflict_source_ids.extend(
+                    source.source_unit_id for source in fact.sources
                 )
+                conflict_fact_ids.append(fact.fact_id)
+        if conflict_source_ids:
+            warnings.append(
+                JobEvaluationPlanV4WarningDetail(
+                    code=JobEvaluationPlanV4WarningCode.CONFLICTING_REQUIREMENTS,
+                    message=(
+                        "原文字段优先级与显式强弱措辞存在冲突，或同一事实出现在"
+                        "不同优先级字段；事实 priority 仍按来源字段计算"
+                    ),
+                    source_unit_ids=list(dict.fromkeys(conflict_source_ids)),
+                    fact_ids=list(dict.fromkeys(conflict_fact_ids)),
+                )
+            )
         unique: list[JobEvaluationPlanV4WarningDetail] = []
         seen: set[str] = set()
         for warning in warnings:
@@ -1671,6 +1714,46 @@ class JobEvaluationPlanService:
                 seen.add(key)
                 unique.append(warning)
         return unique
+
+    @classmethod
+    def _v4_priority_signal_conflicts_with_field(
+        cls,
+        source_unit: JobEvaluationPlanSourceUnit,
+    ) -> bool:
+        expected_signal = {
+            "candidate_requirements": "strong",
+            "preferred_qualifications": "weak",
+        }.get(source_unit.source_field)
+        if expected_signal is None:
+            return False
+        conflicting_signal = "weak" if expected_signal == "strong" else "strong"
+        return cls._has_v4_priority_signal(
+            source_unit.source_text,
+            strength=conflicting_signal,
+        )
+
+    @classmethod
+    def _has_v4_priority_signal(cls, text: str, *, strength: str) -> bool:
+        pattern = (
+            cls._V4_WEAK_PRIORITY_SIGNAL_RE
+            if strength == "weak"
+            else cls._V4_STRONG_PRIORITY_SIGNAL_RE
+        )
+        for match in pattern.finditer(text):
+            prefix = text[max(0, match.start() - 16) : match.start()]
+            suffix = text[match.end() : match.end() + 16]
+            if cls._V4_SIGNAL_NEGATION_PREFIX_RE.search(prefix):
+                continue
+            if strength == "weak" and cls._V4_WEAK_NON_STRENGTH_SUFFIX_RE.search(
+                suffix
+            ):
+                continue
+            if strength == "strong" and cls._V4_STRONG_NON_STRENGTH_SUFFIX_RE.search(
+                suffix
+            ):
+                continue
+            return True
+        return False
 
     def _validate_v4_output_sizes(
         self,

@@ -69,13 +69,30 @@ def _pricing_snapshot() -> dict:
     )
 
 
-def _valid_attempt_audit() -> tuple[list[dict], dict]:
+def _valid_attempt_audit(
+    *,
+    repair_case_ids: tuple[str, ...] = (),
+    selected_case_ids: tuple[str, ...] = contract.TARGETED_CASE_IDS,
+) -> tuple[list[dict], dict, list[dict]]:
     attempts = []
-    for case_id in contract.TARGETED_CASE_IDS:
+    cases = []
+    business_call_number = 0
+    for case_id in selected_case_ids:
+        roles = (
+            ["fact_extraction"]
+            if case_id == "J5-19"
+            else [
+                "fact_extraction",
+                "coverage_review",
+                *(["local_repair"] if case_id in repair_case_ids else []),
+                "criterion_grouping",
+            ]
+        )
         for case_attempt_number, role in enumerate(
-            contract.PLAN_PROMPT_ROLES,
+            roles,
             start=1,
         ):
+            business_call_number += 1
             cost = contract.estimate_attempt_cost_usd(
                 pricing_snapshot=_pricing_snapshot(),
                 input_tokens=100,
@@ -89,7 +106,7 @@ def _valid_attempt_audit() -> tuple[list[dict], dict]:
                     "role": role,
                     "attempt_number": len(attempts) + 1,
                     "case_attempt_number": case_attempt_number,
-                    "business_call_number": len(attempts) + 1,
+                    "business_call_number": business_call_number,
                     "is_infrastructure_retry": False,
                     "requested_model": contract.PLANNED_MODEL,
                     "thinking": "disabled",
@@ -112,32 +129,77 @@ def _valid_attempt_audit() -> tuple[list[dict], dict]:
                     "cost_estimate": cost,
                 }
             )
+        generation_calls = [
+            {
+                "role": role,
+                "prompt_version": contract.EXPECTED_PLAN_PROMPT_VERSIONS[role],
+                "model": contract.PLANNED_MODEL,
+                "input_tokens": 100,
+                "output_tokens": 50,
+                "duration_ms": 10,
+                "infrastructure_retry_count": 0,
+                "result": (
+                    "failed"
+                    if case_id == "J5-19" and role == "fact_extraction"
+                    else "succeeded"
+                ),
+                "error_code": (
+                    "JOB_EVALUATION_PLAN_NO_FACTS"
+                    if case_id == "J5-19" and role == "fact_extraction"
+                    else None
+                ),
+            }
+            for role in roles
+        ]
+        cases.append(
+            {
+                "case_id": case_id,
+                "actual_outcome": contract.EXPECTED_V4_OUTCOMES[case_id],
+                "generation_audit": {
+                    "business_call_count": len(generation_calls),
+                    "content_repair_count": sum(
+                        call["role"] == "local_repair" for call in generation_calls
+                    ),
+                    "infrastructure_retry_count": 0,
+                    "calls": generation_calls,
+                },
+            }
+        )
     total_cost = sum(
         attempt["cost_estimate"]["estimated_cost_usd"] for attempt in attempts
     )
+    budget = (
+        contract.plan_call_budget()["targeted"]
+        if selected_case_ids == contract.TARGETED_CASE_IDS
+        else contract.plan_call_budget()["formal"]
+    )
     summary = {
-        "adapter_attempt_count": 18,
-        "business_call_count": 18,
+        "adapter_attempt_count": len(attempts),
+        "business_call_count": len(attempts),
         "infrastructure_retry_count": 0,
-        "content_repair_count": 0,
-        "succeeded_attempt_count": 18,
+        "content_repair_count": len(repair_case_ids),
+        "succeeded_attempt_count": len(attempts),
         "failed_attempt_count": 0,
-        "priced_attempt_count": 18,
+        "priced_attempt_count": len(attempts),
         "unpriced_attempt_count": 0,
         "estimated_cost_usd": total_cost,
         "monetary_cap_usd": None,
-        "maximum_business_calls": 24,
-        "maximum_api_attempts": 48,
+        "maximum_business_calls": budget["safety_hard_maximum_business_calls"],
+        "maximum_api_attempts": budget[
+            "maximum_api_attempts_with_infrastructure_retries"
+        ],
         "stopped_reason": None,
     }
-    return attempts, summary
+    return attempts, summary, cases
 
 
-def _valid_targeted_payload() -> dict:
-    attempts, attempt_summary = _valid_attempt_audit()
+def _valid_targeted_payload(*, repair_case_ids: tuple[str, ...] = ()) -> dict:
+    attempts, attempt_summary, cases = _valid_attempt_audit(
+        repair_case_ids=repair_case_ids
+    )
     return {
-        "stage": "7R4-H",
-        "result_kind": "plan_quality_targeted",
+        "stage": "7R4-HR1",
+        "result_kind": "plan_quality_targeted_revalidation",
         "status": "formal",
         "plan_schema_version": "4.0",
         "frozen_case_sha256": contract.FROZEN_CASE_SHA256,
@@ -148,7 +210,13 @@ def _valid_targeted_payload() -> dict:
         "official_pricing_snapshot": _pricing_snapshot(),
         "attempt_audit_summary": attempt_summary,
         "attempt_audit": attempts,
+        "cases": cases,
         "summary": {
+            "business_call_count": attempt_summary["business_call_count"],
+            "content_repair_count": attempt_summary["content_repair_count"],
+            "infrastructure_retry_count": attempt_summary[
+                "infrastructure_retry_count"
+            ],
             "sample_contract_denominator": 6,
             "sample_contract_passed_count": 6,
             "manual_fact_denominator": 80,
@@ -184,6 +252,81 @@ def _valid_targeted_payload() -> dict:
         "targeted_gate_passed": True,
         "quality_conclusion_allowed": True,
     }
+
+
+def _with_infrastructure_retry(
+    payload: dict,
+    *,
+    case_id: str,
+    role: str,
+    retry_count: int,
+) -> dict:
+    mutated = deepcopy(payload)
+    attempts = mutated["attempt_audit"]
+    target_index = next(
+        index
+        for index, attempt in enumerate(attempts)
+        if attempt["case_id"] == case_id and attempt["role"] == role
+    )
+    successful_attempt = deepcopy(attempts[target_index])
+    failed_attempts = []
+    for retry_index in range(retry_count):
+        failed = deepcopy(successful_attempt)
+        failed.update(
+            {
+                "is_infrastructure_retry": retry_index > 0,
+                "result": "failed",
+                "error_code": "JOB_EVALUATION_PLAN_TIMEOUT",
+                "retryable": True,
+                "model": None,
+                "finish_reason": None,
+                "input_tokens": None,
+                "cache_hit_input_tokens": None,
+                "cache_miss_input_tokens": None,
+                "output_tokens": None,
+                "raw_response": None,
+            }
+        )
+        failed["cost_estimate"] = contract.estimate_attempt_cost_usd(
+            pricing_snapshot=mutated["official_pricing_snapshot"],
+            input_tokens=None,
+            cache_hit_input_tokens=None,
+            cache_miss_input_tokens=None,
+            output_tokens=None,
+        )
+        failed_attempts.append(failed)
+    successful_attempt["is_infrastructure_retry"] = True
+    attempts[target_index : target_index + 1] = [
+        *failed_attempts,
+        successful_attempt,
+    ]
+
+    case_attempt_numbers: dict[str, int] = {}
+    business_call_number = 0
+    for attempt_number, attempt in enumerate(attempts, start=1):
+        attempt["attempt_number"] = attempt_number
+        case_attempt_numbers[attempt["case_id"]] = (
+            case_attempt_numbers.get(attempt["case_id"], 0) + 1
+        )
+        attempt["case_attempt_number"] = case_attempt_numbers[attempt["case_id"]]
+        if not attempt["is_infrastructure_retry"]:
+            business_call_number += 1
+        attempt["business_call_number"] = business_call_number
+
+    case = next(case for case in mutated["cases"] if case["case_id"] == case_id)
+    call = next(
+        call for call in case["generation_audit"]["calls"] if call["role"] == role
+    )
+    call["infrastructure_retry_count"] = retry_count
+    case["generation_audit"]["infrastructure_retry_count"] = retry_count
+
+    attempt_summary = mutated["attempt_audit_summary"]
+    attempt_summary["adapter_attempt_count"] += retry_count
+    attempt_summary["infrastructure_retry_count"] += retry_count
+    attempt_summary["failed_attempt_count"] += retry_count
+    attempt_summary["unpriced_attempt_count"] += retry_count
+    mutated["summary"]["infrastructure_retry_count"] += retry_count
+    return mutated
 
 
 def test_official_pricing_and_cache_split_cost_are_recalculable() -> None:
@@ -397,15 +540,141 @@ def test_plan_call_budget_separates_business_repair_and_infrastructure_attempts(
     budget = contract.plan_call_budget()
     assert budget["targeted"] == {
         "sample_count": 6,
-        "baseline_business_calls": 18,
-        "maximum_business_calls_with_local_repair": 24,
+        "normal_plan_count": 5,
+        "no_facts_short_circuit_count": 1,
+        "baseline_business_calls": 16,
+        "maximum_business_calls_with_local_repair": 21,
+        "safety_hard_maximum_business_calls": 24,
         "maximum_api_attempts_with_infrastructure_retries": 48,
-        "maximum_output_tokens_without_infrastructure_retries": 384_000,
+        "maximum_output_tokens_without_infrastructure_retries": 336_000,
         "maximum_output_tokens_with_infrastructure_retries": 768_000,
     }
-    assert budget["formal"]["baseline_business_calls"] == 60
-    assert budget["formal"]["maximum_business_calls_with_local_repair"] == 80
+    assert budget["formal"]["baseline_business_calls"] == 58
+    assert budget["formal"]["maximum_business_calls_with_local_repair"] == 77
+    assert budget["formal"]["safety_hard_maximum_business_calls"] == 80
     assert budget["formal"]["maximum_api_attempts_with_infrastructure_retries"] == 160
+
+
+def test_plan_attempt_audit_accepts_only_legal_baselines_and_repair_totals() -> None:
+    targeted_baseline = contract.validate_plan_attempt_audit(
+        _valid_targeted_payload()
+    )
+    assert targeted_baseline["business_call_count"] == 16
+
+    targeted_repaired = contract.validate_plan_attempt_audit(
+        _valid_targeted_payload(
+            repair_case_ids=tuple(
+                case_id
+                for case_id in contract.TARGETED_CASE_IDS
+                if case_id != "J5-19"
+            )
+        )
+    )
+    assert targeted_repaired["business_call_count"] == 21
+
+    for repair_case_ids, expected_business_calls in (
+        ((), 58),
+        (
+            tuple(
+                case_id
+                for case_id in contract.FORMAL_CASE_IDS
+                if case_id != "J5-19"
+            ),
+            77,
+        ),
+    ):
+        attempts, attempt_summary, cases = _valid_attempt_audit(
+            repair_case_ids=repair_case_ids,
+            selected_case_ids=contract.FORMAL_CASE_IDS,
+        )
+        formal_audit = contract.validate_plan_attempt_audit(
+            {
+                "selected_case_ids": list(contract.FORMAL_CASE_IDS),
+                "official_pricing_snapshot": _pricing_snapshot(),
+                "attempt_audit": attempts,
+                "attempt_audit_summary": attempt_summary,
+                "cases": cases,
+                "summary": {
+                    "business_call_count": expected_business_calls,
+                    "content_repair_count": len(repair_case_ids),
+                    "infrastructure_retry_count": 0,
+                },
+            }
+        )
+        assert formal_audit["business_call_count"] == expected_business_calls
+
+
+def test_plan_attempt_audit_accepts_one_adjacent_infrastructure_retry() -> None:
+    payload = _with_infrastructure_retry(
+        _valid_targeted_payload(),
+        case_id="J5-03",
+        role="fact_extraction",
+        retry_count=1,
+    )
+    audit = contract.validate_plan_attempt_audit(payload)
+    assert audit["business_call_count"] == 16
+    assert audit["infrastructure_retry_count"] == 1
+
+
+def test_plan_attempt_audit_rejects_illegal_flow_and_forged_summaries() -> None:
+    illegal_payloads = []
+
+    short_flow = deepcopy(_valid_targeted_payload())
+    short_flow["cases"][0]["generation_audit"]["calls"].pop()
+    short_flow["cases"][0]["generation_audit"]["business_call_count"] -= 1
+    illegal_payloads.append(short_flow)
+
+    disordered = deepcopy(_valid_targeted_payload())
+    disordered["cases"][0]["generation_audit"]["calls"][1:] = reversed(
+        disordered["cases"][0]["generation_audit"]["calls"][1:]
+    )
+    illegal_payloads.append(disordered)
+
+    no_facts_continued = deepcopy(_valid_targeted_payload())
+    no_facts_case = next(
+        case for case in no_facts_continued["cases"] if case["case_id"] == "J5-19"
+    )
+    extra_call = deepcopy(no_facts_case["generation_audit"]["calls"][0])
+    extra_call.update(
+        {
+            "role": "coverage_review",
+            "prompt_version": contract.EXPECTED_PLAN_PROMPT_VERSIONS[
+                "coverage_review"
+            ],
+            "result": "succeeded",
+            "error_code": None,
+        }
+    )
+    no_facts_case["generation_audit"]["calls"].append(extra_call)
+    no_facts_case["generation_audit"]["business_call_count"] += 1
+    illegal_payloads.append(no_facts_continued)
+
+    misplaced_repair = _valid_targeted_payload(repair_case_ids=("J5-03",))
+    repair_calls = misplaced_repair["cases"][0]["generation_audit"]["calls"]
+    repair_calls[2], repair_calls[3] = repair_calls[3], repair_calls[2]
+    illegal_payloads.append(misplaced_repair)
+
+    third_technical_attempt = _with_infrastructure_retry(
+        _valid_targeted_payload(),
+        case_id="J5-03",
+        role="fact_extraction",
+        retry_count=2,
+    )
+    illegal_payloads.append(third_technical_attempt)
+
+    forged_quality_summary = deepcopy(_valid_targeted_payload())
+    forged_quality_summary["summary"]["business_call_count"] += 1
+    illegal_payloads.append(forged_quality_summary)
+
+    forged_generation_summary = deepcopy(_valid_targeted_payload())
+    forged_generation_summary["cases"][0]["generation_audit"][
+        "business_call_count"
+    ] += 1
+    illegal_payloads.append(forged_generation_summary)
+
+    for payload in illegal_payloads:
+        with pytest.raises(RuntimeError):
+            contract.validate_plan_attempt_audit(payload)
     assert contract.model_and_cost_inputs()["cost_estimate_inputs"][
         "official_price_check_required_before_7R4_H"
     ] is True

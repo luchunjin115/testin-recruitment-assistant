@@ -1,3 +1,5 @@
+import ast
+from pathlib import Path
 from unittest import TestCase
 
 from pydantic import ValidationError
@@ -5,7 +7,51 @@ from pydantic import ValidationError
 from app.core.config import Settings
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _env_example_values() -> dict[str, str]:
+    values: dict[str, str] = {}
+    for line in (PROJECT_ROOT / ".env.example").read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        values[key] = value
+    return values
+
+
+def _planned_quality_model() -> str:
+    source = (PROJECT_ROOT / "scripts" / "stage7_7r4_quality_contract.py").read_text(
+        encoding="utf-8"
+    )
+    tree = ast.parse(source)
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if any(
+            isinstance(target, ast.Name) and target.id == "PLANNED_MODEL"
+            for target in node.targets
+        ):
+            if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                return node.value.value
+    raise AssertionError("质量合同缺少 PLANNED_MODEL 字符串常量")
+
+
 class SettingsTest(TestCase):
+    def test_model_calling_defaults_examples_and_quality_contract_stay_aligned(self) -> None:
+        settings = Settings(_env_file=None)
+        example = _env_example_values()
+        expected = "deepseek-v4-flash"
+
+        self.assertEqual(settings.DEEPSEEK_MODEL, expected)
+        self.assertEqual(settings.JOB_EVALUATION_PLAN_MODEL, expected)
+        self.assertEqual(settings.SCREENING_EVALUATION_MODEL, expected)
+        self.assertEqual(example["DEEPSEEK_MODEL"], expected)
+        self.assertEqual(example["JOB_EVALUATION_PLAN_MODEL"], expected)
+        self.assertEqual(example["SCREENING_EVALUATION_MODEL"], expected)
+        self.assertEqual(_planned_quality_model(), expected)
+
     def test_resume_cleanup_defaults_are_safe_and_bounded(self) -> None:
         settings = Settings(_env_file=None)
 

@@ -12,9 +12,16 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 STAGE7_RESULTS_DIR = PROJECT_ROOT / "docs" / "stages" / "stage7"
 
-PLAN_TARGETED_RESULT_PATH = (
+CURRENT_H1_PLAN_TARGETED_RESULT_PATH = (
     STAGE7_RESULTS_DIR
     / "2026-08-25-stage7-7r4h-plan-quality-targeted-results.json"
+)
+CURRENT_H1_PLAN_TARGETED_RESULT_SHA256 = (
+    "ada6cbc91c21e7f4f341eee587259676579c9c2770af3a220277ff32a5e47a6f"
+)
+PLAN_TARGETED_RESULT_PATH = (
+    STAGE7_RESULTS_DIR
+    / "2026-08-25-stage7-7r4hr1-plan-quality-targeted-revalidation-results.json"
 )
 PLAN_FORMAL_RESULT_PATH = (
     STAGE7_RESULTS_DIR
@@ -34,6 +41,7 @@ REPORT_FORMAL_MARKDOWN_PATH = (
 )
 
 HISTORICAL_RESULT_PATHS = (
+    CURRENT_H1_PLAN_TARGETED_RESULT_PATH,
     STAGE7_RESULTS_DIR / "2026-08-22-stage7-7rf-plan-quality-targeted-results.json",
     STAGE7_RESULTS_DIR / "2026-08-21-stage7-step9-jd-decomposition-debug-results.json",
     STAGE7_RESULTS_DIR
@@ -76,6 +84,8 @@ MAX_OUTPUT_TOKENS_PER_BUSINESS_CALL = 16_000
 MAX_INFRASTRUCTURE_RETRIES_PER_BUSINESS_CALL = 1
 TARGETED_MAXIMUM_BUSINESS_CALLS = 24
 TARGETED_MAXIMUM_API_ATTEMPTS = 48
+FORMAL_MAXIMUM_BUSINESS_CALLS = 80
+FORMAL_MAXIMUM_API_ATTEMPTS = 160
 OFFICIAL_PRICING_SOURCE_URL = (
     "https://api-docs.deepseek.com/quick_start/pricing/"
 )
@@ -86,8 +96,8 @@ PLAN_PROMPT_ROLES = (
 )
 PLAN_REPAIR_ROLE = "local_repair"
 EXPECTED_PLAN_PROMPT_VERSIONS = {
-    "fact_extraction": "job_requirement_fact_extraction_v1",
-    "coverage_review": "job_requirement_coverage_review_v1",
+    "fact_extraction": "job_requirement_fact_extraction_v2",
+    "coverage_review": "job_requirement_coverage_review_v2",
     "local_repair": "job_requirement_local_repair_v1",
     "criterion_grouping": "job_evaluation_criterion_grouping_v1",
 }
@@ -119,6 +129,11 @@ def sha256_file(path: Path) -> str:
 
 
 def historical_result_hashes() -> dict[str, str]:
+    if not CURRENT_H1_PLAN_TARGETED_RESULT_PATH.exists():
+        raise RuntimeError("当前 7R4-H1 真实结果文件缺失")
+    current_h1_hash = sha256_file(CURRENT_H1_PLAN_TARGETED_RESULT_PATH)
+    if current_h1_hash != CURRENT_H1_PLAN_TARGETED_RESULT_SHA256:
+        raise RuntimeError("当前 7R4-H1 真实结果 SHA-256 已变化")
     return {
         str(path.relative_to(PROJECT_ROOT)): sha256_file(path)
         for path in HISTORICAL_RESULT_PATHS
@@ -147,6 +162,8 @@ def validate_result_path_isolation() -> dict[str, Any]:
         raise RuntimeError("4.0 质量结果必须写入独立的阶段 7 结果目录")
     if "7r4h" not in PLAN_TARGETED_RESULT_PATH.name.lower():
         raise RuntimeError("4.0 定向计划结果缺少独立 7R4-H 命名")
+    if "7r4hr1" not in PLAN_TARGETED_RESULT_PATH.name.lower():
+        raise RuntimeError("4.0 定向复验结果缺少独立 7R4-HR1 命名")
     if "7r4i" not in REPORT_FORMAL_RESULT_PATH.name.lower():
         raise RuntimeError("4.0 报告结果缺少独立 7R4-I 命名")
     return {
@@ -197,29 +214,45 @@ def validate_frozen_plan_fixture(cases: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def plan_call_budget() -> dict[str, Any]:
-    targeted_count = len(TARGETED_CASE_IDS)
-    formal_count = len(FORMAL_CASE_IDS)
-
-    def row(case_count: int) -> dict[str, int]:
-        baseline = case_count * 3
-        maximum = case_count * 4
+    def row(
+        *,
+        case_count: int,
+        normal_case_count: int,
+        safety_business_calls: int,
+        safety_api_attempts: int,
+    ) -> dict[str, int]:
+        no_facts_case_count = case_count - normal_case_count
+        baseline = normal_case_count * 3 + no_facts_case_count
+        maximum = normal_case_count * 4 + no_facts_case_count
         return {
             "sample_count": case_count,
+            "normal_plan_count": normal_case_count,
+            "no_facts_short_circuit_count": no_facts_case_count,
             "baseline_business_calls": baseline,
             "maximum_business_calls_with_local_repair": maximum,
-            "maximum_api_attempts_with_infrastructure_retries": maximum * 2,
+            "safety_hard_maximum_business_calls": safety_business_calls,
+            "maximum_api_attempts_with_infrastructure_retries": safety_api_attempts,
             "maximum_output_tokens_without_infrastructure_retries": (
                 maximum * MAX_OUTPUT_TOKENS_PER_BUSINESS_CALL
             ),
             "maximum_output_tokens_with_infrastructure_retries": (
-                maximum * MAX_OUTPUT_TOKENS_PER_BUSINESS_CALL * 2
+                safety_api_attempts * MAX_OUTPUT_TOKENS_PER_BUSINESS_CALL
             ),
         }
 
     return {
-        "targeted": row(targeted_count),
-        "formal": row(formal_count),
-        "combined_if_both_rounds_are_authorized": row(targeted_count + formal_count),
+        "targeted": row(
+            case_count=len(TARGETED_CASE_IDS),
+            normal_case_count=5,
+            safety_business_calls=TARGETED_MAXIMUM_BUSINESS_CALLS,
+            safety_api_attempts=TARGETED_MAXIMUM_API_ATTEMPTS,
+        ),
+        "formal": row(
+            case_count=len(FORMAL_CASE_IDS),
+            normal_case_count=19,
+            safety_business_calls=FORMAL_MAXIMUM_BUSINESS_CALLS,
+            safety_api_attempts=FORMAL_MAXIMUM_API_ATTEMPTS,
+        ),
         "business_call_definition": "一个 Prompt 角色的一次逻辑调用",
         "content_repair_definition": "coverage review 后最多一次 local_repair 业务调用",
         "infrastructure_retry_definition": (
@@ -402,15 +435,89 @@ def validate_plan_attempt_audit(payload: dict[str, Any]) -> dict[str, Any]:
     pricing = validate_official_pricing_snapshot(
         payload.get("official_pricing_snapshot") or {}
     )
+    selected_case_ids = tuple(payload.get("selected_case_ids") or ())
+    if selected_case_ids == TARGETED_CASE_IDS:
+        budget = plan_call_budget()["targeted"]
+    elif selected_case_ids == FORMAL_CASE_IDS:
+        budget = plan_call_budget()["formal"]
+    else:
+        raise RuntimeError("计划质量逐 attempt 审计的样本集合或顺序不合法")
+    cases = payload.get("cases")
+    if not isinstance(cases, list) or tuple(
+        case.get("case_id") if isinstance(case, dict) else None for case in cases
+    ) != selected_case_ids:
+        raise RuntimeError("逐样本质量明细必须完整且按冻结顺序排列")
+    case_by_id = {case["case_id"]: case for case in cases}
+    expected_roles_by_case: dict[str, list[str]] = {}
+    generation_audit_by_case: dict[str, dict[str, Any]] = {}
+    for case_id in selected_case_ids:
+        case = case_by_id[case_id]
+        actual_outcome = case.get("actual_outcome")
+        if actual_outcome != EXPECTED_V4_OUTCOMES[case_id]:
+            raise RuntimeError("逐样本 actual_outcome 与冻结预期不一致")
+        generation_audit = case.get("generation_audit")
+        if not isinstance(generation_audit, dict):
+            raise RuntimeError("逐样本缺少 generation audit")
+        calls = generation_audit.get("calls")
+        if not isinstance(calls, list) or not calls:
+            raise RuntimeError("逐样本 generation audit 缺少业务调用明细")
+        roles = [call.get("role") if isinstance(call, dict) else None for call in calls]
+        if actual_outcome == "no_facts":
+            allowed_role_orders = [["fact_extraction"]]
+        else:
+            allowed_role_orders = [
+                ["fact_extraction", "coverage_review", "criterion_grouping"],
+                [
+                    "fact_extraction",
+                    "coverage_review",
+                    "local_repair",
+                    "criterion_grouping",
+                ],
+            ]
+        if roles not in allowed_role_orders:
+            raise RuntimeError("逐样本业务调用少跑、乱序或 repair 位置不合法")
+        if generation_audit.get("business_call_count") != len(calls):
+            raise RuntimeError("逐样本 generation audit 业务调用汇总不一致")
+        repair_count = sum(role == PLAN_REPAIR_ROLE for role in roles)
+        if generation_audit.get("content_repair_count") != repair_count:
+            raise RuntimeError("逐样本 generation audit 局部修复汇总不一致")
+        if any(
+            call.get("prompt_version") != EXPECTED_PLAN_PROMPT_VERSIONS[call.get("role")]
+            for call in calls
+        ):
+            raise RuntimeError("逐样本 generation audit Prompt 版本不一致")
+        if actual_outcome == "no_facts":
+            extraction_call = calls[0]
+            if (
+                extraction_call.get("result") != "failed"
+                or extraction_call.get("error_code") != "JOB_EVALUATION_PLAN_NO_FACTS"
+            ):
+                raise RuntimeError("no_facts 必须在事实提取后以稳定错误合法停止")
+        elif any(call.get("result") != "succeeded" for call in calls):
+            raise RuntimeError("门禁可通过的正常样本业务调用必须全部成功")
+        expected_roles_by_case[case_id] = roles
+        generation_audit_by_case[case_id] = generation_audit
+
     attempts = payload.get("attempt_audit")
     if not isinstance(attempts, list) or not attempts:
         raise RuntimeError("4.0 定向结果缺少逐 attempt 审计")
-    if not 18 <= len(attempts) <= TARGETED_MAXIMUM_API_ATTEMPTS:
-        raise RuntimeError("4.0 定向实际 API 尝试数超出 18—48 合同")
-    selected_case_ids = tuple(payload.get("selected_case_ids") or ())
+    if len(attempts) > budget["maximum_api_attempts_with_infrastructure_retries"]:
+        raise RuntimeError("计划质量实际 API 尝试数超过安全硬上限")
     seen_case_ids: set[str] = set()
-    last_by_case: dict[str, dict[str, Any]] = {}
     case_attempt_counts: Counter[str] = Counter()
+    business_roles_by_case: dict[str, list[str]] = {
+        case_id: [] for case_id in selected_case_ids
+    }
+    retry_counts_by_case: dict[str, list[int]] = {
+        case_id: [] for case_id in selected_case_ids
+    }
+    final_attempts_by_case: dict[str, list[dict[str, Any]]] = {
+        case_id: [] for case_id in selected_case_ids
+    }
+    observed_case_order: list[str] = []
+    completed_cases: set[str] = set()
+    active_case_id: str | None = None
+    previous_attempt: dict[str, Any] | None = None
     derived_business_calls = 0
     for expected_number, attempt in enumerate(attempts, start=1):
         if not isinstance(attempt, dict):
@@ -420,6 +527,13 @@ def validate_plan_attempt_audit(payload: dict[str, Any]) -> dict[str, Any]:
         seen_case_ids.add(case_id)
         if case_id not in selected_case_ids:
             raise RuntimeError("逐 attempt 审计引用了非本轮样本")
+        if case_id != active_case_id:
+            if active_case_id is not None:
+                completed_cases.add(active_case_id)
+            if case_id in completed_cases:
+                raise RuntimeError("逐 attempt 审计不能返回已经结束的样本")
+            active_case_id = case_id
+            observed_case_order.append(case_id)
         if role not in {*PLAN_PROMPT_ROLES, PLAN_REPAIR_ROLE}:
             raise RuntimeError("逐 attempt 审计角色不合法")
         if attempt.get("attempt_number") != expected_number:
@@ -449,19 +563,25 @@ def validate_plan_attempt_audit(payload: dict[str, Any]) -> dict[str, Any]:
             raise RuntimeError("逐 attempt 缺少基础设施重试标记")
         if not isinstance(attempt.get("retryable"), bool):
             raise RuntimeError("逐 attempt 缺少错误重试属性")
-        previous = last_by_case.get(case_id)
         expected_retry = bool(
-            previous
-            and previous.get("role") == role
-            and previous.get("result") == "failed"
-            and previous.get("retryable") is True
+            previous_attempt
+            and previous_attempt.get("case_id") == case_id
+            and previous_attempt.get("role") == role
+            and previous_attempt.get("result") == "failed"
+            and previous_attempt.get("retryable") is True
         )
-        if expected_retry and previous.get("is_infrastructure_retry") is True:
+        if expected_retry and previous_attempt.get("is_infrastructure_retry") is True:
             raise RuntimeError("同一业务调用最多只能有一次基础设施重试")
         if attempt["is_infrastructure_retry"] is not expected_retry:
             raise RuntimeError("基础设施重试标记不能从相邻失败 attempt 推导")
         if not expected_retry:
             derived_business_calls += 1
+            business_roles_by_case[case_id].append(role)
+            retry_counts_by_case[case_id].append(0)
+            final_attempts_by_case[case_id].append(attempt)
+        else:
+            retry_counts_by_case[case_id][-1] += 1
+            final_attempts_by_case[case_id][-1] = attempt
         if attempt.get("business_call_number") != derived_business_calls:
             raise RuntimeError("业务调用编号不能从逐 attempt 记录推导")
         if attempt.get("result") == "succeeded":
@@ -491,9 +611,11 @@ def validate_plan_attempt_audit(payload: dict[str, Any]) -> dict[str, Any]:
             "complete"
         ]:
             raise RuntimeError("已收到模型响应的 attempt 缺少完整计费 token")
-        last_by_case[case_id] = attempt
+        previous_attempt = attempt
     if seen_case_ids != set(selected_case_ids):
         raise RuntimeError("逐 attempt 审计没有覆盖全部定向样本")
+    if tuple(observed_case_order) != selected_case_ids:
+        raise RuntimeError("逐 attempt 审计没有按冻结样本顺序执行")
     business_calls = derived_business_calls
     infrastructure_retries = len(attempts) - business_calls
     content_repairs = sum(
@@ -501,8 +623,31 @@ def validate_plan_attempt_audit(payload: dict[str, Any]) -> dict[str, Any]:
         and attempt["is_infrastructure_retry"] is False
         for attempt in attempts
     )
-    if not 18 <= business_calls <= TARGETED_MAXIMUM_BUSINESS_CALLS:
-        raise RuntimeError("定向业务调用数超出 18—24 合同")
+    for case_id in selected_case_ids:
+        expected_roles = expected_roles_by_case[case_id]
+        if business_roles_by_case[case_id] != expected_roles:
+            raise RuntimeError("逐 attempt 角色顺序与逐样本 actual_outcome 不一致")
+        if any(
+            attempt.get("result") != "succeeded"
+            for attempt in final_attempts_by_case[case_id]
+        ):
+            raise RuntimeError("内容错误不得通过重复业务调用碰运气")
+        generation_audit = generation_audit_by_case[case_id]
+        calls = generation_audit["calls"]
+        retry_counts = retry_counts_by_case[case_id]
+        if len(retry_counts) != len(calls) or any(
+            call.get("infrastructure_retry_count") != retry_count
+            for call, retry_count in zip(calls, retry_counts, strict=True)
+        ):
+            raise RuntimeError("逐 attempt 基础设施重试与 generation audit 不一致")
+        if generation_audit.get("infrastructure_retry_count") != sum(retry_counts):
+            raise RuntimeError("逐样本 generation audit 重试汇总不一致")
+    if not (
+        budget["baseline_business_calls"]
+        <= business_calls
+        <= budget["maximum_business_calls_with_local_repair"]
+    ):
+        raise RuntimeError("计划质量业务调用数不符合逐样本合法流程")
     audit_summary = payload.get("attempt_audit_summary")
     if not isinstance(audit_summary, dict):
         raise RuntimeError("4.0 定向结果缺少 attempt 汇总")
@@ -520,8 +665,8 @@ def validate_plan_attempt_audit(payload: dict[str, Any]) -> dict[str, Any]:
         "priced_attempt_count": sum(
             attempt["cost_estimate"]["complete"] for attempt in attempts
         ),
-        "maximum_business_calls": TARGETED_MAXIMUM_BUSINESS_CALLS,
-        "maximum_api_attempts": TARGETED_MAXIMUM_API_ATTEMPTS,
+        "maximum_business_calls": budget["safety_hard_maximum_business_calls"],
+        "maximum_api_attempts": budget["maximum_api_attempts_with_infrastructure_retries"],
     }
     expected_summary_counts["unpriced_attempt_count"] = (
         len(attempts) - expected_summary_counts["priced_attempt_count"]
@@ -539,6 +684,16 @@ def validate_plan_attempt_audit(payload: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError("本次定向轮不设置金额硬上限")
     if audit_summary.get("stopped_reason") is not None:
         raise RuntimeError("调用上限触发后不能通过定向门禁")
+    quality_summary = payload.get("summary")
+    if not isinstance(quality_summary, dict):
+        raise RuntimeError("4.0 定向结果缺少质量汇总")
+    for key, value in {
+        "business_call_count": business_calls,
+        "content_repair_count": content_repairs,
+        "infrastructure_retry_count": infrastructure_retries,
+    }.items():
+        if quality_summary.get(key) != value:
+            raise RuntimeError(f"质量汇总与逐 attempt 明细不一致：{key}")
     return {
         "attempt_count": len(attempts),
         "business_call_count": business_calls,
@@ -556,8 +711,8 @@ def validate_targeted_gate_payload(
     if source_path.resolve() != PLAN_TARGETED_RESULT_PATH.resolve():
         raise RuntimeError("正式模式只接受登记的新 4.0 定向结果路径")
     expected = {
-        "stage": "7R4-H",
-        "result_kind": "plan_quality_targeted",
+        "stage": "7R4-HR1",
+        "result_kind": "plan_quality_targeted_revalidation",
         "status": "formal",
         "plan_schema_version": "4.0",
         "frozen_case_sha256": FROZEN_CASE_SHA256,

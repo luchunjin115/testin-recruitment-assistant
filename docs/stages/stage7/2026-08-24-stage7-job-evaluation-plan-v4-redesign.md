@@ -2,7 +2,7 @@
 
 > 日期：2026-08-24
 >
-> 状态：业务规则与 7R4-A—7R4-J 实施顺序已获用户最终确认；7R4-A—7R4-G、7R4-H0 已完成，7R4-H1 六份定向真实验证已执行并以 `4/6` 失败。正式 20 份被门禁阻断；当前停止，等待讨论多来源事实合并、优先级信号 warning 和 16 次合法基线审计缺口，不得补跑或进入 7R4-I—J
+> 状态：业务规则与 7R4-A—7R4-J 实施顺序已获用户最终确认；7R4-A—7R4-G、7R4-H0 已完成，7R4-H1 六份定向真实验证已执行并以 `4/6` 失败。用户已认可整改方向，第 29 节已写入 7R4-HR0/HR1 固定顺序并等待明确确认；确认前不得修改 Prompt/Service、补跑或进入正式 20 份及 7R4-I—J
 >
 > 直接上游：`../stage6/2026-08-21-stage6-five-section-jd-remediation-design.md`
 >
@@ -1114,3 +1114,127 @@ Fake 正常分支从生产 Service 的 `generation_audit` 实际得到 3 次 Ada
 H0 把定向 attempt 下界写成 18，但 J5-19 是事先固定的 `no_facts` 边界，按 Service 合同只允许第一次提取后停止，因此本轮合法基线实际是 16。结果文件本身完整保存了 16 次真实证据、费用和停止原因，质量失败也无需作为正式门禁输入；但 `validate_plan_attempt_audit()` 的 `18—48` 下界不能正确审计这种预期边界结果，后续复用前必须通过新的已确认整改批次修正，不能靠补两次无意义调用凑数。
 
 这些结果不能证明正式 20 份质量，也不授权立即修改 Prompt/Service、覆盖结果或重跑六份。7R4-H1 到此失败并停止。下一步必须先和用户讨论整改范围、实施顺序和验收方式；未经新的明确确认，不得进入正式 20 份、7R4-I、7R4-J 或阶段 8。
+
+## 29. 7R4-H1 失败后的整改与复验顺序（2026-08-25，HR0 已完成）
+
+### 29.1 已确认的业务含义与整改原则
+
+用户已认可以下整改方向，但本节写入前尚未授权直接修改代码：
+
+1. “合并”不是把意思接近的 JD 内容改写成一段，也不是把相关 facts 合成一个大项；只有多个 source units 重复表达同一条、可以独立评价的能力/经验/职责，而且能够由同一类简历证据证明、合并后不损失独立评价价值时，才把它们放进同一条 `RequirementFact.sources`。
+2. `EvaluationCriterion` 继续只是展示文件夹：相关但可分别评价的 facts 可以归入同一 criterion，每条 fact 仍必须且只能出现一次，criterion 不打分、不加权、不合并或改写 facts。
+3. 跨 source unit 的语义等价由模型按明确合同判断；程序不得仅因出现“数据、项目、客户”等相同词就自动合并。原文定位、字段 priority、措辞/字段冲突、角色顺序、次数和上限由程序确定性校验。
+4. J5-14 的合同不是强制四处“客户访谈”全部合并，而是至少形成一条由两个及以上真实来源共同支持的客户访谈 fact；不同结果如问题定义、版本计划如果仍有独立评价价值可以保留为其他 facts。
+5. J5-17 的 SQL 数据核查与审计项目经验不是同一事实，不得为了产生 warning 而合并。warning 来自字段固定 priority 与原文“必须/优先”等强弱信号冲突，程序只提醒 HR，不改 JD、字段、fact 或 priority。
+6. 当前 H1 结果文件、冻结六份 JD、80/23 人工标签、90 source units 和质量门槛都是不可变证据。整改不得覆盖、删除、改写或把 `4/6` 伪造成通过。
+
+本轮只新增两个不能连续越过的子批次：
+
+| 子批次 | 依赖 | 唯一目标 | 真实 DeepSeek | 完成后停止点 |
+| --- | --- | --- | ---: | --- |
+| 7R4-HR0 | 本节获用户确认 | 修复同事实多来源复核、优先级信号 warning 和逐样本调用审计 | 0 次 | 报告代码/Fake/回归结果，等待 HR1 单独确认 |
+| 7R4-HR1 | HR0 完成且用户另行确认模型、价格和调用边界 | 用新 Prompt 对完整六份重新做一次定向真实验证 | 允许，受本节上限约束 | 无论通过或失败都停止；不执行正式 20 份 |
+
+### 29.2 7R4-HR0：零调用整改
+
+#### 29.2.1 唯一目标与通俗解释
+
+- 唯一目标：让模型先看完整份 JD，再合并同一事实的多处原文；让独立 reviewer 必须检查“该合并的是否被拆开”；让程序稳定识别字段与“必须/优先”措辞冲突；让调用审计按每份样本实际业务结果判断，而不是靠错误的全局 18 次下限。
+- 通俗解释：模型负责判断“是不是同一件事”，程序负责判断“字段和必须/优先有没有写反”，复核模型负责找漏合并，审计器负责检查每份样本有没有走对步骤。
+
+#### 29.2.2 允许修改的文件与链路位置
+
+- 允许修改 `backend/app/prompts/job_evaluation_plan.py`：只把 fact extraction 和 coverage review Prompt 升为 v2；local repair 与 criterion grouping Prompt 保持原版本，除非实现证明现有输入无法消费合法 `missing_source_merge`，此时必须返回本文重新讨论，不能自行扩展。
+- 允许修改 `backend/app/services/job_evaluation_plan_service.py`：增加 4.0 字段/措辞冲突 warning，并复用现有一次局部修复链；不得加入关键词自动语义合并。
+- 允许修改 `scripts/stage7_7r4_quality_contract.py`、`scripts/run_stage7_7r4_plan_quality.py`：更新 Prompt 版本、16/58 正常基线、逐样本角色顺序、合法短路、费用/重试核对和新的 HR1 结果路径。
+- 允许修改 `backend/tests/services/test_job_evaluation_plan_v4_generation_contract.py`、`backend/tests/services/test_job_evaluation_plan_service.py`、`backend/tests/test_stage7_7r4g_quality_runner.py` 及仅与上述文件直接相关的既有 Adapter/配置测试；同步本文与 `PROJECT_STATE.md`。
+- 允许修改 `.env.example`：只把 `DEEPSEEK_MODEL`、`JOB_EVALUATION_PLAN_MODEL`、`SCREENING_EVALUATION_MODEL` 等仍残留的 `deepseek-chat` 示例同步为当前已确认默认值 `deepseek-v4-flash`，并允许增加直接相关配置测试，防止实际默认配置与示例配置再次分叉。该同步不得扩大到其他模型、其他业务功能或 Adapter 调用参数。
+- 链路位置是“Prompt → Adapter 原样传递 → Service 事实/warning/局部修复 → 质量运行器”。在“前端 → API → Schema → Service → Model → PostgreSQL”主链中只进入 Prompt、Service 和链外质量工具；不修改前端、API、Pydantic 业务/AI Schema、SQLAlchemy Model、migration 或 PostgreSQL。
+
+#### 29.2.3 Fact extraction v2 合同
+
+模型输出前必须按固定步骤完成：
+
+1. 先阅读全部 source units，不得按字段顺序看到一段就立即建立一条孤立 fact。
+2. 找出重复表达同一能力、经验或职责的来源；判断它们是否可以由同一类简历证据证明，以及合并后是否仍保留所有独立评价价值。
+3. 三项都成立时只生成一个 candidate，并把全部已确认来源放进 `sources`；仅主题相关、普通词相同、用途/结果/条件不同或可以分别满足时必须保留为不同 facts。
+4. 输出前再次扫描是否存在表达同一事实的多个单来源 candidates；不得为了减少数量强行合并。
+5. Prompt 使用通用正反例说明规则，不写死 J5-14 的完整答案，不改变“无 AI 标题、无改写 statement、只保存连续原文”的 4.0 合同。
+
+#### 29.2.4 Coverage review v2 与局部修复合同
+
+- reviewer 除现有漏事实、错误事实、disposition、原子性和分类检查外，必须逐 source unit/fact 检查：同一事实是否跨职责、必备、加分项重复出现；是否因字段不同被错误拆开；是否有来源没有挂到已有 fact；合并后是否会损失独立评价价值。
+- 发现漏合并必须返回 `status=needs_repair`、`code=missing_source_merge`，引用全部相关 `source_unit_ids` 和 `fact_ids`；没有完成该检查不得返回 passed。
+- 继续复用现有 `merge_into_fact_id`，只把 finding 涉及的来源并入已有 fact；最多一次局部修复，不重生成整份计划，不处理无关 source units，不无限重试。
+- 修复后仍存在 unresolved finding、来源不存在、错误合并、重复来源或覆盖不完整时，使用现有稳定内容错误失败，不进入 criterion grouping，不通过改门槛继续。
+
+#### 29.2.5 4.0 优先级信号 warning 合同
+
+- 程序比较每个 source unit 的固定字段 priority 与原文显式强弱信号。`candidate_requirements` 中的“优先/加分/preferred/plus”、`preferred_qualifications` 中的“必须/至少/required/must”，以及其他字段/信号明确不一致时，产生受控 `conflicting_requirements` warning。
+- warning 必须保存可定位 `source_unit_ids` 和相关 `fact_ids`，相同证据不得重复；继续按来源字段计算 fact priority，不按措辞擅自改 priority。
+- 程序不得把不同事实合并来制造 warning，不修改 JD，不作招聘决定。必须覆盖中文、英文、大小写、正常同向表达和否定/非强度语境，防止简单子串误报。
+
+#### 29.2.6 调用预算与逐样本审计合同
+
+- 对门禁可通过的六份定向：五份正常计划各为 fact extraction → coverage review → 可选 local repair → criterion grouping；J5-19 `no_facts` 只能是 fact extraction → 合法停止。因此无内容修复基线是 `5×3+1=16`，每份正常计划最多一次修复时业务调用最多 `5×4+1=21`。
+- 对未来正式 20 份：19 份正常计划加 J5-19，基线为 `19×3+1=58`，门禁可通过结果含内容修复最多 `19×4+1=77`。
+- 安全硬上限不下调：定向仍为 24 次业务调用/48 次 API 尝试，正式仍为 80/160；每个业务调用最多额外一次相邻基础设施重试，内容错误不重试。
+- validator 必须从 `cases.actual_outcome`、generation audit 和逐 attempt 角色顺序重算合法业务调用，不得只把全局下限机械改成 16。任何少跑 review/grouping、`no_facts` 后继续调用、repair 位置错误、第三次技术尝试、汇总与明细不一致都必须失败。
+
+#### 29.2.7 结果路径、自动化和禁止范围
+
+- 当前 `2026-08-25-stage7-7r4h-plan-quality-targeted-results.json` 永久保持原样。HR0 只登记新的复验路径 `docs/stages/stage7/2026-08-25-stage7-7r4hr1-plan-quality-targeted-revalidation-results.json`，write helper 必须拒绝历史路径、当前失败路径和已存在新路径。
+- 必测正例：同一客户访谈经验在必备/加分来源中形成一个多来源 fact；reviewer 能返回 `missing_source_merge`，local repair 能并入已有 fact。
+- 必测反例：客户访谈/PRD/版本复盘、普通“数据/项目”词、SQL 数据核查/审计项目经验保持独立；criterion 可以归组但不得替代 fact 合并。
+- 必测 warning：J5-17 中文冲突、英文 required/preferred 冲突、正常同向表达、否定或非强度语境、去重和可定位证据。
+- 必测审计：16 次正常定向、J5-19 单次合法停止、五份可选 repair 后最多 21 次、24/48 硬停止、基础设施单次重试，以及删减/乱序/伪造角色与汇总均被拒绝。
+- 运行 Prompt/Service/质量运行器专项、受影响后端回归、dry-run/Fake、`py_compile` 和 `git diff --check`。HR0 必须为真实模型调用 0、新复验结果写入 0、真实 Adapter 未实例化、历史 hash 和当前 H1 SHA-256 不变。
+- 配置测试必须核对 `backend/app/core/config.py` 的实际默认值、`.env.example` 的模型调用示例和质量合同的计划模型一致为 `deepseek-v4-flash`。历史真实结果文件中的 `deepseek-chat` 不得修改；仅作为普通 Schema 字符串样本、不参与模型调用的历史测试值可以保留，并在 HR0 报告中解释。
+- 禁止修改冻结 JD、人工标签、质量门槛、4.0 Pydantic Schema、Adapter 调用参数、criterion 业务、Model、migration、API、React、PostgreSQL、当前/历史结果；禁止提前调用真实模型、只改测试期待值、按关键词自动合并或进入 7R4-I—J。
+
+#### 29.2.8 HR0 完成、失败与停止点
+
+- 完成标志：上述正反例和 warning/审计合同全部由实际测试通过；Prompt 版本与 dry-run/门禁同步；0 调用、0 复验结果写入和不可变证据 hash 被实际验证。
+- 若 Prompt 合同仍不能让 reviewer 表达 `missing_source_merge`、现有 Schema/repair 无法安全处理、确定性 warning 存在无法排除的误报，返回 HR0 讨论是否需要扩 Coverage Schema；不得自行扩大到 Schema/数据库或付费试错。
+- HR0 完成后立即停止并报告“修改、链路位置、验证、能证明/不能证明、剩余风险”。唯一下一步是等待用户独立确认 HR1。
+
+### 29.3 7R4-HR1：完整六份重新真实验证
+
+- 前置门禁：HR0 必须完成；用户必须另行明确确认 `deepseek-v4-flash + thinking disabled`、当时官方峰谷价格、不设置或设置何种金额上限，以及 24/48 安全硬上限。当前对第 29 节或 HR0 的确认不等于 HR1 付费授权。
+- 固定样本/顺序仍为 J5-03、J5-07、J5-14、J5-17、J5-19、J5-20；冻结 SHA、80/23 人工标签、90 source units 和第 15.2 节门槛不变。不得只跑失败两份、改样本、改标签或删除失败分母。
+- 固定实现为 fact extraction v2、coverage review v2、local repair v1、criterion grouping v1，以及 HR0 完成后的同一 Service/Schema；任何 Prompt/参数/模型再变化都使本次授权失效并返回预检。
+- 只允许创建登记的新 revalidation 文件且拒绝覆盖；调用前记录最新官方价格/时段，逐 attempt 保存请求配置、model、token/cache、finish reason、耗时、重试、原始响应和费用。
+- 预期无修复业务调用 16，门禁可通过结果含修复最多 21；安全硬上限仍是 24/48。达到硬上限、认证/配额/配置错误或结果路径异常立即停止；内容错误不重试，不额外试跑、A/B、补跑或挑最好响应。
+- 通过必须同时满足：6/6；80/80、23/23、90/90；正常 4/4、边界 2/2；追溯、priority、criterion 覆盖和两个预期 warning 均为 100%；新增要求、漏多来源、错误合并、明显重复、背景/public notes 污染、宣传福利误识别均为 0。J5-14 至少一条客户访谈 fact 有两个及以上合法来源，J5-17 命中可定位 `conflicting_requirements`。
+- 验证新结果可从原始明细重算全部分子/分母、角色顺序和费用；历史/current H1 hash、正式结果路径和数据库基线不变。无论通过或失败都同步证据并停止。
+- HR1 通过只允许讨论原 7R4-H2 正式 20 份，不等于 H2 已授权；失败则返回具体 Prompt/Service/审计责任层。不得自动进入 H2、7R4-I、7R4-J 或阶段 8。
+
+### 29.4 本节确认门禁
+
+用户“按照方案来”的回复授权本轮把讨论结果落为第 29 节实施顺序，不视为已经授权修改代码或付费复验。用户明确确认本节或 `7R4-HR0` 后，下一轮只能实施零调用 HR0；完成并报告后再次停止。HR1、正式 20 份、7R4-I—J 和阶段 8 均需要各自后续授权。
+
+### 29.5 7R4-HR0 实际完成记录（2026-08-25）
+
+#### 29.5.1 实际修改与链路位置
+
+- fact extraction 与 coverage review Prompt 已升为 v2：提取模型必须先阅读全部 source units，再用“同一条可独立评价事实、同一类简历证据、合并不损失独立评价价值”三项条件判断多来源；reviewer 必须复核 `missing_source_merge` 并同时返回全部相关来源和 facts。local repair v1 与 criterion grouping v1 保持原合同。
+- 4.0 Service 增加字段/措辞确定性 warning：`candidate_requirements` 中的弱化信号和 `preferred_qualifications` 中的强化信号会生成一条去重后的 `conflicting_requirements`，保留相关 `source_unit_ids/fact_ids`。正常同向、否定和“优先处理、加分规则、PLUS operator、preferred name、required field”等非强度语境被排除；程序没有按普通关键词自动合并 facts，也没有改变 JD 或 fact priority。
+- 计划质量合同和运行器改为逐样本审计：五份正常样本必须按 extraction → review → 可选 repair → grouping，J5-19 只能 extraction 后 `no_facts` 停止；定向合法业务调用为 16—21、正式为 58—77，安全硬上限仍为 24/48 和 80/160。少跑、乱序、no_facts 后继续、repair 错位、同一业务调用第三次技术尝试、逐 attempt/generation/质量汇总不一致都会被拒绝。
+- 新 HR1 复验路径已登记为 `docs/stages/stage7/2026-08-25-stage7-7r4hr1-plan-quality-targeted-revalidation-results.json`，但 HR0 没有创建它。当前 H1 失败结果被加入不可变历史集合并固定校验 SHA-256。
+- `.env.example` 中三个实际参与模型调用的示例已与 `backend/app/core/config.py` 和质量合同同步为 `deepseek-v4-flash`；直接配置测试防止三处再次分叉。历史真实结果没有改动；普通 Schema 测试里仅作为字符串样本、不触发调用的旧 `deepseek-chat` 值保留。
+- 主链位置仅为 Prompt 与 Service，另有链外质量运行器和非业务配置示例；没有修改前端、API、Pydantic Schema、Adapter 参数、EvaluationCriterion 合同、SQLAlchemy Model、migration、React 或 PostgreSQL。
+
+#### 29.5.2 实际验证与不可变证据
+
+- Prompt/Service 专项 `44 passed`；质量运行器专项 `19 passed`；配置专项 `11 passed + 16 subtests`。受影响后端回归覆盖配置、计划 Adapter、1.0—4.0 计划 Service/Schema、source units、step9 和 4.0 Screening gate，为 `262 passed + 48 subtests`。只有既有 PyPDF2 弃用 warning，没有失败。
+- CLI dry-run、Fake normal、Fake local repair 均通过。Fake normal 实际为 3 次业务调用，Fake repair 为 4 次且只有 1 次 local repair；三种模式真实 DeepSeek 调用均为 0、正式结果写入为 0，dry-run 测试使用哨兵证明真实 Adapter 未实例化且 API Key 不是前提。
+- `py_compile` 与 `git diff --check` 通过。dry-run 前后历史结果 hash 一致；当前 H1 结果 SHA-256 仍为 `ada6cbc91c21e7f4f341eee587259676579c9c2770af3a220277ff32a5e47a6f`，新 HR1 复验结果文件不存在。
+- PostgreSQL 只读复核仍为 `current=head=d6f4a2b8e913`，`jobs/candidates/resumes/applications/job_evaluation_plans/screening_runs/screening_reports/stage_histories/reports` 全为 0。本批没有运行 migration、数据库写入或 PostgreSQL 测试夹具。
+
+#### 29.5.3 能证明、不能证明、风险与停止点
+
+这些验证能证明 v2 Prompt 明确表达多来源合同、现有一次 local repair 能消费可定位的 `missing_source_merge`、确定性 warning 的中英文正反例和证据去重按当前测试成立，也能证明审计器按每份样本的真实角色序列而不是全局数字放行。它还证明 HR0 没有付费调用、没有创建复验结果、没有改变历史证据或数据库基线。
+
+这些验证不能证明真实 DeepSeek 一定按 v2 Prompt 正确合并 J5-14，也不能证明未枚举的所有自然语言都不会使确定性信号检查误报或漏报，更不能证明六份真实质量已从 4/6 提升。最终模型质量只能由完整六份 HR1 新结果判断；出现新语言边界时应回到 Prompt/Service 测试层，不得靠额外真实调用碰运气。
+
+7R4-HR0 到此完成并立即停止。唯一下一步是等待用户单独确认 7R4-HR1 的模型、当时价格、金额边界和 24/48 安全上限；当前授权不允许真实 DeepSeek、正式 20 份、7R4-I、7R4-J 或阶段 8。
