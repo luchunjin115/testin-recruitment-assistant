@@ -24,6 +24,7 @@ from app.models.job import Job
 from app.models.job_evaluation_plan import JobEvaluationPlan
 from app.prompts.job_evaluation_plan import (
     JOB_EVALUATION_PLAN_PROMPT_VERSION,
+    JOB_EVALUATION_PLAN_V5_PROMPT_VERSION,
 )
 from app.schemas.job_evaluation_plan import (
     AIEvaluationCriterionGroupingOutput,
@@ -50,6 +51,8 @@ from app.schemas.job_evaluation_plan import (
     JOB_EVALUATION_PLAN_V4_BREAKING_CONTRACT_VERSION,
     JOB_EVALUATION_PLAN_V4_FINGERPRINT_RULE_VERSION,
     JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION,
+    JOB_EVALUATION_PLAN_V5_MAX_CRITERIA,
+    JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION,
     LEGACY_JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION,
     LEGACY_JOB_EVALUATION_PLAN_BREAKING_CONTRACT_VERSION,
     LEGACY_JOB_EVALUATION_PLAN_SCHEMA_VERSION,
@@ -89,10 +92,16 @@ from app.schemas.job_evaluation_plan import (
     StructuredFieldCoverage,
     RequirementFact,
     RequirementFactSource,
+    V5CriterionItem,
 )
 
 
 LEGACY_JOB_EVALUATION_PLAN_PROMPT_VERSION = "job_evaluation_plan_v4"
+JOB_EVALUATION_PLAN_V5_AI_SCHEMA_VERSION = "5.0"
+JOB_EVALUATION_PLAN_V5_BREAKING_CONTRACT_VERSION = (
+    "lightweight_plan_generation_v1"
+)
+JOB_EVALUATION_PLAN_V5_FINGERPRINT_RULE_VERSION = "job_evaluation_input_v5"
 
 
 class JobEvaluationPlanServiceError(RuntimeError):
@@ -153,6 +162,26 @@ class JobEvaluationPlanV4GenerationError(JobEvaluationPlanServiceError):
         super().__init__(message)
 
 
+class JobEvaluationPlanV5GenerationError(JobEvaluationPlanServiceError):
+    """Safe terminal error for the pure 5.0 one-call workflow."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        code: str,
+        business_call_count: int,
+        adapter_attempt_count: int,
+        infrastructure_retry_count: int,
+    ) -> None:
+        self.code = code
+        self.criteria = None
+        self.business_call_count = business_call_count
+        self.adapter_attempt_count = adapter_attempt_count
+        self.infrastructure_retry_count = infrastructure_retry_count
+        super().__init__(message)
+
+
 class JobEvaluationPlanAdapter(Protocol):
     async def extract(
         self,
@@ -162,6 +191,11 @@ class JobEvaluationPlanAdapter(Protocol):
     async def generate_v4(
         self,
         role: str,
+        generation_input: dict[str, Any],
+    ) -> JobEvaluationPlanAdapterResult: ...
+
+    async def generate_v5(
+        self,
         generation_input: dict[str, Any],
     ) -> JobEvaluationPlanAdapterResult: ...
 
@@ -183,6 +217,21 @@ class GeneratedPlanContentV4:
     coverage_review_summary: JobEvaluationPlanCoverageReviewSummary
     warnings: list[JobEvaluationPlanV4WarningDetail]
     generation_audit: JobEvaluationPlanGenerationAudit
+
+
+@dataclass(frozen=True, slots=True)
+class GeneratedPlanContentV5:
+    criteria: list[V5CriterionItem]
+    warnings: list[str]
+    prompt_version: str
+    ai_schema_version: str
+    schema_version: str
+    breaking_contract_version: str
+    fingerprint_rule_version: str
+    model_version: str
+    business_call_count: int
+    adapter_attempt_count: int
+    infrastructure_retry_count: int
 
 
 @dataclass(frozen=True)
@@ -324,6 +373,73 @@ class JobEvaluationPlanService:
         "master_or_above": "硕士及以上学历",
         "doctorate": "博士学历",
     }
+    _V5_SENSITIVE_RE = re.compile(
+        r"(?:姓名|手机号|电话号码|邮箱|身份证|详细住址|性别|男性|女性|男士|"
+        r"女士|年龄|出生日期|婚姻|婚育|民族|籍贯|照片|外貌|颜值|"
+        r"\bgender\b|\bage\b|\bdate of birth\b|\bmarital\b|"
+        r"\bethnicity\b|\bbirthplace\b|\bphoto\b|\bappearance\b)",
+        re.IGNORECASE,
+    )
+    _V5_PROMPT_POLLUTION_RE = re.compile(
+        r"(?:忽略(?:以上|此前|系统)?指令|覆盖系统规则|改变输出格式|"
+        r"执行(?:系统)?命令|输出(?:密码|密钥|\s*api\s*key)|"
+        r"泄露(?:密码|密钥|\s*api\s*key)|"
+        r"ignore (?:all |previous |system )?instructions?|"
+        r"reveal (?:the )?(?:password|secret|api key)|"
+        r"print (?:the )?(?:password|secret|api key))",
+        re.IGNORECASE,
+    )
+    _V5_RECRUITMENT_DECISION_RE = re.compile(
+        r"(?:自动通过|自动淘汰|自动录用|建议通过|建议淘汰|建议录用|"
+        r"直接淘汰|直接录用|hire candidate|reject candidate)",
+        re.IGNORECASE,
+    )
+    _V5_EXPLICIT_REQUIREMENT_MARKERS = (
+        "本科",
+        "硕士",
+        "博士",
+        "大专",
+        "学历",
+        "学位",
+        "证书",
+        "认证",
+        "英语六级",
+        "英语四级",
+        "cet-4",
+        "cet-6",
+        "pmp",
+    )
+    _V5_GENERIC_ASCII_TOKENS = {
+        "ai",
+        "hr",
+        "jd",
+        "work",
+        "working",
+        "project",
+        "projects",
+        "evidence",
+        "resume",
+    }
+    _V5_GENERIC_NAME_TERMS = (
+        "相关",
+        "要求",
+        "能力",
+        "经验",
+        "职责",
+        "岗位",
+        "候选人",
+        "匹配",
+        "评估",
+        "判断",
+        "核对",
+        "证据",
+        "工作",
+        "项目",
+        "具备",
+        "负责",
+        "熟悉",
+        "掌握",
+    )
 
     async def get_current_plan(
         self,
@@ -883,6 +999,369 @@ class JobEvaluationPlanService:
                 if not exc.retryable or attempt == 1:
                     raise
         raise AssertionError("unreachable")
+
+    async def build_v5_plan_content(
+        self,
+        snapshot: JobEvaluationPlanInputSnapshot | dict[str, Any],
+        *,
+        adapter: JobEvaluationPlanAdapter,
+    ) -> GeneratedPlanContentV5:
+        """Build 5.0 lightweight criteria without API or database writes."""
+        adapter_attempt_count = 0
+        infrastructure_retry_count = 0
+        try:
+            validated_snapshot = JobEvaluationPlanInputSnapshot.model_validate(snapshot)
+            if validated_snapshot.schema_version != "5.0":
+                raise JobEvaluationPlanContentError(
+                    "纯生成工作流只接受 5.0 input snapshot",
+                    code="JOB_EVALUATION_PLAN_V5_INPUT_REQUIRED",
+                )
+            payload = validated_snapshot.model_dump(mode="json")
+            serialized = json.dumps(
+                payload,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            if len(serialized) > 100_000:
+                raise JobEvaluationPlanContentError(
+                    "岗位评价计划 5.0 单次输入超过技术安全边界",
+                    code="JOB_EVALUATION_PLAN_V5_INPUT_TOO_LARGE",
+                )
+
+            result: JobEvaluationPlanAdapterResult | None = None
+            for attempt in range(2):
+                adapter_attempt_count += 1
+                try:
+                    result = await adapter.generate_v5(payload)
+                    infrastructure_retry_count = attempt
+                    break
+                except JobEvaluationPlanAdapterError as exc:
+                    if exc.retryable and attempt == 0:
+                        infrastructure_retry_count = 1
+                        continue
+                    raise
+            if result is None:
+                raise AssertionError("5.0 Adapter 未返回结果")
+
+            criteria, warnings = self._parse_v5_plan_response(
+                result.content,
+                validated_snapshot,
+            )
+            return GeneratedPlanContentV5(
+                criteria=criteria,
+                warnings=warnings,
+                prompt_version=JOB_EVALUATION_PLAN_V5_PROMPT_VERSION,
+                ai_schema_version=JOB_EVALUATION_PLAN_V5_AI_SCHEMA_VERSION,
+                schema_version=JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION,
+                breaking_contract_version=(
+                    JOB_EVALUATION_PLAN_V5_BREAKING_CONTRACT_VERSION
+                ),
+                fingerprint_rule_version=(
+                    JOB_EVALUATION_PLAN_V5_FINGERPRINT_RULE_VERSION
+                ),
+                model_version=result.model,
+                business_call_count=1,
+                adapter_attempt_count=adapter_attempt_count,
+                infrastructure_retry_count=infrastructure_retry_count,
+            )
+        except JobEvaluationPlanV5GenerationError:
+            raise
+        except JobEvaluationPlanAdapterError as exc:
+            raise JobEvaluationPlanV5GenerationError(
+                self._safe_adapter_message(exc),
+                code=exc.code,
+                business_call_count=1 if adapter_attempt_count else 0,
+                adapter_attempt_count=adapter_attempt_count,
+                infrastructure_retry_count=infrastructure_retry_count,
+            ) from None
+        except JobEvaluationPlanContentError as exc:
+            raise JobEvaluationPlanV5GenerationError(
+                str(exc),
+                code=exc.code,
+                business_call_count=1 if adapter_attempt_count else 0,
+                adapter_attempt_count=adapter_attempt_count,
+                infrastructure_retry_count=infrastructure_retry_count,
+            ) from None
+        except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
+            raise JobEvaluationPlanV5GenerationError(
+                "岗位评价计划 5.0 内容未通过确定性校验",
+                code="JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT",
+                business_call_count=1 if adapter_attempt_count else 0,
+                adapter_attempt_count=adapter_attempt_count,
+                infrastructure_retry_count=infrastructure_retry_count,
+            ) from None
+        except Exception:
+            raise JobEvaluationPlanV5GenerationError(
+                "岗位评价计划 5.0 生成发生未预期错误",
+                code="JOB_EVALUATION_PLAN_UNEXPECTED_ERROR",
+                business_call_count=1 if adapter_attempt_count else 0,
+                adapter_attempt_count=adapter_attempt_count,
+                infrastructure_retry_count=infrastructure_retry_count,
+            ) from None
+
+    def _parse_v5_plan_response(
+        self,
+        content: str,
+        snapshot: JobEvaluationPlanInputSnapshot,
+    ) -> tuple[list[V5CriterionItem], list[str]]:
+        try:
+            payload = json.loads(
+                content,
+                object_pairs_hook=self._json_object_without_duplicate_keys,
+            )
+        except (json.JSONDecodeError, TypeError, ValueError):
+            raise JobEvaluationPlanContentError(
+                "岗位评价计划 5.0 输出不是合法的唯一键 JSON 对象",
+                code="JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT",
+            ) from None
+        if not isinstance(payload, dict):
+            raise JobEvaluationPlanContentError(
+                "岗位评价计划 5.0 输出顶层必须是 JSON 对象",
+                code="JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT",
+            )
+        if set(payload) != {"criteria"}:
+            raise JobEvaluationPlanContentError(
+                "岗位评价计划 5.0 输出必须只包含模型负责的 criteria",
+                code="JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT",
+            )
+        raw_criteria = payload["criteria"]
+        if not isinstance(raw_criteria, list):
+            raise JobEvaluationPlanContentError(
+                "岗位评价计划 5.0 criteria 必须是数组",
+                code="JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT",
+            )
+        if not raw_criteria:
+            raise JobEvaluationPlanContentError(
+                "模型没有生成可用的轻量评价点",
+                code="JOB_EVALUATION_PLAN_V5_NO_CRITERIA",
+            )
+        if len(raw_criteria) > JOB_EVALUATION_PLAN_V5_MAX_CRITERIA:
+            raise JobEvaluationPlanContentError(
+                "轻量评价点超过 30 项技术安全上限",
+                code="JOB_EVALUATION_PLAN_V5_TOO_MANY_CRITERIA",
+            )
+
+        evaluation_fields = snapshot.evaluation_fields
+        if evaluation_fields is None:
+            raise JobEvaluationPlanContentError(
+                "5.0 input snapshot 缺少评价字段",
+                code="JOB_EVALUATION_PLAN_V5_INPUT_REQUIRED",
+            )
+        field_text = evaluation_fields.model_dump(mode="json")
+        parsed: list[tuple[tuple[Any, ...], V5CriterionItem]] = []
+        seen: set[str] = set()
+        for raw in raw_criteria:
+            criterion = self._validate_v5_criterion_candidate(
+                raw,
+                field_text,
+            )
+            signature = json.dumps(
+                criterion.model_dump(mode="json", exclude={"criterion_id"}),
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            )
+            if signature in seen:
+                continue
+            seen.add(signature)
+            parsed.append(
+                (
+                    self._v5_criterion_sort_key(
+                        criterion,
+                        field_text,
+                    ),
+                    criterion,
+                )
+            )
+        if not parsed:
+            raise JobEvaluationPlanContentError(
+                "模型没有生成可用的轻量评价点",
+                code="JOB_EVALUATION_PLAN_V5_NO_CRITERIA",
+            )
+        parsed.sort(key=lambda item: item[0])
+        criteria = [
+            criterion.model_copy(
+                update={"criterion_id": f"criterion:{index:04d}"}
+            )
+            for index, (_, criterion) in enumerate(parsed, start=1)
+        ]
+        warnings: list[str] = []
+        if len(criteria) < 5:
+            warnings.append("limited_basis")
+        elif len(criteria) > 12:
+            warnings.append("many_criteria")
+        return criteria, warnings
+
+    def _validate_v5_criterion_candidate(
+        self,
+        raw: Any,
+        field_text: Mapping[str, str | None],
+    ) -> V5CriterionItem:
+        required_fields = {
+            "name",
+            "importance",
+            "description",
+            "screening_focus",
+            "sources",
+        }
+        if not isinstance(raw, dict) or set(raw) != required_fields:
+            raise JobEvaluationPlanContentError(
+                "5.0 评价点字段不完整或包含模型无权生成的字段",
+                code="JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT",
+            )
+        try:
+            criterion = V5CriterionItem.model_validate(
+                {
+                    **raw,
+                    "criterion_id": "criterion:0001",
+                    "origin": "ai_from_jd",
+                    "hr_note": None,
+                }
+            )
+        except (ValidationError, TypeError, ValueError):
+            raise JobEvaluationPlanContentError(
+                "5.0 评价点未通过严格字段校验",
+                code="JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT",
+            ) from None
+        source_texts: list[str] = []
+        for source in criterion.sources:
+            complete_field = field_text.get(source.source_field)
+            if not isinstance(complete_field, str) or (
+                source.source_quote not in complete_field
+            ):
+                raise JobEvaluationPlanContentError(
+                    "评价点来源不能在对应冻结 JD 字段中定位",
+                    code="JOB_EVALUATION_PLAN_V5_SOURCE_NOT_FOUND",
+                )
+            source_texts.append(source.source_quote)
+        combined_output = "\n".join(
+            (
+                criterion.name,
+                criterion.description,
+                criterion.screening_focus,
+                *source_texts,
+            )
+        )
+        if self._V5_PROMPT_POLLUTION_RE.search(combined_output):
+            raise JobEvaluationPlanContentError(
+                "评价点包含 Prompt 污染指令",
+                code="JOB_EVALUATION_PLAN_V5_PROMPT_POLLUTION",
+            )
+        if self._V5_SENSITIVE_RE.search(combined_output):
+            raise JobEvaluationPlanContentError(
+                "评价点使用了敏感或受保护信息",
+                code="JOB_EVALUATION_PLAN_V5_SENSITIVE_CRITERION",
+            )
+        if self._V5_RECRUITMENT_DECISION_RE.search(combined_output):
+            raise JobEvaluationPlanContentError(
+                "评价点包含模型无权作出的招聘决定",
+                code="JOB_EVALUATION_PLAN_V5_RECRUITMENT_DECISION",
+            )
+        expected_importance = self._v5_expected_importance(criterion)
+        if criterion.importance is not expected_importance:
+            raise JobEvaluationPlanContentError(
+                "评价点 importance 与 JD 原文强弱或来源字段不一致",
+                code="JOB_EVALUATION_PLAN_V5_IMPORTANCE_MISMATCH",
+            )
+        if not self._v5_candidate_is_supported(criterion, source_texts):
+            raise JobEvaluationPlanContentError(
+                "评价点包含 JD 来源不能支持的新增要求",
+                code="JOB_EVALUATION_PLAN_V5_UNSUPPORTED_CRITERION",
+            )
+        return criterion
+
+    def _v5_expected_importance(
+        self,
+        criterion: V5CriterionItem,
+    ) -> EvaluationItemPriority:
+        quotes = "\n".join(source.source_quote for source in criterion.sources)
+        if self._has_v4_priority_signal(quotes, strength="strong"):
+            return EvaluationItemPriority.REQUIRED
+        if self._has_v4_priority_signal(quotes, strength="weak"):
+            return EvaluationItemPriority.PREFERRED
+        source_fields = {source.source_field for source in criterion.sources}
+        if "candidate_requirements" in source_fields:
+            return EvaluationItemPriority.REQUIRED
+        if "preferred_qualifications" in source_fields:
+            return EvaluationItemPriority.PREFERRED
+        return EvaluationItemPriority.GENERAL
+
+    def _v5_candidate_is_supported(
+        self,
+        criterion: V5CriterionItem,
+        source_texts: list[str],
+    ) -> bool:
+        source = self._v5_support_normalize("\n".join(source_texts))
+        candidate_text = "\n".join(
+            (criterion.name, criterion.description, criterion.screening_focus)
+        )
+        for token in re.findall(r"[A-Za-z][A-Za-z0-9+#./-]{1,}", candidate_text):
+            lowered = token.casefold()
+            if lowered in self._V5_GENERIC_ASCII_TOKENS:
+                continue
+            if lowered not in source:
+                return False
+        for number_requirement in re.findall(
+            r"\d+(?:\.\d+)?\s*(?:年|个月|月|级|%|人)",
+            candidate_text,
+        ):
+            if self._v5_support_normalize(number_requirement) not in source:
+                return False
+        candidate_lower = candidate_text.casefold()
+        for marker in self._V5_EXPLICIT_REQUIREMENT_MARKERS:
+            if marker in candidate_lower and marker not in source:
+                return False
+
+        name = criterion.name
+        for term in self._V5_GENERIC_NAME_TERMS:
+            name = name.replace(term, "")
+        normalized_name = self._v5_support_normalize(name)
+        han = "".join(re.findall(r"[\u4e00-\u9fff]", normalized_name))
+        if len(han) >= 2 and not any(
+            han[index : index + 2] in source for index in range(len(han) - 1)
+        ):
+            return False
+        return bool(normalized_name)
+
+    @staticmethod
+    def _v5_support_normalize(value: str) -> str:
+        return "".join(
+            character.casefold()
+            for character in value
+            if character.isalnum() or "\u4e00" <= character <= "\u9fff"
+        )
+
+    def _v5_criterion_sort_key(
+        self,
+        criterion: V5CriterionItem,
+        field_text: Mapping[str, str | None],
+    ) -> tuple[Any, ...]:
+        field_order = {
+            "job_responsibilities": 0,
+            "candidate_requirements": 1,
+            "preferred_qualifications": 2,
+        }
+        locations = []
+        for source in criterion.sources:
+            complete_field = field_text[source.source_field] or ""
+            locations.append(
+                (
+                    field_order[source.source_field],
+                    complete_field.find(source.source_quote),
+                    source.source_quote,
+                )
+            )
+        return (
+            min(locations),
+            self._v5_support_normalize(criterion.name),
+            json.dumps(
+                criterion.model_dump(mode="json", exclude={"criterion_id"}),
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+        )
 
     async def build_v4_plan_content(
         self,
@@ -2006,6 +2485,47 @@ class JobEvaluationPlanService:
         except (AttributeError, ValidationError, TypeError, ValueError):
             raise JobEvaluationPlanContentError(
                 "五段式岗位输入不符合 4.0 Schema",
+                code="JOB_EVALUATION_PLAN_INVALID_JOB_INPUT",
+            ) from None
+
+    def build_v5_input_snapshot(self, job: Job) -> JobEvaluationPlanInputSnapshot:
+        """Build a pure 5.0 snapshot without activating API persistence."""
+        try:
+            context = {
+                "title": self._normalize_fingerprint_text(job.title),
+                "department": self._normalize_optional_text(job.department),
+                "job_background": self._normalize_optional_text(job.job_background),
+            }
+            evaluation_fields = {
+                "job_responsibilities": self._normalize_optional_text(
+                    job.job_responsibilities
+                ),
+                "candidate_requirements": self._normalize_optional_text(
+                    job.candidate_requirements
+                ),
+                "preferred_qualifications": self._normalize_optional_text(
+                    job.preferred_qualifications
+                ),
+            }
+            source_units = self.build_five_section_source_units(
+                evaluation_fields,
+                max_source_units=JOB_EVALUATION_PLAN_V4_MAX_SOURCE_UNITS,
+            )
+            return JobEvaluationPlanInputSnapshot.model_validate(
+                {
+                    "schema_version": "5.0",
+                    "job_context": context,
+                    "evaluation_fields": evaluation_fields,
+                    "source_units": [
+                        unit.model_dump(mode="json") for unit in source_units
+                    ],
+                }
+            )
+        except JobEvaluationPlanContentError:
+            raise
+        except (AttributeError, ValidationError, TypeError, ValueError):
+            raise JobEvaluationPlanContentError(
+                "五段式岗位输入不符合 5.0 Schema",
                 code="JOB_EVALUATION_PLAN_INVALID_JOB_INPUT",
             ) from None
 

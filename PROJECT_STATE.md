@@ -8,7 +8,7 @@
 
 - 项目正在建设新版招聘主链，旧 React + FastAPI + SQLite + Mock LLM 演示系统已经退役。
 - 阶段 4“简历上传与原文提取”和阶段 5“AI 结构化草稿”已经完成；阶段 6 五段式 JD 整改的 6R-A—6R-D 已全部完成，自动化、真实 PostgreSQL/API 和 Microsoft Playwright 三档浏览器验收通过。
-- 阶段 7”Application 与 AI 初筛底座”已有 Application、Resume 隔离、异步运行、幂等、当前成功报告、固定投递时间、React 报告和 HR 决策历史等可复用能力。4.0 正式 20 份计划质量只通过 `15/20`，因此 7R4-I/J 从未获准继续。用户随后重新确认产品目标，决定不再按 `RequirementFact + EvaluationCriterion` 做原子级 JD 拆解，改为 5.0”完整 JD + HR 可编辑轻量评价清单 + 独立简历报告”：通常约 5—12 个评价点、每项 0—10 分、AI 直接给总体 0—100 分、不采用权重、HR 保留最终决定。5.0 业务合同已经逐项确认并写入新权威设计；7R5-A 合同测试与离线基线和 7R5-B 计划 Schema/Model/migration 均已完成。当前 Alembic head 为 `a3b5c7d9e101`，全套 1039 测试通过、42 xfailed（严格）。当前唯一下一步为 7R5-C（单次计划生成 Prompt / Adapter / Service），待用户另行确认。
+- 阶段 7”Application 与 AI 初筛底座”已有 Application、Resume 隔离、异步运行、幂等、当前成功报告、固定投递时间、React 报告和 HR 决策历史等可复用能力。4.0 正式 20 份计划质量只通过 `15/20`，因此 7R4-I/J 从未获准继续。用户随后重新确认产品目标，决定不再按 `RequirementFact + EvaluationCriterion` 做原子级 JD 拆解，改为 5.0”完整 JD + HR 可编辑轻量评价清单 + 独立简历报告”：通常约 5—12 个评价点、每项 0—10 分、AI 直接给总体 0—100 分、不采用权重、HR 保留最终决定。5.0 业务合同已经逐项确认并写入新权威设计；7R5-A 合同测试与离线基线、7R5-B 计划 Schema/Model/migration 和 7R5-C 单次计划生成链均已完成。教学复盘后用户进一步确认 importance 以完整原文语义为主，任职要求或岗位职责中的明确强约束为 `required`，合法模糊项由程序 warning、HR 最终审核；7R5-C1 书面补充批次已写入权威设计，尚待明确确认后实施。当前 Alembic head 为 `a3b5c7d9e101`，最近全套 1056 测试通过、42 xfailed（严格）。当前不得进入 7R5-D。
 - 小步骤 9-I 已完成 20 次 JD 正式复验和 60 次下游真实诊断。18/18 正常 JD 可用、主要要求与结构化覆盖均为 100%，但 JD18 没有形成预期 `too_many_items`，因此 `step9_quality_gate_passed=false`，小步骤 9 仍未通过；下游诊断也仅有 9/20 至少一份合法报告、1/20 三次全部合法。
 - Application、Resume 隔离、HR 内部录入和 HR 决策等公共能力继续保留。
 - 旧 Rubric、五维权重、确定性评分、`unknown`、证据覆盖率、Python 加权总分和多报告历史方案已经废弃。
@@ -164,11 +164,11 @@ HR 阅读报告并独立作出通过 / 备选 / 淘汰决定
 
 ## 10. 当前工作区状态与风险
 
-- 当前分支是 `2lcj`，HEAD 为 `479738e62206062662994ee631394ee3dd7aee58`，与上游 `origin/2lcj` 同步。本轮开始时工作区干净；当前未提交修改仅为本次环境迁移说明和状态同步涉及的 `README.md`、本文件及阶段 7 当前设计，没有业务代码改动。
+- 当前分支是 `2lcj`，本轮基线 HEAD、`origin/2lcj` 和 merge-base 均为 `c67ec66d27e4b4cc7a431312a5d55bdaaa214938`，开始时工作区干净。当前未提交修改包括已完成的 7R5-C 计划 Prompt、Adapter 必要兼容、Service 纯生成、版本配置、专项测试和状态文档，以及本次仅新增的 7R5-C1 权威设计/状态门禁；没有 API、Model、migration、Screening、React 或历史质量结果改动。
 - 项目由旧电脑压缩迁移后，旧 `.venv` 因保存 `C:\Users\GYAI\...Python311` 绝对路径而失效。本轮已用本机 Python 3.11.9 原地重建 `.venv`，安装 `backend/requirements.txt` 和本地测试依赖 pytest 9.1.1；`.venv` 继续由 Git 忽略，不提交、不再跨电脑复制。
 - 本机 PostgreSQL Docker 卷原停在 `b4e8c2d7f913`，且保留 1 个 Job、2 个 Candidate、2 个 Resume 和 1 个 3.0 failed 计划。升级前已生成 `data/backups/pre_a3b5c7d9e101_20260826.dump`，SHA-256 为 `F8F8AD2EB6C3E6D399562D7DDC2146C262A87A4D9BDBC85FD858325C0D962C4C`；随后只执行既有向前迁移至 `a3b5c7d9e101`，业务表计数和旧计划保持不变。
 - 4.0 的 7R4-A—7R4-H2 均停在各自历史停止点；HR2 定向为 `6/6`，正式 H2 为 `15/20` 且失败。7R4-I/J 永久停止，不再通过追加 4.0 样本整改继续推进；所有既有结果只作历史证据。
-- 用户已经逐项确认 5.0 的产品目标、轻量评价清单、无权重评分、单人/最多 5 人批量、状态、审计、隐私和验收标准。5.0 权威设计和 7R5-A—7R5-J 顺序已获整体确认，7R5-A 与 7R5-B 已分别确认并完成；Schema、Model 和 PostgreSQL 已能兼容 5.0，生成 Prompt/Adapter/Service、API、Screening 和 React 仍未切换到完整 5.0 链路。
+- 用户已经逐项确认 5.0 的产品目标、轻量评价清单、无权重评分、单人/最多 5 人批量、状态、审计、隐私和验收标准。5.0 原权威设计和 7R5-A—7R5-J 顺序已获整体确认，7R5-A、7R5-B 与 7R5-C 已分别确认并完成；Schema、Model、PostgreSQL 兼容层和纯单次生成 Prompt/Adapter/Service 已具备 5.0 能力。用户随后确认 importance 原文语义与 HR 复核新规则，第 26A 节 7R5-C1 书面顺序已经补充但尚未获得实施确认；API、业务落库、Screening 和 React 仍未切换到完整 5.0 链路。
 - 用户已最终确认并完成小步骤 9 的 9-A—9-I。此前助手误解用户意图产生的独立 20 份 JD 结果继续保留为历史诊断；正式 9-I 已使用新路径独立落盘，没有复用或覆盖该记录。JD18 的正式边界失败和当时返回阶段 6 整改的决定均为历史事实；当前新增实现依据已经切换为 5.0 设计。
 - 用户已最终确认五段式 JD 业务合同和 6R-A—6R-D 顺序；四个批次已经全部完成并通过 6R-D 验收。
 - 用户明确授权无备份删除唯一 Job #19；该历史操作不能从当前数据库直接恢复。7R4-B开始时正式开发库revision为 `e4c7a1b9d632`，四张直接相关表计数均为0；7R4-E结束时`current=head=d6f4a2b8e913`、`alembic check`通过，相关业务表均为0。d6已在正式空库完成真实`downgrade c7 -> upgrade d6`往返，没有写入或删除业务行。
@@ -186,12 +186,14 @@ HR 阅读报告并独立作出通过 / 备选 / 淘汰决定
 - HR 决策始终独立，敏感属性和自动招聘决定为零容忍；
 - 真实验收为 10 份新鲜 JD、20 组新鲜 JD/Resume、其中 5 组各 3 次稳定性，以及真实 PostgreSQL/API/浏览器。
 
-7R5-A”合同测试与离线基线”和 7R5-B”计划 Schema / Model / migration”均已完成。数据库和代码迁移头为 `a3b5c7d9e101`；1.0—4.0 历史计划保持只读兼容，没有回填或改写旧行。最新全量结果为 1039 passed、42 xfailed（严格）、419 subtests passed、0 failures；真实 DeepSeek 调用 0。
+7R5-A”合同测试与离线基线”、7R5-B”计划 Schema / Model / migration”和 7R5-C”单次计划生成链”均已完成。数据库和代码迁移头为 `a3b5c7d9e101`；1.0—4.0 历史计划保持只读兼容，没有回填或改写旧行。5.0 纯生成链现在能用一次业务模型调用生成候选，由程序补充版本和稳定 ID，并校验来源、数量与安全边界；基础设施最多额外重试一次，内容错误不重试。复盘发现当前程序会把 importance 模型/规则不一致整单失败，并将无明确语气的任职要求机械回退为 `required`，尚未满足新确认的原文语义与 HR warning 合同。最近全量结果仍为 1056 passed、42 xfailed（严格）、419 subtests passed、0 failures；真实 DeepSeek 调用 0。
 
-当前唯一下一步是等待用户确认 7R5-C”单次计划生成链”。在获得该批次的单独确认前，不得修改计划 Prompt、Adapter、生成 Service 或配置版本，也不得提前进入 7R5-D、调用真实 DeepSeek、修改 API、Screening 或 React。
+当前唯一下一步是等待用户明确确认权威设计第 26A 节 7R5-C1”importance 原文语义与 HR 复核 warning 补充”。确认后只实施该批的 Prompt/最小 Schema/纯 Service/版本/专项测试和离线验证，完成后再次停止；在此之前及该批实施期间不得把 5.0 接入 API 或正式业务写入，不得实现 HR 编辑/确认/并发版本，也不得进入 7R5-D、Screening、React 或真实 DeepSeek。
 
 ## 12. 最近验证基线
 
+- 2026-08-26 用户确认 importance 业务方向后，只完成权威设计第 5.3/5.5/6/7/18/19 节合同补充、新增第 26A 节 7R5-C1 书面实施顺序并同步本状态文件；没有修改 Prompt、Schema、Adapter、Service、测试、API、Model、migration、Screening、React 或数据库。当前仅证明实施门禁和停止点已经写清，不能证明 warning 行为已实现；唯一下一步是等待用户确认 7R5-C1。
+- 2026-08-26 7R5-C 单次计划生成链已完成并停止。新增 5.0 Prompt、Adapter 单请求边界、Service 纯生成与确定性校验、独立版本配置和 17 个专项合同用例；覆盖正常、少量、复杂、超过 30 项、稳定 ID、程序版本字段、完整允许 JD、Prompt 污染、敏感信息、自动招聘决定、擅自新增、来源错误、超时成功重试、第二次超时停止、非法 JSON 和内容不重试。专项与配置合跑为 28 passed、16 subtests passed；受影响回归为 213 passed、6 xfailed、59 subtests passed；全量后端为 1056 passed、42 xfailed、419 subtests passed、0 failures，用时 96.91 秒。静态扫描单跑为 20 passed、2 xfailed；`py_compile` 与 `git diff --check` 通过。全部模型路径使用 Fake 或 `AsyncMock`，真实 DeepSeek 调用 0；没有 API、Model、migration、Screening、React、PostgreSQL 业务数据或 4.0 历史质量结果改动。这证明离线程序合同和既有回归稳定，不能证明真实模型质量、费用、API/数据库、HR 编辑确认、并发、初筛或浏览器链路。
 - 2026-08-26 跨电脑开发环境恢复完成：旧 `.venv` 的绝对路径指向旧用户，已用本机 Python 3.11.9 重建，`pip check` 为 `No broken requirements found`，FastAPI/SQLAlchemy/Pydantic/asyncpg/Alembic 核心导入和版本检查通过，本地测试依赖为 pytest 9.1.1。本机 Docker Desktop 已恢复，PostgreSQL/Redis/Chroma 运行；开发库在备份后由 `b4e8c2d7f913` 向前升级至 `a3b5c7d9e101`，`alembic current=head`、`alembic check` 通过，升级前后业务表计数不变。后端全量为 1039 passed、42 xfailed、419 subtests passed、2 warnings、0 failures，用时 94.73 秒；前端 19 个 Node 测试脚本、TypeScript 和 Vite 生产构建通过。Docker Hub IPv6 拉取前后端基础镜像失败，不影响本机 `.venv`、已有基础设施容器和本轮测试，但尚未重新验证全量 Docker 镜像构建。
 - 2026-08-26 7R5-B 计划 Schema/Model/migration 已完成并停止。新增 revision `a3b5c7d9e101`（`down_revision=d6f4a2b8e913`），让 1.0—5.0 计划并存，新增 `v5_criteria`、`edit_version`、`confirmed_at` 和对应约束，不回填、不改写旧 1.0—4.0 行。批次完成时全套测试为 1039 passed、42 xfailed（strict=True，属于 7R5-D/E/F）、0 failures，真实 DeepSeek 调用 0。
 - 2026-08-26 7R5-A 合同测试与离线基线已完成并停止。新增 7 个测试文件和 1 个 fixture 文件，共 127 个 v5.0 合同测试：70 passed、57 xfailed（strict=True）、0 failures、0 errors。所有 xfail 红灯均来自缺少 5.0 生产能力，0 来自 import 错误、测试语法或 fixture 路径。既有 4.0 回归 954 passed、0 failures。`py_compile` 全部新文件通过，`git diff --check` 通过。历史 H2 正式 SHA-256 `b416809973ef0013a125736d8acafc024b610882608967f42c6ab10fc8a20b50`、HR2 定向 SHA-256 `4b7c44d4874f3ece189b50d4488d305a1161dbbcdf291277de45945844030ce9` 均不变。真实 DeepSeek 调用 0、生产代码修改 0、Alembic `current=head=d6f4a2b8e913`。

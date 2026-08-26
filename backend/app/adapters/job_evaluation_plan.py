@@ -20,11 +20,13 @@ from app.core.llm import get_job_evaluation_plan_llm_client
 from app.prompts.job_evaluation_plan import (
     JOB_EVALUATION_CRITERION_GROUPING_PROMPT_VERSION,
     JOB_EVALUATION_PLAN_PROMPT_VERSION,
+    JOB_EVALUATION_PLAN_V5_PROMPT_VERSION,
     JOB_REQUIREMENT_COVERAGE_REVIEW_PROMPT_VERSION,
     JOB_REQUIREMENT_FACT_EXTRACTION_PROMPT_VERSION,
     JOB_REQUIREMENT_LOCAL_REPAIR_PROMPT_VERSION,
     build_evaluation_criterion_grouping_messages,
     build_job_evaluation_plan_messages,
+    build_job_evaluation_plan_v5_messages,
     build_requirement_coverage_review_messages,
     build_requirement_fact_extraction_messages,
     build_requirement_local_repair_messages,
@@ -37,6 +39,7 @@ from app.schemas.job_evaluation_plan import (
     JOB_EVALUATION_PLAN_V4_MAX_OUTPUT_TOKENS,
     JobEvaluationCriterionGroupingInput,
     JobEvaluationPlanAIInputV3,
+    JobEvaluationPlanInputSnapshot,
     JobRequirementCoverageReviewInput,
     JobRequirementFactExtractionInput,
     JobRequirementLocalRepairInput,
@@ -297,6 +300,79 @@ class DeepSeekJobEvaluationPlanAdapter:
             ) from None
         return self._read_v4_response(response, role)
 
+    async def generate_v5(
+        self,
+        generation_input: dict[str, Any],
+    ) -> JobEvaluationPlanAdapterResult:
+        """Run the one-call 5.0 lightweight-plan generation boundary."""
+        expected_versions = (
+            JOB_EVALUATION_PLAN_V5_PROMPT_VERSION,
+            "5.0",
+            "5.0",
+        )
+        configured_versions = (
+            self.settings.JOB_EVALUATION_PLAN_V5_PROMPT_VERSION,
+            self.settings.JOB_EVALUATION_PLAN_V5_AI_SCHEMA_VERSION,
+            self.settings.JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION,
+        )
+        if configured_versions != expected_versions:
+            raise JobEvaluationPlanConfigurationError(
+                "岗位评价计划 5.0 Prompt、AI Schema 与计划 Schema 版本不一致"
+            )
+        try:
+            validated_input = JobEvaluationPlanInputSnapshot.model_validate(
+                generation_input
+            )
+            if validated_input.schema_version != "5.0":
+                raise ValueError("5.0 Adapter 只接受 5.0 input snapshot")
+        except (ValidationError, TypeError, ValueError):
+            raise JobEvaluationPlanInputError(
+                "岗位评价计划 5.0 AI 输入未通过 Schema 校验"
+            ) from None
+        payload = validated_input.model_dump(mode="json")
+        serialized = json.dumps(
+            payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        if len(serialized) > self.settings.JOB_EVALUATION_PLAN_MAX_INPUT_CHARS:
+            raise JobEvaluationPlanInputError(
+                "岗位评价计划 5.0 单次输入超过技术安全边界"
+            )
+
+        try:
+            response = await self.client.chat.completions.create(
+                model=self.settings.JOB_EVALUATION_PLAN_MODEL,
+                messages=build_job_evaluation_plan_v5_messages(payload),
+                response_format={"type": "json_object"},
+                max_tokens=self.settings.JOB_EVALUATION_PLAN_MAX_OUTPUT_TOKENS,
+                temperature=0.1,
+                stream=False,
+                extra_body={"thinking": {"type": "disabled"}},
+            )
+        except APITimeoutError:
+            raise JobEvaluationPlanTimeoutError("岗位评价计划模型调用超时") from None
+        except AuthenticationError:
+            raise JobEvaluationPlanAuthenticationError("DeepSeek 认证失败") from None
+        except RateLimitError:
+            raise JobEvaluationPlanRateLimitError("DeepSeek 请求达到速率上限") from None
+        except InternalServerError:
+            raise JobEvaluationPlanServiceUnavailableError(
+                "DeepSeek 服务暂时不可用"
+            ) from None
+        except APIConnectionError:
+            raise JobEvaluationPlanServiceUnavailableError(
+                "无法连接 DeepSeek 服务"
+            ) from None
+        except APIStatusError as exc:
+            self._raise_status_error(exc)
+        except Exception:
+            raise JobEvaluationPlanUpstreamError(
+                "DeepSeek 返回未识别的上游错误"
+            ) from None
+        return self._read_v5_response(response)
+
     @staticmethod
     def _raise_status_error(exc: APIStatusError) -> None:
         if exc.status_code in {401, 403}:
@@ -414,6 +490,52 @@ class DeepSeekJobEvaluationPlanAdapter:
             output_tokens=response_audit["output_tokens"],
         )
 
+    def _read_v5_response(self, response: Any) -> JobEvaluationPlanAdapterResult:
+        response_audit = self._response_audit(response)
+        choices = getattr(response, "choices", None)
+        if not choices:
+            raise JobEvaluationPlanEmptyResponseError(
+                "DeepSeek 未返回候选结果", **response_audit
+            )
+        choice = choices[0]
+        finish_reason = getattr(choice, "finish_reason", None)
+        if finish_reason != "stop":
+            message = (
+                "DeepSeek 输出达到长度上限，结果可能被截断"
+                if finish_reason == "length"
+                else "DeepSeek 输出未正常完成"
+            )
+            raise JobEvaluationPlanResponseInterruptedError(
+                message, **response_audit
+            )
+        message = getattr(choice, "message", None)
+        content = getattr(message, "content", None)
+        if not isinstance(content, str) or not content.strip():
+            raise JobEvaluationPlanEmptyResponseError(
+                "DeepSeek 返回了空内容", **response_audit
+            )
+        try:
+            payload = json.loads(
+                content,
+                object_pairs_hook=self._object_without_duplicate_keys,
+            )
+            if not isinstance(payload, dict):
+                raise TypeError("DeepSeek 5.0 响应顶层必须是 JSON 对象")
+        except (json.JSONDecodeError, TypeError, ValueError):
+            raise JobEvaluationPlanInvalidResponseError(
+                "DeepSeek 5.0 返回内容不是合法的唯一键 JSON 对象",
+                **response_audit,
+            ) from None
+        return JobEvaluationPlanAdapterResult(
+            content=content,
+            model=response_audit["model"] or self.settings.JOB_EVALUATION_PLAN_MODEL,
+            finish_reason=finish_reason,
+            input_tokens=response_audit["input_tokens"],
+            cache_hit_input_tokens=response_audit["cache_hit_input_tokens"],
+            cache_miss_input_tokens=response_audit["cache_miss_input_tokens"],
+            output_tokens=response_audit["output_tokens"],
+        )
+
     def _response_audit(self, response: Any) -> dict[str, Any]:
         choices = getattr(response, "choices", None)
         choice = choices[0] if choices else None
@@ -465,6 +587,7 @@ class FakeJobEvaluationPlanAdapter:
         self._outcomes = list(outcomes)
         self.calls: list[dict[str, Any]] = []
         self.v4_calls: list[dict[str, Any]] = []
+        self.v5_calls: list[dict[str, Any]] = []
 
     async def extract(
         self,
@@ -484,6 +607,18 @@ class FakeJobEvaluationPlanAdapter:
         generation_input: dict[str, Any],
     ) -> JobEvaluationPlanAdapterResult:
         self.v4_calls.append({"role": role, "input": generation_input})
+        if not self._outcomes:
+            raise AssertionError("Fake Adapter 没有可返回的预设结果")
+        outcome = self._outcomes.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome
+
+    async def generate_v5(
+        self,
+        generation_input: dict[str, Any],
+    ) -> JobEvaluationPlanAdapterResult:
+        self.v5_calls.append(generation_input)
         if not self._outcomes:
             raise AssertionError("Fake Adapter 没有可返回的预设结果")
         outcome = self._outcomes.pop(0)

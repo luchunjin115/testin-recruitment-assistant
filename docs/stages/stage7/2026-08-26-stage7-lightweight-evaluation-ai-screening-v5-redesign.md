@@ -1,7 +1,7 @@
 # 阶段 7：轻量评价清单驱动的 AI 初筛 5.0 重设计
 
 > 日期：2026-08-26  
-> 状态：7R5-A（合同测试与离线基线）和 7R5-B（计划 Schema/Model/migration）已完成；Alembic head=`a3b5c7d9e101`；全套 1039 测试通过、42 xfailed（严格）；当前唯一下一步为 7R5-C，待用户另行确认
+> 状态：7R5-A（合同测试与离线基线）、7R5-B（计划 Schema/Model/migration）和 7R5-C（单次计划生成链）已完成；用户已确认 importance 改为“完整原文语气为主、五段式字段作一致性信号、HR 最终审核”，7R5-C1 补充批次的书面实施顺序待确认；Alembic head=`a3b5c7d9e101`；全套 1056 测试通过、42 xfailed（严格）；当前不得进入 7R5-D
 > 当前权威性：本文件替代 4.0 作为阶段 7 新增实现的唯一业务合同。4.0、3.0 和更早资料只保留历史实现与质量证据，不得继续指导新开发。  
 > 一句话目标：不再追求把 JD 拆成大量“原子事实”，而是让 AI 基于完整 JD 生成一份 HR 可编辑、可追溯的轻量评价清单，再用同一把尺子独立评价每份简历。
 
@@ -141,11 +141,17 @@ source_quote           可在冻结 JD 原文中定位的短引用
 
 ### 5.3 importance 的含义
 
-- `required`：JD 明确表达为必须、至少、需要具备或同等强约束；
-- `preferred`：JD 明确表达优先、加分、熟悉更佳；
-- `general`：职责匹配、通用能力或没有明确强弱信号的主要判断点。
+- `required`：完整 JD 原文明确定义为必须、至少、需要具备、硬性要求、不可缺少或同等强约束；任职要求或岗位职责中的明确强约束都属于 `required`；
+- `preferred`：完整 JD 原文明确定义为优先、加分、熟悉更佳、非必须、有则更好或同等弱约束；
+- `general`：职责匹配、通用能力或完整原文没有明确强弱信号的主要判断点。
 
 importance 只帮助 AI 和 HR理解重要程度，不是权重，不参与数学加权。
+
+importance 的首要判断依据是评价点全部来源及完整 JD 上下文中的真实语义，不允许只根据关键词或 `source_field` 机械决定。模型负责提出 importance；程序负责校验枚举、来源和明显一致性信号，但不得把简单词表冒充完整语义理解，也不得静默覆盖模型建议。
+
+五段式字段继续提供一致性信号：岗位职责通常对应 `general`、任职要求通常对应 `required`、加分项通常对应 `preferred`。如果原文明确语气与字段位置不一致、同一评价点同时包含强弱信号、包含否定/转折/可放宽语义，或模型建议与程序可识别的明确信号冲突，内容在来源、安全和结构均合法时不得整单失败；程序保留模型建议并为该稳定 `criterion_id` 生成 `importance_review_required` warning，交由 HR 对照原文修改或明确确认。
+
+`importance_review_required` 是业务复核提示，不是安全放行：来源不存在、擅自新增要求、敏感内容、Prompt 污染、招聘决定越界、非法 JSON/Schema 和超过技术安全上限仍按内容错误整单失败，不能借 HR 审核绕过。
 
 ### 5.4 来源和 HR 补充规则
 
@@ -167,6 +173,8 @@ importance 只帮助 AI 和 HR理解重要程度，不是权重，不参与数�
 - 确认清单可用于初筛。
 
 AI 只提供建议，不自动确认，不在 HR 不知情时修改 ready 清单。
+
+HR 审核 `pending_confirmation` 时必须能够同时看到 importance、对应五段式字段、JD 原文和 `importance_review_required`。HR 可以修改 importance，也可以在读过提示后明确保留当前建议；整份计划确认本身即表示 HR 已审核当前版本的全部 warning。仅修改 importance 且评价主题仍受原引用支持时可以保持 `ai_from_jd`，由编辑版本审计记录 HR 修改；只有修改后不再受原引用支持时才必须转为 `hr_added` 或重新绑定真实来源。
 
 ## 6. 评价计划状态和版本
 
@@ -192,6 +200,7 @@ JD 评价输入改变或被新版本替代 → outdated
 6. 仅修改非评价内容不得让计划过期。
 7. 同一 Job 最多一个 current 计划；历史版本不可删除或篡改。
 8. 正在生成时发生 JD 变化，迟到结果只能成为失败或历史记录，不能成为 current。
+9. `pending_confirmation` 可以携带 `importance_review_required`；保存编辑后按当前内容重新计算 warning。HR 可以消除 warning，也可以在仍有 warning 时明确确认当前版本，确认动作表示对当前版本全部 warning 的整体审核，不设置隐蔽的自动确认。
 
 ## 7. 计划生成模型边界
 
@@ -199,15 +208,15 @@ JD 评价输入改变或被新版本替代 → outdated
 
 调用责任：
 
-- 模型负责理解语义、聚合主要判断点、给出名称/描述/初筛重点和原文引用；
-- Service 负责版本字段、稳定 ID、来源定位、去重、安全上限、指纹、状态、事务和迟到保护；
+- 模型负责理解完整原文语义、聚合主要判断点、给出 importance 建议、名称/描述/初筛重点和原文引用；
+- Service 负责版本字段、稳定 ID、来源定位、去重、安全上限、明显 importance 一致性 warning、指纹、状态、事务和迟到保护；Service 不得静默改写模型 importance，也不得把合法的 importance 模糊项当作整单内容失败；
 - Adapter 只负责模型 API、严格 JSON 解析、重复键、finish reason、token/费用和基础设施错误分类；
 - 固定 `schema_version` 等程序合同由程序补充，不能要求模型随机背诵。
 
 重试规则：
 
 - 网络超时、限流和模型 5xx 最多额外技术重试一次；
-- 认证、配额、非法 JSON、Schema、来源、敏感内容和业务内容错误不自动重试；
+- 认证、配额、非法 JSON、Schema、来源、敏感内容和业务内容错误不自动重试；合法的 importance 模糊或冲突只产生 warning，不触发重试；
 - 内容失败保存稳定错误，HR 可显式重新生成；
 - 不引入 4.0 的隐藏完整性复核、局部修复和归组调用。
 
@@ -432,6 +441,7 @@ outdated        页面语义；旧报告输入已变化
 - 新增、删除、合并、调整 importance；
 - AI 来源和“HR 补充”的明显区分；
 - 可展开查看 JD 原文引用；
+- `importance_review_required` 必须同时展示当前 importance、来源字段、原文和受控冲突原因，不能只显示笼统“请检查”；
 - 约 5—12 个的提示和多于 12 个的 warning；
 - 保存冲突、过期和迟到响应提示；
 - 明确确认后才变为 ready；
@@ -456,17 +466,18 @@ outdated        页面语义；旧报告输入已变化
 7R5 的 Fake/自动化至少覆盖：
 
 1. 轻量清单 Schema、约 5—12 提示、30 安全上限和来源定位；
-2. HR 新增、修改、删除、合并、保存、确认、版本冲突和 `hr_added` 来源语义；
-3. JD 改动使计划/报告过期，非评价内容变化不误伤；
-4. 旧 1.0—4.0 只读和 5.0 新生成隔离；
-5. 单人普通幂等、强制重评确认、并发唯一运行和迟到响应保护；
-6. 同岗位最多 5 人、跨岗位/重复/超量拒绝和批量部分失败；
-7. 每个评价点恰好一条 assessment、0—10 范围、总体 0—100 范围；
-8. 所有非零分有当前简历证据，0 分使用“未发现证据”语义；
-9. 敏感属性、自动招聘决定、未知评价点和严重方向矛盾被拒绝；
-10. current 成功替换、失败保留旧成功、输入变化和历史只读；
-11. HR 决策、反转、原因和 StageHistory；
-12. 明确扫描 5.0 运行路径中没有固定权重、权重字段和 Python 加权总分。
+2. 原文强/弱/无信号、任职要求与职责中的明确强约束、字段/语气冲突、否定/转折/可放宽、混合来源和模型 importance 偏差；合法模糊项形成稳定 warning 而不整单失败、不重试、不被程序静默改写；
+3. HR 新增、修改、删除、合并、保存、保留或消除 importance warning、确认、版本冲突和 `hr_added` 来源语义；
+4. JD 改动使计划/报告过期，非评价内容变化不误伤；
+5. 旧 1.0—4.0 只读和 5.0 新生成隔离；
+6. 单人普通幂等、强制重评确认、并发唯一运行和迟到响应保护；
+7. 同岗位最多 5 人、跨岗位/重复/超量拒绝和批量部分失败；
+8. 每个评价点恰好一条 assessment、0—10 范围、总体 0—100 范围；
+9. 所有非零分有当前简历证据，0 分使用“未发现证据”语义；
+10. 敏感属性、自动招聘决定、未知评价点和严重方向矛盾被拒绝；
+11. current 成功替换、失败保留旧成功、输入变化和历史只读；
+12. HR 决策、反转、原因和 StageHistory；
+13. 明确扫描 5.0 运行路径中没有固定权重、权重字段和 Python 加权总分。
 
 ## 20. 真实 AI 质量验收
 
@@ -565,12 +576,13 @@ outdated        页面语义；旧报告输入已变化
 
 ## 23. 5.0 实施批次总览
 
-> 本节完整实施顺序已获用户整体确认，7R5-A 与 7R5-B 已分别确认并完成。每一轮仍只能执行一个另行确认的批次并停止；当前不得跳过 7R5-C 直接进入 7R5-D。
+> 原实施顺序已获用户整体确认，7R5-A、7R5-B 与 7R5-C 已分别确认并完成。7R5-C 完成后的教学复盘发现 importance 硬失败语义无法发挥既定 HR 审核责任，用户已确认业务方向，新增 7R5-C1 书面补充批次。每一轮仍只能执行一个另行确认的批次并停止；当前必须先确认并完成 7R5-C1，不得直接进入 7R5-D。
 
 ```text
 7R5-A 合同测试与离线基线
 → 7R5-B 计划 5.0 Schema / Model / migration
 → 7R5-C 单次计划生成 Prompt / Adapter / Service
+→ 7R5-C1 importance 原文语义与 HR 复核 warning 补充
 → 7R5-D 计划编辑、确认、版本和 API
 → 7R5-E 5.0 报告 Schema / Prompt / Service
 → 7R5-F 单人、小批量、状态与 HR 决策接线
@@ -673,9 +685,46 @@ Alembic migration `a3b5c7d9e101`（`down_revision=d6f4a2b8e913`）已应用至�
 
 验证：Fake 正常/少量/复杂/>30/污染/来源错误/超时重试/内容不重试；现有回归和静态扫描。失败返回 Prompt/Adapter/Service 层。完成后停止，唯一下一步是 7R5-D。
 
+### 7R5-C 实际结果（2026-08-26 执行）
+
+5.0 单次计划生成链已在纯生成边界完成：Prompt 把完整允许范围 JD 声明为不可信数据并要求通常 5—12 项、最多 30 项；Adapter 每次 attempt 只发出一个 JSON 请求并保留严格 JSON/重复键/finish reason/基础设施错误分类；Service 在一次业务调用内完成版本字段、确定性排序与 `criterion:0001` 起的稳定 ID、逐字来源定位、`required/preferred/general` 复核、去重和安全拒绝。模型无权输出版本、ID、origin 或 HR 字段；简单岗位少于 5 项返回 `limited_basis`，复杂岗位多于 12 项返回 `many_criteria` 而不截断，原始输出超过 30 项直接按内容错误失败。
+
+重试边界已固定：网络超时、限流和服务端错误最多额外技术重试一次，仍计为一次业务调用；非法 JSON、未知字段、来源错误、importance 冲突、Prompt 污染、敏感信息、自动招聘决定和 JD 无法支持的新增要求不重试。5.0 独立配置版本为 Prompt `job_evaluation_plan_lightweight_v1`、AI Schema `5.0`、计划 Schema `5.0`，没有切换现有 4.0 API 入口。
+
+专项 5.0 生成合同为 17 passed；连同配置为 28 passed、16 subtests passed。受影响 Adapter/Service/3.0/4.0/Schema/静态扫描回归为 213 passed、6 xfailed、59 subtests passed；后端全量为 1056 passed、42 xfailed（strict=True，仍属于 7R5-D/E/F）、419 subtests passed、0 failures。静态扫描单跑为 20 passed、2 xfailed；`py_compile` 和 `git diff --check` 通过。全部模型路径只使用 Fake 或 `AsyncMock`，真实 DeepSeek 调用 0；未修改 API、Model、migration、Screening、React、PostgreSQL 业务数据或 4.0 历史质量结果。
+
+这些结果证明单次计划候选的程序合同、确定性校验和重试边界在离线输入下成立，也证明既有后端回归未被破坏；不能证明真实 DeepSeek 对 10 份冻结 JD 的语义聚合质量、稳定性、费用、API 落库、HR 编辑确认、并发版本、Screening、React 或真实端到端链路。上述未验证范围分别留给 7R5-D—7R5-J，当前必须停止。
+
+完成后的教学复盘进一步发现：本批实现会在模型 importance 与程序词表/字段回退不一致时整单失败，并把无明确语气的 `candidate_requirements` 机械回退为 `required`。这与第 5.3 节现已确认的“完整原文语义为主、HR 最终审核”不一致。该结果作为真实实现事实保留，不改写为已满足新合同；必须先完成下述 7R5-C1，才能进入 7R5-D。
+
+## 26A. 7R5-C1：importance 原文语义与 HR 复核 warning 补充
+
+依赖：7R5-C 已完成；用户已确认业务规则为“任职要求或岗位职责中的明确强约束是 `required`，明确弱约束是 `preferred`，无明确信号是 `general`，模型基于完整原文提出建议，HR 最终审核”；本节书面实施顺序另行获得明确确认。
+
+唯一目标：把合法的 importance 语义不确定性从“整单失败”改为“保留模型建议并生成稳定 HR 复核 warning”，同时保持来源、安全和擅自新增硬门禁不退让。
+
+通俗解释：AI 负责读懂原文并打草稿；程序不再用简单词表替 AI 武断改答案，只把看得见的矛盾圈出来；HR 对照原文修改或签字。
+
+允许修改：5.0 importance/review warning 所需的最小 Schema、计划 Prompt、计划 Adapter 的版本兼容、计划 Service 纯生成部分、配置/版本常量、7R5-C/C1 专项测试、本文和 `PROJECT_STATE.md`。链路位置为 Schema → Service → AI Adapter；不接 API，不落正式业务数据。
+
+禁止修改：JobEvaluationPlan 持久化 Model、migration、API 路由和事务、HR 编辑/确认实现、Screening、React、正式 PostgreSQL 业务数据、真实 DeepSeek、4.0 历史质量结果及 7R5-D 以后范围。
+
+固定交付：
+
+1. Prompt 明确要求模型结合评价点全部来源和完整 JD 上下文判断 importance，正确处理否定、转折、非必须、可放宽和混合语气；字段位置只作上下文和一致性信号。
+2. `required/preferred/general` 模型建议原样保留；程序不得静默改写。明确单向语气与模型建议不一致、强弱混合/否定/可放宽、明显字段/语气错位时，生成关联稳定 `criterion_id` 的受控 `importance_review_required` warning。
+3. 无明确强弱信号时 Prompt 目标为 `general`；模型给出其他值时生成 warning，不整单失败。
+4. importance warning 属于合法草稿的软问题：业务调用成功、内容不重试，可进入未来 `pending_confirmation`；warning 不代表自动确认，也不改变 `origin`。
+5. 来源不存在、来源字段错误、擅自新增、敏感信息、Prompt 污染、招聘决定、非法 JSON/Schema、模型越权字段和超过 30 项继续整单失败且内容不重试。
+6. Prompt/行为合同版本递增，旧 7R5-C 结果和 1.0—4.0 历史数据不改写；单次业务调用、基础设施最多额外重试一次、稳定 ID、5—12 提示和 30 上限保持不变。
+
+验证：只使用 Fake/Mock，至少覆盖任职要求强约束、岗位职责强约束、明确弱约束、无信号、否定/转折/可放宽、强弱混合、多来源、模型建议偏差、字段/语气错位、warning 稳定 criterion ID、软问题不失败/不重试，以及全部既有来源/敏感/擅增/>30 硬失败回归；再执行受影响回归、全量后端、静态扫描、`py_compile` 和 `git diff --check`。真实模型调用和费用固定为 0，结果只记录在本文和状态文档，不创建或覆盖质量结果 JSON。
+
+完成标志：新语义专项全绿，旧硬门禁没有降级，42 个后续严格 xfail 不因本批扩大，0 次真实调用；报告能证明离线 warning 和失败边界，不能证明真实模型语气判断质量或 HR 编辑体验。失败返回 Prompt/Schema/Service 责任层。本批完成后停止，唯一下一步是等待用户确认 7R5-D。
+
 ## 27. 7R5-D：计划编辑、确认、版本和 API
 
-依赖：7R5-C 完成且用户另行确认。
+依赖：7R5-C1 完成且用户另行确认。
 
 唯一目标：把 5.0 清单可靠落库，让 HR 能编辑并确认同一岗位的正式尺子。
 
@@ -811,6 +860,6 @@ Alembic migration `a3b5c7d9e101`（`down_revision=d6f4a2b8e913`）已应用至�
 
 ## 35. 当前停止点
 
-7R5-A 与 7R5-B 已分别获得授权并完成；5.0 合同测试、Schema、Model 和 migration 已落地，Alembic head 为 `a3b5c7d9e101`。完整生成链、API、Screening 和 React 尚未切换到 5.0，本阶段也尚未执行 5.0 真实 DeepSeek 质量验收。
+7R5-A、7R5-B 与 7R5-C 已分别获得授权并完成；5.0 合同测试、Schema、Model、migration 和纯单次生成链已落地，Alembic head 为 `a3b5c7d9e101`。7R5-C 完成后的教学复盘确认需要增加 importance 原文语义与 HR 复核 warning 补充；业务方向已由用户确认，第 26A 节实施顺序尚待用户基于书面合同另行确认。现有 API、PostgreSQL 业务写入、Screening 和 React 尚未切换到 5.0，本阶段也尚未执行 5.0 真实 DeepSeek 质量验收。
 
-当前唯一下一步是等待用户确认 7R5-C。确认后也只允许完成第 26 节规定的单次计划生成 Prompt / Adapter / Service 和离线验证，完成并汇报后必须再次停止；不得跳过 7R5-C 直接进入 7R5-D。
+当前唯一下一步是等待用户明确确认第 26A 节 7R5-C1。确认后也只允许完成该节规定的 Prompt/Schema/纯 Service warning 补充和离线验证，完成后必须再次停止；不得直接进入 7R5-D，也不得提前接线 API、数据库、Screening 或 React。

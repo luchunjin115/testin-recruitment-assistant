@@ -101,6 +101,21 @@ class Settings(BaseSettings):
         min_length=1,
         max_length=20,
     )
+    JOB_EVALUATION_PLAN_V5_PROMPT_VERSION: str = Field(
+        default="job_evaluation_plan_lightweight_v1",
+        min_length=1,
+        max_length=100,
+    )
+    JOB_EVALUATION_PLAN_V5_AI_SCHEMA_VERSION: str = Field(
+        default="5.0",
+        min_length=1,
+        max_length=20,
+    )
+    JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION: str = Field(
+        default="5.0",
+        min_length=1,
+        max_length=20,
+    )
     SCREENING_EVALUATION_ENABLED: bool = True
     SCREENING_EVALUATION_MODEL: str = Field(
         default="deepseek-v4-flash",
