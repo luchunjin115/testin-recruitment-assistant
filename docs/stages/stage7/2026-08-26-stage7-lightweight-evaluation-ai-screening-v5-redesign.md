@@ -1,7 +1,7 @@
 # 阶段 7：轻量评价清单驱动的 AI 初筛 5.0 重设计
 
 > 日期：2026-08-26  
-> 状态：7R5-A（合同测试与离线基线）、7R5-B（计划 Schema/Model/migration）和 7R5-C（单次计划生成链）已完成；用户已确认 importance 改为“完整原文语气为主、五段式字段作一致性信号、HR 最终审核”，7R5-C1 补充批次的书面实施顺序待确认；Alembic head=`a3b5c7d9e101`；全套 1056 测试通过、42 xfailed（严格）；当前不得进入 7R5-D
+> 状态：7R5-A（合同测试与离线基线）、7R5-B（计划 Schema/Model/migration）和 7R5-C（单次计划生成链）已完成；用户已确认 importance 改为“完整原文语气为主、五段式字段作一致性信号、HR 最终审核”，并确认 7R5-C1 主要采用“结构化 Prompt + 少量边界 Few-shot”改进模型判断，Schema/Service 只保留 warning 所需的最小兜底；补充批次的书面实施顺序待确认；Alembic head=`a3b5c7d9e101`；全套 1056 测试通过、42 xfailed（严格）；当前不得进入 7R5-D
 > 当前权威性：本文件替代 4.0 作为阶段 7 新增实现的唯一业务合同。4.0、3.0 和更早资料只保留历史实现与质量证据，不得继续指导新开发。  
 > 一句话目标：不再追求把 JD 拆成大量“原子事实”，而是让 AI 基于完整 JD 生成一份 HR 可编辑、可追溯的轻量评价清单，再用同一把尺子独立评价每份简历。
 
@@ -212,6 +212,16 @@ JD 评价输入改变或被新版本替代 → outdated
 - Service 负责版本字段、稳定 ID、来源定位、去重、安全上限、明显 importance 一致性 warning、指纹、状态、事务和迟到保护；Service 不得静默改写模型 importance，也不得把合法的 importance 模糊项当作整单内容失败；
 - Adapter 只负责模型 API、严格 JSON 解析、重复键、finish reason、token/费用和基础设施错误分类；
 - 固定 `schema_version` 等程序合同由程序补充，不能要求模型随机背诵。
+
+Prompt 结构固定按“唯一任务 → 输入数据边界 → 评价点生成规则 → importance 判断规则 → 来源与安全硬约束 → 输出格式 → 输出前静默自检”组织，避免把所有规则堆成一段连续文字。输出前静默自检只要求模型在形成最终 JSON 前核对来源、擅自新增、importance、敏感信息、招聘决定、数量上限和额外字段；不得要求或保存完整思维链、分析草稿或内部推理过程。
+
+5.0 可以使用少量 Few-shot（少样本输入/输出示例）帮助模型理解 importance 边界，但必须遵守：
+
+- 示例总量保持精简，目标为 3—5 个虚构、脱敏且与正式验收样本分离的开发示例；
+- 示例至少覆盖“职责中的明确强约束”“任职要求中的明确弱约束”“无明确强弱信号”“否定/转折/可放宽”和“多来源强弱混合”，不能只展示 `required`；
+- 示例只演示如何基于完整原文语义生成合法业务候选字段，不得引入 JD 外知识、模型版本字段、稳定 ID、warning、分数或招聘决定；
+- 后续第 20 节的 10 份新鲜 JD 和正式人工标签不得进入 Prompt 或 Few-shot，防止验收样本污染；
+- Few-shot 不能代替 Schema/Service 校验。模型建议仍可能出错，程序继续负责来源、安全、技术上限和 `importance_review_required` 最小兜底。
 
 重试规则：
 
@@ -479,6 +489,8 @@ outdated        页面语义；旧报告输入已变化
 12. HR 决策、反转、原因和 StageHistory；
 13. 明确扫描 5.0 运行路径中没有固定权重、权重字段和 Python 加权总分。
 
+Prompt 专项还必须静态验证结构化分区、3—5 个边界 Few-shot、示例类别平衡、正式质量样本未进入 Prompt、只允许输出业务候选字段，以及输出前自检不要求模型返回思维链。Fake/Mock 可以证明消息构造、Schema、重试和程序 warning/硬失败边界，不能证明 Few-shot 已提高真实模型语义质量；该效果只能由第 20 节的新鲜样本真实验收证明，不能用静态检查或固定 Fake 输出冒充。
+
 ## 20. 真实 AI 质量验收
 
 所有真实样本必须是未参与 Prompt 调整的新鲜、虚构或脱敏样本；人工标签在调用前冻结，运行后不得按模型答案改标签。
@@ -701,26 +713,43 @@ Alembic migration `a3b5c7d9e101`（`down_revision=d6f4a2b8e913`）已应用至�
 
 依赖：7R5-C 已完成；用户已确认业务规则为“任职要求或岗位职责中的明确强约束是 `required`，明确弱约束是 `preferred`，无明确信号是 `general`，模型基于完整原文提出建议，HR 最终审核”；本节书面实施顺序另行获得明确确认。
 
-唯一目标：把合法的 importance 语义不确定性从“整单失败”改为“保留模型建议并生成稳定 HR 复核 warning”，同时保持来源、安全和擅自新增硬门禁不退让。
+唯一目标：主要通过结构化 Prompt 和少量边界 Few-shot 提高模型对 importance 原文语义的判断质量，并把剩余合法不确定性从“整单失败”改为“保留模型建议并生成稳定 HR 复核 warning”，同时保持来源、安全和擅自新增硬门禁不退让。
 
 通俗解释：AI 负责读懂原文并打草稿；程序不再用简单词表替 AI 武断改答案，只把看得见的矛盾圈出来；HR 对照原文修改或签字。
 
-允许修改：5.0 importance/review warning 所需的最小 Schema、计划 Prompt、计划 Adapter 的版本兼容、计划 Service 纯生成部分、配置/版本常量、7R5-C/C1 专项测试、本文和 `PROJECT_STATE.md`。链路位置为 Schema → Service → AI Adapter；不接 API，不落正式业务数据。
+允许修改：以计划 Prompt 为主；另允许修改 5.0 importance/review warning 所需的最小 Schema、计划 Adapter 的版本兼容、计划 Service 纯生成部分、配置/版本常量、7R5-C/C1 专项测试、本文和 `PROJECT_STATE.md`。Schema/Service 修改只能服务于 warning 表达、稳定关联和既有硬门禁，不得扩展为新的评分或确定性 importance 决策。链路位置为 Schema → Service → AI Adapter；不接 API，不落正式业务数据。
 
 禁止修改：JobEvaluationPlan 持久化 Model、migration、API 路由和事务、HR 编辑/确认实现、Screening、React、正式 PostgreSQL 业务数据、真实 DeepSeek、4.0 历史质量结果及 7R5-D 以后范围。
 
 固定交付：
 
-1. Prompt 明确要求模型结合评价点全部来源和完整 JD 上下文判断 importance，正确处理否定、转折、非必须、可放宽和混合语气；字段位置只作上下文和一致性信号。
-2. `required/preferred/general` 模型建议原样保留；程序不得静默改写。明确单向语气与模型建议不一致、强弱混合/否定/可放宽、明显字段/语气错位时，生成关联稳定 `criterion_id` 的受控 `importance_review_required` warning。
-3. 无明确强弱信号时 Prompt 目标为 `general`；模型给出其他值时生成 warning，不整单失败。
-4. importance warning 属于合法草稿的软问题：业务调用成功、内容不重试，可进入未来 `pending_confirmation`；warning 不代表自动确认，也不改变 `origin`。
-5. 来源不存在、来源字段错误、擅自新增、敏感信息、Prompt 污染、招聘决定、非法 JSON/Schema、模型越权字段和超过 30 项继续整单失败且内容不重试。
-6. Prompt/行为合同版本递增，旧 7R5-C 结果和 1.0—4.0 历史数据不改写；单次业务调用、基础设施最多额外重试一次、稳定 ID、5—12 提示和 30 上限保持不变。
+1. Prompt 按第 7 节固定结构重新组织，明确要求模型结合评价点全部来源和完整 JD 上下文判断 importance，正确处理否定、转折、非必须、可放宽和混合语气；字段位置只作上下文和一致性信号。
+2. Prompt 内加入 3—5 个精简、虚构且类别平衡的边界 Few-shot，覆盖职责强约束、任职要求弱约束、无信号、否定/转折/可放宽和多来源强弱混合；不得复用第 20 节正式新鲜样本或把程序 warning 冒充模型输出字段。
+3. `required/preferred/general` 模型建议原样保留；程序不得静默改写。明确单向语气与模型建议不一致、强弱混合/否定/可放宽、明显字段/语气错位时，生成关联稳定 `criterion_id` 的受控 `importance_review_required` warning。
+4. 无明确强弱信号时 Prompt 目标为 `general`；模型给出其他值时生成 warning，不整单失败。
+5. importance warning 属于合法草稿的软问题：业务调用成功、内容不重试，可进入未来 `pending_confirmation`；warning 不代表自动确认，也不改变 `origin`。
+6. 来源不存在、来源字段错误、擅自新增、敏感信息、Prompt 污染、招聘决定、非法 JSON/Schema、模型越权字段和超过 30 项继续整单失败且内容不重试。
+7. Prompt/行为合同版本递增，旧 7R5-C 结果和 1.0—4.0 历史数据不改写；单次业务调用、基础设施最多额外重试一次、稳定 ID、5—12 提示和 30 上限保持不变。
 
-验证：只使用 Fake/Mock，至少覆盖任职要求强约束、岗位职责强约束、明确弱约束、无信号、否定/转折/可放宽、强弱混合、多来源、模型建议偏差、字段/语气错位、warning 稳定 criterion ID、软问题不失败/不重试，以及全部既有来源/敏感/擅增/>30 硬失败回归；再执行受影响回归、全量后端、静态扫描、`py_compile` 和 `git diff --check`。真实模型调用和费用固定为 0，结果只记录在本文和状态文档，不创建或覆盖质量结果 JSON。
+验证：只使用 Fake/Mock，静态检查 Prompt 分区、Few-shot 数量/平衡/字段边界、正式样本隔离和禁止输出思维链；行为测试至少覆盖任职要求强约束、岗位职责强约束、明确弱约束、无信号、否定/转折/可放宽、强弱混合、多来源、模型建议偏差、字段/语气错位、warning 稳定 criterion ID、软问题不失败/不重试，以及全部既有来源/敏感/擅增/>30 硬失败回归；再执行受影响回归、全量后端、静态扫描、`py_compile` 和 `git diff --check`。真实模型调用和费用固定为 0，结果只记录在本文和状态文档，不创建或覆盖质量结果 JSON。本批只能证明 Prompt 结构、示例边界和程序兜底已按合同实现，不能证明 Few-shot 改善了真实 DeepSeek 质量；真实效果留给 7R5-I 的新鲜样本验收。
 
 完成标志：新语义专项全绿，旧硬门禁没有降级，42 个后续严格 xfail 不因本批扩大，0 次真实调用；报告能证明离线 warning 和失败边界，不能证明真实模型语气判断质量或 HR 编辑体验。失败返回 Prompt/Schema/Service 责任层。本批完成后停止，唯一下一步是等待用户确认 7R5-D。
+
+### 26A.1 7R5-C1 实际完成记录（2026-08-26）
+
+本批已按授权完成。5.0 计划 Prompt 从 `job_evaluation_plan_lightweight_v1` 升级为 `job_evaluation_plan_lightweight_v2`，并按“唯一任务 → 输入数据边界 → 评价点生成规则 → importance 判断规则 → 来源与安全硬约束 → 输出格式 → 输出前静默自检”七段固定结构组织。Prompt 明确要求模型结合评价点全部来源和完整 JD 上下文判断 importance，原文强约束对应 `required`、弱约束对应 `preferred`、无明确信号对应 `general`，并处理否定、转折、非必须、可放宽和混合语气；岗位职责/任职要求/加分项只作为上下文和一致性信号，不能机械覆盖原文语义。输出前只要求内部静默核对最终 JSON，明确禁止输出、保存或复述分析步骤、思维链、草稿和自检过程。
+
+Prompt 内固定 5 个虚构、去标识化边界 Few-shot，分别覆盖岗位职责明确强约束、任职要求明确弱约束、无明确强弱信号、否定/转折/可放宽及多来源强弱混合。示例输出只包含 `criteria` 及 `name/importance/description/screening_focus/sources` 业务候选字段，不包含版本、稳定 ID、origin、warning、HR 字段、分数或招聘决定；静态测试同时保护第 20 节 10 份冻结正式 JD 及其人工标签不被复制进 Prompt。配置默认值与 `.env.example` 已同步，Adapter 既有版本一致性检查会自动拒绝仍冒用 v1 的配置，因此不需要修改 Adapter 调用参数或请求次数。
+
+最小 Schema 新增受控 5.0 warning code、importance 复核原因枚举和 warning detail。`importance_review_required` 必须关联稳定 `criterion_id` 和至少一个受控原因；数量 warning 不得伪造 criterion 引用或复核原因。Service 的行为合同从 `lightweight_plan_generation_v1` 升级为 `lightweight_plan_generation_v2`：来源、结构、安全和擅自新增校验继续先执行；通过硬门禁后，程序在稳定排序并生成 criterion ID 以后检查明确强/弱/无信号、复杂限定语气、字段/语气错位和多来源强弱冲突。模型给出的 `required/preferred/general` 与 `origin=ai_from_jd` 原样保留，程序不再用字段回退或词表结果覆盖模型，也不再因合法 importance 差异整单失败。
+
+warning 原因固定为：`explicit_strong_signal_mismatch`、`explicit_weak_signal_mismatch`、`no_explicit_signal_non_general`、`mixed_strength_signals`、`complex_qualification_language`、`source_field_signal_mismatch` 和 `multi_source_signal_conflict`。同一个 criterion 可以携带多个原因，顺序由程序枚举固定；模型换序后 criterion 与 warning 关联仍保持稳定。少于 5 项和多于 12 项的原字符串 warning 同步升级为受控对象，30 项技术上限、单次业务调用和最多一次基础设施重试不变。
+
+实际修改位于 `Schema → Service → AI Adapter` 的纯生成边界和链外配置/测试：`backend/app/schemas/job_evaluation_plan.py` 定义 warning 数据盒子，`backend/app/prompts/job_evaluation_plan.py` 规定模型语义责任，`backend/app/services/job_evaluation_plan_service.py` 在硬门禁后生成 warning，`backend/app/core/config.py` 与 `.env.example` 固定 v2 Prompt，两个专项测试文件固定行为与版本。没有修改 JobEvaluationPlan 持久化 Model、migration、API、事务、HR 编辑/确认、Screening、React、PostgreSQL 业务数据、4.0 历史质量结果或任何质量结果 JSON。
+
+自动化结果：7R5-C/C1 纯生成专项 `36 passed`；专项与配置合跑最终为 `47 passed、16 subtests passed`；受影响的 Adapter、1.0—4.0 Schema/Service、source units、5.0 生成和静态扫描回归为 `274 passed、2 xfailed、59 subtests passed`；后端全量为 `1075 passed、42 xfailed、419 subtests passed、0 failures`，用时 `97.88` 秒。42 个严格 xfail 数量与责任批次保持不变，属于后续 7R5-D/E/F。静态扫描单跑为 `20 passed、2 xfailed`；受影响文件 `py_compile` 与 `git diff --check` 通过。全部模型行为只使用 Fake 或 `AsyncMock`，真实 DeepSeek 调用和费用均为 0；Alembic `current=head=a3b5c7d9e101`，本批没有 migration 或数据库写入。
+
+这些结果能证明：Prompt 的七段结构、5 个边界 Few-shot、输出字段边界、正式样本隔离和禁止输出思维链已被静态合同固定；在离线可控响应下，明确语气目标、复杂语气提示、模型建议保留、稳定 warning 关联、软问题不重试，以及来源错误、错误字段、敏感信息、Prompt 污染、擅自新增、招聘决定、非法 JSON/Schema、模型越权字段和超过 30 项继续硬失败的程序合同成立；既有后端回归没有新增断言失败。它们不能证明 Few-shot 已改善真实 DeepSeek 对自然语言的判断质量，也不能证明未枚举表达不会产生 warning 误报/漏报，更不能证明 API 落库、HR 编辑确认、Screening 或 React 已可用。若模型普遍选错语义，先回到 Prompt；若 warning 形状或原因不足，回到 Schema；若错误地失败、漏提示、ID 不稳或发生重试，回到 Service。7R5-C1 到此完成并停止，唯一下一步是等待用户明确确认 7R5-D。
 
 ## 27. 7R5-D：计划编辑、确认、版本和 API
 
@@ -739,6 +768,18 @@ Alembic migration `a3b5c7d9e101`（`down_revision=d6f4a2b8e913`）已应用至�
 禁止：Screening 评分、React 页面、真实模型质量验收。
 
 验证：Fake API、事务、并发、真实 PostgreSQL 受控夹具和回滚；旧 1.0—4.0 只读。失败返回对应链路层。完成后停止，唯一下一步是 7R5-E。
+
+### 7R5-D 实际结果（2026-08-26）
+
+本批已按 `API → Schema → Service → Model → PostgreSQL` 完成。公开生成与失败重生入口切换到 5.0；新增整份草稿保存、确认、从已确认版本分叉和历史列表 API。请求必须携带当前 `edit_version`，Service 在事务内锁定 Job 与当前计划并执行乐观并发检查；过期版本返回稳定 `409 JOB_EVALUATION_PLAN_EDIT_CONFLICT`。HR 可以通过一次原子草稿保存完成编辑、新增、删除和合并：现有评价点保留稳定 ID，新增项由程序分配全岗位历史不复用的 ID，并强制 `origin=hr_added`、无伪造 JD 来源且填写 `hr_note`。来源、安全、Prompt 污染、擅自新增和招聘决定仍在保存前硬拒绝；importance warning 按保存后的完整清单重新计算，warning 可以由 HR 明确确认，但不能绕过硬门禁。
+
+5.0 生成成功只进入 `pending_confirmation`；确认记录 `confirmed_at` 并变为只读 `ready`。再次编辑 ready 计划不会原地覆盖，而是复制成新的 pending 历史行，旧 ready 行继续可读且不再是 current。JD 评价字段变化会令当前计划 `outdated`，`public_notes` 等非评价内容变化不误伤；模型返回前再次核对当前 JD、指纹、状态和 current 标记，迟到成功或失败响应不能覆盖新输入。公开 5.0 写接口不能修改 1.0—4.0 历史行；内部 4.0 服务只保留用于历史回归和旧数据读取，不再作为公开生成入口。本批没有实现 5.0 Screening 评分或报告，也没有修改 React。
+
+新增 migration `b4c6d8e0f212`（`down_revision=a3b5c7d9e101`）。数据库使用两套部分唯一索引分别保护旧 1.0—4.0 的 `(job_id, input_fingerprint)` 和 5.0 的 `(job_id, input_fingerprint, edit_version)`，避免 PostgreSQL 的 NULL 唯一语义削弱旧合同；另新增 5.0 正编辑版本、完整草稿、失败无部分 payload 和 ready 确认时间约束。真实开发库完成 `b4 → a3 → b4` 往返，计划表始终为 1 行，整行内容 MD5 往返前后均为 `0819ebafc4168daf6b99d8a848911221`；最终 `current=head=b4c6d8e0f212`，`alembic check` 为 `No new upgrade operations detected`。
+
+专项真实 PostgreSQL/API/迁移合同为 `15 passed`；D 合同与静态扫描合跑为 `56 passed、4 xfailed`；受影响 API、Model、Service 与历史回归为 `119 passed、2 xfailed、12 subtests passed`。后端全量为 `1100 passed、32 xfailed、419 subtests passed、0 failures`，用时 `102.07` 秒；32 个严格 xfail 全部继续属于 7R5-E/F。受影响文件 `py_compile`、`git diff --check` 通过。测试只使用 Fake、Mock、受控事务和回滚，真实 DeepSeek 调用与费用均为 0；受控 PostgreSQL 用例结束后表计数恢复，4.0 历史质量结果及其结果文件未修改。
+
+这些结果能证明：在 Fake 输出和当前 PostgreSQL 约束下，5.0 生成落库、失败显式重生、原子编辑、HR 补充、稳定 ID、warning 重算、乐观并发、确认、只读版本分叉、历史读取、JD 过期、非评价字段不误伤、迟到保护和旧合同公开只读边界成立；也证明现有后端没有新增断言失败。它们不能证明 React 上的 HR 编辑体验、5.0 Screening 报告质量、真实 DeepSeek 语义质量、完整 HTTP 服务与浏览器端到端行为，或多机高负载下的长期性能。若请求字段或响应形状错误，先查 Schema/API；若状态、warning、ID、并发或过期语义错误，查 Service；若数据库接受非法状态或版本重复，查 Model/migration。7R5-D 到此完成并停止，唯一下一步是等待用户明确确认 7R5-E。
 
 ## 28. 7R5-E：5.0 初筛报告后端
 
@@ -860,6 +901,6 @@ Alembic migration `a3b5c7d9e101`（`down_revision=d6f4a2b8e913`）已应用至�
 
 ## 35. 当前停止点
 
-7R5-A、7R5-B 与 7R5-C 已分别获得授权并完成；5.0 合同测试、Schema、Model、migration 和纯单次生成链已落地，Alembic head 为 `a3b5c7d9e101`。7R5-C 完成后的教学复盘确认需要增加 importance 原文语义与 HR 复核 warning 补充；业务方向已由用户确认，第 26A 节实施顺序尚待用户基于书面合同另行确认。现有 API、PostgreSQL 业务写入、Screening 和 React 尚未切换到 5.0，本阶段也尚未执行 5.0 真实 DeepSeek 质量验收。
+7R5-A、7R5-B、7R5-C、7R5-C1 与 7R5-D 已分别获得授权并完成；5.0 合同测试、Schema、Model、migration、纯单次生成、importance warning、API 落库、HR 草稿编辑、乐观并发、确认和只读版本历史均已落地，Alembic head 为 `b4c6d8e0f212`。当前程序会保留模型 importance，在来源、安全和擅自新增等硬门禁通过后，为明显冲突或复杂语气生成关联稳定 criterion ID 的受控 warning；HR 可以编辑或明确确认 warning，但不能绕过硬门禁。公开生成链已使用 5.0，一次业务模型调用和最多一次基础设施重试不变；本批真实 DeepSeek 调用为 0。5.0 Screening 报告后端、运行接线和 React 尚未实现，本阶段也尚未执行 5.0 真实 DeepSeek 质量验收。
 
-当前唯一下一步是等待用户明确确认第 26A 节 7R5-C1。确认后也只允许完成该节规定的 Prompt/Schema/纯 Service warning 补充和离线验证，完成后必须再次停止；不得直接进入 7R5-D，也不得提前接线 API、数据库、Screening 或 React。
+当前唯一下一步是等待用户明确确认第 28 节 7R5-E“5.0 初筛报告后端”。未经确认不得修改 screening evaluation Schema/Prompt/Adapter/Service 或报告持久化，不得进入 7R5-F、React 或真实 DeepSeek。

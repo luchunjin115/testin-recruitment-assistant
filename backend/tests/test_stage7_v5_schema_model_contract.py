@@ -37,34 +37,64 @@ class TestSchemaVersion50NotSupported:
     """5.0 schema version is not accepted by any current schema or model.
     All tests xfail because 7R5-B has not landed yet."""
 
-    def test_plan_read_rejects_schema_version_5(self) -> None:
-        """JobEvaluationPlanRead.schema_version Literal must include '5.0'.
-
-        Currently Literal['1.0', '2.0', '3.0', '4.0'] -- 5.0 is rejected.
-        After 7R5-B lands, constructing a valid 5.0 plan read should succeed.
-        """
-        # We only need to prove that "5.0" is accepted by the Literal.
-        # Build minimal valid-shaped data; if schema_version rejects "5.0"
-        # a ValidationError is raised before any other field is checked.
-        JobEvaluationPlanRead.model_validate({
+    def test_plan_read_accepts_valid_schema_version_5(self) -> None:
+        """JobEvaluationPlanRead accepts a complete 5.0 pending draft."""
+        plan = JobEvaluationPlanRead.model_validate({
             "id": 1,
             "job_id": 1,
             "jd_fingerprint": "a" * 64,
-            "status": "ready",
+            "status": "pending_confirmation",
             "is_current": True,
             "items": None,
+            "v5_criteria": [
+                {
+                    "criterion_id": "criterion:0001",
+                    "name": "Python 后端经验",
+                    "importance": "required",
+                    "description": "核对 Python 后端项目经验。",
+                    "screening_focus": "寻找 Python 后端项目证据。",
+                    "origin": "ai_from_jd",
+                    "sources": [
+                        {
+                            "source_field": "candidate_requirements",
+                            "source_quote": "必须具备 Python 后端项目经验",
+                        }
+                    ],
+                    "hr_note": None,
+                }
+            ],
+            "edit_version": 1,
+            "confirmed_at": None,
             "warnings": [],
             "prompt_version": "v1",
             "model_version": "v1",
             "schema_version": "5.0",
             "input_fingerprint": "b" * 64,
-            "input_snapshot": {},
+            "input_snapshot": {
+                "schema_version": "5.0",
+                "job_context": {"title": "后端工程师"},
+                "evaluation_fields": {
+                    "job_responsibilities": None,
+                    "candidate_requirements": "必须具备 Python 后端项目经验",
+                    "preferred_qualifications": None,
+                },
+                "source_units": [
+                    {
+                        "source_unit_id": "candidate_requirements:0001",
+                        "source_field": "candidate_requirements",
+                        "ordinal": 1,
+                        "source_text": "必须具备 Python 后端项目经验",
+                    }
+                ],
+            },
             "error_code": None,
             "error_message": None,
             "created_at": "2026-01-01T00:00:00Z",
             "completed_at": "2026-01-01T00:00:00Z",
             "updated_at": "2026-01-01T00:00:00Z",
         })
+        assert plan.schema_version == "5.0"
+        assert plan.edit_version == 1
 
     def test_input_snapshot_rejects_schema_version_5(self) -> None:
         """JobEvaluationPlanInputSnapshot.schema_version Literal['3.0', '4.0']

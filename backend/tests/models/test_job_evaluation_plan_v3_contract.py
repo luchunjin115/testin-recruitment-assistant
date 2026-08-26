@@ -36,13 +36,24 @@ def test_v3_model_requires_ready_summary_and_forbids_legacy_coverages() -> None:
     assert "free_text_coverage is null" in sql
 
 
-def test_v3_model_preserves_job_input_fingerprint_uniqueness() -> None:
-    constraint = next(
-        constraint
-        for constraint in JobEvaluationPlan.__table__.constraints
-        if constraint.name == "uq_job_evaluation_plans_job_input_fingerprint"
-    )
-    assert [column.name for column in constraint.columns] == [
+def test_v5_model_versions_job_input_fingerprint_uniqueness() -> None:
+    indexes = {
+        index.name: index for index in JobEvaluationPlan.__table__.indexes
+    }
+    legacy_index = indexes["uq_job_evaluation_plans_legacy_job_input"]
+    v5_index = indexes["uq_job_evaluation_plans_v5_job_input_edit_version"]
+    assert [column.name for column in legacy_index.columns] == [
         "job_id",
         "input_fingerprint",
     ]
+    assert [column.name for column in v5_index.columns] == [
+        "job_id",
+        "input_fingerprint",
+        "edit_version",
+    ]
+    assert "schema_version <> '5.0'" in str(
+        legacy_index.dialect_options["postgresql"]["where"]
+    )
+    assert "schema_version = '5.0'" in str(
+        v5_index.dialect_options["postgresql"]["where"]
+    )

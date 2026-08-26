@@ -401,7 +401,7 @@ class JobEvaluationPlanV4ConcurrentConfirmationTest(IsolatedAsyncioTestCase):
             await engine.dispose()
 
 
-def test_confirm_api_has_no_edit_body_and_reconciles_screening_as_ready() -> None:
+def test_confirm_api_requires_edit_version_without_entering_screening() -> None:
     db = AsyncMock()
     plan = Mock(id=4, job_id=701, status="ready")
     read_model = JobEvaluationPlanRead.model_validate(
@@ -431,20 +431,22 @@ def test_confirm_api_has_no_edit_body_and_reconciles_screening_as_ready() -> Non
             AsyncMock(),
         ) as notify,
     ):
-        # The route contract test above already proves there are no editable body fields.
         route = next(
             item
             for item in api.router.routes
             if item.path == "/jobs/{job_id}/evaluation-plan/confirm"
         )
-        assert route.dependant.body_params == []
+        assert [field.name for field in route.dependant.body_params] == ["data"]
         with TestClient(app) as client:
-            response = client.post("/jobs/701/evaluation-plan/confirm")
+            response = client.post(
+                "/jobs/701/evaluation-plan/confirm",
+                json={"edit_version": 3},
+            )
 
     assert response.status_code == 200
     assert response.json()["status"] == "ready"
-    confirm.assert_awaited_once_with(db, 701)
-    notify.assert_awaited_once_with(db, 701, plan_ready=True)
+    confirm.assert_awaited_once_with(db, 701, 3)
+    notify.assert_not_awaited()
 
 
 def test_confirm_api_maps_stale_or_invalid_plan_to_safe_409() -> None:
@@ -466,7 +468,10 @@ def test_confirm_api_maps_stale_or_invalid_plan_to_safe_409() -> None:
         ),
     ):
         with TestClient(app) as client:
-            response = client.post("/jobs/701/evaluation-plan/confirm")
+            response = client.post(
+                "/jobs/701/evaluation-plan/confirm",
+                json={"edit_version": 3},
+            )
 
     assert response.status_code == 409
     assert response.json()["detail"]["code"] == "JOB_EVALUATION_PLAN_NOT_CONFIRMABLE"

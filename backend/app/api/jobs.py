@@ -104,7 +104,10 @@ async def generate_evaluation_plan_after_job_commit(job_id: int) -> None:
     """Use a fresh session so plan failure can never roll back the committed Job."""
     async with get_sessionmaker()() as session:
         try:
-            plan = await job_evaluation_plan_service.generate_for_job(session, job_id)
+            plan = await job_evaluation_plan_service.generate_v5_for_job(
+                session,
+                job_id,
+            )
             await screening_service.after_plan_changed(
                 session,
                 job_id,

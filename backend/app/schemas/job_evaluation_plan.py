@@ -154,6 +154,22 @@ class JobEvaluationPlanV4WarningCode(str, Enum):
     NON_EVALUATION_CONTENT = "non_evaluation_content"
 
 
+class JobEvaluationPlanV5WarningCode(str, Enum):
+    LIMITED_BASIS = "limited_basis"
+    MANY_CRITERIA = "many_criteria"
+    IMPORTANCE_REVIEW_REQUIRED = "importance_review_required"
+
+
+class JobEvaluationPlanV5ImportanceReviewReason(str, Enum):
+    EXPLICIT_STRONG_SIGNAL_MISMATCH = "explicit_strong_signal_mismatch"
+    EXPLICIT_WEAK_SIGNAL_MISMATCH = "explicit_weak_signal_mismatch"
+    NO_EXPLICIT_SIGNAL_NON_GENERAL = "no_explicit_signal_non_general"
+    MIXED_STRENGTH_SIGNALS = "mixed_strength_signals"
+    COMPLEX_QUALIFICATION_LANGUAGE = "complex_qualification_language"
+    SOURCE_FIELD_SIGNAL_MISMATCH = "source_field_signal_mismatch"
+    MULTI_SOURCE_SIGNAL_CONFLICT = "multi_source_signal_conflict"
+
+
 class RequirementFactCategory(str, Enum):
     SKILL = "skill"
     EXPERIENCE = "experience"
@@ -372,6 +388,102 @@ class V5CriterionItem(BaseModel):
         ]
         if len(source_identities) != len(set(source_identities)):
             raise ValueError("评价点来源不能重复")
+        return self
+
+
+class JobEvaluationPlanV5DraftCriterion(BaseModel):
+    criterion_id: CriterionId | None = None
+    name: CriterionName
+    importance: EvaluationItemPriority
+    description: CriterionDescription
+    screening_focus: ScreeningFocusText
+    origin: CriterionOrigin
+    sources: list[V5CriterionSource] = Field(
+        default_factory=list,
+        max_length=JOB_EVALUATION_PLAN_V5_MAX_SOURCES_PER_CRITERION,
+    )
+    hr_note: HrNoteText | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_hr_edit_shape(self) -> JobEvaluationPlanV5DraftCriterion:
+        identities = [
+            (source.source_field, source.source_quote) for source in self.sources
+        ]
+        if len(identities) != len(set(identities)):
+            raise ValueError("评价点来源不能重复")
+        if self.criterion_id is None and self.origin != "hr_added":
+            raise ValueError("HR 新增评价点必须标记为 hr_added")
+        if self.origin == "ai_from_jd" and not self.sources:
+            raise ValueError("AI 来源评价点至少需要一条 JD 来源")
+        if self.origin == "hr_added" and (self.sources or self.hr_note is None):
+            raise ValueError("HR 补充评价点必须没有伪造来源并填写 hr_note")
+        return self
+
+
+class JobEvaluationPlanV5DraftSaveRequest(BaseModel):
+    edit_version: StrictInt = Field(ge=1)
+    criteria: list[JobEvaluationPlanV5DraftCriterion] = Field(
+        min_length=1,
+        max_length=JOB_EVALUATION_PLAN_V5_MAX_CRITERIA,
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_unique_existing_ids(self) -> JobEvaluationPlanV5DraftSaveRequest:
+        existing_ids = [
+            criterion.criterion_id
+            for criterion in self.criteria
+            if criterion.criterion_id is not None
+        ]
+        if len(existing_ids) != len(set(existing_ids)):
+            raise ValueError("同一草稿不能重复提交 criterion_id")
+        return self
+
+
+class JobEvaluationPlanV5ConfirmRequest(BaseModel):
+    edit_version: StrictInt = Field(ge=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class JobEvaluationPlanV5VersionForkRequest(BaseModel):
+    edit_version: StrictInt = Field(ge=1)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class JobEvaluationPlanV5WarningDetail(BaseModel):
+    code: JobEvaluationPlanV5WarningCode
+    message: SafeErrorMessage
+    criterion_id: CriterionId | None = None
+    reasons: list[JobEvaluationPlanV5ImportanceReviewReason] = Field(
+        default_factory=list,
+        max_length=len(JobEvaluationPlanV5ImportanceReviewReason),
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_warning_references(self) -> JobEvaluationPlanV5WarningDetail:
+        is_importance_review = (
+            self.code
+            is JobEvaluationPlanV5WarningCode.IMPORTANCE_REVIEW_REQUIRED
+        )
+        if is_importance_review and (
+            self.criterion_id is None or not self.reasons
+        ):
+            raise ValueError(
+                "importance_review_required 必须关联 criterion_id 和受控原因"
+            )
+        if not is_importance_review and (
+            self.criterion_id is not None or self.reasons
+        ):
+            raise ValueError("数量 warning 不能伪造评价点复核原因")
+        if len(self.reasons) != len(set(self.reasons)):
+            raise ValueError("5.0 warning reasons 不能重复")
         return self
 
 
@@ -889,11 +1001,18 @@ class JobEvaluationPlanRead(BaseModel):
     )
     coverage_review_summary: JobEvaluationPlanCoverageReviewSummary | None = None
     generation_audit: JobEvaluationPlanGenerationAudit | None = None
+    v5_criteria: list[V5CriterionItem] | None = Field(
+        default=None,
+        max_length=JOB_EVALUATION_PLAN_V5_MAX_CRITERIA,
+    )
+    edit_version: StrictInt | None = Field(default=None, ge=1)
+    confirmed_at: datetime | None = None
     warnings: list[
         JobEvaluationPlanWarning
         | JobEvaluationPlanWarningDetail
         | JobEvaluationPlanV4WarningDetail
-    ] = Field(max_length=5)
+        | JobEvaluationPlanV5WarningDetail
+    ] = Field(max_length=JOB_EVALUATION_PLAN_V5_MAX_CRITERIA + 1)
     prompt_version: VersionText
     model_version: VersionText
     schema_version: Literal["1.0", "2.0", "3.0", "4.0", "5.0"]
@@ -968,6 +1087,35 @@ class JobEvaluationPlanRead(BaseModel):
             raise ValueError("5.0 计划不能包含 legacy items")
         if self.structured_coverage is not None:
             raise ValueError("5.0 计划不能包含 legacy structured coverage")
+        if self.input_snapshot.schema_version != "5.0":
+            raise ValueError("5.0 计划必须使用 5.0 input snapshot")
+        if self.edit_version is None:
+            raise ValueError("5.0 计划必须包含 edit_version")
+        complete_statuses = {
+            JobEvaluationPlanStatus.PENDING_CONFIRMATION,
+            JobEvaluationPlanStatus.READY,
+        }
+        if self.status in complete_statuses and not self.v5_criteria:
+            raise ValueError("5.0 完整计划必须包含轻量评价点")
+        if self.status in {
+            JobEvaluationPlanStatus.GENERATING,
+            JobEvaluationPlanStatus.FAILED,
+        } and self.v5_criteria:
+            raise ValueError("5.0 生成中或失败计划不能保存部分评价点")
+        if self.status is JobEvaluationPlanStatus.READY:
+            if self.confirmed_at is None:
+                raise ValueError("5.0 ready 计划必须记录 HR 确认时间")
+        elif self.confirmed_at is not None:
+            raise ValueError("只有 5.0 ready 历史版本可以包含 confirmed_at")
+        if self.v5_criteria:
+            criterion_ids = [item.criterion_id for item in self.v5_criteria]
+            if len(criterion_ids) != len(set(criterion_ids)):
+                raise ValueError("5.0 criterion_id 不能重复")
+        if any(
+            not isinstance(warning, JobEvaluationPlanV5WarningDetail)
+            for warning in self.warnings
+        ):
+            raise ValueError("5.0 warnings 必须使用受控对象")
 
     def _validate_v4_contract(self) -> None:
         if self.input_snapshot.schema_version != "4.0":

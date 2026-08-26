@@ -10,7 +10,6 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
-    UniqueConstraint,
     func,
     text,
 )
@@ -23,10 +22,20 @@ from app.core.database import Base
 class JobEvaluationPlan(Base):
     __tablename__ = "job_evaluation_plans"
     __table_args__ = (
-        UniqueConstraint(
+        Index(
+            "uq_job_evaluation_plans_legacy_job_input",
             "job_id",
             "input_fingerprint",
-            name="uq_job_evaluation_plans_job_input_fingerprint",
+            unique=True,
+            postgresql_where=text("schema_version <> '5.0'"),
+        ),
+        Index(
+            "uq_job_evaluation_plans_v5_job_input_edit_version",
+            "job_id",
+            "input_fingerprint",
+            "edit_version",
+            unique=True,
+            postgresql_where=text("schema_version = '5.0'"),
         ),
         CheckConstraint(
             "status IN ("
@@ -130,8 +139,34 @@ class JobEvaluationPlan(Base):
             name="ck_job_evaluation_plans_v5_criteria_array",
         ),
         CheckConstraint(
-            "schema_version = '5.0' OR v5_criteria IS NULL",
+            "schema_version = '5.0' OR "
+            "(v5_criteria IS NULL AND edit_version IS NULL "
+            "AND confirmed_at IS NULL)",
             name="ck_job_evaluation_plans_legacy_has_no_v5_payload",
+        ),
+        CheckConstraint(
+            "schema_version <> '5.0' OR "
+            "(edit_version IS NOT NULL AND edit_version > 0)",
+            name="ck_job_evaluation_plans_v5_positive_edit_version",
+        ),
+        CheckConstraint(
+            "schema_version <> '5.0' "
+            "OR status NOT IN ('pending_confirmation', 'ready') "
+            "OR (v5_criteria IS NOT NULL "
+            "AND jsonb_array_length(v5_criteria) > 0)",
+            name="ck_job_evaluation_plans_v5_complete_payload",
+        ),
+        CheckConstraint(
+            "schema_version <> '5.0' "
+            "OR status NOT IN ('generating', 'failed') "
+            "OR v5_criteria IS NULL",
+            name="ck_job_evaluation_plans_v5_no_partial_failed_payload",
+        ),
+        CheckConstraint(
+            "schema_version <> '5.0' OR "
+            "((status = 'ready' AND confirmed_at IS NOT NULL) "
+            "OR (status <> 'ready' AND confirmed_at IS NULL))",
+            name="ck_job_evaluation_plans_v5_confirmation_timestamp",
         ),
         Index("ix_job_evaluation_plans_job_id", "job_id"),
         Index("ix_job_evaluation_plans_status", "status"),

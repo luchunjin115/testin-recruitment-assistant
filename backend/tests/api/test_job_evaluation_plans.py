@@ -107,7 +107,7 @@ class JobEvaluationPlanApiTest(TestCase):
             ),
             patch.object(
                 job_evaluation_plan_service,
-                "generate_for_job",
+                "generate_v5_for_job",
                 AsyncMock(),
             ) as generate_mock,
         ):
@@ -131,18 +131,18 @@ class JobEvaluationPlanApiTest(TestCase):
             response = self.client.get("/jobs/1/evaluation-plan")
         self.assert_error(response, 404, "JOB_EVALUATION_PLAN_NOT_FOUND")
 
-    def test_generate_and_regenerate_call_current_v3_services(self) -> None:
+    def test_generate_and_regenerate_call_current_v5_services(self) -> None:
         generate_mock = AsyncMock(return_value=make_plan())
         regenerate_mock = AsyncMock(return_value=make_plan())
         with patch.object(
             job_evaluation_plan_service,
-            "generate_for_job",
+            "generate_v5_for_job",
             generate_mock,
         ):
             generated = self.client.post("/jobs/1/evaluation-plan/generate")
         with patch.object(
             job_evaluation_plan_service,
-            "regenerate_failed_plan",
+            "regenerate_failed_v5_plan",
             regenerate_mock,
         ):
             regenerated = self.client.post("/jobs/1/evaluation-plan/regenerate")
@@ -177,21 +177,21 @@ class JobEvaluationPlanApiTest(TestCase):
         cases = (
             (
                 "/jobs/99/evaluation-plan/generate",
-                "generate_for_job",
+                "generate_v5_for_job",
                 JobEvaluationPlanJobNotFoundError("postgresql://private"),
                 404,
                 "JOB_NOT_FOUND",
             ),
             (
                 "/jobs/1/evaluation-plan/generate",
-                "generate_for_job",
+                "generate_v5_for_job",
                 JobEvaluationPlanJobNotOpenError("private"),
                 409,
                 "JOB_EVALUATION_PLAN_JOB_NOT_OPEN",
             ),
             (
                 "/jobs/1/evaluation-plan/regenerate",
-                "regenerate_failed_plan",
+                "regenerate_failed_v5_plan",
                 JobEvaluationPlanNotRegenerableError("private"),
                 409,
                 "JOB_EVALUATION_PLAN_NOT_REGENERABLE",
@@ -214,7 +214,7 @@ class JobEvaluationPlanApiTest(TestCase):
         legacy_mock = AsyncMock(side_effect=RuntimeError("api-key=secret"))
         with patch.object(
             job_evaluation_plan_service,
-            "generate_for_job",
+            "generate_v5_for_job",
             legacy_mock,
         ):
             response = self.client.post("/jobs/1/evaluation-plan/generate")

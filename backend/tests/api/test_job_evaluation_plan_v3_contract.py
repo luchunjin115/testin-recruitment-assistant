@@ -60,11 +60,11 @@ def _client() -> tuple[TestClient, Mock, FastAPI]:
     return TestClient(app, raise_server_exceptions=False), db, app
 
 
-def test_generate_endpoint_resumes_v3_service_instead_of_fixed_503() -> None:
+def test_generate_endpoint_uses_current_v5_service_instead_of_fixed_503() -> None:
     client, db, app = _client()
     service = AsyncMock(return_value=_v3_plan())
     try:
-        with patch.object(job_evaluation_plan_service, "generate_for_job", service):
+        with patch.object(job_evaluation_plan_service, "generate_v5_for_job", service):
             response = client.post("/jobs/701/evaluation-plan/generate")
     finally:
         client.close()
@@ -75,11 +75,15 @@ def test_generate_endpoint_resumes_v3_service_instead_of_fixed_503() -> None:
     service.assert_awaited_once_with(db, 701)
 
 
-def test_regenerate_endpoint_resumes_failed_v3_service_instead_of_fixed_503() -> None:
+def test_regenerate_endpoint_uses_current_v5_service_instead_of_fixed_503() -> None:
     client, db, app = _client()
     service = AsyncMock(return_value=_v3_plan())
     try:
-        with patch.object(job_evaluation_plan_service, "regenerate_failed_plan", service):
+        with patch.object(
+            job_evaluation_plan_service,
+            "regenerate_failed_v5_plan",
+            service,
+        ):
             response = client.post("/jobs/701/evaluation-plan/regenerate")
     finally:
         client.close()

@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from sqlalchemy import CheckConstraint, UniqueConstraint
+from sqlalchemy import CheckConstraint
 
 from app.models import Job, JobEvaluationPlan
 
@@ -60,9 +60,10 @@ class JobEvaluationPlanModelTest(TestCase):
             "ck_job_evaluation_plans_v3_has_no_legacy_coverage",
             constraint_names,
         )
+        self.assertIn("uq_job_evaluation_plans_legacy_job_input", index_names)
         self.assertIn(
-            "uq_job_evaluation_plans_job_input_fingerprint",
-            constraint_names,
+            "uq_job_evaluation_plans_v5_job_input_edit_version",
+            index_names,
         )
         self.assertIn("uq_job_evaluation_plans_current_job", index_names)
         current_index = next(
@@ -73,15 +74,33 @@ class JobEvaluationPlanModelTest(TestCase):
         self.assertTrue(current_index.unique)
         self.assertIsNotNone(current_index.dialect_options["postgresql"]["where"])
 
-        unique_constraints = [
-            constraint
-            for constraint in table.constraints
-            if isinstance(constraint, UniqueConstraint)
-        ]
-        self.assertEqual(len(unique_constraints), 1)
+        legacy_index = next(
+            index
+            for index in table.indexes
+            if index.name == "uq_job_evaluation_plans_legacy_job_input"
+        )
+        v5_index = next(
+            index
+            for index in table.indexes
+            if index.name == "uq_job_evaluation_plans_v5_job_input_edit_version"
+        )
+        self.assertTrue(legacy_index.unique)
         self.assertEqual(
-            [column.name for column in unique_constraints[0].columns],
+            [column.name for column in legacy_index.columns],
             ["job_id", "input_fingerprint"],
+        )
+        self.assertTrue(v5_index.unique)
+        self.assertEqual(
+            [column.name for column in v5_index.columns],
+            ["job_id", "input_fingerprint", "edit_version"],
+        )
+        self.assertIn(
+            "schema_version <> '5.0'",
+            str(legacy_index.dialect_options["postgresql"]["where"]),
+        )
+        self.assertIn(
+            "schema_version = '5.0'",
+            str(v5_index.dialect_options["postgresql"]["where"]),
         )
         self.assertTrue(
             any(

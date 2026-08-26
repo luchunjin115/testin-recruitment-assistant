@@ -73,6 +73,8 @@ from app.schemas.job_evaluation_plan import (
     JobEvaluationPlanGenerationAudit,
     JobEvaluationPlanGenerationCallAudit,
     JobEvaluationPlanRead,
+    JobEvaluationPlanV5DraftCriterion,
+    JobEvaluationPlanV5DraftSaveRequest,
     JobEvaluationPlanSourceReviewSummary,
     JobEvaluationPlanSourceReviewSummaryV4,
     JobEvaluationPlanSourceReviewUnit,
@@ -84,6 +86,9 @@ from app.schemas.job_evaluation_plan import (
     JobEvaluationPlanWarningCode,
     JobEvaluationPlanV4WarningCode,
     JobEvaluationPlanV4WarningDetail,
+    JobEvaluationPlanV5ImportanceReviewReason,
+    JobEvaluationPlanV5WarningCode,
+    JobEvaluationPlanV5WarningDetail,
     JobRequirementCoverageReviewInput,
     JobRequirementFactExtractionInput,
     JobRequirementLocalRepairInput,
@@ -99,7 +104,7 @@ from app.schemas.job_evaluation_plan import (
 LEGACY_JOB_EVALUATION_PLAN_PROMPT_VERSION = "job_evaluation_plan_v4"
 JOB_EVALUATION_PLAN_V5_AI_SCHEMA_VERSION = "5.0"
 JOB_EVALUATION_PLAN_V5_BREAKING_CONTRACT_VERSION = (
-    "lightweight_plan_generation_v1"
+    "lightweight_plan_generation_v2"
 )
 JOB_EVALUATION_PLAN_V5_FINGERPRINT_RULE_VERSION = "job_evaluation_input_v5"
 
@@ -134,6 +139,14 @@ class JobEvaluationPlanNotRegenerableError(JobEvaluationPlanServiceError):
 
 class JobEvaluationPlanNotConfirmableError(JobEvaluationPlanServiceError):
     code = "JOB_EVALUATION_PLAN_NOT_CONFIRMABLE"
+
+
+class JobEvaluationPlanNotEditableError(JobEvaluationPlanServiceError):
+    code = "JOB_EVALUATION_PLAN_NOT_EDITABLE"
+
+
+class PlanEditConflictError(JobEvaluationPlanServiceError):
+    code = "JOB_EVALUATION_PLAN_EDIT_CONFLICT"
 
 
 class JobEvaluationPlanContentError(JobEvaluationPlanServiceError):
@@ -222,7 +235,7 @@ class GeneratedPlanContentV4:
 @dataclass(frozen=True, slots=True)
 class GeneratedPlanContentV5:
     criteria: list[V5CriterionItem]
-    warnings: list[str]
+    warnings: list[JobEvaluationPlanV5WarningDetail]
     prompt_version: str
     ai_schema_version: str
     schema_version: str
@@ -245,6 +258,13 @@ class DescriptionSourceUnit:
 class _CandidateItem:
     item: JobEvaluationItem
     source_fields: list[str]
+
+
+@dataclass(frozen=True, slots=True)
+class _V5ImportanceSignals:
+    strong: bool
+    weak: bool
+    complex_language: bool
 
 
 class JobEvaluationPlanService:
@@ -394,6 +414,32 @@ class JobEvaluationPlanService:
         r"直接淘汰|直接录用|hire candidate|reject candidate)",
         re.IGNORECASE,
     )
+    _V5_NEGATED_STRONG_SIGNAL_RE = re.compile(
+        r"(?:非|不|并非|不是|不作|不作为|无需|无须|不必)\s*"
+        r"(?:必须|硬性要求|强制要求|不可缺少|不可或缺)|"
+        r"\bnot\s+(?:strictly\s+)?(?:required|mandatory)\b",
+        re.IGNORECASE,
+    )
+    _V5_STRONG_IMPORTANCE_SIGNAL_RE = re.compile(
+        r"(?:必须|至少|需要具备|需具备|硬性要求|强制要求|不可缺少|不可或缺)|"
+        r"\b(?:must|required|mandatory|at\s+least)\b",
+        re.IGNORECASE,
+    )
+    _V5_WEAK_IMPORTANCE_SIGNAL_RE = re.compile(
+        r"(?:优先|加分|更佳|有则更好|非必须|不是必须|不是硬性要求|非硬性要求|"
+        r"不作硬性要求|可选)|"
+        r"\b(?:preferred|bonus|optional|nice[ -]to[ -]have|"
+        r"not\s+(?:strictly\s+)?(?:required|mandatory))\b",
+        re.IGNORECASE,
+    )
+    _V5_COMPLEX_IMPORTANCE_LANGUAGE_RE = re.compile(
+        r"(?:非必须|不是必须|不是硬性要求|非硬性要求|不作硬性要求|无需|无须|不必|"
+        r"可放宽|可以放宽|适当放宽|视情况|原则上|除非|但|但是|不过|然而)|"
+        r"\b(?:not\s+(?:strictly\s+)?(?:required|mandatory)|optional|"
+        r"but|however|unless|may\s+be\s+(?:relaxed|waived)|"
+        r"can\s+be\s+(?:relaxed|waived))\b",
+        re.IGNORECASE,
+    )
     _V5_EXPLICIT_REQUIREMENT_MARKERS = (
         "本科",
         "硕士",
@@ -475,11 +521,33 @@ class JobEvaluationPlanService:
             .limit(1)
         )
 
+    async def list_plan_history(
+        self,
+        db: AsyncSession,
+        job_id: int,
+    ) -> list[JobEvaluationPlan]:
+        job = await db.get(Job, job_id)
+        if job is None:
+            raise JobEvaluationPlanJobNotFoundError("岗位不存在")
+        return list(
+            (
+                await db.scalars(
+                    select(JobEvaluationPlan)
+                    .where(JobEvaluationPlan.job_id == job_id)
+                    .order_by(
+                        JobEvaluationPlan.created_at.desc(),
+                        JobEvaluationPlan.id.desc(),
+                    )
+                )
+            ).all()
+        )
+
     def is_contract_outdated(self, plan: JobEvaluationPlan) -> bool:
         """Compare a stored plan with the current extraction contract without writes."""
         if plan.schema_version not in {
             JOB_EVALUATION_PLAN_SCHEMA_VERSION,
             JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION,
+            JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION,
         }:
             return True
         try:
@@ -529,6 +597,122 @@ class JobEvaluationPlanService:
             adapter=adapter,
             settings=settings,
             clock=clock,
+        )
+
+    async def regenerate_failed_v5_plan(
+        self,
+        db: AsyncSession,
+        job_id: int,
+        *,
+        adapter: JobEvaluationPlanAdapter | None = None,
+        settings: Settings | None = None,
+        clock: Callable[[], datetime] | None = None,
+    ) -> JobEvaluationPlan:
+        current = await self.get_current_plan(db, job_id)
+        if (
+            current is None
+            or current.schema_version != JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION
+        ):
+            raise JobEvaluationPlanNotFoundError("当前岗位还没有 5.0 评价计划")
+        if current.status != JobEvaluationPlanStatus.FAILED.value:
+            raise JobEvaluationPlanNotRegenerableError(
+                "只有失败的当前 5.0 评价计划可以重新生成"
+            )
+        return await self.generate_v5_for_job(
+            db,
+            job_id,
+            force=True,
+            adapter=adapter,
+            settings=settings,
+            clock=clock,
+        )
+
+    async def generate_v5_for_job(
+        self,
+        db: AsyncSession,
+        job_id: int,
+        *,
+        force: bool = False,
+        adapter: JobEvaluationPlanAdapter | None = None,
+        settings: Settings | None = None,
+        clock: Callable[[], datetime] | None = None,
+    ) -> JobEvaluationPlan:
+        """Generate and persist the current 5.0 editable draft."""
+        resolved_settings = settings or get_settings()
+        if not resolved_settings.JOB_EVALUATION_PLAN_ENABLED:
+            raise JobEvaluationPlanDisabledError("岗位评价计划功能当前未启用")
+        self._validate_v5_configuration(resolved_settings)
+        now_provider = clock or (lambda: datetime.now(timezone.utc))
+        started_at = self._aware_time(now_provider())
+
+        try:
+            job = await self._get_locked_job(db, job_id)
+            if job is None:
+                raise JobEvaluationPlanJobNotFoundError("岗位不存在")
+            if job.status != "open":
+                raise JobEvaluationPlanJobNotOpenError(
+                    "只有开放岗位可以生成评价计划"
+                )
+            snapshot = self.build_v5_input_snapshot(job)
+            snapshot_payload = snapshot.model_dump(mode="json")
+            jd_fingerprint = self.fingerprint_snapshot(snapshot)
+            input_fingerprint = self.fingerprint_input(snapshot)
+            plan, should_generate = await self._prepare_v5_plan(
+                db,
+                job,
+                snapshot_payload,
+                jd_fingerprint,
+                input_fingerprint,
+                force=force,
+                settings=resolved_settings,
+                started_at=started_at,
+            )
+            if not should_generate:
+                await db.commit()
+                await db.refresh(plan)
+                return plan
+            await db.commit()
+            await db.refresh(plan)
+        except JobEvaluationPlanServiceError:
+            await db.rollback()
+            raise
+        except BaseException:
+            await db.rollback()
+            raise
+
+        try:
+            resolved_adapter = adapter or DeepSeekJobEvaluationPlanAdapter(
+                settings=resolved_settings
+            )
+            content = await self.build_v5_plan_content(
+                snapshot,
+                adapter=resolved_adapter,
+            )
+        except JobEvaluationPlanV5GenerationError as exc:
+            return await self._save_failure(
+                db,
+                plan.id,
+                input_fingerprint,
+                code=exc.code,
+                message=str(exc),
+                completed_at=self._aware_time(now_provider()),
+            )
+        except Exception:
+            return await self._save_failure(
+                db,
+                plan.id,
+                input_fingerprint,
+                code="JOB_EVALUATION_PLAN_UNEXPECTED_ERROR",
+                message="岗位评价计划 5.0 生成发生未预期错误",
+                completed_at=self._aware_time(now_provider()),
+            )
+
+        return await self._save_v5_success(
+            db,
+            plan.id,
+            input_fingerprint,
+            content,
+            completed_at=self._aware_time(now_provider()),
         )
 
     async def generate_for_job(
@@ -731,6 +915,121 @@ class JobEvaluationPlanService:
             completed_at=self._aware_time(now_provider()),
         )
 
+    async def _prepare_v5_plan(
+        self,
+        db: AsyncSession,
+        job: Job,
+        snapshot_payload: dict[str, Any],
+        jd_fingerprint: str,
+        input_fingerprint: str,
+        *,
+        force: bool,
+        settings: Settings,
+        started_at: datetime,
+    ) -> tuple[JobEvaluationPlan, bool]:
+        current = await db.scalar(
+            select(JobEvaluationPlan)
+            .where(
+                JobEvaluationPlan.job_id == job.id,
+                JobEvaluationPlan.is_current.is_(True),
+            )
+            .with_for_update()
+        )
+        if (
+            current is not None
+            and current.schema_version == JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION
+            and current.input_fingerprint == input_fingerprint
+        ):
+            if not force or current.status == JobEvaluationPlanStatus.GENERATING.value:
+                return current, False
+            self._reset_v5_generating_plan(
+                current,
+                snapshot_payload,
+                jd_fingerprint,
+                input_fingerprint,
+                settings,
+            )
+            return current, True
+
+        if current is not None:
+            current.status = JobEvaluationPlanStatus.OUTDATED.value
+            current.is_current = False
+            if current.completed_at is None:
+                current.completed_at = started_at
+            await db.flush()
+
+        versions = list(
+            (
+                await db.scalars(
+                    select(JobEvaluationPlan.edit_version).where(
+                        JobEvaluationPlan.job_id == job.id,
+                        JobEvaluationPlan.input_fingerprint == input_fingerprint,
+                        JobEvaluationPlan.edit_version.is_not(None),
+                    )
+                )
+            ).all()
+        )
+        next_version = max(versions, default=0) + 1
+        plan = JobEvaluationPlan(
+            job_id=job.id,
+            jd_fingerprint=jd_fingerprint,
+            status=JobEvaluationPlanStatus.GENERATING.value,
+            is_current=True,
+            items=null(),
+            structured_coverage=null(),
+            free_text_coverage=null(),
+            source_review_summary=null(),
+            requirement_facts=null(),
+            evaluation_criteria=null(),
+            coverage_review_summary=null(),
+            generation_audit=null(),
+            v5_criteria=null(),
+            edit_version=next_version,
+            confirmed_at=None,
+            warnings=[],
+            prompt_version=settings.JOB_EVALUATION_PLAN_V5_PROMPT_VERSION,
+            model_version=settings.JOB_EVALUATION_PLAN_MODEL,
+            schema_version=JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION,
+            input_fingerprint=input_fingerprint,
+            input_snapshot=snapshot_payload,
+            error_code=None,
+            error_message=None,
+            completed_at=None,
+        )
+        db.add(plan)
+        return plan, True
+
+    @staticmethod
+    def _reset_v5_generating_plan(
+        plan: JobEvaluationPlan,
+        snapshot_payload: dict[str, Any],
+        jd_fingerprint: str,
+        input_fingerprint: str,
+        settings: Settings,
+    ) -> None:
+        plan.status = JobEvaluationPlanStatus.GENERATING.value
+        plan.is_current = True
+        plan.items = null()
+        plan.structured_coverage = null()
+        plan.free_text_coverage = null()
+        plan.source_review_summary = null()
+        plan.requirement_facts = null()
+        plan.evaluation_criteria = null()
+        plan.coverage_review_summary = null()
+        plan.generation_audit = null()
+        plan.v5_criteria = null()
+        plan.confirmed_at = None
+        plan.warnings = []
+        plan.prompt_version = settings.JOB_EVALUATION_PLAN_V5_PROMPT_VERSION
+        plan.model_version = settings.JOB_EVALUATION_PLAN_MODEL
+        plan.schema_version = JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION
+        plan.jd_fingerprint = jd_fingerprint
+        plan.input_fingerprint = input_fingerprint
+        plan.input_snapshot = snapshot_payload
+        plan.error_code = None
+        plan.error_message = None
+        plan.completed_at = None
+
     async def _prepare_plan(
         self,
         db: AsyncSession,
@@ -895,9 +1194,17 @@ class JobEvaluationPlanService:
             if current is None:
                 await db.rollback()
                 return None
-            snapshot = self.build_v4_input_snapshot(job)
+            snapshot = (
+                self.build_v5_input_snapshot(job)
+                if current.schema_version == JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION
+                else self.build_v4_input_snapshot(job)
+            )
             if (
-                current.schema_version == JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION
+                current.schema_version
+                in {
+                    JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION,
+                    JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION,
+                }
                 and current.input_fingerprint == self.fingerprint_input(snapshot)
             ):
                 await db.commit()
@@ -914,12 +1221,389 @@ class JobEvaluationPlanService:
             await db.rollback()
             raise
 
+    @staticmethod
+    def check_edit_version_conflict(
+        plan: JobEvaluationPlan,
+        expected_edit_version: int,
+    ) -> None:
+        if plan.edit_version != expected_edit_version:
+            raise PlanEditConflictError("评价计划已被其他操作更新，请刷新后重试")
+
+    def edit_plan_criteria(
+        self,
+        current: list[V5CriterionItem],
+        draft: list[JobEvaluationPlanV5DraftCriterion],
+    ) -> list[JobEvaluationPlanV5DraftCriterion]:
+        current_ids = {criterion.criterion_id for criterion in current}
+        submitted_ids = {
+            criterion.criterion_id
+            for criterion in draft
+            if criterion.criterion_id is not None
+        }
+        unknown_ids = submitted_ids - current_ids
+        if unknown_ids:
+            raise JobEvaluationPlanContentError(
+                "草稿包含不属于当前计划的 criterion_id",
+                code="JOB_EVALUATION_PLAN_V5_UNKNOWN_CRITERION",
+            )
+        return list(draft)
+
+    @staticmethod
+    def add_criterion(
+        criteria: list[JobEvaluationPlanV5DraftCriterion],
+        criterion: JobEvaluationPlanV5DraftCriterion,
+    ) -> list[JobEvaluationPlanV5DraftCriterion]:
+        if criterion.criterion_id is not None or criterion.origin != "hr_added":
+            raise JobEvaluationPlanContentError(
+                "新增评价点必须由程序分配 ID 并标记为 HR 补充",
+                code="JOB_EVALUATION_PLAN_V5_INVALID_HR_EDIT",
+            )
+        return [*criteria, criterion]
+
+    @staticmethod
+    def delete_criterion(
+        criteria: list[JobEvaluationPlanV5DraftCriterion],
+        criterion_id: str,
+    ) -> list[JobEvaluationPlanV5DraftCriterion]:
+        remaining = [
+            criterion
+            for criterion in criteria
+            if criterion.criterion_id != criterion_id
+        ]
+        if len(remaining) == len(criteria):
+            raise JobEvaluationPlanContentError(
+                "要删除的评价点不存在",
+                code="JOB_EVALUATION_PLAN_V5_UNKNOWN_CRITERION",
+            )
+        if not remaining:
+            raise JobEvaluationPlanContentError(
+                "评价清单至少保留一个评价点",
+                code="JOB_EVALUATION_PLAN_V5_NO_CRITERIA",
+            )
+        return remaining
+
+    @staticmethod
+    def merge_criteria(
+        criteria: list[JobEvaluationPlanV5DraftCriterion],
+        criterion_ids: list[str],
+        merged: JobEvaluationPlanV5DraftCriterion,
+    ) -> list[JobEvaluationPlanV5DraftCriterion]:
+        merge_ids = set(criterion_ids)
+        if len(merge_ids) < 2 or merged.criterion_id not in merge_ids:
+            raise JobEvaluationPlanContentError(
+                "合并必须选择至少两个评价点并保留其中一个稳定 ID",
+                code="JOB_EVALUATION_PLAN_V5_INVALID_MERGE",
+            )
+        existing_ids = {
+            criterion.criterion_id
+            for criterion in criteria
+            if criterion.criterion_id is not None
+        }
+        if not merge_ids.issubset(existing_ids):
+            raise JobEvaluationPlanContentError(
+                "合并包含未知评价点",
+                code="JOB_EVALUATION_PLAN_V5_UNKNOWN_CRITERION",
+            )
+        return [
+            criterion
+            for criterion in criteria
+            if criterion.criterion_id not in merge_ids
+        ] + [merged]
+
+    @staticmethod
+    def update_criterion_importance(
+        criteria: list[JobEvaluationPlanV5DraftCriterion],
+        criterion_id: str,
+        importance: EvaluationItemPriority,
+    ) -> list[JobEvaluationPlanV5DraftCriterion]:
+        updated: list[JobEvaluationPlanV5DraftCriterion] = []
+        found = False
+        for criterion in criteria:
+            if criterion.criterion_id == criterion_id:
+                found = True
+                criterion = criterion.model_copy(update={"importance": importance})
+            updated.append(criterion)
+        if not found:
+            raise JobEvaluationPlanContentError(
+                "要修改 importance 的评价点不存在",
+                code="JOB_EVALUATION_PLAN_V5_UNKNOWN_CRITERION",
+            )
+        return updated
+
+    async def save_draft(
+        self,
+        db: AsyncSession,
+        job_id: int,
+        request: JobEvaluationPlanV5DraftSaveRequest | dict[str, Any],
+    ) -> JobEvaluationPlan:
+        data = JobEvaluationPlanV5DraftSaveRequest.model_validate(request)
+        try:
+            job = await self._get_locked_job(db, job_id)
+            if job is None:
+                raise JobEvaluationPlanJobNotFoundError("岗位不存在")
+            if job.status != "open":
+                raise JobEvaluationPlanNotEditableError("关闭岗位不能编辑评价计划")
+            plan = await db.scalar(
+                select(JobEvaluationPlan)
+                .where(
+                    JobEvaluationPlan.job_id == job_id,
+                    JobEvaluationPlan.is_current.is_(True),
+                )
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+            if plan is None:
+                raise JobEvaluationPlanNotFoundError("当前岗位还没有评价计划")
+            if (
+                plan.schema_version != JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION
+                or plan.status != JobEvaluationPlanStatus.PENDING_CONFIRMATION.value
+            ):
+                raise JobEvaluationPlanNotEditableError(
+                    "只有当前 5.0 待确认草稿可以保存编辑"
+                )
+            snapshot = self.build_v5_input_snapshot(job)
+            if (
+                plan.input_fingerprint != self.fingerprint_input(snapshot)
+                or plan.jd_fingerprint != self.fingerprint_snapshot(snapshot)
+            ):
+                plan.status = JobEvaluationPlanStatus.OUTDATED.value
+                plan.is_current = False
+                await db.commit()
+                raise JobEvaluationPlanNotEditableError(
+                    "岗位评价输入已经变化，旧草稿已过期"
+                )
+            self.check_edit_version_conflict(plan, data.edit_version)
+            current = [
+                V5CriterionItem.model_validate(item)
+                for item in (plan.v5_criteria or [])
+            ]
+            draft = self.edit_plan_criteria(current, data.criteria)
+            criteria = await self._materialize_v5_draft(
+                db,
+                plan,
+                snapshot,
+                draft,
+            )
+            plan.v5_criteria = [
+                criterion.model_dump(mode="json") for criterion in criteria
+            ]
+            plan.warnings = [
+                warning.model_dump(mode="json")
+                for warning in self._build_v5_warnings(criteria)
+            ]
+            plan.edit_version = data.edit_version + 1
+            plan.confirmed_at = None
+            await db.commit()
+            await db.refresh(plan)
+            return plan
+        except JobEvaluationPlanServiceError:
+            await db.rollback()
+            raise
+        except (ValidationError, TypeError, ValueError):
+            await db.rollback()
+            raise JobEvaluationPlanContentError(
+                "HR 编辑后的评价清单没有通过严格校验",
+                code="JOB_EVALUATION_PLAN_V5_INVALID_HR_EDIT",
+            ) from None
+        except BaseException:
+            await db.rollback()
+            raise
+
+    async def _materialize_v5_draft(
+        self,
+        db: AsyncSession,
+        plan: JobEvaluationPlan,
+        snapshot: JobEvaluationPlanInputSnapshot,
+        draft: list[JobEvaluationPlanV5DraftCriterion],
+    ) -> list[V5CriterionItem]:
+        history_payloads = list(
+            (
+                await db.scalars(
+                    select(JobEvaluationPlan.v5_criteria).where(
+                        JobEvaluationPlan.job_id == plan.job_id,
+                        JobEvaluationPlan.schema_version
+                        == JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION,
+                    )
+                )
+            ).all()
+        )
+        used_numbers = [
+            int(item["criterion_id"].split(":", 1)[1])
+            for payload in history_payloads
+            for item in (payload or [])
+            if isinstance(item, dict)
+            and isinstance(item.get("criterion_id"), str)
+            and re.fullmatch(r"criterion:\d{4}", item["criterion_id"])
+        ]
+        next_number = max(used_numbers, default=0) + 1
+        criteria: list[V5CriterionItem] = []
+        for incoming in draft:
+            criterion_id = incoming.criterion_id
+            if criterion_id is None:
+                if next_number > 9999:
+                    raise JobEvaluationPlanContentError(
+                        "评价点稳定 ID 已达到技术上限",
+                        code="JOB_EVALUATION_PLAN_V5_ID_LIMIT",
+                    )
+                criterion_id = f"criterion:{next_number:04d}"
+                next_number += 1
+            criterion = V5CriterionItem.model_validate(
+                {**incoming.model_dump(mode="json"), "criterion_id": criterion_id}
+            )
+            self._validate_v5_hr_criterion(criterion, snapshot)
+            criteria.append(criterion)
+        return criteria
+
+    def _validate_v5_hr_criterion(
+        self,
+        criterion: V5CriterionItem,
+        snapshot: JobEvaluationPlanInputSnapshot,
+    ) -> None:
+        evaluation_fields = snapshot.evaluation_fields
+        if evaluation_fields is None:
+            raise JobEvaluationPlanContentError(
+                "5.0 草稿缺少冻结 JD 评价字段",
+                code="JOB_EVALUATION_PLAN_V5_INPUT_REQUIRED",
+            )
+        if criterion.origin == "ai_from_jd":
+            self._validate_v5_criterion_candidate(
+                {
+                    "name": criterion.name,
+                    "importance": criterion.importance.value,
+                    "description": criterion.description,
+                    "screening_focus": criterion.screening_focus,
+                    "sources": [
+                        source.model_dump(mode="json")
+                        for source in criterion.sources
+                    ],
+                },
+                evaluation_fields.model_dump(mode="json"),
+            )
+        combined = "\n".join(
+            value
+            for value in (
+                criterion.name,
+                criterion.description,
+                criterion.screening_focus,
+                criterion.hr_note,
+            )
+            if value
+        )
+        if self._V5_PROMPT_POLLUTION_RE.search(combined):
+            raise JobEvaluationPlanContentError(
+                "HR 编辑包含 Prompt 污染指令",
+                code="JOB_EVALUATION_PLAN_V5_PROMPT_POLLUTION",
+            )
+        if self._V5_SENSITIVE_RE.search(combined):
+            raise JobEvaluationPlanContentError(
+                "HR 编辑使用了敏感或受保护信息",
+                code="JOB_EVALUATION_PLAN_V5_SENSITIVE_CRITERION",
+            )
+        if self._V5_RECRUITMENT_DECISION_RE.search(combined):
+            raise JobEvaluationPlanContentError(
+                "HR 编辑不能把评价点变成自动招聘决定",
+                code="JOB_EVALUATION_PLAN_V5_RECRUITMENT_DECISION",
+            )
+
+    async def create_new_version_from_confirmed(
+        self,
+        db: AsyncSession,
+        job_id: int,
+        expected_edit_version: int,
+        *,
+        clock: Callable[[], datetime] | None = None,
+    ) -> JobEvaluationPlan:
+        now_provider = clock or (lambda: datetime.now(timezone.utc))
+        try:
+            job = await self._get_locked_job(db, job_id)
+            if job is None:
+                raise JobEvaluationPlanJobNotFoundError("岗位不存在")
+            if job.status != "open":
+                raise JobEvaluationPlanNotEditableError("关闭岗位不能创建新草稿")
+            plan = await db.scalar(
+                select(JobEvaluationPlan)
+                .where(
+                    JobEvaluationPlan.job_id == job_id,
+                    JobEvaluationPlan.is_current.is_(True),
+                )
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+            if (
+                plan is None
+                or plan.schema_version != JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION
+                or plan.status != JobEvaluationPlanStatus.READY.value
+            ):
+                raise JobEvaluationPlanNotEditableError(
+                    "只有当前已确认的 5.0 计划可以创建新草稿"
+                )
+            self.check_edit_version_conflict(plan, expected_edit_version)
+            snapshot = self.build_v5_input_snapshot(job)
+            if (
+                plan.input_fingerprint != self.fingerprint_input(snapshot)
+                or plan.jd_fingerprint != self.fingerprint_snapshot(snapshot)
+            ):
+                plan.status = JobEvaluationPlanStatus.OUTDATED.value
+                plan.is_current = False
+                await db.commit()
+                raise JobEvaluationPlanNotEditableError(
+                    "岗位评价输入已经变化，已确认计划不能继续分叉"
+                )
+            criteria = [
+                V5CriterionItem.model_validate(item)
+                for item in (plan.v5_criteria or [])
+            ]
+            plan.is_current = False
+            await db.flush()
+            draft = JobEvaluationPlan(
+                job_id=plan.job_id,
+                jd_fingerprint=plan.jd_fingerprint,
+                status=JobEvaluationPlanStatus.PENDING_CONFIRMATION.value,
+                is_current=True,
+                items=null(),
+                structured_coverage=null(),
+                free_text_coverage=null(),
+                source_review_summary=null(),
+                requirement_facts=null(),
+                evaluation_criteria=null(),
+                coverage_review_summary=null(),
+                generation_audit=null(),
+                v5_criteria=[item.model_dump(mode="json") for item in criteria],
+                edit_version=(plan.edit_version or 0) + 1,
+                confirmed_at=None,
+                warnings=[
+                    warning.model_dump(mode="json")
+                    for warning in self._build_v5_warnings(criteria)
+                ],
+                prompt_version=plan.prompt_version,
+                model_version=plan.model_version,
+                schema_version=JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION,
+                input_fingerprint=plan.input_fingerprint,
+                input_snapshot=plan.input_snapshot,
+                error_code=None,
+                error_message=None,
+                completed_at=self._aware_time(now_provider()),
+            )
+            db.add(draft)
+            await db.commit()
+            await db.refresh(draft)
+            return draft
+        except JobEvaluationPlanServiceError:
+            await db.rollback()
+            raise
+        except BaseException:
+            await db.rollback()
+            raise
+
     async def confirm_current_plan(
         self,
         db: AsyncSession,
         job_id: int,
+        expected_edit_version: int | None = None,
+        *,
+        clock: Callable[[], datetime] | None = None,
     ) -> JobEvaluationPlan:
-        """Move the current validated 4.0 pending_confirmation plan to ready."""
+        """Confirm a 5.0 draft, while retaining legacy 4.0 internal reads."""
         stale_plan: JobEvaluationPlan | None = None
         try:
             job = await self._get_locked_job(db, job_id)
@@ -941,41 +1625,84 @@ class JobEvaluationPlanService:
                     "关闭岗位不能确认评价计划"
                 )
 
-            snapshot = self.build_v4_input_snapshot(job)
-            input_fingerprint = self.fingerprint_input(snapshot)
-            if (
-                not plan.is_current
-                or plan.schema_version != "4.0"
-                or plan.input_fingerprint != input_fingerprint
-                or plan.jd_fingerprint != self.fingerprint_snapshot(snapshot)
-            ):
-                plan.status = JobEvaluationPlanStatus.OUTDATED.value
-                plan.is_current = False
-                await db.commit()
-                await db.refresh(plan)
-                stale_plan = plan
-            elif plan.status == JobEvaluationPlanStatus.READY.value:
-                self.build_read_model(plan)
-                await db.commit()
-                await db.refresh(plan)
-                return plan
-            elif plan.status != "pending_confirmation":
-                raise JobEvaluationPlanNotConfirmableError(
-                    "只有当前待确认的 4.0 评价计划可以确认"
-                )
+            if plan.schema_version == JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION:
+                if expected_edit_version is None:
+                    raise JobEvaluationPlanNotConfirmableError(
+                        "确认 5.0 评价计划必须提交当前 edit_version"
+                    )
+                snapshot = self.build_v5_input_snapshot(job)
+                input_fingerprint = self.fingerprint_input(snapshot)
+                if (
+                    not plan.is_current
+                    or plan.input_fingerprint != input_fingerprint
+                    or plan.jd_fingerprint != self.fingerprint_snapshot(snapshot)
+                ):
+                    plan.status = JobEvaluationPlanStatus.OUTDATED.value
+                    plan.is_current = False
+                    await db.commit()
+                    await db.refresh(plan)
+                    stale_plan = plan
+                else:
+                    self.check_edit_version_conflict(
+                        plan,
+                        expected_edit_version,
+                    )
+                    if plan.status == JobEvaluationPlanStatus.READY.value:
+                        self.build_read_model(plan)
+                        await db.commit()
+                        await db.refresh(plan)
+                        return plan
+                    if plan.status != JobEvaluationPlanStatus.PENDING_CONFIRMATION.value:
+                        raise JobEvaluationPlanNotConfirmableError(
+                            "只有当前待确认的 5.0 评价计划可以确认"
+                        )
+                    self.build_read_model(plan)
+                    plan.status = JobEvaluationPlanStatus.READY.value
+                    now_provider = clock or (lambda: datetime.now(timezone.utc))
+                    plan.confirmed_at = self._aware_time(now_provider())
+                    await db.commit()
+                    await db.refresh(plan)
+                    return plan
             else:
-                self.build_read_model(plan)
-                plan.status = JobEvaluationPlanStatus.READY.value
-                await db.commit()
-                await db.refresh(plan)
-                return plan
+                if expected_edit_version is not None:
+                    raise JobEvaluationPlanNotConfirmableError(
+                        "1.0—4.0 历史计划只读，不能通过 5.0 确认接口修改"
+                    )
+                snapshot = self.build_v4_input_snapshot(job)
+                input_fingerprint = self.fingerprint_input(snapshot)
+                if (
+                    not plan.is_current
+                    or plan.schema_version != "4.0"
+                    or plan.input_fingerprint != input_fingerprint
+                    or plan.jd_fingerprint != self.fingerprint_snapshot(snapshot)
+                ):
+                    plan.status = JobEvaluationPlanStatus.OUTDATED.value
+                    plan.is_current = False
+                    await db.commit()
+                    await db.refresh(plan)
+                    stale_plan = plan
+                elif plan.status == JobEvaluationPlanStatus.READY.value:
+                    self.build_read_model(plan)
+                    await db.commit()
+                    await db.refresh(plan)
+                    return plan
+                elif plan.status != "pending_confirmation":
+                    raise JobEvaluationPlanNotConfirmableError(
+                        "只有当前待确认的 4.0 评价计划可以确认"
+                    )
+                else:
+                    self.build_read_model(plan)
+                    plan.status = JobEvaluationPlanStatus.READY.value
+                    await db.commit()
+                    await db.refresh(plan)
+                    return plan
         except JobEvaluationPlanServiceError:
             await db.rollback()
             raise
         except (AttributeError, ValidationError, TypeError, ValueError):
             await db.rollback()
             raise JobEvaluationPlanNotConfirmableError(
-                "待确认评价计划没有通过 4.0 完整性复核"
+                "待确认评价计划没有通过完整性复核"
             ) from None
         except BaseException:
             await db.rollback()
@@ -1104,7 +1831,7 @@ class JobEvaluationPlanService:
         self,
         content: str,
         snapshot: JobEvaluationPlanInputSnapshot,
-    ) -> tuple[list[V5CriterionItem], list[str]]:
+    ) -> tuple[list[V5CriterionItem], list[JobEvaluationPlanV5WarningDetail]]:
         try:
             payload = json.loads(
                 content,
@@ -1186,12 +1913,44 @@ class JobEvaluationPlanService:
             )
             for index, (_, criterion) in enumerate(parsed, start=1)
         ]
-        warnings: list[str] = []
+        return criteria, self._build_v5_warnings(criteria)
+
+    def _build_v5_warnings(
+        self,
+        criteria: list[V5CriterionItem],
+    ) -> list[JobEvaluationPlanV5WarningDetail]:
+        warnings: list[JobEvaluationPlanV5WarningDetail] = []
         if len(criteria) < 5:
-            warnings.append("limited_basis")
+            warnings.append(
+                JobEvaluationPlanV5WarningDetail(
+                    code=JobEvaluationPlanV5WarningCode.LIMITED_BASIS,
+                    message="当前轻量评价清单少于 5 项，请 HR 检查评价依据是否充足",
+                )
+            )
         elif len(criteria) > 12:
-            warnings.append("many_criteria")
-        return criteria, warnings
+            warnings.append(
+                JobEvaluationPlanV5WarningDetail(
+                    code=JobEvaluationPlanV5WarningCode.MANY_CRITERIA,
+                    message="当前轻量评价清单多于 12 项，请 HR 检查是否需要合并",
+                )
+            )
+        for criterion in criteria:
+            if criterion.origin == "hr_added":
+                continue
+            reasons = self._v5_importance_review_reasons(criterion)
+            if reasons:
+                warnings.append(
+                    JobEvaluationPlanV5WarningDetail(
+                        code=JobEvaluationPlanV5WarningCode.IMPORTANCE_REVIEW_REQUIRED,
+                        message=(
+                            "评价点 importance 与原文语气或字段信号存在需要 HR "
+                            "复核的不确定性"
+                        ),
+                        criterion_id=criterion.criterion_id,
+                        reasons=reasons,
+                    )
+                )
+        return warnings
 
     def _validate_v5_criterion_candidate(
         self,
@@ -1258,12 +2017,6 @@ class JobEvaluationPlanService:
                 "评价点包含模型无权作出的招聘决定",
                 code="JOB_EVALUATION_PLAN_V5_RECRUITMENT_DECISION",
             )
-        expected_importance = self._v5_expected_importance(criterion)
-        if criterion.importance is not expected_importance:
-            raise JobEvaluationPlanContentError(
-                "评价点 importance 与 JD 原文强弱或来源字段不一致",
-                code="JOB_EVALUATION_PLAN_V5_IMPORTANCE_MISMATCH",
-            )
         if not self._v5_candidate_is_supported(criterion, source_texts):
             raise JobEvaluationPlanContentError(
                 "评价点包含 JD 来源不能支持的新增要求",
@@ -1271,21 +2024,101 @@ class JobEvaluationPlanService:
             )
         return criterion
 
-    def _v5_expected_importance(
+    def _v5_importance_review_reasons(
         self,
         criterion: V5CriterionItem,
-    ) -> EvaluationItemPriority:
-        quotes = "\n".join(source.source_quote for source in criterion.sources)
-        if self._has_v4_priority_signal(quotes, strength="strong"):
-            return EvaluationItemPriority.REQUIRED
-        if self._has_v4_priority_signal(quotes, strength="weak"):
-            return EvaluationItemPriority.PREFERRED
-        source_fields = {source.source_field for source in criterion.sources}
-        if "candidate_requirements" in source_fields:
-            return EvaluationItemPriority.REQUIRED
-        if "preferred_qualifications" in source_fields:
-            return EvaluationItemPriority.PREFERRED
-        return EvaluationItemPriority.GENERAL
+    ) -> list[JobEvaluationPlanV5ImportanceReviewReason]:
+        source_signals = [
+            (
+                source.source_field,
+                self._v5_importance_signals(source.source_quote),
+            )
+            for source in criterion.sources
+        ]
+        has_strong = any(signals.strong for _, signals in source_signals)
+        has_weak = any(signals.weak for _, signals in source_signals)
+        reasons: set[JobEvaluationPlanV5ImportanceReviewReason] = set()
+
+        if has_strong and has_weak:
+            reasons.add(
+                JobEvaluationPlanV5ImportanceReviewReason.MIXED_STRENGTH_SIGNALS
+            )
+        elif has_strong and criterion.importance != EvaluationItemPriority.REQUIRED:
+            reasons.add(
+                JobEvaluationPlanV5ImportanceReviewReason.EXPLICIT_STRONG_SIGNAL_MISMATCH
+            )
+        elif has_weak and criterion.importance != EvaluationItemPriority.PREFERRED:
+            reasons.add(
+                JobEvaluationPlanV5ImportanceReviewReason.EXPLICIT_WEAK_SIGNAL_MISMATCH
+            )
+        elif (
+            not has_strong
+            and not has_weak
+            and criterion.importance != EvaluationItemPriority.GENERAL
+        ):
+            reasons.add(
+                JobEvaluationPlanV5ImportanceReviewReason.NO_EXPLICIT_SIGNAL_NON_GENERAL
+            )
+
+        if any(signals.complex_language for _, signals in source_signals):
+            reasons.add(
+                JobEvaluationPlanV5ImportanceReviewReason.COMPLEX_QUALIFICATION_LANGUAGE
+            )
+
+        if any(
+            self._v5_source_field_signal_mismatch(source_field, signals)
+            for source_field, signals in source_signals
+        ):
+            reasons.add(
+                JobEvaluationPlanV5ImportanceReviewReason.SOURCE_FIELD_SIGNAL_MISMATCH
+            )
+
+        strong_only_source = any(
+            signals.strong and not signals.weak
+            for _, signals in source_signals
+        )
+        weak_only_source = any(
+            signals.weak and not signals.strong
+            for _, signals in source_signals
+        )
+        if strong_only_source and weak_only_source:
+            reasons.add(
+                JobEvaluationPlanV5ImportanceReviewReason.MULTI_SOURCE_SIGNAL_CONFLICT
+            )
+
+        return [
+            reason
+            for reason in JobEvaluationPlanV5ImportanceReviewReason
+            if reason in reasons
+        ]
+
+    @classmethod
+    def _v5_importance_signals(cls, text: str) -> _V5ImportanceSignals:
+        strong_signal_text = cls._V5_NEGATED_STRONG_SIGNAL_RE.sub(" ", text)
+        return _V5ImportanceSignals(
+            strong=bool(
+                cls._V5_STRONG_IMPORTANCE_SIGNAL_RE.search(strong_signal_text)
+            ),
+            weak=bool(cls._V5_WEAK_IMPORTANCE_SIGNAL_RE.search(text)),
+            complex_language=bool(
+                cls._V5_COMPLEX_IMPORTANCE_LANGUAGE_RE.search(text)
+            ),
+        )
+
+    @staticmethod
+    def _v5_source_field_signal_mismatch(
+        source_field: str,
+        signals: _V5ImportanceSignals,
+    ) -> bool:
+        if signals.strong == signals.weak:
+            return False
+        if source_field == "job_responsibilities":
+            return True
+        if source_field == "candidate_requirements":
+            return signals.weak
+        if source_field == "preferred_qualifications":
+            return signals.strong
+        return False
 
     def _v5_candidate_is_supported(
         self,
@@ -3614,6 +4447,60 @@ class JobEvaluationPlanService:
         collect(snapshot.requirements.model_dump(mode="json"))
         return "\n".join(values)
 
+    async def _save_v5_success(
+        self,
+        db: AsyncSession,
+        plan_id: int,
+        input_fingerprint: str,
+        content: GeneratedPlanContentV5,
+        *,
+        completed_at: datetime,
+    ) -> JobEvaluationPlan:
+        try:
+            plan = await self._get_locked_plan(db, plan_id)
+            if plan is None:
+                raise JobEvaluationPlanNotFoundError("评价计划不存在")
+            job = await self._get_locked_job(db, plan.job_id)
+            if plan.status != JobEvaluationPlanStatus.GENERATING.value:
+                await db.commit()
+                await db.refresh(plan)
+                return plan
+            if (
+                job is None
+                or self.fingerprint_input(self.build_v5_input_snapshot(job))
+                != input_fingerprint
+                or plan.input_fingerprint != input_fingerprint
+                or plan.schema_version != JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION
+                or not plan.is_current
+            ):
+                plan.status = JobEvaluationPlanStatus.OUTDATED.value
+                plan.is_current = False
+                plan.completed_at = completed_at
+                await db.commit()
+                await db.refresh(plan)
+                return plan
+
+            plan.status = JobEvaluationPlanStatus.PENDING_CONFIRMATION.value
+            plan.v5_criteria = [
+                criterion.model_dump(mode="json") for criterion in content.criteria
+            ]
+            plan.warnings = [
+                warning.model_dump(mode="json") for warning in content.warnings
+            ]
+            plan.prompt_version = content.prompt_version
+            plan.model_version = content.model_version
+            plan.schema_version = content.schema_version
+            plan.confirmed_at = None
+            plan.error_code = None
+            plan.error_message = None
+            plan.completed_at = completed_at
+            await db.commit()
+            await db.refresh(plan)
+            return plan
+        except BaseException:
+            await db.rollback()
+            raise
+
     async def _save_success(
         self,
         db: AsyncSession,
@@ -3762,7 +4649,9 @@ class JobEvaluationPlanService:
                 raise JobEvaluationPlanNotFoundError("评价计划不存在")
             job = await self._get_locked_job(db, plan.job_id)
             current_snapshot = (
-                self.build_v4_input_snapshot(job)
+                self.build_v5_input_snapshot(job)
+                if job is not None and plan.schema_version == "5.0"
+                else self.build_v4_input_snapshot(job)
                 if job is not None and plan.schema_version == "4.0"
                 else self.build_input_snapshot(job)
                 if job is not None
@@ -3783,9 +4672,11 @@ class JobEvaluationPlanService:
                 plan.is_current = False
             else:
                 plan.status = JobEvaluationPlanStatus.FAILED.value
-                plan.items = null() if plan.schema_version == "4.0" else []
+                plan.items = (
+                    null() if plan.schema_version in {"4.0", "5.0"} else []
+                )
                 plan.source_review_summary = null()
-                if plan.schema_version in {"3.0", "4.0"}:
+                if plan.schema_version in {"3.0", "4.0", "5.0"}:
                     plan.structured_coverage = null()
                     plan.free_text_coverage = null()
                 if plan.schema_version == "4.0":
@@ -3793,6 +4684,9 @@ class JobEvaluationPlanService:
                     plan.evaluation_criteria = null()
                     plan.coverage_review_summary = null()
                     plan.generation_audit = null()
+                if plan.schema_version == "5.0":
+                    plan.v5_criteria = null()
+                    plan.confirmed_at = None
                 plan.warnings = []
                 plan.error_code = code
                 plan.error_message = message[:500]
@@ -3847,6 +4741,23 @@ class JobEvaluationPlanService:
         if versions not in {current_versions, legacy_versions}:
             raise JobEvaluationPlanConfigurationError(
                 "岗位评价计划 Prompt、AI Schema 与计划 Schema 版本组合不一致"
+            )
+
+    @staticmethod
+    def _validate_v5_configuration(settings: Settings) -> None:
+        versions = (
+            settings.JOB_EVALUATION_PLAN_V5_PROMPT_VERSION,
+            settings.JOB_EVALUATION_PLAN_V5_AI_SCHEMA_VERSION,
+            settings.JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION,
+        )
+        expected = (
+            JOB_EVALUATION_PLAN_V5_PROMPT_VERSION,
+            JOB_EVALUATION_PLAN_V5_AI_SCHEMA_VERSION,
+            JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION,
+        )
+        if versions != expected:
+            raise JobEvaluationPlanConfigurationError(
+                "岗位评价计划 5.0 Prompt、AI Schema 与计划 Schema 版本不一致"
             )
 
     @staticmethod

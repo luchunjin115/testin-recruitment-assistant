@@ -6,15 +6,23 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.schemas.job_evaluation_plan import JobEvaluationPlanRead
+from app.schemas.job_evaluation_plan import (
+    JobEvaluationPlanRead,
+    JobEvaluationPlanV5ConfirmRequest,
+    JobEvaluationPlanV5DraftSaveRequest,
+    JobEvaluationPlanV5VersionForkRequest,
+)
 from app.services.job_evaluation_plan_service import (
     JobEvaluationPlanConfigurationError,
     JobEvaluationPlanDisabledError,
     JobEvaluationPlanJobNotFoundError,
     JobEvaluationPlanJobNotOpenError,
     JobEvaluationPlanNotFoundError,
+    JobEvaluationPlanNotEditableError,
     JobEvaluationPlanNotConfirmableError,
     JobEvaluationPlanNotRegenerableError,
+    JobEvaluationPlanContentError,
+    PlanEditConflictError,
     job_evaluation_plan_service,
 )
 from app.services.screening_service import screening_service
@@ -73,7 +81,25 @@ def _map_expected_error(exc: Exception) -> HTTPException:
         return _error(
             status.HTTP_409_CONFLICT,
             exc.code,
-            "只有当前、未过期的 4.0 待确认计划可以确认",
+            "只有当前、未过期且版本匹配的 5.0 待确认计划可以确认",
+        )
+    if isinstance(exc, JobEvaluationPlanNotEditableError):
+        return _error(
+            status.HTTP_409_CONFLICT,
+            exc.code,
+            "只有当前、未过期的 5.0 待确认计划可以编辑",
+        )
+    if isinstance(exc, PlanEditConflictError):
+        return _error(
+            status.HTTP_409_CONFLICT,
+            exc.code,
+            "评价计划已更新，请刷新后重试",
+        )
+    if isinstance(exc, JobEvaluationPlanContentError):
+        return _error(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            exc.code,
+            "评价计划编辑内容未通过校验",
         )
     if isinstance(exc, JobEvaluationPlanDisabledError):
         return _error(
@@ -122,14 +148,8 @@ async def generate_current_evaluation_plan(
     db: AsyncSession = Depends(get_db),
 ) -> JobEvaluationPlanRead:
     try:
-        plan = await job_evaluation_plan_service.generate_for_job(db, job_id)
-        response = job_evaluation_plan_service.build_read_model(plan)
-        await _notify_screening_plan_changed(
-            db,
-            job_id,
-            plan_ready=getattr(plan, "status", None) == "ready",
-        )
-        return response
+        plan = await job_evaluation_plan_service.generate_v5_for_job(db, job_id)
+        return job_evaluation_plan_service.build_read_model(plan)
     except Exception as exc:
         raise _map_expected_error(exc) from exc
 
@@ -143,14 +163,11 @@ async def regenerate_failed_evaluation_plan(
     db: AsyncSession = Depends(get_db),
 ) -> JobEvaluationPlanRead:
     try:
-        plan = await job_evaluation_plan_service.regenerate_failed_plan(db, job_id)
-        response = job_evaluation_plan_service.build_read_model(plan)
-        await _notify_screening_plan_changed(
+        plan = await job_evaluation_plan_service.regenerate_failed_v5_plan(
             db,
             job_id,
-            plan_ready=getattr(plan, "status", None) == "ready",
         )
-        return response
+        return job_evaluation_plan_service.build_read_model(plan)
     except Exception as exc:
         raise _map_expected_error(exc) from exc
 
@@ -161,12 +178,68 @@ async def regenerate_failed_evaluation_plan(
 )
 async def confirm_current_evaluation_plan(
     job_id: int,
+    data: JobEvaluationPlanV5ConfirmRequest,
     db: AsyncSession = Depends(get_db),
 ) -> JobEvaluationPlanRead:
     try:
-        plan = await job_evaluation_plan_service.confirm_current_plan(db, job_id)
-        response = job_evaluation_plan_service.build_read_model(plan)
-        await _notify_screening_plan_changed(db, job_id, plan_ready=True)
-        return response
+        plan = await job_evaluation_plan_service.confirm_current_plan(
+            db,
+            job_id,
+            data.edit_version,
+        )
+        return job_evaluation_plan_service.build_read_model(plan)
+    except Exception as exc:
+        raise _map_expected_error(exc) from exc
+
+
+@router.put(
+    "/{job_id}/evaluation-plan/draft",
+    response_model=JobEvaluationPlanRead,
+)
+async def save_current_evaluation_plan_draft(
+    job_id: int,
+    data: JobEvaluationPlanV5DraftSaveRequest,
+    db: AsyncSession = Depends(get_db),
+) -> JobEvaluationPlanRead:
+    try:
+        plan = await job_evaluation_plan_service.save_draft(db, job_id, data)
+        return job_evaluation_plan_service.build_read_model(plan)
+    except Exception as exc:
+        raise _map_expected_error(exc) from exc
+
+
+@router.post(
+    "/{job_id}/evaluation-plan/versions",
+    response_model=JobEvaluationPlanRead,
+)
+async def create_evaluation_plan_version(
+    job_id: int,
+    data: JobEvaluationPlanV5VersionForkRequest,
+    db: AsyncSession = Depends(get_db),
+) -> JobEvaluationPlanRead:
+    try:
+        plan = await job_evaluation_plan_service.create_new_version_from_confirmed(
+            db,
+            job_id,
+            data.edit_version,
+        )
+        return job_evaluation_plan_service.build_read_model(plan)
+    except Exception as exc:
+        raise _map_expected_error(exc) from exc
+
+
+@router.get(
+    "/{job_id}/evaluation-plans",
+    response_model=list[JobEvaluationPlanRead],
+)
+async def list_evaluation_plan_history(
+    job_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> list[JobEvaluationPlanRead]:
+    try:
+        plans = await job_evaluation_plan_service.list_plan_history(db, job_id)
+        return [
+            job_evaluation_plan_service.build_read_model(plan) for plan in plans
+        ]
     except Exception as exc:
         raise _map_expected_error(exc) from exc

@@ -17,7 +17,6 @@ from app.adapters.screening_evaluation import (
     FakeScreeningEvaluationAdapter,
     ScreeningEvaluationAdapterResult,
 )
-from app.api import job_evaluation_plans as plan_api
 from app.api import screening as screening_api
 from app.core.config import Settings
 from app.models.application import Application
@@ -34,6 +33,7 @@ from app.schemas.screening import (
     ScreeningRunTriggerType,
     ScreeningWaitingReason,
 )
+from app.services.job_evaluation_plan_service import job_evaluation_plan_service
 from app.services.screening_service import screening_service
 
 
@@ -180,7 +180,7 @@ class Stage7R4GFakeApiPostgresTest(IsolatedAsyncioTestCase):
         await self.engine.dispose()
         self.assertEqual(counts_after, self.counts_before)
 
-    async def test_fake_plan_confirmation_and_fact_screening_cross_api_service_db(self) -> None:
+    async def test_legacy_v4_fact_screening_regression_across_services_and_db(self) -> None:
         job = Job(
             title="7R4-G Fake integration job",
             department="Engineering",
@@ -230,15 +230,20 @@ class Stage7R4GFakeApiPostgresTest(IsolatedAsyncioTestCase):
             "app.services.job_evaluation_plan_service.DeepSeekJobEvaluationPlanAdapter",
             return_value=plan_adapter,
         ):
-            pending_plan = await plan_api.generate_current_evaluation_plan(
-                job.id,
+            pending_plan = await job_evaluation_plan_service.generate_for_job(
                 self.db,
+                job.id,
             )
         self.assertEqual(pending_plan.status, "pending_confirmation")
         self.assertEqual(pending_plan.schema_version, "4.0")
-        self.assertEqual(pending_plan.generation_audit.business_call_count, 3)
+        self.assertEqual(pending_plan.generation_audit["business_call_count"], 3)
         self.assertEqual(len(plan_adapter.v4_calls), 3)
 
+        await screening_service.after_plan_changed(
+            self.db,
+            job.id,
+            plan_ready=False,
+        )
         pending_state = await screening_api.get_application_screening(
             application_id,
             self.db,
@@ -248,9 +253,18 @@ class Stage7R4GFakeApiPostgresTest(IsolatedAsyncioTestCase):
             ScreeningWaitingReason.PLAN_PENDING_CONFIRMATION,
         )
 
-        ready_plan = await plan_api.confirm_current_evaluation_plan(job.id, self.db)
+        ready_plan = await job_evaluation_plan_service.confirm_current_plan(
+            self.db,
+            job.id,
+        )
         self.assertEqual(ready_plan.status, "ready")
         self.assertEqual(len(plan_adapter.v4_calls), 3)
+
+        await screening_service.after_plan_changed(
+            self.db,
+            job.id,
+            plan_ready=True,
+        )
 
         claimed = await screening_service.claim_next_run(
             self.db,

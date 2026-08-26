@@ -95,7 +95,7 @@ class JobApiTest(TestCase):
             patch.object(job_service, "open_job", open_mock),
             patch(
                 "app.services.job_evaluation_plan_service."
-                "job_evaluation_plan_service.generate_for_job",
+                "job_evaluation_plan_service.generate_v5_for_job",
                 plan_mock,
             ),
         ):

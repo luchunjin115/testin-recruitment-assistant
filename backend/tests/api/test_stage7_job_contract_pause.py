@@ -11,8 +11,7 @@ from app.api.job_evaluation_plans import (
 )
 from app.api.jobs import create_job, open_job, reopen_job, update_job
 from app.schemas.job import JobCreate, JobStatus, JobUpdate
-from app.schemas.job_evaluation_plan import JobEvaluationPlanRead
-from tests.fixtures.job_evaluation_plan_v4 import make_v4_plan
+from app.schemas.job_evaluation_plan import JobEvaluationPlanV5ConfirmRequest
 
 
 def open_job_record():
@@ -74,33 +73,34 @@ class Stage7JobContractGenerationTest(IsolatedAsyncioTestCase):
         outdate.assert_awaited_once_with(job.id)
         self.assertEqual(len(background.tasks), 0)
 
-    async def test_explicit_generate_regenerate_and_confirm_use_v4_state_flow(self) -> None:
+    async def test_explicit_generate_regenerate_and_confirm_use_v5_state_flow(self) -> None:
         db = Mock()
         db.rollback = AsyncMock()
         operations = (
             (
                 generate_current_evaluation_plan,
-                "generate_for_job",
+                "generate_v5_for_job",
+                (11, db),
                 "pending_confirmation",
-                False,
             ),
             (
                 regenerate_failed_evaluation_plan,
-                "regenerate_failed_plan",
+                "regenerate_failed_v5_plan",
+                (11, db),
                 "pending_confirmation",
-                False,
             ),
             (
                 confirm_current_evaluation_plan,
                 "confirm_current_plan",
+                (11, JobEvaluationPlanV5ConfirmRequest(edit_version=3), db),
                 "ready",
-                True,
             ),
         )
-        for operation, service_name, plan_status, plan_ready in operations:
+        for operation, service_name, args, plan_status in operations:
             plan = SimpleNamespace(status=plan_status)
-            read_model = JobEvaluationPlanRead.model_validate(
-                make_v4_plan(status=plan_status)
+            read_model = SimpleNamespace(
+                schema_version="5.0",
+                status=SimpleNamespace(value=plan_status),
             )
             service = AsyncMock(return_value=plan)
             notify = AsyncMock(return_value=None)
@@ -118,8 +118,11 @@ class Stage7JobContractGenerationTest(IsolatedAsyncioTestCase):
                     notify,
                 ),
             ):
-                result = await operation(11, db)
-            self.assertEqual(result.schema_version, "4.0")
+                result = await operation(*args)
+            self.assertEqual(result.schema_version, "5.0")
             self.assertEqual(result.status.value, plan_status)
-            service.assert_awaited_once_with(db, 11)
-            notify.assert_awaited_once_with(db, 11, plan_ready=plan_ready)
+            if service_name == "confirm_current_plan":
+                service.assert_awaited_once_with(db, 11, 3)
+            else:
+                service.assert_awaited_once_with(db, 11)
+            notify.assert_not_awaited()

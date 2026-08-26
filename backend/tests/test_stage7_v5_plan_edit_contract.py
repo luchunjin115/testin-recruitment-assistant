@@ -67,39 +67,33 @@ class TestEditingMethodsAbsent:
     modify individual criteria.  Each test asserts that a required v5.0
     editing method does NOT exist on ``JobEvaluationPlanService``."""
 
-    @pytest.mark.xfail(reason="7R5-D: edit_plan_criteria not implemented", strict=True)
     def test_edit_plan_criteria_exists(self) -> None:
         """v5.0 must provide ``edit_plan_criteria`` for bulk criterion edits
         (rename, change description, change screening_focus).  Batch 7R5-D
         will add this method."""
         assert _has_method("edit_plan_criteria")
 
-    @pytest.mark.xfail(reason="7R5-D: add_criterion not implemented", strict=True)
     def test_add_criterion_exists(self) -> None:
         """v5.0 must let HR add a brand-new criterion with origin=hr_added.
         Batch 7R5-D will add ``add_criterion``."""
         assert _has_method("add_criterion")
 
-    @pytest.mark.xfail(reason="7R5-D: delete_criterion not implemented", strict=True)
     def test_delete_criterion_exists(self) -> None:
         """v5.0 must let HR remove a criterion entirely.
         Batch 7R5-D will add ``delete_criterion``."""
         assert _has_method("delete_criterion")
 
-    @pytest.mark.xfail(reason="7R5-D: merge_criteria not implemented", strict=True)
     def test_merge_criteria_exists(self) -> None:
         """v5.0 must let HR merge two or more criteria into one.
         Batch 7R5-D will add ``merge_criteria``."""
         assert _has_method("merge_criteria")
 
-    @pytest.mark.xfail(reason="7R5-D: update_criterion_importance not implemented", strict=True)
     def test_update_criterion_importance_exists(self) -> None:
         """v5.0 must let HR change a criterion's importance
         (required / preferred / general).
         Batch 7R5-D will add ``update_criterion_importance``."""
         assert _has_method("update_criterion_importance")
 
-    @pytest.mark.xfail(reason="7R5-D: save_draft not implemented", strict=True)
     def test_save_draft_exists(self) -> None:
         """v5.0 must let HR save edits as a pending_confirmation draft
         without confirming.  Batch 7R5-D will add ``save_draft``."""
@@ -116,7 +110,6 @@ class TestVersionConcurrencyAbsent:
     editing the same plan at the same time get a clear conflict error
     instead of a silent last-write-wins overwrite."""
 
-    @pytest.mark.xfail(reason="7R5-D: check_edit_version_conflict not implemented", strict=True)
     def test_check_edit_version_conflict_exists(self) -> None:
         """v5.0 must provide ``check_edit_version_conflict`` to detect
         concurrent edits.  Batch 7R5-D will add this method."""
@@ -134,7 +127,6 @@ class TestVersionConcurrencyAbsent:
         Batch 7R5-D will add this column."""
         assert _has_column("confirmed_at")
 
-    @pytest.mark.xfail(reason="7R5-D: PlanEditConflictError not defined", strict=True)
     def test_plan_edit_conflict_error_exists(self) -> None:
         """v5.0 must raise a dedicated ``PlanEditConflictError`` when an
         optimistic-locking conflict is detected.  Batch 7R5-D will add
@@ -153,14 +145,12 @@ class TestVersionImmutability:
     reports, it must not be mutated in place.  v5.0 must create a new
     version instead."""
 
-    @pytest.mark.xfail(reason="7R5-D: create_new_version_from_confirmed not implemented", strict=True)
     def test_create_new_version_from_confirmed_exists(self) -> None:
         """v5.0 must provide ``create_new_version_from_confirmed`` to fork a
         confirmed plan into an editable draft without touching the original.
         Batch 7R5-D will add this method."""
         assert _has_method("create_new_version_from_confirmed")
 
-    @pytest.mark.xfail(reason="7R5-D: no mechanism to create a new version from confirmed plan", strict=True)
     def test_confirmed_plan_version_fork_mechanism(self) -> None:
         """v5.0 must have at least one public method whose signature accepts
         an existing plan id and returns a new draft version.  Today no such

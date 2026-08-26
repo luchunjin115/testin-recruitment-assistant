@@ -16,14 +16,23 @@ from app.adapters.job_evaluation_plan import (
 )
 from app.core.config import Settings
 from app.prompts.job_evaluation_plan import (
+    JOB_EVALUATION_PLAN_V5_FEW_SHOT_EXAMPLES,
     JOB_EVALUATION_PLAN_V5_PROMPT_VERSION,
+    JOB_EVALUATION_PLAN_V5_PROMPT_SECTION_TITLES,
     build_job_evaluation_plan_v5_messages,
 )
+from app.schemas.job_evaluation_plan import (
+    JobEvaluationPlanV5ImportanceReviewReason,
+    JobEvaluationPlanV5WarningCode,
+    JobEvaluationPlanV5WarningDetail,
+)
 from app.services.job_evaluation_plan_service import (
+    JOB_EVALUATION_PLAN_V5_BREAKING_CONTRACT_VERSION,
     JobEvaluationPlanService,
     JobEvaluationPlanV5GenerationError,
 )
 from tests.fixtures.job_evaluation_plan_v3 import make_five_section_job
+from tests.fixtures.v5_quality_samples import V5_PLAN_JDS
 
 
 def _snapshot(rows: list[tuple[str, str]]) -> dict:
@@ -105,6 +114,46 @@ def _result(payload: dict, *, model: str = "fake-plan-model") -> JobEvaluationPl
     )
 
 
+def _warning_codes(content) -> list[str]:
+    return [warning.code.value for warning in content.warnings]
+
+
+def _importance_warnings(content):
+    return [
+        warning
+        for warning in content.warnings
+        if warning.code
+        is JobEvaluationPlanV5WarningCode.IMPORTANCE_REVIEW_REQUIRED
+    ]
+
+
+def test_v5_importance_warning_schema_requires_stable_id_and_controlled_reason() -> None:
+    with pytest.raises(ValueError):
+        JobEvaluationPlanV5WarningDetail(
+            code=JobEvaluationPlanV5WarningCode.IMPORTANCE_REVIEW_REQUIRED,
+            message="请 HR 复核",
+        )
+    with pytest.raises(ValueError):
+        JobEvaluationPlanV5WarningDetail.model_validate(
+            {
+                "code": "importance_review_required",
+                "message": "请 HR 复核",
+                "criterion_id": "criterion:0001",
+                "reasons": ["free_form_reason"],
+            }
+        )
+
+    warning = JobEvaluationPlanV5WarningDetail(
+        code=JobEvaluationPlanV5WarningCode.IMPORTANCE_REVIEW_REQUIRED,
+        message="请 HR 复核",
+        criterion_id="criterion:0001",
+        reasons=[
+            JobEvaluationPlanV5ImportanceReviewReason.MIXED_STRENGTH_SIGNALS
+        ],
+    )
+    assert warning.criterion_id == "criterion:0001"
+
+
 def test_v5_normal_generation_is_one_call_and_program_owns_versions_and_ids() -> None:
     service = JobEvaluationPlanService()
     adapter = FakeJobEvaluationPlanAdapter([_result(_normal_payload())])
@@ -120,6 +169,13 @@ def test_v5_normal_generation_is_one_call_and_program_owns_versions_and_ids() ->
     assert content.schema_version == "5.0"
     assert content.ai_schema_version == "5.0"
     assert content.prompt_version == JOB_EVALUATION_PLAN_V5_PROMPT_VERSION
+    assert JOB_EVALUATION_PLAN_V5_PROMPT_VERSION == (
+        "job_evaluation_plan_lightweight_v2"
+    )
+    assert content.breaking_contract_version == (
+        JOB_EVALUATION_PLAN_V5_BREAKING_CONTRACT_VERSION
+    )
+    assert content.breaking_contract_version == "lightweight_plan_generation_v2"
     assert content.model_version == "fake-plan-model"
     assert [item.criterion_id for item in content.criteria] == [
         f"criterion:{index:04d}" for index in range(1, 6)
@@ -189,7 +245,9 @@ def test_v5_few_criteria_are_accepted_with_limited_basis_warning() -> None:
         )
     )
     assert len(content.criteria) == 3
-    assert content.warnings == ["limited_basis"]
+    assert _warning_codes(content) == ["limited_basis"]
+    assert content.warnings[0].criterion_id is None
+    assert content.warnings[0].reasons == []
 
 
 def test_v5_complex_plan_over_twelve_is_accepted_without_truncation() -> None:
@@ -210,7 +268,265 @@ def test_v5_complex_plan_over_twelve_is_accepted_without_truncation() -> None:
         )
     )
     assert len(content.criteria) == 13
-    assert content.warnings == ["many_criteria"]
+    assert _warning_codes(content) == ["many_criteria"]
+
+
+@pytest.mark.parametrize(
+    ("field", "quote", "importance", "expected_reasons"),
+    [
+        (
+            "candidate_requirements",
+            "必须具备 Python 后端项目经验。",
+            "required",
+            set(),
+        ),
+        (
+            "job_responsibilities",
+            "必须按时完成项目交付。",
+            "required",
+            {"source_field_signal_mismatch"},
+        ),
+        (
+            "preferred_qualifications",
+            "具备客户访谈经验者优先。",
+            "preferred",
+            set(),
+        ),
+        (
+            "job_responsibilities",
+            "负责客户访谈与需求整理。",
+            "general",
+            set(),
+        ),
+        (
+            "candidate_requirements",
+            "具备跨团队协作能力。",
+            "general",
+            set(),
+        ),
+    ],
+)
+def test_v5_clear_original_language_drives_model_suggestion_without_field_override(
+    field: str,
+    quote: str,
+    importance: str,
+    expected_reasons: set[str],
+) -> None:
+    name = (
+        "Python 后端项目经验"
+        if "Python" in quote
+        else "项目交付"
+        if "项目交付" in quote
+        else "客户访谈经验"
+        if "客户访谈" in quote
+        else "跨团队协作能力"
+    )
+    content = asyncio.run(
+        JobEvaluationPlanService().build_v5_plan_content(
+            _snapshot([(field, quote)]),
+            adapter=FakeJobEvaluationPlanAdapter(
+                [_result({"criteria": [_criterion(name, field, quote, importance)]})]
+            ),
+        )
+    )
+
+    assert content.criteria[0].importance.value == importance
+    warnings = _importance_warnings(content)
+    assert {
+        reason.value for warning in warnings for reason in warning.reasons
+    } == expected_reasons
+
+
+@pytest.mark.parametrize(
+    ("quote", "importance", "expected_reasons"),
+    [
+        (
+            "Python 项目经验非必须，有则更好。",
+            "preferred",
+            {
+                "complex_qualification_language",
+                "source_field_signal_mismatch",
+            },
+        ),
+        (
+            "Python 项目经验不是硬性要求。",
+            "preferred",
+            {
+                "complex_qualification_language",
+                "source_field_signal_mismatch",
+            },
+        ),
+        (
+            "必须具备 5 年后端交付经验，但优秀者可放宽至 3 年。",
+            "required",
+            {"complex_qualification_language"},
+        ),
+        (
+            "原则上需要具备 5 年后端交付经验，优秀者可放宽。",
+            "required",
+            {"complex_qualification_language"},
+        ),
+        (
+            "必须具备 Python 经验，Kubernetes 经验优先。",
+            "required",
+            {"mixed_strength_signals"},
+        ),
+    ],
+)
+def test_v5_complex_importance_language_becomes_review_warning(
+    quote: str,
+    importance: str,
+    expected_reasons: set[str],
+) -> None:
+    name = "Python 项目经验" if "Python" in quote else "后端交付经验"
+    content = asyncio.run(
+        JobEvaluationPlanService().build_v5_plan_content(
+            _snapshot([("candidate_requirements", quote)]),
+            adapter=FakeJobEvaluationPlanAdapter(
+                [
+                    _result(
+                        {
+                            "criteria": [
+                                _criterion(
+                                    name,
+                                    "candidate_requirements",
+                                    quote,
+                                    importance,
+                                )
+                            ]
+                        }
+                    )
+                ]
+            ),
+        )
+    )
+
+    warning = _importance_warnings(content)[0]
+    assert warning.criterion_id == content.criteria[0].criterion_id
+    assert {reason.value for reason in warning.reasons} == expected_reasons
+
+
+def test_v5_multi_source_strength_conflict_is_a_stable_review_warning() -> None:
+    rows = [
+        ("candidate_requirements", "必须具备 Python 项目经验。"),
+        ("preferred_qualifications", "有 Python 项目经验者优先。"),
+    ]
+    candidate = {
+        "name": "Python 项目经验",
+        "importance": "required",
+        "description": "根据 JD 核对 Python 项目经验。",
+        "screening_focus": "寻找 Python 项目经验的工作或项目证据。",
+        "sources": [
+            {"source_field": field, "source_quote": quote}
+            for field, quote in rows
+        ],
+    }
+    content = asyncio.run(
+        JobEvaluationPlanService().build_v5_plan_content(
+            _snapshot(rows),
+            adapter=FakeJobEvaluationPlanAdapter(
+                [_result({"criteria": [candidate]})]
+            ),
+        )
+    )
+
+    warning = _importance_warnings(content)[0]
+    assert warning.criterion_id == "criterion:0001"
+    assert {reason.value for reason in warning.reasons} == {
+        "mixed_strength_signals",
+        "multi_source_signal_conflict",
+    }
+
+
+@pytest.mark.parametrize(
+    ("quote", "model_importance", "expected_reason"),
+    [
+        (
+            "必须具备 Python 项目经验。",
+            "preferred",
+            "explicit_strong_signal_mismatch",
+        ),
+        (
+            "具备 Python 项目经验者优先。",
+            "required",
+            "explicit_weak_signal_mismatch",
+        ),
+        (
+            "具备 Python 项目经验。",
+            "required",
+            "no_explicit_signal_non_general",
+        ),
+    ],
+)
+def test_v5_model_importance_deviation_is_preserved_without_content_retry(
+    quote: str,
+    model_importance: str,
+    expected_reason: str,
+) -> None:
+    candidate = _criterion(
+        "Python 项目经验",
+        "candidate_requirements",
+        quote,
+        model_importance,
+    )
+    adapter = FakeJobEvaluationPlanAdapter(
+        [_result({"criteria": [candidate]}), _result(_normal_payload())]
+    )
+
+    content = asyncio.run(
+        JobEvaluationPlanService().build_v5_plan_content(
+            _snapshot([("candidate_requirements", quote)]),
+            adapter=adapter,
+        )
+    )
+
+    assert content.criteria[0].importance.value == model_importance
+    assert content.criteria[0].origin == "ai_from_jd"
+    assert len(adapter.v5_calls) == 1
+    assert content.business_call_count == 1
+    assert content.adapter_attempt_count == 1
+    warning = _importance_warnings(content)[0]
+    assert expected_reason in {reason.value for reason in warning.reasons}
+
+
+def test_v5_warning_ids_remain_stable_when_model_reorders_candidates() -> None:
+    rows = [
+        ("candidate_requirements", "具备 Python 项目经验。"),
+        ("preferred_qualifications", "必须具备 Kubernetes 生产经验。"),
+    ]
+    candidates = [
+        _criterion("Python 项目经验", *rows[0], "required"),
+        _criterion("Kubernetes 生产经验", *rows[1], "required"),
+    ]
+    service = JobEvaluationPlanService()
+
+    first = asyncio.run(
+        service.build_v5_plan_content(
+            _snapshot(rows),
+            adapter=FakeJobEvaluationPlanAdapter(
+                [_result({"criteria": deepcopy(candidates)})]
+            ),
+        )
+    )
+    second = asyncio.run(
+        service.build_v5_plan_content(
+            _snapshot(rows),
+            adapter=FakeJobEvaluationPlanAdapter(
+                [_result({"criteria": list(reversed(deepcopy(candidates)))})]
+            ),
+        )
+    )
+
+    def warning_map(content) -> dict[str, list[str]]:
+        return {
+            warning.criterion_id: [reason.value for reason in warning.reasons]
+            for warning in _importance_warnings(content)
+        }
+
+    assert [item.model_dump(mode="json") for item in first.criteria] == [
+        item.model_dump(mode="json") for item in second.criteria
+    ]
+    assert warning_map(first) == warning_map(second)
 
 
 def test_v5_more_than_thirty_criteria_is_a_non_retryable_content_error() -> None:
@@ -320,6 +636,29 @@ def test_v5_wrong_source_quote_fails_without_retry() -> None:
     assert len(adapter.v5_calls) == 1
 
 
+def test_v5_wrong_source_field_fails_without_retry() -> None:
+    candidate = _criterion(
+        "Python 后端开发",
+        "candidate_requirements",
+        NORMAL_ROWS[0][1],
+        "general",
+    )
+    adapter = FakeJobEvaluationPlanAdapter(
+        [_result({"criteria": [candidate]}), _result(_normal_payload())]
+    )
+
+    with pytest.raises(JobEvaluationPlanV5GenerationError) as raised:
+        asyncio.run(
+            JobEvaluationPlanService().build_v5_plan_content(
+                _snapshot(NORMAL_ROWS),
+                adapter=adapter,
+            )
+        )
+
+    assert raised.value.code == "JOB_EVALUATION_PLAN_V5_SOURCE_NOT_FOUND"
+    assert len(adapter.v5_calls) == 1
+
+
 def test_v5_timeout_retries_once_inside_the_same_business_call() -> None:
     adapter = FakeJobEvaluationPlanAdapter(
         [JobEvaluationPlanTimeoutError("timeout"), _result(_normal_payload())]
@@ -400,24 +739,114 @@ def test_v5_model_cannot_supply_program_owned_version_fields() -> None:
     assert len(adapter.v5_calls) == 1
 
 
-def test_v5_prompt_is_single_role_untrusted_and_leaves_program_fields_out() -> None:
+def test_v5_prompt_has_fixed_sections_and_keeps_program_fields_out() -> None:
     messages = build_job_evaluation_plan_v5_messages(_snapshot(NORMAL_ROWS))
     system_prompt = messages[0]["content"]
     user_prompt = messages[1]["content"]
+    assert [message["role"] for message in messages] == ["system", "user"]
+    section_headings = [
+        f"## {title}" for title in JOB_EVALUATION_PLAN_V5_PROMPT_SECTION_TITLES
+    ]
+    assert [system_prompt.index(heading) for heading in section_headings] == sorted(
+        system_prompt.index(heading) for heading in section_headings
+    )
+    assert all(system_prompt.count(heading) == 1 for heading in section_headings)
     for text in (
         "不可信数据",
         "5—12",
         "30",
+        "完整 JD 上下文",
         "required",
         "preferred",
         "general",
+        "否定",
+        "转折",
+        "非必须",
+        "可放宽",
+        "字段位置不得机械覆盖原文语义",
         "敏感",
         "不得凭常识",
+        "内部静默核对",
+        "不得输出、保存或复述分析步骤、思维链、草稿或自检过程",
+        "只返回最终 JSON",
     ):
         assert text in system_prompt
     for forbidden in ('"schema_version"', '"criterion_id"', '"origin"', '"hr_note"'):
         assert forbidden not in system_prompt
     assert "public_notes" not in user_prompt
+
+
+def test_v5_prompt_few_shots_are_balanced_fictional_business_candidates() -> None:
+    examples = JOB_EVALUATION_PLAN_V5_FEW_SHOT_EXAMPLES
+    assert 3 <= len(examples) <= 5
+    assert {example["case"] for example in examples} == {
+        "responsibility_explicit_strong",
+        "requirement_explicit_weak",
+        "no_explicit_strength_signal",
+        "negation_turn_and_relaxation",
+        "multi_source_mixed_strength",
+    }
+
+    candidate_fields = {
+        "name",
+        "importance",
+        "description",
+        "screening_focus",
+        "sources",
+    }
+    source_fields = {"source_field", "source_quote"}
+    importances = set()
+    for example in examples:
+        assert set(example["output"]) == {"criteria"}
+        assert example["output"]["criteria"]
+        for criterion in example["output"]["criteria"]:
+            assert set(criterion) == candidate_fields
+            importances.add(criterion["importance"])
+            assert criterion["sources"]
+            assert all(
+                set(source) == source_fields for source in criterion["sources"]
+            )
+    assert importances == {"required", "preferred", "general"}
+
+    serialized_outputs = json.dumps(
+        [example["output"] for example in examples],
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+    for forbidden in (
+        "schema_version",
+        "prompt_version",
+        "criterion_id",
+        "origin",
+        "warning",
+        "hr_note",
+        "score",
+        "自动通过",
+        "淘汰",
+        "录用",
+    ):
+        assert forbidden not in serialized_outputs
+
+
+def test_v5_prompt_does_not_copy_frozen_formal_quality_samples_or_labels() -> None:
+    system_prompt = build_job_evaluation_plan_v5_messages(
+        _snapshot(NORMAL_ROWS)
+    )[0]["content"]
+    protected_fragments: list[str] = []
+    for sample in V5_PLAN_JDS:
+        protected_fragments.extend(
+            value
+            for value in sample["jd"].values()
+            if isinstance(value, str) and value
+        )
+        protected_fragments.extend(
+            item
+            for label_group in sample["labels"].values()
+            for item in label_group
+        )
+
+    assert protected_fragments
+    assert all(fragment not in system_prompt for fragment in protected_fragments)
 
 
 def test_real_adapter_v5_path_keeps_one_request_and_raw_json_boundary() -> None:
