@@ -86,7 +86,7 @@ class ScreeningEvaluationPlanInput(BaseModel):
 
     schema_version: Annotated[
         str,
-        StringConstraints(pattern=r"^4\.0$"),
+        StringConstraints(pattern=r"^[45]\.0$"),
     ]
     requirement_facts: list[RequirementFact] = Field(
         min_length=1,

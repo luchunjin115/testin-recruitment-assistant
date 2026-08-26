@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     String,
     UniqueConstraint,
     func,
@@ -48,7 +49,7 @@ class JobEvaluationPlan(Base):
             name="ck_job_evaluation_plans_source_review_summary_object",
         ),
         CheckConstraint(
-            "schema_version IN ('1.0', '2.0', '3.0', '4.0')",
+            "schema_version IN ('1.0', '2.0', '3.0', '4.0', '5.0')",
             name="ck_job_evaluation_plans_schema_version_allowed",
         ),
         CheckConstraint(
@@ -87,7 +88,7 @@ class JobEvaluationPlan(Base):
             name="ck_job_evaluation_plans_generation_audit_object",
         ),
         CheckConstraint(
-            "schema_version = '4.0' OR "
+            "schema_version IN ('4.0', '5.0') OR "
             "(requirement_facts IS NULL "
             "AND evaluation_criteria IS NULL "
             "AND coverage_review_summary IS NULL "
@@ -95,7 +96,7 @@ class JobEvaluationPlan(Base):
             name="ck_job_evaluation_plans_legacy_has_no_v4_payload",
         ),
         CheckConstraint(
-            "schema_version <> '4.0' OR "
+            "schema_version NOT IN ('4.0', '5.0') OR "
             "(items IS NULL "
             "AND structured_coverage IS NULL "
             "AND free_text_coverage IS NULL)",
@@ -122,6 +123,15 @@ class JobEvaluationPlan(Base):
             "AND coverage_review_summary IS NULL "
             "AND generation_audit IS NULL)",
             name="ck_job_evaluation_plans_v4_no_partial_failed_payload",
+        ),
+        CheckConstraint(
+            "v5_criteria IS NULL "
+            "OR jsonb_typeof(v5_criteria) = 'array'",
+            name="ck_job_evaluation_plans_v5_criteria_array",
+        ),
+        CheckConstraint(
+            "schema_version = '5.0' OR v5_criteria IS NULL",
+            name="ck_job_evaluation_plans_legacy_has_no_v5_payload",
         ),
         Index("ix_job_evaluation_plans_job_id", "job_id"),
         Index("ix_job_evaluation_plans_status", "status"),
@@ -176,6 +186,11 @@ class JobEvaluationPlan(Base):
         nullable=True,
     )
     generation_audit: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    v5_criteria: Mapped[list[dict] | None] = mapped_column(JSONB, nullable=True)
+    edit_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
     warnings: Mapped[list[str | dict]] = mapped_column(
         JSONB,
         nullable=False,

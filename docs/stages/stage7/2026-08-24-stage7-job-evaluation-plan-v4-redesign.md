@@ -1,8 +1,10 @@
 # 阶段 7：岗位事实与评价维度双层计划 4.0 重设计
 
+> 当前权威性：本文件已于 2026-08-26 被 `2026-08-26-stage7-lightweight-evaluation-ai-screening-v5-redesign.md` 替代。4.0 代码、批次和真实质量结果继续作为不可覆盖的历史实现与失败证据保留，但不得再据此启动新增实现或 7R4-I/J。
+>
 > 日期：2026-08-24
 >
-> 状态：业务规则与 7R4-A—7R4-J 实施顺序已获用户最终确认；7R4-A—7R4-G、7R4-H0 已完成，7R4-H1 六份定向真实验证已执行并以 `4/6` 失败。用户已认可整改方向，第 29 节已写入 7R4-HR0/HR1 固定顺序并等待明确确认；确认前不得修改 Prompt/Service、补跑或进入正式 20 份及 7R4-I—J
+> 状态：7R4-A—7R4-H2 已执行到历史停止点。HR2 六份定向为 `6/6`，唯一正式 20 份为 `15/20` 且 `formal_gate_passed=false`；7R4-I/J 未执行。用户已决定改用 5.0 轻量评价清单，因此 4.0 不再继续整改或扩展。
 >
 > 直接上游：`../stage6/2026-08-21-stage6-five-section-jd-remediation-design.md`
 >
@@ -1238,3 +1240,496 @@ H0 把定向 attempt 下界写成 18，但 J5-19 是事先固定的 `no_facts` �
 这些验证不能证明真实 DeepSeek 一定按 v2 Prompt 正确合并 J5-14，也不能证明未枚举的所有自然语言都不会使确定性信号检查误报或漏报，更不能证明六份真实质量已从 4/6 提升。最终模型质量只能由完整六份 HR1 新结果判断；出现新语言边界时应回到 Prompt/Service 测试层，不得靠额外真实调用碰运气。
 
 7R4-HR0 到此完成并立即停止。唯一下一步是等待用户单独确认 7R4-HR1 的模型、当时价格、金额边界和 24/48 安全上限；当前授权不允许真实 DeepSeek、正式 20 份、7R4-I、7R4-J 或阶段 8。
+
+### 29.6 7R4-HR1 实际完成记录（2026-08-25）
+
+#### 29.6.1 运行前门禁与真实调用合同
+
+- HR1 开始前重新完整核对 HR0 代码、四个 Prompt 版本、冻结样本 SHA-256、人工标签、质量门槛、样本顺序、模型配置、历史结果 hash、新结果路径、PostgreSQL revision/业务表基线以及专项测试和 dry-run。预检全部通过后才创建真实 Adapter；预检与 dry-run 阶段真实 DeepSeek 调用为 0。
+- 六份样本严格按 J5-03、J5-07、J5-14、J5-17、J5-19、J5-20 执行，没有只重跑旧失败样本，也没有改动 JD、人工标签、分母或门槛。
+- 模型合同为 `deepseek-v4-flash`、`thinking=disabled`、`temperature=0.1`、`response_format=json_object`、每个业务调用 `max_output_tokens=16000`、SDK 自动重试 0；四个 Prompt 版本依次为 `job_requirement_fact_extraction_v2`、`job_requirement_coverage_review_v2`、`job_requirement_local_repair_v1`、`job_evaluation_criterion_grouping_v1`。
+- 2026-08-25 15:41:04（北京时间）重新查询 DeepSeek 官方价格页 `https://api-docs.deepseek.com/quick_start/pricing/`。本轮属于工作日峰值时段，按每百万 token 的 cache hit input `$0.014`、cache miss input `$0.44`、output `$1.32` 计费；官方峰谷价格快照均写入结果文件。本轮不设置金额硬上限，调用安全硬上限仍为 24 次业务调用、48 次 API attempt。
+
+#### 29.6.2 六份样本的实际执行
+
+| 样本 | 实际角色顺序 | 结果 | local repair | 基础设施重试 | 费用（USD） |
+| --- | --- | --- | ---: | ---: | ---: |
+| J5-03 | fact extraction | 失败：模型 JSON 缺少 `schema_version`，`JOB_EVALUATION_PLAN_INVALID_RESPONSE` | 0 | 0 | 0.003420560 |
+| J5-07 | fact extraction → coverage review → criterion grouping | `pending_confirmation`，逐样本合同通过 | 0 | 0 | 0.004215896 |
+| J5-14 | fact extraction → coverage review → criterion grouping | `pending_confirmation`，逐样本合同通过；客户访谈 fact 保留 4 个合法来源 | 0 | 0 | 0.003929360 |
+| J5-17 | fact extraction | 失败：模型 JSON 缺少 `schema_version`，`JOB_EVALUATION_PLAN_INVALID_RESPONSE` | 0 | 0 | 0.003059040 |
+| J5-19 | fact extraction 后 `no_facts` 立即停止 | 预期边界结果，逐样本合同通过 | 0 | 0 | 0.000611760 |
+| J5-20 | fact extraction | 失败：模型 JSON 缺少 `schema_version`，`JOB_EVALUATION_PLAN_INVALID_RESPONSE` | 0 | 0 | 0.006164560 |
+
+实际共 10 次业务调用、10 次 API attempt、0 次 local repair、0 次基础设施重试。J5-07 和 J5-14 各完成 3 个正常角色，共 6 次；J5-03、J5-17、J5-20 各在第一次内容合同错误后停止，J5-19 在第一次 `no_facts` 后按合同停止，共 4 次。内容错误不得重试，因此实际次数低于无 repair 的 16 次合法完整路径；这不是少跑或漏跑，而是逐样本失败即停门禁在正常工作。
+
+本轮 token 为 input `20,441`、其中 cache hit `3,584`、cache miss `16,857`，output `10,556`。费用按峰值价格重新计算：
+
+```text
+cache hit： 3,584 × 0.014 / 1,000,000 = USD 0.000050176
+cache miss：16,857 × 0.44  / 1,000,000 = USD 0.007417080
+output：    10,556 × 1.32  / 1,000,000 = USD 0.013933920
+合计：                                      USD 0.021401176
+```
+
+#### 29.6.3 质量门槛、责任层与证据
+
+- 逐样本合同为 `3/6`，人工 facts 为 `23/80`，明确必测为 `12/23`，source units 为 `31/90`，正常结果为 `2/4`，边界结果为 `1/2`，两个预期 warning 为 `0/2`，因此 `targeted_gate_passed=false`、`quality_conclusion_allowed=false`。正式 20 份门禁没有放行。
+- 已形成的 23 条 facts 中，来源追溯、priority 一致和 criterion 唯一覆盖均为 `23/23`；新增要求、漏多来源、错误合并、明显重复、背景/public notes 污染及宣传福利误识别均为 0。J5-14 的多来源客户访谈问题在本轮真实输出中修复成功。
+- J5-17 的原始业务内容把“SQL 数据核查经验”和“审计项目经验”保留为不同候选 facts，但顶层缺少 `schema_version`，所以响应在 Pydantic Schema 校验时已经失败，后续 Service warning 逻辑没有机会运行，不能把 `conflicting_requirements` 记为命中。因此 J5-17 没有完成可验收修复。
+- 三份失败均不是网络、认证、配额、截断或非法 JSON，而是模型返回的合法 JSON 缺少当时 AI Output Schema 必填的固定字段 `schema_version`。直接失败点位于“模型输出 → Pydantic Schema”边界；更深一层的合同职责问题是固定技术版本字段被交给模型生成。该问题返回 Prompt/Service 合同层处理，后续方案单独记录在第 30 节；本轮没有现场改 Prompt、Service、Schema、Adapter 参数或门槛后继续碰运气。
+- 唯一新建结果为 `docs/stages/stage7/2026-08-25-stage7-7r4hr1-plan-quality-targeted-revalidation-results.json`，大小 `315,076` bytes，SHA-256 为 `f1de3930c16e628617d4213ad0f85bf3a25fa0272945e5806e00c69a5d0df4d4`。旧 H1 结果 SHA-256 保持 `ada6cbc91c21e7f4f341eee587259676579c9c2770af3a220277ff32a5e47a6f`，其余历史真实质量结果 hash 也保持不变；完整逐 attempt 原始响应、token/cache、模型、参数、Prompt、耗时、错误和费用均保存在 HR1 结果文件中。
+- 正式 20 份结果文件未创建；运行前后 PostgreSQL 均为 `current=head=d6f4a2b8e913`，九张相关业务表均为 0。本轮没有修改数据库，没有进入原 7R4-H2、7R4-I、7R4-J 或阶段 8。
+
+#### 29.6.4 能证明、不能证明、风险与停止点
+
+这次结果能证明 J5-14 的多来源问题在一次真实输出中得到修复，也证明逐样本失败即停、禁止内容重试、调用上限、逐 attempt 留证和正式门禁确实生效。它还能证明当前成功进入 Service 的 facts 在来源追溯、priority 和 criterion 覆盖上保持完整。
+
+这次结果不能证明六份质量合格，也不能证明 J5-17 的冲突 warning 已修复，更不能证明正式 20 份或后续报告质量。与旧 H1 的 `4/6` 相比，HR1 的 `3/6` 更差；直接原因不是事实语义整体退化，而是三份响应在业务质量计分前就因缺少固定顶层字段被合同拒绝。由于失败样本没有进入后续 Service，低分母不能用来判断那些样本的事实召回本身一定更差。
+
+7R4-HR1 已按授权完成、诚实记录并立即停止。即使结果通过也只能获得“可以讨论正式 20 份”的资格，不等于正式轮已获授权；本轮实际失败，更不能自动继续。当前唯一可讨论的下一步是第 30 节的 7R4-HR0b 零调用方案，必须由用户另行确认后才能实施。
+
+## 30. 7R4-HR0b：Adapter 与 Service 的 `schema_version` 职责整改（2026-08-26，待实施确认）
+
+### 30.1 已发生事实与真正根因
+
+7R4-HR1 已按第 29.6 节完成六份真实复验，共 10 次业务调用/API attempt。J5-03、J5-17、J5-20 的 DeepSeek 响应都是合法 JSON，但事实提取顶层缺少 `schema_version`，所以三份样本以 `JOB_EVALUATION_PLAN_INVALID_RESPONSE` 失败，最终门槛为 `3/6`。这是已经发生且不可覆盖的历史，不得再把 HR0b 写成位于 HR1 之前。
+
+固定值 `schema_version="4.0"` 不需要模型理解 JD 或做语义判断，把它交给 LLM 生成会制造没有业务价值的随机失败点。但只在 Service 中增加赋值仍然不能修复真实链路，因为当前 `DeepSeekJobEvaluationPlanAdapter._read_v4_response` 会先对原始 JSON 调用四个完整 AI Output Schema；缺少 `schema_version` 时，Adapter 在返回 `JobEvaluationPlanAdapterResult` 之前已经失败，`JobEvaluationPlanService._invoke_v4_role` 根本收不到响应。Fake Adapter 不执行这次真实 Adapter 前置校验，因此只补 Fake/Service 测试会形成“测试通过、真实调用仍失败”的假象。
+
+根因不是 Pydantic 太严格，而是职责和校验顺序错误：LLM 被要求生成固定技术字段，Adapter 又在程序补齐该字段之前执行了完整业务结构校验。整改必须同时调整 Prompt、Adapter 前置校验和 Service 规范化，不能只增加一行 Service 赋值。
+
+### 30.2 唯一目标与不变安全原则
+
+唯一目标是把当前 4.0 的固定技术版本从 LLM 生成责任移到程序确定性责任，同时保证最终传入业务链的对象仍经过原四个完整 Pydantic Schema 严格校验。
+
+通俗解释：外部供应商只负责填写需要理解岗位的表格内容；门卫确认文件确实送到、没有损坏且能正常打开；公司内部程序统一盖 `4.0` 版本章；最后审核员仍按完整表格规则逐项检查。忘记盖章不再导致整份内容作废，但写错版本、缺业务栏目、乱加字段或填写非法内容仍然失败。
+
+本整改不降低以下安全要求：非法 JSON、非对象根节点、重复键、错误版本、缺少业务字段、多余字段、非法事实/来源/引用、错误 warning 或错误归组仍必须受控失败；内容错误不得重试。
+
+### 30.3 子批次、依赖和停止顺序
+
+| 子批次 | 依赖 | 唯一目标 | 真实 DeepSeek | 完成后停止点 |
+| --- | --- | --- | ---: | --- |
+| 7R4-HR0b | 本节先获用户明确确认 | 调整 Prompt → Adapter → Service → Pydantic 的版本职责并补全零调用门禁 | 0 次 | 报告代码、Fake、Adapter/Service/运行器回归与证据 hash，等待 HR2 单独确认 |
+
+固定顺序为：
+
+```text
+第 30 节设计获用户确认
+→ 只实施 7R4-HR0b（0 次真实调用）
+→ 完成或失败都停止并报告
+→ 用户另行决定是否授权 7R4-HR2 完整六份复验
+→ HR2 无论通过或失败都再次停止
+→ 只有 HR2 达到全部门槛且再获授权，才允许讨论正式 20 份
+```
+
+当前对“按本方案更新文档”的确认只授权文档替换，不授权 HR0b 代码，更不授权 HR2、正式 20 份、7R4-I—J 或阶段 8。
+
+### 30.4 整改后的固定数据流
+
+```text
+DeepSeek 返回原始 JSON 文本
+        ↓
+Adapter 检查 API 状态、finish_reason、空内容、JSON 语法、对象根节点和重复键
+        ↓
+Adapter 原样返回 content/model/token/finish_reason 等元数据，不执行依赖 schema_version 的完整 Output Schema 校验
+        ↓
+Service 重新安全解析原始 JSON，检查模型自带 schema_version 是否缺失、正确或冲突
+        ↓
+Service 受控注入 JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION（当前为 "4.0"）
+        ↓
+四个完整 Pydantic AI Output Schema 执行 model_validate
+        ↓
+Service 继续检查原文来源、事实、priority、warning、coverage、repair 和 criterion 唯一归组
+```
+
+在“前端 → API → Schema → Service → Model → PostgreSQL”主链中，本批只改变 Model 外部调用边界中的 Prompt、Adapter 响应读取和 Service 规范化顺序；最终 Pydantic Schema 定义、API、业务 Model 和 PostgreSQL 均不变。
+
+### 30.5 各层具体职责与失败语义
+
+#### 30.5.1 Prompt：只要求业务内容并升级版本
+
+四个 Prompt 正文和示例不再要求模型输出 `schema_version`：
+
+- fact extraction 只返回 `fact_candidates + source_reviews`；
+- coverage review 只返回 `status + findings`；
+- local repair 只返回 `replacement_candidates + source_reviews + resolved/unresolved finding indexes`；
+- criterion grouping 只返回 `criteria`。
+
+因为输出合同确实发生变化，四个 Prompt 版本必须同时升级，不能继续冒用 HR1 的旧版本：
+
+| 角色 | HR1 历史版本 | HR0b 后候选版本 |
+| --- | --- | --- |
+| fact extraction | `job_requirement_fact_extraction_v2` | `job_requirement_fact_extraction_v3` |
+| coverage review | `job_requirement_coverage_review_v2` | `job_requirement_coverage_review_v3` |
+| local repair | `job_requirement_local_repair_v1` | `job_requirement_local_repair_v2` |
+| criterion grouping | `job_evaluation_criterion_grouping_v1` | `job_evaluation_criterion_grouping_v2` |
+
+Prompt 仍要求只返回一个 JSON 对象、不得返回 Markdown/解释/额外字段；JD 和 source units 仍是不可信数据，不能覆盖系统规则。
+
+#### 30.5.2 Adapter：只做外部响应与 JSON 基础门禁
+
+`DeepSeekJobEvaluationPlanAdapter.generate_v4/_read_v4_response` 继续负责真实 API 调用参数、异常映射、模型名、token/cache、`finish_reason` 和原始响应读取，并保留以下前置拒绝：
+
+- 未知角色或非法调用输入；
+- 认证、配额、限流、连接、超时或上游服务错误；
+- 没有 choice、空响应或 `finish_reason != "stop"`；
+- 非法 JSON、顶层不是 JSON 对象或对象包含重复键。
+
+Adapter 不再对 v4 原始 payload 调用要求 `schema_version` 的 `output_type.model_validate`。它返回的 `JobEvaluationPlanAdapterResult.content` 必须保持 DeepSeek 原始文本，不能把程序补齐后的内容冒充原始响应。Adapter 调用模型的 `deepseek-v4-flash`、thinking、temperature、response_format、max tokens、SDK 自动重试和单次相邻基础设施重试合同全部不变。
+
+上述变化不表示 Adapter 完全不检查格式；它仍检查“响应是否是完整、唯一键的 JSON 对象”，只是把最终业务 Output Schema 校验放到程序补齐固定技术字段之后。
+
+#### 30.5.3 Service：检查版本、受控注入并执行最终 Schema
+
+`JobEvaluationPlanService._invoke_v4_role` 收到 Adapter 原始内容后，使用拒绝重复键的解析器重新解析，并先确认根节点是字典。随后只允许三种版本情况：
+
+1. payload 没有 `schema_version`：设置 `payload["schema_version"] = JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION`；
+2. payload 已包含字符串 `"4.0"`：兼容接受并统一赋为同一程序常量；
+3. payload 包含 `"3.0"`、`"5.0"`、其他字符串、数字、布尔、`null`、对象或数组：以稳定的非重试内容错误 `JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT` 失败，不得覆盖后伪装成合法响应。
+
+注入后才调用对应的 `output_type.model_validate(payload)`。缺少 `fact_candidates`、`source_reviews`、`status`、`findings`、repair 字段或 `criteria`，字段类型错误、额外字段和四个 Schema 内已有的交叉约束仍由 Pydantic 拒绝。通过 Pydantic 后，现有 Service 的来源逐字定位、source review、priority、warning、repair、coverage 和 criterion 唯一覆盖校验继续不变。
+
+#### 30.5.4 Schema：完整内部合同保持不变
+
+以下四个既有 Schema 继续保留 `schema_version: Literal["4.0"]` 和 `extra="forbid"`，本批不修改其字段定义：
+
+- `AIRequirementFactExtractionOutput`；
+- `AIRequirementCoverageReviewOutput`；
+- `AIRequirementLocalRepairOutput`；
+- `AIEvaluationCriterionGroupingOutput`。
+
+`JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION` 只用于避免 Service 再硬编码一份 `"4.0"`。未来升级 5.0 仍必须建立并验证新的 Schema、业务合同、历史兼容和质量门禁，不可能只修改一个常量。
+
+#### 30.5.5 原始证据与错误责任
+
+- attempt 的 `raw_response` 永远保存模型原文；程序规范化后的 payload 只用于校验和业务处理，不覆盖原始证据。
+- API/网络/认证/配额/finish reason/JSON 语法/重复键/非对象根节点继续返回 Adapter 责任层的稳定错误；其中只有合同允许的相邻基础设施错误可重试一次。
+- 缺少 `schema_version` 不再是错误；模型显式返回冲突版本、缺业务字段、extra 字段或 Pydantic 失败返回 Service/模型内容责任层，绝不重试。
+- 后续来源、事实、warning、repair 或归组失败继续返回原有 Service/质量审计责任层，不得用版本注入掩盖。
+
+### 30.6 不可变证据与下一轮独立路径
+
+两轮已经发生的结果必须同时进入不可变历史集合：
+
+- H1：`docs/stages/stage7/2026-08-25-stage7-7r4h-plan-quality-targeted-results.json`，SHA-256 `ada6cbc91c21e7f4f341eee587259676579c9c2770af3a220277ff32a5e47a6f`；
+- HR1：`docs/stages/stage7/2026-08-25-stage7-7r4hr1-plan-quality-targeted-revalidation-results.json`，SHA-256 `f1de3930c16e628617d4213ad0f85bf3a25fa0272945e5806e00c69a5d0df4d4`。
+
+HR0b 必须让质量合同固定验证两份 hash，并把 HR1 加入 `HISTORICAL_RESULT_PATHS`；不得删除、覆盖或重新解释任何历史结果。现有 HR1 路径已经存在，不能再次作为“新结果路径”。
+
+HR0b 只登记下一轮候选批次 `7R4-HR2` 及唯一新路径：
+
+`docs/stages/stage7/2026-08-26-stage7-7r4hr2-plan-quality-targeted-revalidation-results.json`
+
+该路径在 HR0b 实施前、实施中和 dry-run 后都必须不存在。质量合同中的计划定向路径、路径隔离命名检查、结果 `stage` 以及正式门禁读取方必须切换到 HR2；HR2 仍使用 `result_kind=plan_quality_targeted_revalidation`，由 `stage=7R4-HR2` 与独立路径区分。HR0b 只登记和验证路径，不创建结果。
+
+HR2 不是本节授权内容。未来若要执行，仍须单独确认模型、thinking、temperature、JSON、max tokens、SDK 重试、当时官方峰谷价格、金额边界、24/48 安全上限、固定六份顺序、Prompt 新版本以及全部质量门槛。
+
+### 30.7 HR0b 允许修改的文件
+
+| 文件 | 唯一允许修改内容 | 链路位置 |
+| --- | --- | --- |
+| `backend/app/prompts/job_evaluation_plan.py` | 四个 Prompt 移除 `schema_version` 输出责任并升级版本 | Prompt |
+| `backend/app/adapters/job_evaluation_plan.py` | v4 响应读取只保留外部响应和 JSON 基础门禁，移除补字段前的完整 Output Schema 校验 | Adapter |
+| `backend/app/services/job_evaluation_plan_service.py` | `_invoke_v4_role` 执行版本冲突检查、常量注入和最终 Pydantic 校验 | Service |
+| `scripts/stage7_7r4_quality_contract.py` | 固定 HR1 hash、加入历史集合、登记 HR2 路径和新 Prompt 版本 | 质量合同 |
+| `scripts/run_stage7_7r4_plan_quality.py` | 只同步 HR2 结果 stage/路径与零调用门禁，不执行 HR2 | 质量运行器 |
+| `backend/tests/adapters/test_job_evaluation_plan_adapter.py` | 真实 Adapter 响应边界与原始证据测试 | 测试 |
+| `backend/tests/services/test_job_evaluation_plan_v4_generation_contract.py` | 四角色注入、冲突版本、完整 Schema 和调用序列测试 | 测试 |
+| `backend/tests/test_stage7_7r4g_quality_runner.py` | 历史 hash、HR2 路径、Prompt 版本、dry-run/Fake/不覆盖测试 | 测试 |
+| 本文与 `PROJECT_STATE.md` | 实施完成后的实际结果同步 | 文档 |
+
+如果只改 Service 而没有解除真实 Adapter 的前置完整 Schema 校验，或者只补 Fake 测试而没有真实 Adapter 模拟响应测试，HR0b 必须判定失败，不能声明完成。
+
+### 30.8 明确禁止修改或进入的范围
+
+- 四个 AI Output Schema 的 `schema_version: Literal["4.0"]`、其他字段和 `extra="forbid"`；
+- RequirementFact、EvaluationCriterion、source review、priority、warning、repair、coverage 和归组业务规则；
+- Adapter 的模型 ID、thinking、temperature、response_format、max tokens、SDK 自动重试及错误重试边界；
+- 冻结六份/二十份 JD、人工标签、分母和质量门槛；
+- 当前 H1、HR1 及任何历史真实质量结果；
+- SQLAlchemy Model、migration、PostgreSQL、API、React 和报告质量实现；
+- 真实 DeepSeek 调用、HR2 六份复验、正式 20 份、7R4-I、7R4-J 和阶段 8。
+
+### 30.9 自动化与只读验证
+
+#### 30.9.1 Adapter 与 Service 必测合同
+
+- 四个角色的模拟真实 Adapter 响应均不包含 `schema_version` 时，能够越过 Adapter，并由 Service 注入后通过完整 Pydantic 校验；不能只调用 Fake Adapter 证明。
+- 模型返回 `schema_version="4.0"` 时兼容通过，最终使用程序常量；模型返回 `"3.0"`、其他字符串、数字、布尔、`null`、对象或数组时稳定失败且不重试。
+- 非法 JSON、数组/`null` 根节点、重复键继续在受控边界失败；缺少真正业务字段、业务字段类型错误或 extra 字段继续由完整 Schema 拒绝。
+- Adapter 返回的 `content` 和质量 attempt `raw_response` 与模拟模型原文逐字一致，不能出现程序注入伪造原始响应。
+- 认证、配额、配置、非法 JSON、Schema、事实、证据和安全错误仍不重试；合法基础设施瞬时错误仍最多一次相邻重试。
+
+#### 30.9.2 完整角色链与质量门禁
+
+- Fake normal 继续严格为 fact extraction → coverage review → criterion grouping 共 3 次业务调用；
+- Fake local repair 继续严格为 fact extraction → coverage review → local repair → criterion grouping 共 4 次业务调用且最多一次 repair；
+- J5-19 模拟 `no_facts` 仍在 fact extraction 后立即停止；
+- dry-run 为 0 次真实 DeepSeek 调用、0 次结果写入、真实 Adapter 未实例化且 API Key 不是前提；
+- 质量合同实际验证 H1、HR1 和全部历史结果 hash 不变，HR2 路径不存在且拒绝覆盖历史路径；
+- Prompt 实际常量、运行器记录和质量合同期望必须一致为 v3/v3/v2/v2；
+- 受影响 Adapter/Service/Schema/质量运行器回归无新增失败，`py_compile` 和 `git diff --check` 通过。
+
+这些测试能证明程序链不会再因“模型遗漏固定版本字段”失败，并证明其他结构与业务门禁仍然存在；它们不能证明真实 DeepSeek 的 facts、warning 或归组质量，也不能证明 J5-17/J5-20 已修复或六份达到 6/6。
+
+### 30.10 完成标志、失败处理与停止点
+
+HR0b 只有同时满足以下条件才算完成：
+
+- 真实 Adapter 模拟路径和 Fake 完整角色链全部按 30.9 通过；
+- 缺失版本由 Service 受控注入，冲突版本受控失败；
+- 原始响应未被篡改，最终四个 Pydantic Schema 未放宽；
+- 四个 Prompt 新版本、质量合同、运行器和测试一致；
+- H1/HR1/全部历史 hash 不变，HR2 路径只登记且未创建；
+- 真实 DeepSeek 调用 0、结果写入 0、数据库和禁止范围修改 0；
+- `git diff --check` 通过并同步实际文档记录。
+
+如果 Adapter 仍提前拒绝缺版本响应、Service 注入掩盖错误版本、原始响应被修改、Prompt/质量合同版本不一致、历史 hash 改变、HR2 路径已存在或任何相关回归失败，应立即返回 Adapter、Service、Prompt 或质量合同责任层，保留现场并停止；不得临时放宽 Schema、修改门槛或真实调用碰运气。
+
+HR0b 完成或失败后都必须立即停止。唯一可能的下一步是由用户另行决定是否授权 7R4-HR2；HR0b 的通过不等于 HR2 获授权，更不等于正式 20 份、7R4-I—J 或阶段 8 获授权。
+
+### 30.11 本节确认门禁
+
+用户本轮只确认用本节替换旧第 30 节，因此只授权文档更新。后续只有在用户明确确认“实施 7R4-HR0b”后，才允许按本节修改列出的代码、测试和质量合同；该实施轮必须保持 0 次真实 DeepSeek 调用并在验证、记录和汇报后停止。
+
+### 30.12 7R4-HR0b 实际完成记录（2026-08-26）
+
+7R4-HR0b 已按本节授权范围完成。四个 Prompt 已移除模型输出 `schema_version` 的责任并升级为 v3/v3/v2/v2；Adapter 保留 API、finish reason、空内容、JSON 语法、对象根节点与重复键门禁，且原样返回模型文本；Service 对缺失版本注入 `JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION`，兼容字符串 `"4.0"`，拒绝其他字符串、数字、布尔、`null`、对象与数组，然后才执行四个原有完整 Pydantic Output Schema 及既有业务校验。四个 AI Output Schema 的字段与 `extra="forbid"` 均未修改。
+
+实际修改严格限于 30.7 列出的十个文件：Prompt、Adapter、Service、质量合同、质量运行器、三个专项测试、本文和 `PROJECT_STATE.md`。没有修改 Schema、RequirementFact、EvaluationCriterion、Adapter 调用参数、Model、migration、API、React、冻结样本、人工标签、分母、门槛或 PostgreSQL，也没有创建或覆盖质量结果。
+
+自动化与只读验证结果：
+
+- 修改前直接相关基线为 `73 passed + 7 subtests`；
+- 修改后 Adapter 专项为 `12 passed + 18 subtests`，Service 4.0 生成合同专项为 `68 passed`，质量运行器专项为 `20 passed`；三组同跑为 `100 passed + 18 subtests`；
+- 受影响 Adapter、1.0—4.0 Schema/Service、source units、step9、容量与质量合同回归为 `275 passed + 43 subtests`；仅有既有 PyPDF2 弃用 warning；
+- Fake normal 严格记录 3 次业务调用，顺序为 fact extraction → coverage review → criterion grouping；Fake local repair 严格记录 4 次业务调用和 1 次内容修复，顺序中只增加 local repair；两者基础设施重试均为 0；
+- dry-run 为真实调用 0、结果写入 0、真实 Adapter 未实例化、API Key 非前提，并确认 Prompt 版本为 v3/v3/v2/v2、HR2 独立路径和正式门禁读取 HR2；
+- `py_compile` 与 `git diff --check` 通过；`backend/app/schemas/job_evaluation_plan.py` 无差异；
+- H1/HR1 SHA-256 仍分别为 `ada6cbc91c21e7f4f341eee587259676579c9c2770af3a220277ff32a5e47a6f` 与 `f1de3930c16e628617d4213ad0f85bf3a25fa0272945e5806e00c69a5d0df4d4`，其余六份历史质量结果也与固定 hash 一致；
+- HR2 候选路径和正式 20 份结果路径均不存在；PostgreSQL `current=head=d6f4a2b8e913`，`jobs/candidates/resumes/applications/job_evaluation_plans/screening_runs/screening_reports/stage_histories/reports` 九表均为 0；
+- 本批真实 DeepSeek 调用为 0，新质量结果写入为 0，未执行 Git 提交。
+
+这些结果证明程序链不再要求模型生成固定版本字段，缺失、正确与冲突版本各自进入受控分支，原始响应证据和最终严格 Schema 仍被保留；它们不能证明真实 DeepSeek 的事实召回、warning、局部修复或 criterion 归组质量，也不能证明 J5-03/J5-17/J5-20 在真实复验中已经通过，更不能把 HR1 的 `3/6` 改写成成功。
+
+7R4-HR0b 到此停止。唯一下一步是等待用户单独决定是否授权 7R4-HR2 完整六份真实复验；不得自动调用 DeepSeek、创建 HR2 结果、执行正式 20 份或进入 7R4-I—J/阶段 8。
+
+## 31. 7R4-HR2 六份定向真实复验结果（2026-08-26）
+
+### 31.1 运行前门禁与固定调用合同
+
+用户先授权零真实调用预检，再在看到 DeepSeek 官方峰谷价格、当前计价时段、16/21/24 次业务调用边界和 48 次 API attempt 硬上限后，明确确认“本轮不设置金额上限并执行 HR2”。金额确认前没有传入真实调用确认参数，也没有读取 API Key 或实例化真实 Adapter。
+
+真实运行前重新确认：分支 `2lcj`、HEAD `7932eed2651eb9bbfbcce498961778551ac78be5`、上游 `origin/2lcj`、ahead/behind 为 `1/0`；工作区仍为 HR0b 的十个预期未提交文件；HR2 与正式 20 份结果路径均不存在；H1、HR1 和其余六份历史质量结果 SHA-256 全部与固定值一致；PostgreSQL `current=head=d6f4a2b8e913` 且九张业务表均为 0。
+
+零调用预检实际结果为：直接 Adapter/Service 4.0/质量运行器专项 `100 passed + 18 subtests`；扩大后的配置、Adapter、1.0—4.0 Schema/Service、source units、step9、容量和质量合同回归 `286 passed + 59 subtests`；只有既有 PyPDF2 弃用 warning。`py_compile`、`git diff --check` 通过，四个 AI Output Schema 无差异；Fake normal/repair 分别为 3/4 次业务调用，repair 路径只发生 1 次内容修复；dry-run 为真实调用 0、结果写入 0、真实 Adapter 未实例化且 API Key 不是前提。
+
+2026-08-26T10:28:30.377+08:00 查询 DeepSeek 官方价格页 `https://api-docs.deepseek.com/quick_start/pricing/`。当时为工作日峰值时段，`deepseek-v4-flash` 每百万 token 美元单价为 cache-hit input `$0.014`、cache-miss input `$0.44`、output `$1.32`；空闲时段对应 `$0.007/$0.22/$0.66`。固定模型合同仍为 `deepseek-v4-flash`、thinking disabled、temperature `0.1`、JSON object、每次 max output tokens `16,000`、SDK 自动重试 0，Prompt 为 v3/v3/v2/v2。
+
+### 31.2 六份样本与调用审计
+
+| 样本 | 实际角色顺序 | 实际结果 | 人工 facts | 明确必测 | source units | warning | 费用（USD） |
+| --- | --- | --- | ---: | ---: | ---: | --- | ---: |
+| J5-03 | fact extraction → coverage review → criterion grouping | `pending_confirmation`，通过 | 13/13 | 6/6 | 13/13 | 无预期、无实际 | 0.005071976 |
+| J5-07 | fact extraction → coverage review → criterion grouping | `pending_confirmation`，通过 | 13/13 | 6/6 | 13/13 | 无预期、无实际 | 0.004839344 |
+| J5-14 | fact extraction → coverage review → criterion grouping | `pending_confirmation`，通过 | 10/10 | 6/6 | 13/13 | 实际 `conflicting_requirements`，不影响本样本合同 | 0.003748176 |
+| J5-17 | fact extraction → coverage review → criterion grouping | `pending_confirmation`，通过 | 13/13 | 5/5 | 13/13 | 预期并命中 `conflicting_requirements` | 0.003866160 |
+| J5-19 | fact extraction 后合法停止 | 预期 `no_facts`，通过 | 0/0 | 0/0 | 5/5 | 无预期、无实际 | 0.000599440 |
+| J5-20 | fact extraction → coverage review → criterion grouping | `pending_confirmation`，通过 | 31/31 | 0/0 | 33/33 | 预期并命中 `overly_broad_jd` | 0.010291480 |
+
+六份共 16 次业务调用/API attempt，符合五份正常样本各 3 次加 J5-19 单次短路的无修复基线；local repair 0、基础设施重试 0、失败 attempt 0。16 次均为实际 model `deepseek-v4-flash`、`finish_reason=stop`，逐次 model、Prompt version、token/cache、原始响应和费用字段完整。总 input tokens `33,936`，其中 cache hit `5,504`、cache miss `28,432`；output tokens `11,992`。按保存的峰值价格逐 attempt 重算总费用为 `$0.028416576`，与结果汇总一致；该数值是 provider token usage 估算，不等于最终账单。
+
+### 31.3 质量硬门槛与结果证据
+
+- 逐样本合同 `6/6`；正常样本 `4/4`；边界样本 `2/2`；
+- 人工 facts `80/80 = 100%`，高于至少 95% 门槛；明确必测 `23/23 = 100%`；source units `90/90 = 100%`；
+- 最终形成 80 条 facts，来源追溯、priority 一致和 criterion 唯一覆盖均为 `80/80 = 100%`；
+- 预期 warning `2/2 = 100%`；擅自新增要求、漏多来源、错误合并、明显重复、背景/public notes 污染和宣传福利误识别计数全部为 0；
+- `targeted_gate_passed=true`、`quality_conclusion_allowed=true`。只读调用正式门禁 validator 已能从 HR2 固定路径重新读取样本、分母、质量统计、角色顺序、attempt 和费用，并返回通过；没有执行 `--mode formal`。
+
+唯一新建结果为 `docs/stages/stage7/2026-08-26-stage7-7r4hr2-plan-quality-targeted-revalidation-results.json`，大小 `510,921` bytes，SHA-256 为 `4b7c44d4874f3ece189b50d4488d305a1161dbbcdf291277de45945844030ce9`。文件可重新读取，`stage=7R4-HR2`、`result_kind=plan_quality_targeted_revalidation`、`status=formal`、样本集合/顺序、模型参数、Prompt 版本、人工分母和逐 attempt 审计均通过只读复核。
+
+### 31.4 证明边界与停止点
+
+HR0b 修复的是“固定技术版本字段不应由模型随机生成”的职责错误；HR2 验证的是整改后的真实 Prompt/Adapter/Service 链能否在六份固定 JD 上同时满足事实召回、来源、priority、warning、边界和归组门槛。Fake 测试只能证明程序在预设答案下会正确编排与拒绝错误，不能替代这 16 次真实模型输出，因此 HR2 必须重新真实调用。
+
+HR2 通过只证明六份定向门禁通过，并使正式 20 份在程序上具备被另行授权讨论的资格。它不能证明正式 20 份质量、下游 Screening 报告合法率与三次稳定性、真实数据库/API 页面主链、浏览器验收、招聘准确性或阶段 7 完成。真实模型仍有非确定性，未来正式轮必须使用独立结果路径、重新核对价格并获得用户单独授权；不得复用或覆盖本 HR2 文件。
+
+7R4-HR2 到此完成并停止。不得自动执行正式 20 份、7R4-I、7R4-J 或阶段 8；唯一下一步是等待用户另行决定是否授权正式 20 份计划质量验证。
+
+## 32. 7R4-H2P：正式轮前质量测试生命周期修正与零调用预检（2026-08-26，已完成）
+
+### 32.1 已发现的问题与责任层
+
+用户授权准备正式 20 份后，零调用预检重新执行质量运行器专项。Adapter 专项为 `12 passed + 18 subtests`，Service 4.0 生成合同专项为 `68 passed`；质量运行器专项为 `19 passed, 1 failed`。唯一失败是 `test_v4_result_paths_are_new_and_never_historical` 仍断言 `PLAN_TARGETED_RESULT_PATH.exists() is False`。
+
+该断言是 HR0b/HR2 执行前的现场前提：当时 HR2 候选结果不得提前存在。第 31 节已经记录 HR2 合法完成，当前固定 HR2 文件必须存在、大小为 `510,921` bytes、SHA-256 为 `4b7c44d4874f3ece189b50d4488d305a1161dbbcdf291277de45945844030ce9`，并作为正式门禁的只读输入。因此失败不是 HR2 损坏、正式 validator 失败或生产业务回归，而是单元测试把一次性的“HR2 执行前现场状态”误写成了永久合同。
+
+通俗解释：资格考试已经完成并产生合法成绩单，但旧检查表仍要求“成绩单必须不存在”。需要修正检查表的适用阶段，不能删除成绩单，也不能忽略红灯后直接付费执行。
+
+责任层固定为链外的“质量运行器测试生命周期”，不返回 Prompt、Adapter、Service、Schema、Model、PostgreSQL 或真实模型质量层。正式门禁只读 validator 已能读取 HR2 并返回通过；正式 20 份结果路径仍不存在。
+
+### 32.2 固定实施批次与依赖
+
+本补充只新增一个不能拆分越过、也不能与正式真实调用连续执行的批次：
+
+| 批次 | 依赖 | 唯一目标 | DeepSeek | 完成后停止点 |
+| --- | --- | --- | ---: | --- |
+| 7R4-H2P | 本节先获用户明确确认 | 修正过期测试，完成正式轮全部零调用预检与官方价格核对 | 0 次 | 展示官方价格、当前计价时段和 58/77/80、160 边界，等待用户重新确认金额授权 |
+
+固定顺序为：
+
+```text
+第 32 节设计获用户确认
+→ 只实施 7R4-H2P 测试生命周期修正
+→ 完成全部零真实调用预检
+→ 只有预检全绿才查询 DeepSeek 官方价格
+→ 展示价格、当前计价时段与调用边界后停止
+→ 用户重新明确确认“不设置金额上限并执行正式 20 份”
+→ 才允许另行执行一次 7R4-H2 正式真实验证
+```
+
+用户在本次红灯出现前给出的金额授权不跨越失败预检继续生效；7R4-H2P 完成后必须使用新查询的官方价格重新确认。当前“开始实施直到让我确认金额上限”的授权允许先把本节写入权威设计，但根据长期实施顺序门禁，本节落盘后仍须由用户明确确认 7R4-H2P，才能修改测试。
+
+### 32.3 唯一允许修改的文件与链路位置
+
+7R4-H2P 实施时只允许修改：
+
+1. `backend/tests/test_stage7_7r4g_quality_runner.py`：移除静态路径隔离测试对 HR2 当前存在状态的错误绑定；保留并复核新旧路径互斥、固定命名、已存在文件拒绝覆盖、历史结果拒绝写入、缺失/失败正式门禁在 Adapter 创建前阻断等测试。
+2. 本文：追加 7R4-H2P 实际结果、验证数字、官方价格检查时间和停止点。
+3. `PROJECT_STATE.md`：同步当前红灯已修正或失败、验证结果和唯一下一步。
+
+链路位置是“质量测试 → 质量合同/运行器只读门禁”，位于“前端 → API → Schema → Service → Model → PostgreSQL”生产主链之外。本批不修改生产链任何一层。
+
+### 32.4 测试生命周期的固定合同
+
+1. `validate_result_path_isolation()` 的静态测试只验证新结果路径互不重复、与历史路径不重叠、位于固定目录并具有正确命名；不得断言 HR2 路径在所有时期都必须不存在，也不得机械改成在所有环境都必须存在。
+2. 文件存在与否属于运行阶段现场门禁：
+   - HR2 执行前，HR2 结果路径必须不存在；
+   - HR2 已完成、正式轮执行前，HR2 文件必须存在、大小/hash 不变、内容可重新读取、正式 validator 必须只读通过；
+   - 正式 20 份结果路径必须不存在。
+3. 不可覆盖合同继续由临时路径/模拟现场测试：新路径首次写入允许，已存在路径拒绝覆盖，历史路径永远拒绝写入。不得为了让测试通过而删除、改名、移动或修改真实 HR2 文件。
+4. 正式模式必须先完成 `load_and_validate_targeted_gate()`，再允许创建真实 Adapter；缺失、失败、篡改或不匹配的 HR2 必须在读取 API Key和 Adapter 创建前阻断。
+
+### 32.5 明确禁止修改或进入的范围
+
+- `scripts/stage7_7r4_quality_contract.py`、`scripts/run_stage7_7r4_plan_quality.py` 及其他运行器生产逻辑；若现有测试无法在不修改它们的情况下表达第 32.4 节合同，必须返回本文重新讨论，不能自行扩围；
+- Prompt、Adapter、Service、Pydantic Schema、RequirementFact、EvaluationCriterion、warning、repair、归组和质量门槛；
+- 模型 ID、thinking、temperature、response format、max tokens、SDK 重试及 80/160 安全硬上限；
+- 冻结 J5-01—J5-20、人工标签、245/97/255 分母和样本顺序；
+- H1、HR1、HR2 与全部历史质量结果；
+- SQLAlchemy Model、migration、PostgreSQL、API、React 和报告质量实现；
+- 读取 DeepSeek API Key、实例化真实 Adapter、传入 `--confirm-real-model`/`--confirm-no-monetary-cap`、执行正式 20 份、7R4-I、7R4-J 或阶段 8；
+- Git commit、覆盖或清理当前未提交工作区。
+
+### 32.6 零调用验证与价格门禁
+
+修改后必须依次完成：
+
+1. 质量运行器专项恢复全绿，并与 Adapter、Service 4.0 两个专项同跑；
+2. 配置、Adapter、1.0—4.0 Schema/Service、source units、step9、容量和质量合同扩大回归无新增失败；
+3. Fake normal 严格为 extraction → review → grouping 共 3 次业务调用；Fake local repair 严格为 extraction → review → repair → grouping 共 4 次业务调用、1 次内容修复；
+4. dry-run 真实调用 0、结果写入 0、真实 Adapter 未实例化、API Key 非前提，Prompt 仍为 v3/v3/v2/v2；
+5. 只读正式 validator 从固定 HR2 路径验证 `6/6`、80/80、23/23、90/90、角色顺序、attempt 和费用并通过；
+6. H1、HR1、HR2 和其余历史结果 SHA-256 全部不变，正式结果路径不存在；
+7. `py_compile`、`git diff --check` 通过，最终 Git 只新增本节允许的差异；
+8. PostgreSQL 只读确认 `current=head=d6f4a2b8e913` 和九张业务表计数，不执行 migration 或写入；
+9. 上述全部通过后，才查询 DeepSeek 官方价格页，记录带时区 ISO-8601 时间、官方 URL、峰/非峰适用时段、当前 Asia/Shanghai 档位和两档 cache-hit/cache-miss/output 单价，单位为 USD / 1M tokens；同时展示正式轮 58 次基线、77 次合法修复上限、80 次业务调用硬上限、160 次 API attempt 硬上限和每次 16,000 max output tokens；
+10. 价格只用于按 provider token usage 重算估算费用，不冒充最终账单。完成后立即停止，询问用户是否重新确认本轮不设置金额上限并允许执行一次正式 20 份。
+
+若任何自动化、hash、正式门禁、路径、Git 或数据库检查失败，保存证据、返回测试/质量合同/环境责任层并停止；不得查询价格后诱导付费确认，不得真实调用试错，也不得放宽门槛。
+
+### 32.7 完成标志、证明边界与停止点
+
+7R4-H2P 只有在测试生命周期修正、全部零调用验证、历史证据和数据库只读复核均通过后，才允许查询官方价格并到达金额确认门禁。它能证明正式轮的程序预检不会再因 HR2 已合法存在而误报，同时仍会阻止缺失、失败、篡改或覆盖；它不能证明正式 20 份质量、真实模型下一次响应、报告质量、浏览器验收或阶段 7 完成。
+
+7R4-H2P 完成或失败都必须停止。完成时唯一下一步是等待用户基于最新官方价格重新确认是否执行一次 7R4-H2 正式 20 份；失败时唯一下一步是讨论实际责任层。不得在同一批次自动传入真实调用确认参数或执行正式模式。
+
+### 32.8 本节确认门禁
+
+本节落盘只完成实施顺序文档门禁，不代表测试已经修改。只有用户在看到本节后明确确认“实施 7R4-H2P”或含义完全相同的授权，下一轮才允许修改 `backend/tests/test_stage7_7r4g_quality_runner.py`，完成零调用预检并查询官方价格；该轮必须在金额确认问题处停止。
+
+### 32.9 7R4-H2P 实际完成记录（2026-08-26）
+
+用户明确回复“开始下一步”，确认按第 32 节实施 H2P。实际代码修改只发生在 `backend/tests/test_stage7_7r4g_quality_runner.py`：删除静态路径隔离测试中 `PLAN_TARGETED_RESULT_PATH.exists() is False` 这一条过期现场断言，并增加注释说明 HR2 文件存在性是运行生命周期事实。路径互斥、固定命名、历史路径拒绝写入、已存在文件拒绝覆盖，以及失败正式门禁在 Adapter 创建前阻断的既有测试均保留。没有把断言机械改成“HR2 永远必须存在”，因此静态测试不依赖某个执行日期的磁盘现场。
+
+本批实际链路只在“质量测试 → 质量合同/运行器只读门禁”，没有修改质量合同、运行器生产逻辑、Prompt、Adapter、Service、Schema、Model、migration、API、React、PostgreSQL、冻结样本、人工标签、分母、质量门槛或任何真实结果。
+
+零调用验证实际结果：
+
+- Adapter 专项 `12 passed + 18 subtests`；Service 4.0 生成合同专项 `68 passed`；质量运行器专项从 `19 passed, 1 failed` 恢复为 `20 passed`；三组同跑为 `100 passed + 18 subtests`；
+- 配置、Adapter、1.0—4.0 Schema/Service、source units、step9、容量和质量合同扩大回归为 `286 passed + 59 subtests`；只有既有 PyPDF2 弃用 warning；
+- Fake normal 严格为 extraction → review → grouping 共 3 次业务调用、0 repair、0 基础设施重试；Fake local repair 严格为 extraction → review → repair → grouping 共 4 次业务调用、1 repair、0 基础设施重试；两者真实调用和结果写入均为 0；
+- dry-run 为真实模型调用 0、结果写入 0、真实 Adapter 未实例化、API Key 非前提，Prompt 为 v3/v3/v2/v2；它正确报告 HR2 是唯一已存在的新路径、正式结果不存在，历史路径重叠为 0；
+- `py_compile` 与 `git diff --check` 通过；H1、HR1、HR2 和其余六份固定历史证据 SHA-256 全部不变；正式 20 份结果路径不存在；
+- 正式 validator 从固定 HR2 文件只读重算并通过：6/6、80/80、23/23、90/90，16 次业务调用/API attempt、0 repair、0 基础设施重试，估算历史费用 `$0.028416576`；验证发生在任何真实 Adapter 创建之前；
+- PostgreSQL 容器 healthy；Alembic `current=head=d6f4a2b8e913`；`jobs/candidates/resumes/applications/job_evaluation_plans/screening_runs/screening_reports/stage_histories/reports` 九表均为 0。本批没有执行 migration 或数据库写入；
+- 本批没有读取 DeepSeek API Key、没有实例化真实 Adapter、没有传入两个真实确认参数、没有执行 `--mode formal`，真实 DeepSeek 调用为 0。
+
+2026-08-26T14:55:42.413+08:00 重新核对 DeepSeek 官方价格页 `https://api-docs.deepseek.com/quick_start/pricing/`。官方说明峰值时段为 UTC 周一至周五 01:00—04:00、06:00—10:00，即 Asia/Shanghai 工作日 09:00—12:00、14:00—18:00，其余时段为非峰值。当时为星期三北京时间 14:55，属于峰值时段。`deepseek-v4-flash` 每百万 token 美元单价为：
+
+| 计价档位 | cache-hit input | cache-miss input | output |
+| --- | ---: | ---: | ---: |
+| off_peak | `$0.007` | `$0.22` | `$0.66` |
+| peak | `$0.014` | `$0.44` | `$1.32` |
+
+正式 20 份固定边界仍为无 local repair 基线 58 次业务调用、合法 local repair 后门禁可通过上限 77 次、安全硬上限 80 次业务调用、含基础设施重试的 160 次 API attempt 硬上限；每次 max output tokens 为 16,000，SDK 自动重试 0。费用只按 provider 实际返回的 cache hit/cache miss/output token usage 逐 attempt 重算，是估算值，不等于最终账单，也不构成金额上限。
+
+这些结果证明过期测试已经按生命周期修正，正式轮的零调用程序、证据、数据库与价格门禁均已重新通过；它们不能证明正式 20 份质量或保证真实模型下一轮输出。7R4-H2P 到此完成并停止。唯一下一步是等待用户基于上述最新官方价格明确确认本轮是否不设置金额上限，并允许传入 `--confirm-real-model` 与 `--confirm-no-monetary-cap` 执行一次 7R4-H2 正式计划质量验证；未经该确认不得读取 API Key 或执行正式模式。
+
+## 33. 7R4-H2 正式 20 份真实验证结果（2026-08-26，未通过）
+
+### 33.1 授权、运行前门禁与固定合同
+
+用户在看到第 32.9 节记录的最新官方峰谷价格和 58/77/80、160 调用边界后，明确确认“本轮不设置金额上限并执行正式 20 份”。本次授权只允许执行一次 `7R4-H2` 正式计划质量验证；无论通过、质量失败、基础设施失败或终端中断均不得自动重跑。
+
+真实调用前再次确认：正式结果路径不存在；HR2 文件仍为 `510,921` bytes、SHA-256 `4b7c44d4874f3ece189b50d4488d305a1161dbbcdf291277de45945844030ce9`，正式门禁只读返回 `targeted_gate_passed=true`；H1、HR1 和其余六份固定历史结果 hash 全部匹配；工作区只有已知 HR0b/H2P 修改；API Key 只确认存在，没有输出内容。
+
+2026-08-26T15:02:05+08:00 从 DeepSeek 官方价格页实时取得峰谷表，2026-08-26T15:03:44.963102+08:00 写入本轮价格快照。当时是星期三北京时间 15:03，属于工作日 peak。`deepseek-v4-flash` 每百万 token 美元单价仍为 off_peak `$0.007/$0.22/$0.66`、peak `$0.014/$0.44/$1.32`，依次对应 cache-hit input、cache-miss input、output。本轮显式记录 `monetary_cap_usd=null`。
+
+实际使用的模型合同未改变：`deepseek-v4-flash`、thinking disabled、temperature `0.1`、JSON object、每次 max output tokens `16,000`、SDK 自动重试 0、Prompt v3/v3/v2/v2；样本严格为 J5-01—J5-20 固定顺序，业务调用安全硬上限 80、API attempt 硬上限 160。
+
+### 33.2 唯一正式运行与调用审计
+
+唯一新建结果为 `docs/stages/stage7/2026-08-25-stage7-7r4h-plan-quality-formal-results.json`。该文件名是 7R4-G 预先登记的独立正式路径，虽然实际执行日期为 2026-08-26，也不得改名或另建结果。文件大小 `1,550,704` bytes，SHA-256 为 `b416809973ef0013a125736d8acafc024b610882608967f42c6ab10fc8a20b50`；UTF-8 JSON 可完整重新读取，顶层合同为 `stage=7R4-H2`、`result_kind=plan_quality_formal`、`status=formal`、`plan_schema_version=4.0`。
+
+实际为固定基线 58 次业务调用/API attempt：J5-01—J5-18 和 J5-20 均按 fact extraction → coverage review → criterion grouping 执行，J5-19 在 fact extraction 后以预期 `JOB_EVALUATION_PLAN_NO_FACTS` 合法停止；local repair 0、基础设施重试 0。58 次 provider attempt 均返回实际模型 `deepseek-v4-flash`、`finish_reason=stop`，model、Prompt version、token/cache、原始响应、耗时和费用字段全部存在；没有触发 80/160 上限，也没有额外调用。
+
+总 input tokens `105,874`，其中 cache hit `43,776`、cache miss `62,098`；output tokens `35,182`。58 次 cache 分账均满足 hit + miss = input，逐 attempt 费用可按保存的 peak 单价重新计算，汇总估算费用为 `$0.074376224`。这是 provider token usage 的估算，不冒充最终账单。
+
+业务结果中，J5-19 的一次 provider 响应成功，但 Service 按预期生成 `no_facts` 业务错误；J5-20 的 criterion grouping provider 响应也成功，但 Service 因归组内容违反合同返回 `JOB_EVALUATION_PLAN_V4_GROUPING_INVALID`。因此“API 响应成功”不等于“业务质量通过”。
+
+运行器已经先以 UTF-8 写入完整结果、完成历史 hash 后置检查并返回 payload；随后 `main()` 尝试把 1.55 MB 结果打印到 Windows GBK 终端时，因原始内容包含 `•` 字符触发 `UnicodeEncodeError`，进程退出码为 1。该错误发生在唯一结果落盘和运行后证据检查之后，不改变质量结论，也不构成重跑理由。它属于质量运行器 CLI 输出层的独立问题，本批按失败停止规则只记录，不在同一轮修复。
+
+### 33.3 正式质量门槛与失败样本
+
+正式结果为 `formal_gate_passed=false`、`quality_conclusion_allowed=false`，独立调用 `plan_quality_gate_passed(summary, mode="formal")` 也返回 false。20 份中只有 `15/20` 满足全部逐样本合同，未通过样本为 J5-02、J5-06、J5-12、J5-13、J5-20：
+
+| 样本 | 未通过原因 | 责任位置 |
+| --- | --- | --- |
+| J5-02 | `fact:0001` 把 React 交付与 React/TypeScript 技能合并；`fact:0003` 又把可访问性/页面性能、性能瓶颈和 WCAG 三组本应独立的要求合并，共 2 处错误合并 | fact extraction / 事实粒度 |
+| J5-06 | `fact:0003` 把采购库存履约流程与缺货率、周转天数、履约及时率指标合并，1 处错误合并 | fact extraction / 事实粒度 |
+| J5-12 | `fact:0001` 把 LLM gateway/模型路由与流式响应、失败切换、调用审计合并，1 处错误合并 | fact extraction / 事实粒度 |
+| J5-13 | 已把一条福利内容标为 `non_evaluation`，但没有输出预期 `non_evaluation_content` warning | fact extraction / warning |
+| J5-20 | criterion grouping 把 `fact:0021` 同时放进“客户运营与分层”和“试用转化与流失预警”，违反每条 fact 唯一归组；同时漏掉预期 `overly_broad_jd` warning，最终业务结果为 `failed` | criterion grouping + warning |
+
+完整正式统计为：
+
+- 人工 facts `214/245 = 87.35%`，低于至少 95% 门槛；其中 31 条缺口全部来自 J5-20 最终生成失败；
+- 明确必测 `97/97 = 100%`；source units `222/255 = 87.06%`，33 条缺口同样全部来自 J5-20；
+- 已形成的 210 条 facts 中，来源追溯、priority 一致、criterion 覆盖均为 `210/210 = 100%`；
+- 正常样本业务状态 `18/18`，边界正确 `1/2`；J5-19 正确 `no_facts`，J5-20 未形成预期 `pending_confirmation + overly_broad_jd`；
+- 预期 warning `3/5 = 60%`：J5-09/J5-10 的 `limited_basis` 和 J5-17 的 `conflicting_requirements` 命中，J5-13/J5-20 的预期 warning 未命中；
+- 擅自新增、漏多来源、明显重复、背景/public notes 污染和宣传福利误识别均为 0；错误合并为 4，不满足必须为 0 的硬门槛。
+
+额外出现的 J5-02 `conflicting_requirements` 与 J5-14 `conflicting_requirements` 不计入固定预期 warning 分子；J5-02 失败原因仍是错误合并，不是多发 warning。
+
+### 33.4 证据完整性、数据库与停止点
+
+正式结果内记录的运行前八份历史 hash 与运行后重新计算值逐项一致；H1、HR1 和其余六份历史结果没有变化，HR2 大小/hash 也没有变化。`git diff --check` 通过，除本轮独立正式 JSON 和既有 HR2 外没有出现陌生新路径。PostgreSQL 容器仍为 healthy，Alembic `current=head=d6f4a2b8e913`，`jobs/candidates/resumes/applications/job_evaluation_plans/screening_runs/screening_reports/stage_histories/reports` 九表仍全部为 0；本轮没有执行 migration 或数据库写入。
+
+本轮位于“Prompt → Adapter → Service → 质量统计”链路：Prompt 让真实模型提取、复核和归组；Adapter 负责外部响应与计费证据；Service 负责事实、warning 和唯一归组合同；质量统计把二十份结果与冻结人工标签比较。它没有经过前端、API、SQLAlchemy Model 或 PostgreSQL 业务持久化，因此不能证明页面、真实 API/数据库主链、Screening 报告、浏览器验收或招聘准确性。
+
+7R4-H2 正式轮已经以真实质量失败结束。失败结果是不可覆盖证据，不得删除、改名、修改或重跑；不得把 `15/20`、`87.35%` 或 `3/5` 改写成通过。根据既定顺序，本轮停止在 7R4-H2，不进入 7R4-I、7R4-J 或阶段 8。唯一下一步是由用户先理解并确认是否启动新的质量整改设计；如要整改，必须先在权威设计中登记新的批次、责任层、允许文件、新结果路径、费用授权和停止点，再单独实施，不能在本轮直接改 Prompt/Service 或碰运气复跑。

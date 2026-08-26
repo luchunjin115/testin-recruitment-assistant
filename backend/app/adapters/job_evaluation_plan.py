@@ -30,11 +30,7 @@ from app.prompts.job_evaluation_plan import (
     build_requirement_local_repair_messages,
 )
 from app.schemas.job_evaluation_plan import (
-    AIEvaluationCriterionGroupingOutput,
     AIExtractedEvaluationPlanV3,
-    AIRequirementCoverageReviewOutput,
-    AIRequirementFactExtractionOutput,
-    AIRequirementLocalRepairOutput,
     JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION,
     JOB_EVALUATION_PLAN_SCHEMA_VERSION,
     JOB_EVALUATION_PLAN_V4_MAX_INPUT_CHARS,
@@ -52,12 +48,6 @@ _V4_INPUT_TYPES: dict[str, type[BaseModel]] = {
     "coverage_review": JobRequirementCoverageReviewInput,
     "local_repair": JobRequirementLocalRepairInput,
     "criterion_grouping": JobEvaluationCriterionGroupingInput,
-}
-_V4_OUTPUT_TYPES: dict[str, type[BaseModel]] = {
-    "fact_extraction": AIRequirementFactExtractionOutput,
-    "coverage_review": AIRequirementCoverageReviewOutput,
-    "local_repair": AIRequirementLocalRepairOutput,
-    "criterion_grouping": AIEvaluationCriterionGroupingOutput,
 }
 _V4_PROMPT_BUILDERS = {
     "fact_extraction": build_requirement_fact_extraction_messages,
@@ -376,8 +366,7 @@ class DeepSeekJobEvaluationPlanAdapter:
         response: Any,
         role: str,
     ) -> JobEvaluationPlanAdapterResult:
-        output_type = _V4_OUTPUT_TYPES.get(role)
-        if output_type is None:
+        if role not in _V4_INPUT_TYPES:
             raise JobEvaluationPlanInputError("未知的岗位评价计划 4.0 调用角色")
         response_audit = self._response_audit(response)
         choices = getattr(response, "choices", None)
@@ -407,10 +396,11 @@ class DeepSeekJobEvaluationPlanAdapter:
                 content,
                 object_pairs_hook=self._object_without_duplicate_keys,
             )
-            output_type.model_validate(payload)
-        except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
+            if not isinstance(payload, dict):
+                raise TypeError("DeepSeek 4.0 响应顶层必须是 JSON 对象")
+        except (json.JSONDecodeError, TypeError, ValueError):
             raise JobEvaluationPlanInvalidResponseError(
-                f"DeepSeek {role} 返回内容未通过独立 4.0 Schema 校验",
+                f"DeepSeek {role} 返回内容不是合法的唯一键 JSON 对象",
                 **response_audit,
             ) from None
 

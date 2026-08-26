@@ -260,21 +260,68 @@ class DeepSeekJobEvaluationPlanAdapterTest(IsolatedAsyncioTestCase):
             response.choices[0].message.content,
         )
 
-    async def test_v4_schema_failure_keeps_raw_response_and_usage_evidence(self) -> None:
+    async def test_v4_invalid_json_keeps_raw_response_and_usage_evidence(self) -> None:
         response = make_response()
-        response.choices[0].message.content = '{"schema_version":"3.0"}'
+        response.choices[0].message.content = '{"fact_candidates":[]'
         adapter = make_legacy_adapter(settings=make_settings(), client=Mock())
 
         with self.assertRaises(JobEvaluationPlanInvalidResponseError) as raised:
             adapter._read_v4_response(response, role="fact_extraction")
 
-        self.assertEqual(raised.exception.raw_response, '{"schema_version":"3.0"}')
+        self.assertEqual(raised.exception.raw_response, '{"fact_candidates":[]')
         self.assertEqual(raised.exception.model, "deepseek-test-0813")
         self.assertEqual(raised.exception.finish_reason, "stop")
         self.assertEqual(raised.exception.input_tokens, 12)
         self.assertEqual(raised.exception.cache_hit_input_tokens, 5)
         self.assertEqual(raised.exception.cache_miss_input_tokens, 7)
         self.assertEqual(raised.exception.output_tokens, 8)
+
+    async def test_v4_four_roles_accept_business_objects_without_schema_version(self) -> None:
+        contents = {
+            "fact_extraction": (
+                '{"fact_candidates":[],"source_reviews":[]}'
+            ),
+            "coverage_review": '{"status":"passed","findings":[]}',
+            "local_repair": (
+                '{"replacement_candidates":[],"source_reviews":[],'
+                '"resolved_finding_indexes":[],"unresolved_finding_indexes":[]}'
+            ),
+            "criterion_grouping": '{"criteria":[]}',
+        }
+        adapter = make_legacy_adapter(settings=make_settings(), client=Mock())
+
+        for role, content in contents.items():
+            with self.subTest(role=role):
+                response = make_response()
+                response.choices[0].message.content = content
+
+                result = adapter._read_v4_response(response, role=role)
+
+                self.assertEqual(result.content, content)
+                self.assertNotIn("schema_version", result.content)
+
+    async def test_v4_rejects_invalid_json_non_object_roots_and_duplicate_keys(self) -> None:
+        invalid_contents = (
+            "not-json",
+            "[]",
+            "null",
+            '"text"',
+            "1",
+            "true",
+            '{"status":"passed","status":"needs_repair"}',
+        )
+        adapter = make_legacy_adapter(settings=make_settings(), client=Mock())
+
+        for content in invalid_contents:
+            with self.subTest(content=content):
+                response = make_response()
+                response.choices[0].message.content = content
+
+                with self.assertRaises(JobEvaluationPlanInvalidResponseError) as raised:
+                    adapter._read_v4_response(response, role="coverage_review")
+
+                self.assertEqual(raised.exception.raw_response, content)
+                self.assertFalse(raised.exception.retryable)
 
     async def test_only_retryable_transport_errors_are_marked_retryable(self) -> None:
         request = httpx.Request("POST", "https://api.deepseek.com/chat/completions")

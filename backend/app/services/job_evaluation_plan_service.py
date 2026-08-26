@@ -1085,6 +1085,19 @@ class JobEvaluationPlanService:
                         result.content,
                         object_pairs_hook=self._json_object_without_duplicate_keys,
                     )
+                    if not isinstance(payload, dict):
+                        raise TypeError("岗位评价计划 4.0 输出顶层必须是 JSON 对象")
+                    if "schema_version" in payload:
+                        model_schema_version = payload["schema_version"]
+                        if (
+                            not isinstance(model_schema_version, str)
+                            or model_schema_version
+                            != JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION
+                        ):
+                            raise ValueError("岗位评价计划 4.0 输出版本冲突")
+                    payload["schema_version"] = (
+                        JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION
+                    )
                     parsed = output_type.model_validate(payload)
                 except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
                     audit_calls.append(

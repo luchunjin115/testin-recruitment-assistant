@@ -14,14 +14,14 @@ from app.schemas.job_evaluation_plan import (
 
 JOB_EVALUATION_PLAN_PROMPT_VERSION = "job_evaluation_plan_v5"
 JOB_REQUIREMENT_FACT_EXTRACTION_PROMPT_VERSION = (
-    "job_requirement_fact_extraction_v2"
+    "job_requirement_fact_extraction_v3"
 )
 JOB_REQUIREMENT_COVERAGE_REVIEW_PROMPT_VERSION = (
-    "job_requirement_coverage_review_v2"
+    "job_requirement_coverage_review_v3"
 )
-JOB_REQUIREMENT_LOCAL_REPAIR_PROMPT_VERSION = "job_requirement_local_repair_v1"
+JOB_REQUIREMENT_LOCAL_REPAIR_PROMPT_VERSION = "job_requirement_local_repair_v2"
 JOB_EVALUATION_CRITERION_GROUPING_PROMPT_VERSION = (
-    "job_evaluation_criterion_grouping_v1"
+    "job_evaluation_criterion_grouping_v2"
 )
 
 
@@ -105,7 +105,7 @@ fact candidate 只允许 candidate_id、category、sources。candidate_id 只是
 输出前再次扫描全部 candidates：检查是否仍把同一事实错误拆成多条单来源 candidate，也检查是否把仅相关但可分别评价的事实强行合并。模糊要求保留原文并在对应 review 标记 ambiguous_requirement，不补充年限、数量、等级、技能或强制语气。福利、介绍、宣传和招聘流程不生成事实，在评价字段中出现时标记 non_evaluation_content。
 
 输出固定为：
-{{"schema_version":"4.0","fact_candidates":[{{"candidate_id":"candidate:0001","category":"experience","sources":[{{"source_field":"candidate_requirements","source_unit_id":"candidate_requirements:0001","source_quote":"具备 Python 后端开发经验"}}]}}],"source_reviews":[{{"source_unit_id":"candidate_requirements:0001","disposition":"evaluation","candidate_ids":["candidate:0001"],"non_evaluation_reason":null,"warning_codes":[]}}]}}"""
+{{"fact_candidates":[{{"candidate_id":"candidate:0001","category":"experience","sources":[{{"source_field":"candidate_requirements","source_unit_id":"candidate_requirements:0001","source_quote":"具备 Python 后端开发经验"}}]}}],"source_reviews":[{{"source_unit_id":"candidate_requirements:0001","disposition":"evaluation","candidate_ids":["candidate:0001"],"non_evaluation_reason":null,"warning_codes":[]}}]}}"""
 
 _COVERAGE_REVIEW_SYSTEM_PROMPT = f"""你是 JobEvaluationPlan 4.0 的独立完整性检查员。
 {_V4_UNTRUSTED_DATA_RULE}
@@ -119,7 +119,7 @@ missing_source_merge 是强制复核项：检查同一事实是否跨岗位职�
 finding 只能引用输入中真实存在的 source_unit_id 和 fact_id；missing_fact 可以使用空 fact_ids。没有问题时返回 passed 和空 findings；发现可定位内容问题时返回 needs_repair。message 只写简短安全说明，不复述完整模型响应。
 
 输出固定为：
-{{"schema_version":"4.0","status":"passed","findings":[]}}"""
+{{"status":"passed","findings":[]}}"""
 
 _LOCAL_REPAIR_SYSTEM_PROMPT = f"""你是 JobEvaluationPlan 4.0 的一次性局部返工员。
 {_V4_UNTRUSTED_DATA_RULE}
@@ -129,7 +129,7 @@ _LOCAL_REPAIR_SYSTEM_PROMPT = f"""你是 JobEvaluationPlan 4.0 的一次性局�
 每个失败 source unit 必须恰好返回一次 source review。resolved_finding_indexes 与 unresolved_finding_indexes 使用输入 findings 的零基索引；所有 finding 必须且只能出现在其中一个列表。不能确认修复时放入 unresolved，禁止假装已解决。
 
 输出固定为：
-{{"schema_version":"4.0","replacement_candidates":[],"source_reviews":[{{"source_unit_id":"candidate_requirements:0001","disposition":"non_evaluation","candidate_ids":[],"non_evaluation_reason":"other","warning_codes":["non_evaluation_content"]}}],"resolved_finding_indexes":[0],"unresolved_finding_indexes":[]}}"""
+{{"replacement_candidates":[],"source_reviews":[{{"source_unit_id":"candidate_requirements:0001","disposition":"non_evaluation","candidate_ids":[],"non_evaluation_reason":"other","warning_codes":["non_evaluation_content"]}}],"resolved_finding_indexes":[0],"unresolved_finding_indexes":[]}}"""
 
 _CRITERION_GROUPING_SYSTEM_PROMPT = f"""你是 JobEvaluationPlan 4.0 的评价维度归组员。
 {_V4_UNTRUSTED_DATA_RULE}
@@ -137,7 +137,7 @@ _CRITERION_GROUPING_SYSTEM_PROMPT = f"""你是 JobEvaluationPlan 4.0 的评价�
 输入 facts 已经通过来源与覆盖校验。你只能用 criterion name 组织 fact_ids：不能新增、删除、合并、改写 fact，不能生成 criterion_id，不能输出权重、分数、阈值、priority、淘汰规则或招聘决定。每个 fact_id 必须出现且只出现一次。一个 criterion 可以只含一个 fact；criterion 数量可以等于 fact 数量，不为减少数量强行合并。
 
 输出固定为：
-{{"schema_version":"4.0","criteria":[{{"name":"Python 后端工程经验","fact_ids":["fact:0001"]}}]}}"""
+{{"criteria":[{{"name":"Python 后端工程经验","fact_ids":["fact:0001"]}}]}}"""
 
 
 def _build_v4_messages(

@@ -171,7 +171,7 @@ def dry_run_payload() -> dict[str, Any]:
     return {
         "stage": "7R4-G",
         "mode": "dry_run",
-        "status": "ready_for_7R4_HR1_cost_confirmation",
+        "status": "ready_for_7R4_HR2_cost_confirmation",
         "generated_at": _utc_now(),
         "fixture": fixture,
         "call_budget": plan_call_budget(),
@@ -285,7 +285,6 @@ def _faithful_extraction(
         )
     return (
         {
-            "schema_version": "4.0",
             "fact_candidates": candidates,
             "source_reviews": reviews,
         },
@@ -304,12 +303,9 @@ def _fake_outcomes(
         fact_ids = [f"fact:{index:04d}" for index in range(1, len(candidates) + 1)]
         return [
             _adapter_result(extraction),
-            _adapter_result(
-                {"schema_version": "4.0", "status": "passed", "findings": []}
-            ),
+            _adapter_result({"status": "passed", "findings": []}),
             _adapter_result(
                 {
-                    "schema_version": "4.0",
                     "criteria": [
                         {"name": "冻结事实", "fact_ids": fact_ids}
                     ],
@@ -340,7 +336,6 @@ def _fake_outcomes(
             )
     repair_source = omitted["sources"][0]
     repair_payload = {
-        "schema_version": "4.0",
         "replacement_candidates": [
             {
                 "candidate_id": "candidate:0001",
@@ -366,7 +361,6 @@ def _fake_outcomes(
         _adapter_result(extraction),
         _adapter_result(
             {
-                "schema_version": "4.0",
                 "status": "needs_repair",
                 "findings": [
                     {
@@ -381,7 +375,6 @@ def _fake_outcomes(
         _adapter_result(repair_payload),
         _adapter_result(
             {
-                "schema_version": "4.0",
                 "criteria": [{"name": "冻结事实", "fact_ids": fact_ids}],
             }
         ),
@@ -1077,7 +1070,7 @@ async def _run_real(
         and plan_quality_gate_passed(summary, mode=mode)
     )
     payload = {
-        "stage": "7R4-HR1" if mode == "targeted" else "7R4-H2",
+        "stage": "7R4-HR2" if mode == "targeted" else "7R4-H2",
         "result_kind": (
             "plan_quality_targeted_revalidation"
             if mode == "targeted"
@@ -1110,7 +1103,7 @@ async def _run_real(
 
 def _pricing_snapshot_from_args(args: argparse.Namespace) -> dict[str, Any]:
     if not args.confirm_no_monetary_cap:
-        raise SystemExit("7R4-HR1 必须显式确认本轮不设置金额上限")
+        raise SystemExit("7R4-HR2 必须显式确认本轮不设置金额上限")
     required = {
         "official_price_checked_at": args.official_price_checked_at,
         "pricing_tier": args.pricing_tier,
@@ -1188,7 +1181,7 @@ def main(argv: list[str] | None = None) -> None:
         payload = asyncio.run(run_fake_scenario(repair=True))
     else:
         if not args.confirm_real_model:
-            raise SystemExit("7R4-HR1/H2 真实调用必须显式传入 --confirm-real-model")
+            raise SystemExit("7R4-HR2/正式轮真实调用必须显式传入 --confirm-real-model")
         if args.model != PLANNED_MODEL:
             raise SystemExit("真实模型必须与本轮单独确认的 planned model 一致")
         pricing_snapshot = _pricing_snapshot_from_args(args)

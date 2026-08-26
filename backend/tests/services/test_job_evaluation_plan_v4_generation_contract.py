@@ -3,21 +3,31 @@ from __future__ import annotations
 import inspect
 import json
 import asyncio
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
 from app.adapters.job_evaluation_plan import (
+    DeepSeekJobEvaluationPlanAdapter,
     FakeJobEvaluationPlanAdapter,
     JobEvaluationPlanAdapterResult,
     JobEvaluationPlanAuthenticationError,
     JobEvaluationPlanTimeoutError,
 )
+from app.core.config import Settings
 from app.prompts import job_evaluation_plan as prompts
 from app.schemas.job_evaluation_plan import (
+    AIEvaluationCriterionGroupingOutput,
+    AIRequirementCoverageReviewOutput,
+    AIRequirementFactExtractionOutput,
+    AIRequirementLocalRepairOutput,
+    JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION,
     JobEvaluationPlanInputSnapshot,
     JobEvaluationPlanSourceUnit,
 )
 from app.services.job_evaluation_plan_service import (
+    JobEvaluationPlanContentError,
     JobEvaluationPlanV4GenerationError,
     job_evaluation_plan_service,
 )
@@ -127,13 +137,47 @@ def _run(coroutine):
     return asyncio.run(coroutine)
 
 
+def _without_schema_version(payload: dict) -> dict:
+    value = json.loads(json.dumps(payload, ensure_ascii=False))
+    value.pop("schema_version", None)
+    return value
+
+
+def _real_adapter_result(role: str, payload: dict) -> JobEvaluationPlanAdapterResult:
+    content = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                finish_reason="stop",
+                message=SimpleNamespace(content=content),
+            )
+        ],
+        model="deepseek-test",
+        usage=SimpleNamespace(
+            prompt_tokens=10,
+            prompt_cache_hit_tokens=4,
+            prompt_cache_miss_tokens=6,
+            completion_tokens=5,
+        ),
+    )
+    adapter = DeepSeekJobEvaluationPlanAdapter(
+        settings=Settings(
+            _env_file=None,
+            DEEPSEEK_API_KEY="test-key",
+            JOB_EVALUATION_PLAN_MODEL="deepseek-test",
+        ),
+        client=Mock(),
+    )
+    return adapter._read_v4_response(response, role=role)
+
+
 @pytest.mark.parametrize(
     ("constant_name", "expected"),
     [
-        ("JOB_REQUIREMENT_FACT_EXTRACTION_PROMPT_VERSION", "job_requirement_fact_extraction_v2"),
-        ("JOB_REQUIREMENT_COVERAGE_REVIEW_PROMPT_VERSION", "job_requirement_coverage_review_v2"),
-        ("JOB_REQUIREMENT_LOCAL_REPAIR_PROMPT_VERSION", "job_requirement_local_repair_v1"),
-        ("JOB_EVALUATION_CRITERION_GROUPING_PROMPT_VERSION", "job_evaluation_criterion_grouping_v1"),
+        ("JOB_REQUIREMENT_FACT_EXTRACTION_PROMPT_VERSION", "job_requirement_fact_extraction_v3"),
+        ("JOB_REQUIREMENT_COVERAGE_REVIEW_PROMPT_VERSION", "job_requirement_coverage_review_v3"),
+        ("JOB_REQUIREMENT_LOCAL_REPAIR_PROMPT_VERSION", "job_requirement_local_repair_v2"),
+        ("JOB_EVALUATION_CRITERION_GROUPING_PROMPT_VERSION", "job_evaluation_criterion_grouping_v2"),
     ],
 )
 def test_v4_declares_four_independent_prompt_roles(
@@ -167,6 +211,179 @@ def test_v4_fact_and_coverage_v2_prompts_require_global_source_merge_review() ->
     assert "missing_source_merge 是强制复核项" in coverage_prompt
     assert "source_unit_ids 中引用全部相关来源" in coverage_prompt
     assert "fact_ids 中引用全部相关现有 facts" in coverage_prompt
+
+
+def test_v4_prompts_leave_schema_version_to_the_service() -> None:
+    for system_prompt in (
+        prompts._FACT_EXTRACTION_SYSTEM_PROMPT,
+        prompts._COVERAGE_REVIEW_SYSTEM_PROMPT,
+        prompts._LOCAL_REPAIR_SYSTEM_PROMPT,
+        prompts._CRITERION_GROUPING_SYSTEM_PROMPT,
+    ):
+        assert "schema_version" not in system_prompt
+
+
+@pytest.mark.parametrize(
+    ("role", "payload", "output_type"),
+    [
+        (
+            "fact_extraction",
+            _without_schema_version(_fact_extraction()),
+            AIRequirementFactExtractionOutput,
+        ),
+        (
+            "coverage_review",
+            _without_schema_version(_coverage_passed()),
+            AIRequirementCoverageReviewOutput,
+        ),
+        (
+            "local_repair",
+            {
+                "replacement_candidates": [],
+                "source_reviews": [
+                    {
+                        "source_unit_id": "candidate_requirements:0001",
+                        "disposition": "non_evaluation",
+                        "candidate_ids": [],
+                        "non_evaluation_reason": "other",
+                        "warning_codes": ["non_evaluation_content"],
+                    }
+                ],
+                "resolved_finding_indexes": [0],
+                "unresolved_finding_indexes": [],
+            },
+            AIRequirementLocalRepairOutput,
+        ),
+        (
+            "criterion_grouping",
+            _without_schema_version(_grouping("fact:0001")),
+            AIEvaluationCriterionGroupingOutput,
+        ),
+    ],
+)
+def test_v4_real_adapter_raw_objects_are_service_injected_and_fully_validated(
+    role: str,
+    payload: dict,
+    output_type: type,
+) -> None:
+    raw_result = _real_adapter_result(role, payload)
+    adapter = FakeJobEvaluationPlanAdapter([raw_result])
+    audit_calls = []
+
+    parsed = _run(
+        job_evaluation_plan_service._invoke_v4_role(
+            adapter,
+            role,
+            {},
+            output_type,
+            audit_calls,
+        )
+    )
+
+    assert parsed.schema_version == JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION
+    assert raw_result.content == json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    )
+    assert "schema_version" not in raw_result.content
+    assert len(adapter.v4_calls) == 1
+    assert audit_calls[0].result == "succeeded"
+
+
+def test_v4_explicit_current_schema_version_is_accepted() -> None:
+    adapter = FakeJobEvaluationPlanAdapter([_result(_fact_extraction())])
+    parsed = _run(
+        job_evaluation_plan_service._invoke_v4_role(
+            adapter,
+            "fact_extraction",
+            {},
+            AIRequirementFactExtractionOutput,
+            [],
+        )
+    )
+    assert parsed.schema_version == JOB_EVALUATION_PLAN_V4_SCHEMA_VERSION
+
+
+@pytest.mark.parametrize(
+    "schema_version",
+    ["3.0", "5.0", "4.00", 4, True, None, {"value": "4.0"}, ["4.0"]],
+)
+def test_v4_conflicting_schema_versions_fail_once_without_retry(
+    schema_version: object,
+) -> None:
+    payload = _fact_extraction()
+    payload["schema_version"] = schema_version
+    adapter = FakeJobEvaluationPlanAdapter([_result(payload)])
+
+    with pytest.raises(JobEvaluationPlanV4GenerationError) as caught:
+        _run(
+            job_evaluation_plan_service.build_v4_plan_content(
+                _snapshot(), adapter=adapter
+            )
+        )
+
+    assert caught.value.code == "JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT"
+    assert len(adapter.v4_calls) == 1
+    assert caught.value.generation_audit.infrastructure_retry_count == 0
+
+
+@pytest.mark.parametrize(
+    ("role", "payload", "output_type"),
+    [
+        ("fact_extraction", {"source_reviews": []}, AIRequirementFactExtractionOutput),
+        ("fact_extraction", {"fact_candidates": []}, AIRequirementFactExtractionOutput),
+        ("coverage_review", {"findings": []}, AIRequirementCoverageReviewOutput),
+        ("coverage_review", {"status": "passed"}, AIRequirementCoverageReviewOutput),
+        (
+            "local_repair",
+            {
+                "source_reviews": [],
+                "resolved_finding_indexes": [],
+                "unresolved_finding_indexes": [],
+            },
+            AIRequirementLocalRepairOutput,
+        ),
+        ("criterion_grouping", {}, AIEvaluationCriterionGroupingOutput),
+    ],
+)
+def test_v4_missing_business_fields_remain_strict_schema_failures(
+    role: str,
+    payload: dict,
+    output_type: type,
+) -> None:
+    adapter = FakeJobEvaluationPlanAdapter([_result(payload)])
+    with pytest.raises(JobEvaluationPlanContentError) as caught:
+        _run(
+            job_evaluation_plan_service._invoke_v4_role(
+                adapter,
+                role,
+                {},
+                output_type,
+                [],
+            )
+        )
+    assert caught.value.code == "JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT"
+    assert len(adapter.v4_calls) == 1
+
+
+def test_v4_extra_business_field_remains_forbidden() -> None:
+    payload = _fact_extraction()
+    payload.pop("schema_version")
+    payload["unexpected"] = True
+    adapter = FakeJobEvaluationPlanAdapter([_result(payload)])
+    with pytest.raises(JobEvaluationPlanContentError) as caught:
+        _run(
+            job_evaluation_plan_service._invoke_v4_role(
+                adapter,
+                "fact_extraction",
+                {},
+                AIRequirementFactExtractionOutput,
+                [],
+            )
+        )
+    assert caught.value.code == "JOB_EVALUATION_PLAN_INVALID_MODEL_OUTPUT"
+    assert len(adapter.v4_calls) == 1
 
 
 def test_v4_service_exposes_pure_generation_workflow() -> None:
@@ -729,6 +946,9 @@ def test_v4_infrastructure_retry_adds_attempt_not_business_call() -> None:
     "outcome",
     [
         _result("not-json"),
+        _result("[]"),
+        _result("null"),
+        _result('{"fact_candidates":[],"fact_candidates":[]}'),
         JobEvaluationPlanAuthenticationError("secret upstream detail"),
     ],
 )

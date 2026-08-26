@@ -198,7 +198,7 @@ def _valid_targeted_payload(*, repair_case_ids: tuple[str, ...] = ()) -> dict:
         repair_case_ids=repair_case_ids
     )
     return {
-        "stage": "7R4-HR1",
+        "stage": "7R4-HR2",
         "result_kind": "plan_quality_targeted_revalidation",
         "status": "formal",
         "plan_schema_version": "4.0",
@@ -372,8 +372,9 @@ def test_real_run_rejects_stale_official_pricing_snapshot() -> None:
 
 def test_recording_adapter_keeps_finish_cache_cost_and_failed_raw_response() -> None:
     ledger = runner.QualityRunAuditLedger(_pricing_snapshot())
+    raw_success = '{"status":"passed","findings":[]}'
     successful = JobEvaluationPlanAdapterResult(
-        content='{"schema_version":"4.0"}',
+        content=raw_success,
         model="DeepSeek-V4-Flash-0731",
         finish_reason="stop",
         input_tokens=100,
@@ -415,6 +416,8 @@ def test_recording_adapter_keeps_finish_cache_cost_and_failed_raw_response() -> 
     assert adapter.attempts[1]["cache_hit_input_tokens"] == 40
     assert adapter.attempts[1]["cache_miss_input_tokens"] == 60
     assert adapter.attempts[1]["cost_estimate"]["complete"] is True
+    assert adapter.attempts[1]["raw_response"] == raw_success
+    assert "schema_version" not in adapter.attempts[1]["raw_response"]
     assert adapter.attempts[2]["raw_response"] == '{"schema_version":"3.0"}'
     assert adapter.attempts[2]["cost_estimate"]["complete"] is True
     assert ledger.summary()["business_call_count"] == 2
@@ -874,11 +877,28 @@ def test_missing_or_failed_formal_gate_blocks_before_adapter_factory() -> None:
 def test_v4_result_paths_are_new_and_never_historical() -> None:
     isolation = contract.validate_result_path_isolation()
     assert isolation["overlap_count"] == 0
+    # Whether HR2 exists is a run-lifecycle fact, not a permanent path contract:
+    # it must be absent before HR2 and present as immutable gate evidence afterward.
     new_paths = {Path(value).resolve() for value in contract.result_paths().values()}
     historical_paths = {path.resolve() for path in contract.HISTORICAL_RESULT_PATHS}
     assert new_paths.isdisjoint(historical_paths)
-    assert "7r4h" in contract.PLAN_TARGETED_RESULT_PATH.name
+    assert "7r4hr2" in contract.PLAN_TARGETED_RESULT_PATH.name
     assert "7r4i" in contract.REPORT_FORMAL_RESULT_PATH.name
+
+
+def test_h1_and_hr1_results_are_both_immutable_historical_evidence() -> None:
+    hashes = contract.historical_result_hashes()
+    h1_relative = str(
+        contract.CURRENT_H1_PLAN_TARGETED_RESULT_PATH.relative_to(PROJECT_ROOT)
+    )
+    hr1_relative = str(
+        contract.CURRENT_HR1_PLAN_TARGETED_RESULT_PATH.relative_to(PROJECT_ROOT)
+    )
+    assert hashes[h1_relative] == contract.CURRENT_H1_PLAN_TARGETED_RESULT_SHA256
+    assert hashes[hr1_relative] == contract.CURRENT_HR1_PLAN_TARGETED_RESULT_SHA256
+    assert contract.CURRENT_HR1_PLAN_TARGETED_RESULT_PATH in (
+        contract.HISTORICAL_RESULT_PATHS
+    )
 
 
 def test_report_runner_prepares_frozen_denominators_without_calls_or_writes() -> None:

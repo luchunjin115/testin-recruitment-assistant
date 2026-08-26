@@ -19,9 +19,16 @@ CURRENT_H1_PLAN_TARGETED_RESULT_PATH = (
 CURRENT_H1_PLAN_TARGETED_RESULT_SHA256 = (
     "ada6cbc91c21e7f4f341eee587259676579c9c2770af3a220277ff32a5e47a6f"
 )
-PLAN_TARGETED_RESULT_PATH = (
+CURRENT_HR1_PLAN_TARGETED_RESULT_PATH = (
     STAGE7_RESULTS_DIR
     / "2026-08-25-stage7-7r4hr1-plan-quality-targeted-revalidation-results.json"
+)
+CURRENT_HR1_PLAN_TARGETED_RESULT_SHA256 = (
+    "f1de3930c16e628617d4213ad0f85bf3a25fa0272945e5806e00c69a5d0df4d4"
+)
+PLAN_TARGETED_RESULT_PATH = (
+    STAGE7_RESULTS_DIR
+    / "2026-08-26-stage7-7r4hr2-plan-quality-targeted-revalidation-results.json"
 )
 PLAN_FORMAL_RESULT_PATH = (
     STAGE7_RESULTS_DIR
@@ -42,6 +49,7 @@ REPORT_FORMAL_MARKDOWN_PATH = (
 
 HISTORICAL_RESULT_PATHS = (
     CURRENT_H1_PLAN_TARGETED_RESULT_PATH,
+    CURRENT_HR1_PLAN_TARGETED_RESULT_PATH,
     STAGE7_RESULTS_DIR / "2026-08-22-stage7-7rf-plan-quality-targeted-results.json",
     STAGE7_RESULTS_DIR / "2026-08-21-stage7-step9-jd-decomposition-debug-results.json",
     STAGE7_RESULTS_DIR
@@ -96,10 +104,10 @@ PLAN_PROMPT_ROLES = (
 )
 PLAN_REPAIR_ROLE = "local_repair"
 EXPECTED_PLAN_PROMPT_VERSIONS = {
-    "fact_extraction": "job_requirement_fact_extraction_v2",
-    "coverage_review": "job_requirement_coverage_review_v2",
-    "local_repair": "job_requirement_local_repair_v1",
-    "criterion_grouping": "job_evaluation_criterion_grouping_v1",
+    "fact_extraction": "job_requirement_fact_extraction_v3",
+    "coverage_review": "job_requirement_coverage_review_v3",
+    "local_repair": "job_requirement_local_repair_v2",
+    "criterion_grouping": "job_evaluation_criterion_grouping_v2",
 }
 PLAN_QUALITY_ZERO_COUNT_FIELDS = (
     "added_requirement_count",
@@ -134,6 +142,11 @@ def historical_result_hashes() -> dict[str, str]:
     current_h1_hash = sha256_file(CURRENT_H1_PLAN_TARGETED_RESULT_PATH)
     if current_h1_hash != CURRENT_H1_PLAN_TARGETED_RESULT_SHA256:
         raise RuntimeError("当前 7R4-H1 真实结果 SHA-256 已变化")
+    if not CURRENT_HR1_PLAN_TARGETED_RESULT_PATH.exists():
+        raise RuntimeError("当前 7R4-HR1 真实结果文件缺失")
+    current_hr1_hash = sha256_file(CURRENT_HR1_PLAN_TARGETED_RESULT_PATH)
+    if current_hr1_hash != CURRENT_HR1_PLAN_TARGETED_RESULT_SHA256:
+        raise RuntimeError("当前 7R4-HR1 真实结果 SHA-256 已变化")
     return {
         str(path.relative_to(PROJECT_ROOT)): sha256_file(path)
         for path in HISTORICAL_RESULT_PATHS
@@ -162,8 +175,8 @@ def validate_result_path_isolation() -> dict[str, Any]:
         raise RuntimeError("4.0 质量结果必须写入独立的阶段 7 结果目录")
     if "7r4h" not in PLAN_TARGETED_RESULT_PATH.name.lower():
         raise RuntimeError("4.0 定向计划结果缺少独立 7R4-H 命名")
-    if "7r4hr1" not in PLAN_TARGETED_RESULT_PATH.name.lower():
-        raise RuntimeError("4.0 定向复验结果缺少独立 7R4-HR1 命名")
+    if "7r4hr2" not in PLAN_TARGETED_RESULT_PATH.name.lower():
+        raise RuntimeError("4.0 定向复验结果缺少独立 7R4-HR2 命名")
     if "7r4i" not in REPORT_FORMAL_RESULT_PATH.name.lower():
         raise RuntimeError("4.0 报告结果缺少独立 7R4-I 命名")
     return {
@@ -711,7 +724,7 @@ def validate_targeted_gate_payload(
     if source_path.resolve() != PLAN_TARGETED_RESULT_PATH.resolve():
         raise RuntimeError("正式模式只接受登记的新 4.0 定向结果路径")
     expected = {
-        "stage": "7R4-HR1",
+        "stage": "7R4-HR2",
         "result_kind": "plan_quality_targeted_revalidation",
         "status": "formal",
         "plan_schema_version": "4.0",

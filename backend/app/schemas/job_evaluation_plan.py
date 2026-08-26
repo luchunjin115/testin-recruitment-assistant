@@ -27,6 +27,9 @@ JOB_EVALUATION_PLAN_V4_BREAKING_CONTRACT_VERSION = (
     "fact_criterion_plan_generation_v1"
 )
 JOB_EVALUATION_PLAN_V4_FINGERPRINT_RULE_VERSION = "job_evaluation_input_v4"
+JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION = "5.0"
+JOB_EVALUATION_PLAN_V5_MAX_CRITERIA = 30
+JOB_EVALUATION_PLAN_V5_MAX_SOURCES_PER_CRITERION = 20
 LEGACY_JOB_EVALUATION_PLAN_SCHEMA_VERSION = "2.0"
 LEGACY_JOB_EVALUATION_PLAN_AI_SCHEMA_VERSION = "2.0"
 LEGACY_JOB_EVALUATION_PLAN_BREAKING_CONTRACT_VERSION = "jd_extraction_v2"
@@ -244,6 +247,19 @@ CriterionName = Annotated[
     str,
     StringConstraints(strip_whitespace=True, min_length=1, max_length=200),
 ]
+CriterionDescription = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=500),
+]
+ScreeningFocusText = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=500),
+]
+HrNoteText = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=1_000),
+]
+CriterionOrigin = Literal["ai_from_jd", "hr_added"]
 
 
 class JobEvaluationItemSource(BaseModel):
@@ -303,6 +319,10 @@ class EvaluationCriterion(BaseModel):
         min_length=1,
         max_length=JOB_EVALUATION_PLAN_V4_MAX_FACTS,
     )
+    description: CriterionDescription | None = None
+    screening_focus: ScreeningFocusText | None = None
+    origin: CriterionOrigin | None = None
+    hr_note: HrNoteText | None = None
 
     model_config = ConfigDict(extra="forbid")
 
@@ -310,6 +330,48 @@ class EvaluationCriterion(BaseModel):
     def validate_unique_fact_ids(self) -> EvaluationCriterion:
         if len(self.fact_ids) != len(set(self.fact_ids)):
             raise ValueError("EvaluationCriterion fact_ids 不能重复")
+        return self
+
+    @model_serializer(mode="wrap")
+    def serialize_criterion(self, handler):
+        payload = handler(self)
+        for field in ("description", "screening_focus", "origin", "hr_note"):
+            if payload.get(field) is None:
+                payload.pop(field, None)
+        return payload
+
+
+class V5CriterionSource(BaseModel):
+    source_field: FiveSectionSourceField
+    source_quote: SourceQuote
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class V5CriterionItem(BaseModel):
+    criterion_id: CriterionId
+    name: CriterionName
+    importance: EvaluationItemPriority
+    description: CriterionDescription
+    screening_focus: ScreeningFocusText
+    origin: CriterionOrigin
+    sources: list[V5CriterionSource] = Field(
+        default_factory=list,
+        max_length=JOB_EVALUATION_PLAN_V5_MAX_SOURCES_PER_CRITERION,
+    )
+    hr_note: HrNoteText | None = None
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_origin_sources(self) -> V5CriterionItem:
+        if self.origin == "ai_from_jd" and not self.sources:
+            raise ValueError("AI 生成的评价点至少需要一条 JD 来源")
+        source_identities = [
+            (s.source_field, s.source_quote) for s in self.sources
+        ]
+        if len(source_identities) != len(set(source_identities)):
+            raise ValueError("评价点来源不能重复")
         return self
 
 
@@ -493,7 +555,7 @@ class JobEvaluationPlanSourceUnit(BaseModel):
 class JobEvaluationPlanInputSnapshot(BaseModel):
     """Versioned input snapshot for 3.0/4.0 plans and legacy history reads."""
 
-    schema_version: Literal["3.0", "4.0"] | None = None
+    schema_version: Literal["3.0", "4.0", "5.0"] | None = None
     job_context: JobEvaluationPlanJobContext | None = None
     evaluation_fields: JobEvaluationPlanEvaluationFields | None = None
     source_units: list[JobEvaluationPlanSourceUnit] | None = Field(
@@ -514,7 +576,7 @@ class JobEvaluationPlanInputSnapshot(BaseModel):
     def validate_versioned_shape(self) -> JobEvaluationPlanInputSnapshot:
         legacy_values = (self.job_id, self.title, self.description, self.requirements)
         v3_values = (self.job_context, self.evaluation_fields, self.source_units)
-        if self.schema_version in {"3.0", "4.0"}:
+        if self.schema_version in {"3.0", "4.0", "5.0"}:
             if any(value is not None for value in legacy_values):
                 raise ValueError("当前 input snapshot 不能包含 legacy Job 字段")
             if any(value is None for value in v3_values):
@@ -533,6 +595,10 @@ class JobEvaluationPlanInputSnapshot(BaseModel):
             if len(source_ids) != len(set(source_ids)):
                 raise ValueError("source_unit_id 不能重复")
         else:
+            if self.schema_version is None and all(
+                v is None for v in (*legacy_values, *v3_values)
+            ):
+                return self
             if any(value is not None for value in v3_values):
                 raise ValueError("legacy input snapshot 不能包含 3.0 字段")
             if self.job_id is None or self.title is None or self.requirements is None:
@@ -542,7 +608,7 @@ class JobEvaluationPlanInputSnapshot(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_versioned_snapshot(self, handler):
         payload = handler(self)
-        if self.schema_version in {"3.0", "4.0"}:
+        if self.schema_version in {"3.0", "4.0", "5.0"}:
             for field in ("job_id", "title", "department", "description", "requirements"):
                 payload.pop(field, None)
         else:
@@ -830,7 +896,7 @@ class JobEvaluationPlanRead(BaseModel):
     ] = Field(max_length=5)
     prompt_version: VersionText
     model_version: VersionText
-    schema_version: Literal["1.0", "2.0", "3.0", "4.0"]
+    schema_version: Literal["1.0", "2.0", "3.0", "4.0", "5.0"]
     input_fingerprint: Fingerprint
     input_snapshot: JobEvaluationPlanInputSnapshot
     contract_outdated: bool = False
@@ -854,7 +920,7 @@ class JobEvaluationPlanRead(BaseModel):
         elif self.status is JobEvaluationPlanStatus.READY:
             if self.completed_at is None or self.error_code or self.error_message:
                 raise ValueError("ready 计划必须已完成且不能包含错误信息")
-            if self.schema_version != "4.0" and not self.items:
+            if self.schema_version not in {"4.0", "5.0"} and not self.items:
                 raise ValueError("ready 计划必须包含评价事项")
             if self.schema_version == "3.0":
                 if (
@@ -872,8 +938,8 @@ class JobEvaluationPlanRead(BaseModel):
                 ):
                     raise ValueError("3.0 warnings 必须使用受控对象")
         elif self.status is JobEvaluationPlanStatus.PENDING_CONFIRMATION:
-            if self.schema_version != "4.0":
-                raise ValueError("只有 4.0 计划可以处于 pending_confirmation")
+            if self.schema_version not in {"4.0", "5.0"}:
+                raise ValueError("只有 4.0 / 5.0 计划可以处于 pending_confirmation")
             if self.completed_at is None or self.error_code or self.error_message:
                 raise ValueError("pending_confirmation 计划必须已完成且不能包含错误信息")
         elif self.status is JobEvaluationPlanStatus.FAILED:
@@ -881,7 +947,9 @@ class JobEvaluationPlanRead(BaseModel):
                 raise ValueError("failed 计划必须包含完成时间和安全错误信息")
         if self.status is JobEvaluationPlanStatus.OUTDATED and self.is_current:
             raise ValueError("outdated 计划不能是当前计划")
-        if self.schema_version == "4.0":
+        if self.schema_version == "5.0":
+            self._validate_v5_contract()
+        elif self.schema_version == "4.0":
             self._validate_v4_contract()
         elif any(
             value is not None
@@ -894,6 +962,12 @@ class JobEvaluationPlanRead(BaseModel):
         ):
             raise ValueError("1.0—3.0 历史计划不能伪造 4.0 facts/criteria")
         return self
+
+    def _validate_v5_contract(self) -> None:
+        if self.items:
+            raise ValueError("5.0 计划不能包含 legacy items")
+        if self.structured_coverage is not None:
+            raise ValueError("5.0 计划不能包含 legacy structured coverage")
 
     def _validate_v4_contract(self) -> None:
         if self.input_snapshot.schema_version != "4.0":
@@ -1015,7 +1089,13 @@ class JobEvaluationPlanRead(BaseModel):
             "coverage_review_summary",
             "generation_audit",
         )
-        if self.schema_version == "4.0":
+        if self.schema_version == "5.0":
+            payload.pop("items", None)
+            payload.pop("structured_coverage", None)
+            payload.pop("free_text_coverage", None)
+            for field in v4_fields:
+                payload.pop(field, None)
+        elif self.schema_version == "4.0":
             payload["items"] = payload.get("items") or []
             payload.pop("structured_coverage", None)
         elif self.schema_version == "3.0":
