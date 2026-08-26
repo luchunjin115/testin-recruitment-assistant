@@ -111,9 +111,12 @@ launch\start_project.bat -NoBrowser
 首次准备 Python 虚拟环境：
 
 ```powershell
-python -m venv .venv
+py -3.11 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+.\.venv\Scripts\python.exe -m pip install pytest==9.1.1
 ```
+
+`.venv` 会记录创建它的电脑上的 Python 绝对路径，不能随压缩包复制到另一台电脑继续使用。迁移项目时只复制源码；在新电脑删除旧 `.venv` 后，按上面的命令重新创建。pytest 只用于本地测试，因此单独安装，不进入后端生产依赖。
 
 启动基础设施：
 
