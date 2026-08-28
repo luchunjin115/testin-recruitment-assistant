@@ -155,6 +155,7 @@ export type Stage7VoidApplicationInput = {
 export type Stage7StageHistoryApiResponse = {
   id: number;
   application_id: number;
+  report_id: number | null;
   from_recruitment_stage: Stage7RecruitmentStage | null;
   to_recruitment_stage: Stage7RecruitmentStage;
   from_hr_decision: Stage7HRDecision | null;
@@ -170,6 +171,7 @@ export type Stage7StageHistoryApiResponse = {
 export type Stage7StageHistory = {
   id: number;
   applicationId: number;
+  reportId: number | null;
   fromRecruitmentStage: Stage7RecruitmentStage | null;
   toRecruitmentStage: Stage7RecruitmentStage;
   fromHrDecision: Stage7HRDecision | null;

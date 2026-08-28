@@ -235,7 +235,6 @@ class TestScreeningGate:
             "screening gate must reference schema_version 4.0"
         )
 
-    @pytest.mark.xfail(reason="7R5-F: no v5 screening gate method yet", strict=True)
     def test_v5_screening_gate_method_exists(self) -> None:
         """v5.0 screening requires a gate that accepts 5.0 ready plans.
         Batch 7R5-F will add ``_classify_v5_plan`` or update the existing
@@ -249,15 +248,13 @@ class TestScreeningGate:
         ]
         assert len(v5_methods) > 0, "no v5 plan classifier found on ScreeningService"
 
-    @pytest.mark.xfail(reason="7R5-F: schema_version 5.0 rejected by current screening gate", strict=True)
     def test_schema_version_5_0_would_pass_screening_gate(self) -> None:
         """Today the screening gate hard-codes '4.0'.  A plan with
         schema_version='5.0' would be rejected as PLAN_CONTRACT_OUTDATED.
         Batch 7R5-F will widen the gate to accept 5.0 ready plans."""
         from app.services.screening_service import ScreeningService
 
-        source = inspect.getsource(ScreeningService._classify_v4_plan)
-        # The method must accept "5.0" in addition to "4.0"
+        source = inspect.getsource(ScreeningService._classify_v5_plan)
         assert '"5.0"' in source, (
             "screening gate must accept schema_version 5.0 for v5 plans"
         )

@@ -26,6 +26,10 @@ import type {
   ScreeningState,
   ScreeningTriggerResult,
   ScreeningWaitingReason,
+  ScreeningV5Report,
+  V5Criterion,
+  V5CriterionDraft,
+  V5ReportFinding,
 } from '../types/aiScreening';
 
 type JobEvaluationItemSourceResponse = {
@@ -48,8 +52,34 @@ type JobEvaluationItemResponse = {
 type JobEvaluationPlanWarningResponse = 'limited_basis' | {
   code: JobEvaluationPlanWarningCode;
   message: string;
-  source_unit_ids: string[];
+  source_unit_ids?: string[];
   fact_ids?: string[];
+  criterion_id?: string | null;
+  reasons?: Array<
+    | 'explicit_strong_signal_mismatch'
+    | 'explicit_weak_signal_mismatch'
+    | 'no_explicit_signal_non_general'
+    | 'mixed_strength_signals'
+    | 'complex_qualification_language'
+    | 'source_field_signal_mismatch'
+    | 'multi_source_signal_conflict'
+  >;
+};
+
+type V5CriterionSourceResponse = {
+  source_field: FiveSectionSourceField;
+  source_quote: string;
+};
+
+type V5CriterionResponse = {
+  criterion_id: string;
+  name: string;
+  importance: EvaluationItemPriority;
+  description: string;
+  screening_focus: string;
+  origin: 'ai_from_jd' | 'hr_added';
+  sources: V5CriterionSourceResponse[];
+  hr_note: string | null;
 };
 
 type JobEvaluationPlanSourceReviewSummaryResponse = {
@@ -133,7 +163,7 @@ type LegacyJobEvaluationPlanInputSnapshotResponse = {
 };
 
 type JobEvaluationPlanInputSnapshotV3Response = {
-  schema_version: '3.0' | '4.0';
+  schema_version: '3.0' | '4.0' | '5.0';
   job_context: {
     title: string;
     department: string | null;
@@ -169,10 +199,13 @@ type JobEvaluationPlanResponse = {
   evaluation_criteria?: EvaluationCriterionResponse[] | null;
   coverage_review_summary?: JobEvaluationPlanCoverageReviewSummaryResponse | null;
   generation_audit?: JobEvaluationPlanGenerationAuditResponse | null;
+  v5_criteria?: V5CriterionResponse[] | null;
+  edit_version?: number | null;
+  confirmed_at?: string | null;
   warnings: JobEvaluationPlanWarningResponse[];
   prompt_version: string;
   model_version: string;
-  schema_version: '1.0' | '2.0' | '3.0' | '4.0';
+  schema_version: '1.0' | '2.0' | '3.0' | '4.0' | '5.0';
   input_fingerprint: string;
   contract_outdated: boolean;
   input_snapshot:
@@ -200,6 +233,33 @@ type BonusHighlightResponse = {
   reason: string;
   evidence: ScreeningEvidenceResponse[];
 };
+type V5ReportFindingResponse = {
+  summary: string;
+  criterion_ids: string[];
+  evidence: ScreeningEvidenceResponse[];
+};
+type V5CriterionAssessmentResponse = {
+  criterion: V5CriterionResponse;
+  assessment: {
+    criterion_id: string;
+    score: number;
+    reason: string;
+    calculation_note: string | null;
+    experience_period_fact_keys: string[];
+    evidence: ScreeningEvidenceResponse[];
+  };
+};
+type ScreeningV5ReportResponse = {
+  overall_score: number;
+  display_label: string;
+  overall_summary: string;
+  criterion_assessments: V5CriterionAssessmentResponse[];
+  strengths: V5ReportFindingResponse[];
+  gaps: V5ReportFindingResponse[];
+  risks_or_conflicts: V5ReportFindingResponse[];
+  missing_info: V5ReportFindingResponse[];
+  hr_follow_up_questions: string[];
+};
 type ScreeningReportResponse = {
   id: number;
   application_id: number;
@@ -224,6 +284,8 @@ type ScreeningReportResponse = {
   evaluation_reference_at: string | null;
   evaluation_timezone: string | null;
   experience_period_facts_rule_version: string | null;
+  v5_report?: ScreeningV5ReportResponse | null;
+  is_current?: boolean;
   is_outdated: boolean;
   outdated_reasons: ScreeningOutdatedReason[];
   outdated_at: string | null;
@@ -271,7 +333,20 @@ type ScreeningTriggerResponse = {
   reused_report: boolean;
   reused_run: boolean;
 };
-type ScreeningBatchResponse = { job_id: number; results: ScreeningTriggerResponse[] };
+type ScreeningBatchResponse = {
+  job_id: number;
+  total_count: number;
+  reused_count: number;
+  queued_count: number;
+  failed_count: number;
+  results: ScreeningTriggerResponse[];
+  failures: Array<{
+    application_id: number;
+    error_code: string;
+    error_message: string;
+    retryable: boolean;
+  }>;
+};
 
 const mapEvidence = (value: ScreeningEvidenceResponse): ScreeningEvidence => ({
   quote: value.quote,
@@ -296,12 +371,54 @@ const mapBonusHighlight = (value: BonusHighlightResponse): BonusHighlight => ({
   evidence: value.evidence.map(mapEvidence),
 });
 
+const mapV5Criterion = (value: V5CriterionResponse): V5Criterion => ({
+  criterionId: value.criterion_id,
+  name: value.name,
+  importance: value.importance,
+  description: value.description,
+  screeningFocus: value.screening_focus,
+  origin: value.origin,
+  sources: value.sources.map(source => ({
+    sourceField: source.source_field,
+    sourceQuote: source.source_quote,
+  })),
+  hrNote: value.hr_note,
+});
+
+const mapV5Finding = (value: V5ReportFindingResponse): V5ReportFinding => ({
+  summary: value.summary,
+  criterionIds: value.criterion_ids,
+  evidence: value.evidence.map(mapEvidence),
+});
+
+const mapV5Report = (value: ScreeningV5ReportResponse): ScreeningV5Report => ({
+  overallScore: value.overall_score,
+  displayLabel: value.display_label,
+  overallSummary: value.overall_summary,
+  criterionAssessments: value.criterion_assessments.map(item => ({
+    criterion: mapV5Criterion(item.criterion),
+    assessment: {
+      criterionId: item.assessment.criterion_id,
+      score: item.assessment.score,
+      reason: item.assessment.reason,
+      calculationNote: item.assessment.calculation_note,
+      experiencePeriodFactKeys: item.assessment.experience_period_fact_keys,
+      evidence: item.assessment.evidence.map(mapEvidence),
+    },
+  })),
+  strengths: value.strengths.map(mapV5Finding),
+  gaps: value.gaps.map(mapV5Finding),
+  risksOrConflicts: value.risks_or_conflicts.map(mapV5Finding),
+  missingInfo: value.missing_info.map(mapV5Finding),
+  hrFollowUpQuestions: value.hr_follow_up_questions,
+});
+
 const mapInputSnapshot = (
   value: JobEvaluationPlanResponse['input_snapshot'],
 ): JobEvaluationPlanInputSnapshot => {
-  if ('schema_version' in value && value.schema_version === '4.0') {
+  if ('schema_version' in value && (value.schema_version === '4.0' || value.schema_version === '5.0')) {
     return {
-      schemaVersion: '4.0',
+      schemaVersion: value.schema_version,
       jobContext: {
         title: value.job_context.title,
         department: value.job_context.department,
@@ -439,14 +556,19 @@ export const mapJobEvaluationPlan = (value: JobEvaluationPlanResponse): JobEvalu
       errorCode: call.error_code ?? null,
     })),
   } : null,
+  v5Criteria: (value.v5_criteria ?? []).map(mapV5Criterion),
+  editVersion: value.edit_version ?? null,
+  confirmedAt: value.confirmed_at ?? null,
   warnings: value.warnings.map((warning): JobEvaluationPlanWarning => (
     typeof warning === 'string'
       ? warning
       : {
         code: warning.code,
         message: warning.message,
-        sourceUnitIds: warning.source_unit_ids,
+        sourceUnitIds: warning.source_unit_ids ?? [],
         factIds: warning.fact_ids ?? [],
+        criterionId: warning.criterion_id ?? null,
+        reasons: warning.reasons ?? [],
       }
   )),
   promptVersion: value.prompt_version,
@@ -486,6 +608,8 @@ const mapScreeningReport = (value: ScreeningReportResponse): ScreeningReport => 
   evaluationReferenceAt: value.evaluation_reference_at,
   evaluationTimezone: value.evaluation_timezone,
   experiencePeriodFactsRuleVersion: value.experience_period_facts_rule_version,
+  v5Report: value.v5_report ? mapV5Report(value.v5_report) : null,
+  isCurrent: value.is_current ?? true,
   isOutdated: value.is_outdated,
   outdatedReasons: value.outdated_reasons,
   outdatedAt: value.outdated_at,
@@ -562,11 +686,59 @@ const postEvaluationPlan = async (
 
 export const generateJobEvaluationPlan = (jobId: number) => postEvaluationPlan(jobId, 'generate');
 export const regenerateJobEvaluationPlan = (jobId: number) => postEvaluationPlan(jobId, 'regenerate');
-export const confirmJobEvaluationPlan = async (jobId: number): Promise<JobEvaluationPlan> => {
+export const confirmJobEvaluationPlan = async (
+  jobId: number,
+  editVersion: number,
+): Promise<JobEvaluationPlan> => {
   const response = await v2Http.post<JobEvaluationPlanResponse>(
     `/jobs/${jobId}/evaluation-plan/confirm`,
+    { edit_version: editVersion },
   );
   return mapJobEvaluationPlan(response.data);
+};
+
+const serializeV5CriterionDraft = (criterion: V5CriterionDraft) => ({
+  criterion_id: criterion.criterionId,
+  name: criterion.name,
+  importance: criterion.importance,
+  description: criterion.description,
+  screening_focus: criterion.screeningFocus,
+  origin: criterion.origin,
+  sources: criterion.sources.map(source => ({
+    source_field: source.sourceField,
+    source_quote: source.sourceQuote,
+  })),
+  hr_note: criterion.hrNote,
+});
+
+export const saveJobEvaluationPlanDraft = async (
+  jobId: number,
+  editVersion: number,
+  criteria: V5CriterionDraft[],
+): Promise<JobEvaluationPlan> => {
+  const response = await v2Http.put<JobEvaluationPlanResponse>(
+    `/jobs/${jobId}/evaluation-plan/draft`,
+    { edit_version: editVersion, criteria: criteria.map(serializeV5CriterionDraft) },
+  );
+  return mapJobEvaluationPlan(response.data);
+};
+
+export const createJobEvaluationPlanVersion = async (
+  jobId: number,
+  editVersion: number,
+): Promise<JobEvaluationPlan> => {
+  const response = await v2Http.post<JobEvaluationPlanResponse>(
+    `/jobs/${jobId}/evaluation-plan/versions`,
+    { edit_version: editVersion },
+  );
+  return mapJobEvaluationPlan(response.data);
+};
+
+export const listJobEvaluationPlans = async (jobId: number): Promise<JobEvaluationPlan[]> => {
+  const response = await v2Http.get<JobEvaluationPlanResponse[]>(
+    `/jobs/${jobId}/evaluation-plans`,
+  );
+  return response.data.map(mapJobEvaluationPlan);
 };
 
 export const getApplicationScreening = async (
@@ -580,6 +752,15 @@ export const getApplicationScreening = async (
   return mapScreeningState(response.data);
 };
 
+export const listApplicationScreeningReports = async (
+  applicationId: number,
+): Promise<ScreeningReport[]> => {
+  const response = await v2Http.get<ScreeningReportResponse[]>(
+    `/applications/${applicationId}/screening/reports`,
+  );
+  return response.data.map(mapScreeningReport);
+};
+
 const postApplicationScreening = async (
   applicationId: number,
   reassess: boolean,
@@ -587,6 +768,7 @@ const postApplicationScreening = async (
   const suffix = reassess ? '/re-evaluate' : '';
   const response = await v2Http.post<ScreeningTriggerResponse>(
     `/applications/${applicationId}/screening${suffix}`,
+    reassess ? { confirmed: true } : undefined,
   );
   return mapScreeningTrigger(response.data);
 };
@@ -604,11 +786,21 @@ export const reassessJobApplications = async (
 ): Promise<ScreeningBatchReassessmentResult> => {
   const response = await v2Http.post<ScreeningBatchResponse>(
     `/jobs/${jobId}/screening/re-evaluate-batch`,
-    { application_ids: applicationIds },
+    { application_ids: applicationIds, confirmed: true },
   );
   return {
     jobId: response.data.job_id,
+    totalCount: response.data.total_count ?? response.data.results.length,
+    reusedCount: response.data.reused_count ?? response.data.results.filter(item => item.reused_report || item.reused_run).length,
+    queuedCount: response.data.queued_count ?? response.data.results.filter(item => !item.reused_report && !item.reused_run).length,
+    failedCount: response.data.failed_count ?? 0,
     results: response.data.results.map(mapScreeningTrigger),
+    failures: (response.data.failures ?? []).map(failure => ({
+      applicationId: failure.application_id,
+      errorCode: failure.error_code,
+      errorMessage: failure.error_message,
+      retryable: failure.retryable,
+    })),
   };
 };
 

@@ -259,7 +259,7 @@ async def pass_application(
     db: AsyncSession = Depends(get_db),
 ) -> ApplicationRead:
     try:
-        return await application_decision_service.pass_application(
+        return await application_decision_service.hr_direct_pass(
             db,
             application_id,
             data,

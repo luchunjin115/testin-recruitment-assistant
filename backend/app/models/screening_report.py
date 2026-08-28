@@ -12,7 +12,6 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
-    UniqueConstraint,
     func,
     text,
 )
@@ -26,17 +25,14 @@ if TYPE_CHECKING:
     from app.models.job import Job
     from app.models.job_evaluation_plan import JobEvaluationPlan
     from app.models.resume import Resume
+    from app.models.stage_history import StageHistory
 
 
 class ScreeningReport(Base):
-    """The single current successful AI screening report for an Application."""
+    """An immutable successful report; one row per Application is current."""
 
     __tablename__ = "screening_reports"
     __table_args__ = (
-        UniqueConstraint(
-            "application_id",
-            name="uq_screening_reports_application_id",
-        ),
         CheckConstraint(
             "overall_score BETWEEN 0 AND 100",
             name="ck_screening_reports_overall_score_range",
@@ -68,6 +64,12 @@ class ScreeningReport(Base):
             name="ck_screening_reports_experience_facts_object",
         ),
         CheckConstraint(
+            "(schema_version = '5.0' AND v5_report IS NOT NULL "
+            "AND jsonb_typeof(v5_report) = 'object') OR "
+            "(schema_version <> '5.0' AND v5_report IS NULL)",
+            name="ck_screening_reports_v5_payload_matches_schema",
+        ),
+        CheckConstraint(
             "(is_outdated AND jsonb_array_length(outdated_reasons) > 0 "
             "AND outdated_at IS NOT NULL) OR "
             "(NOT is_outdated AND jsonb_array_length(outdated_reasons) = 0 "
@@ -78,6 +80,12 @@ class ScreeningReport(Base):
         Index("ix_screening_reports_resume_id", "resume_id"),
         Index("ix_screening_reports_plan_id", "job_evaluation_plan_id"),
         Index("ix_screening_reports_is_outdated", "is_outdated"),
+        Index(
+            "uq_screening_reports_current_application",
+            "application_id",
+            unique=True,
+            postgresql_where=text("is_current"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
@@ -120,6 +128,13 @@ class ScreeningReport(Base):
         String(100)
     )
     experience_period_facts: Mapped[dict | None] = mapped_column(JSONB)
+    v5_report: Mapped[dict | None] = mapped_column(JSONB)
+    is_current: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default=text("true"),
+    )
     is_outdated: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
@@ -145,9 +160,12 @@ class ScreeningReport(Base):
         onupdate=func.now(),
     )
 
-    application: Mapped["Application"] = relationship(back_populates="screening_report")
+    application: Mapped["Application"] = relationship(back_populates="screening_reports")
     job: Mapped["Job"] = relationship(back_populates="screening_reports")
     resume: Mapped["Resume"] = relationship(back_populates="screening_reports")
     job_evaluation_plan: Mapped["JobEvaluationPlan"] = relationship(
         back_populates="screening_reports"
+    )
+    stage_histories: Mapped[list["StageHistory"]] = relationship(
+        back_populates="screening_report"
     )

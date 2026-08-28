@@ -1,15 +1,21 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.schemas.experience_period import ExperiencePeriodFactKey
-from app.schemas.job_evaluation_plan import EvaluationCriterion, RequirementFact
+from app.schemas.job_evaluation_plan import (
+    EvaluationCriterion,
+    RequirementFact,
+    V5CriterionItem,
+)
 
 
 SCREENING_EVALUATION_SCHEMA_VERSION = "2.0"
+SCREENING_EVALUATION_V5_SCHEMA_VERSION = "5.0"
 SCREENING_EVALUATION_MAX_REQUIREMENTS = 512
+SCREENING_EVALUATION_V5_MAX_CRITERIA = 30
 SCREENING_EVALUATION_MAX_BONUSES = 5
 SCREENING_EVALUATION_MAX_QUESTIONS = 5
 
@@ -124,5 +130,115 @@ class AIScreeningEvaluationOutput(BaseModel):
     interview_questions: list[InterviewQuestion] = Field(
         max_length=SCREENING_EVALUATION_MAX_QUESTIONS
     )
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ScreeningEvaluationPlanInputV5(BaseModel):
+    """The exact confirmed lightweight plan accepted by the 5.0 evaluator."""
+
+    schema_version: Literal["5.0"]
+    criteria: list[V5CriterionItem] = Field(
+        min_length=1,
+        max_length=SCREENING_EVALUATION_V5_MAX_CRITERIA,
+    )
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_unique_criterion_ids(self) -> ScreeningEvaluationPlanInputV5:
+        criterion_ids = [item.criterion_id for item in self.criteria]
+        if len(criterion_ids) != len(set(criterion_ids)):
+            raise ValueError("5.0 评价点 criterion_id 不能重复")
+        return self
+
+
+class CriterionAssessment(BaseModel):
+    criterion_id: RequirementKey
+    score: RequirementScore
+    reason: ReasonText
+    calculation_note: CalculationNote | None = None
+    experience_period_fact_keys: list[ExperiencePeriodFactKey] = Field(
+        default_factory=list,
+        max_length=100,
+    )
+    evidence: list[ScreeningEvidence] = Field(max_length=10)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_score_evidence_shape(self) -> CriterionAssessment:
+        if self.score > 0 and not self.evidence:
+            raise ValueError("5.0 非零分必须至少包含一条简历证据")
+        if self.score == 0:
+            if self.evidence:
+                raise ValueError("5.0 零分不得附带正向简历证据")
+            if "当前简历未发现相关证据" not in self.reason:
+                raise ValueError("5.0 零分必须说明当前简历未发现相关证据")
+        return self
+
+
+class V5ReportFinding(BaseModel):
+    summary: SummaryText
+    criterion_ids: list[RequirementKey] = Field(default_factory=list, max_length=30)
+    evidence: list[ScreeningEvidence] = Field(default_factory=list, max_length=10)
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_unique_criterion_ids(self) -> V5ReportFinding:
+        if len(self.criterion_ids) != len(set(self.criterion_ids)):
+            raise ValueError("报告分区引用的 criterion_id 不能重复")
+        return self
+
+
+class AIScreeningEvaluationV5Output(BaseModel):
+    """Strict model-owned JSON. Program-owned labels and criterion snapshots are absent."""
+
+    overall_score: OverallScore
+    overall_summary: SummaryText
+    criterion_assessments: list[CriterionAssessment] = Field(
+        min_length=1,
+        max_length=SCREENING_EVALUATION_V5_MAX_CRITERIA,
+    )
+    strengths: list[V5ReportFinding] = Field(max_length=10)
+    gaps: list[V5ReportFinding] = Field(min_length=1, max_length=10)
+    risks_or_conflicts: list[V5ReportFinding] = Field(max_length=10)
+    missing_info: list[V5ReportFinding] = Field(min_length=1, max_length=10)
+    hr_follow_up_questions: list[InterviewQuestion] = Field(min_length=1, max_length=5)
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class PersistedCriterionAssessmentV5(BaseModel):
+    """Program-enriched immutable assessment used by a safely persisted report."""
+
+    criterion: V5CriterionItem
+    assessment: CriterionAssessment
+
+    model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_same_criterion(self) -> PersistedCriterionAssessmentV5:
+        if self.criterion.criterion_id != self.assessment.criterion_id:
+            raise ValueError("评价结果与评价点快照 ID 不一致")
+        return self
+
+
+class ScreeningEvaluationV5ReportPayload(BaseModel):
+    """Complete, validated 5.0 report payload safe for JSONB persistence."""
+
+    overall_score: OverallScore
+    display_label: str = Field(min_length=1, max_length=30)
+    overall_summary: SummaryText
+    criterion_assessments: list[PersistedCriterionAssessmentV5] = Field(
+        min_length=1,
+        max_length=SCREENING_EVALUATION_V5_MAX_CRITERIA,
+    )
+    strengths: list[V5ReportFinding] = Field(max_length=10)
+    gaps: list[V5ReportFinding] = Field(min_length=1, max_length=10)
+    risks_or_conflicts: list[V5ReportFinding] = Field(max_length=10)
+    missing_info: list[V5ReportFinding] = Field(min_length=1, max_length=10)
+    hr_follow_up_questions: list[InterviewQuestion] = Field(min_length=1, max_length=5)
 
     model_config = ConfigDict(extra="forbid")

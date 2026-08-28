@@ -23,12 +23,12 @@ export const PLAN_STATUS_META: Record<
   pending_confirmation: {
     label: '待 HR 确认',
     tone: 'warning',
-    description: '事实提取与完整性复核已完成，确认前不会用于候选人初筛。',
+    description: '轻量评价清单等待 HR 编辑与确认，确认前不会用于候选人初筛。',
   },
   ready: {
     label: '已就绪',
     tone: 'success',
-    description: '当前 JD 的基础评价事项已就绪，可用于新申请的 AI 初筛。',
+    description: '当前 JD 的 HR 已确认评价清单已就绪，可用于新申请的 AI 初筛。',
   },
   failed: {
     label: '生成失败',
@@ -100,7 +100,7 @@ export const SCREENING_WAITING_REASON_META: Record<
   },
   plan_missing: {
     label: '尚无评价计划',
-    description: '请先到岗位页面生成当前 JD 的五段式评价计划。',
+    description: '请先到岗位页面生成当前 JD 的 5.0 轻量评价清单。',
   },
   plan_generating: {
     label: '评价计划生成中',
@@ -108,7 +108,7 @@ export const SCREENING_WAITING_REASON_META: Record<
   },
   plan_pending_confirmation: {
     label: '评价计划等待 HR 确认',
-    description: '请到岗位页面核对原文事实、评价维度和 warning；确认后系统才会继续初筛。',
+    description: '请到岗位页面编辑并核对评价点、JD 来源和 warning；确认后系统才会继续初筛。',
   },
   plan_failed: {
     label: '评价计划生成失败',
@@ -120,7 +120,7 @@ export const SCREENING_WAITING_REASON_META: Record<
   },
   plan_contract_outdated: {
     label: '评价计划使用旧合同',
-    description: '请按当前 JD 生成并确认 4.0 计划，1.0—3.0 计划不能用于新申请。',
+    description: '请按当前 JD 生成并确认 5.0 清单，1.0—4.0 计划不能用于新申请。',
   },
 };
 
@@ -182,8 +182,8 @@ export const validateBatchSelection = (
   if (selectedItems.length === 0) {
     return { valid: false, message: '请先选择至少 1 个 Application。' };
   }
-  if (selectedItems.length > 20) {
-    return { valid: false, message: '一次最多重新评估 20 个 Application。' };
+  if (selectedItems.length > 5) {
+    return { valid: false, message: '一次最多重新评估 5 个 Application。' };
   }
   const applicationIds = selectedItems.map(item => item.applicationId);
   if (new Set(applicationIds).size !== applicationIds.length) {

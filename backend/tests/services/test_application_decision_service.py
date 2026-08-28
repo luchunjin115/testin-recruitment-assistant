@@ -101,7 +101,10 @@ class ApplicationDecisionServiceTest(IsolatedAsyncioTestCase):
         await self.service.backup_application(
             self.db,
             1,
-            BackupApplicationRequest(reason_code="waiting_for_comparison"),
+            BackupApplicationRequest(
+                reason_code="waiting_for_comparison",
+                reason_detail="等待同岗位候选人比较",
+            ),
         )
 
         self.assertEqual(backup_application.lifecycle_status, "active")
@@ -120,6 +123,7 @@ class ApplicationDecisionServiceTest(IsolatedAsyncioTestCase):
             1,
             RejectApplicationRequest(
                 reason_code="required_skill_missing",
+                reason_detail="缺少岗位必需技能证据",
                 confirmed=True,
             ),
         )
@@ -173,7 +177,7 @@ class ApplicationDecisionServiceTest(IsolatedAsyncioTestCase):
             recruitment_stage="rejected",
             hr_decision="rejected",
         )
-        self.db.scalar.side_effect = [application, None]
+        self.db.scalar.side_effect = [application, None, None]
 
         result = await self.service.undo_rejection(
             self.db,
@@ -191,7 +195,7 @@ class ApplicationDecisionServiceTest(IsolatedAsyncioTestCase):
         history, activity = self.db.add_all.call_args.args[0]
         self.assertEqual(history.reason_code, "new_evidence")
         self.assertEqual(activity.action, "application_rejection_undone")
-        self.assertEqual(self.db.scalar.await_count, 2)
+        self.assertEqual(self.db.scalar.await_count, 3)
 
     async def test_undo_rejection_rejects_another_active_application(self) -> None:
         rejected = make_application(

@@ -240,23 +240,15 @@ class TestRequirementFactSeparation:
             field_names
         ), f"RequirementFact is missing expected fields; has: {field_names}"
 
-    @pytest.mark.xfail(
-        reason="7R5-A: v5 screening code path does not exist yet",
-        strict=True,
-    )
     def test_v5_code_path_does_not_import_requirement_fact(self) -> None:
         """When a v5 screening evaluation module exists, it must not
         import RequirementFact.
 
         This test will pass once the v5 code path is implemented without
         RequirementFact dependency."""
-        # The v5 screening evaluation path would be a separate module or
-        # a clearly identifiable branch. For now we look for a v5 service.
-        v5_service_path = _SERVICES_DIR / "screening_evaluation_v5_service.py"
-        assert v5_service_path.exists(), (
-            "v5 screening evaluation service does not exist yet"
-        )
-        source = _read_source(v5_service_path)
+        from app.services.screening_evaluation_service import ScreeningEvaluationService
+
+        source = inspect.getsource(ScreeningEvaluationService.evaluate_v5)
         assert "RequirementFact" not in source, (
             "v5 screening evaluation service must not import RequirementFact"
         )
@@ -270,10 +262,6 @@ class TestRequirementFactSeparation:
             "RequirementFact (v4.0 dependency)"
         )
 
-    @pytest.mark.xfail(
-        reason="7R5-A: v5.0 schema version constant not yet defined",
-        strict=True,
-    )
     def test_v5_schema_version_constant_exists(self) -> None:
         """A SCREENING_EVALUATION_V5_SCHEMA_VERSION constant should exist
         once v5.0 is implemented."""

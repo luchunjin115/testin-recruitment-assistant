@@ -6,6 +6,7 @@ import {
   FileSearchOutlined,
   QuestionCircleOutlined,
   SwapOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { Alert, Collapse, Empty, Progress, Tag } from 'antd';
 import {
@@ -22,7 +23,15 @@ import type {
   RequirementFact,
   ScreeningEvidence,
   ScreeningReport,
+  V5PersistedCriterionAssessment,
+  V5ReportFinding,
 } from './types/aiScreening';
+
+const SOURCE_FIELD_LABELS = {
+  candidate_requirements: '任职要求',
+  preferred_qualifications: '加分项',
+  job_responsibilities: '岗位职责',
+} as const;
 
 type Props = {
   report: ScreeningReport;
@@ -142,7 +151,145 @@ const RequirementAssessmentCard: React.FC<{
   </article>
 );
 
+const V5AssessmentCard: React.FC<{
+  item: V5PersistedCriterionAssessment;
+  index: number;
+}> = ({ item, index }) => {
+  const { assessment, criterion } = item;
+  return (
+    <article className="recruitment-requirement-item recruitment-v5-assessment">
+      <div className={`recruitment-requirement-score ${scoreTone(assessment.score)}`}>
+        <strong>{assessment.score}</strong><span>/ 10</span>
+      </div>
+      <div className="recruitment-requirement-content">
+        <div className="recruitment-requirement-heading">
+          <div><span>{criterion.criterionId} · {String(index + 1).padStart(2, '0')}</span><h4>{criterion.name}</h4></div>
+          <div className="recruitment-requirement-tags">
+            <Tag color={criterion.importance === 'required' ? 'red' : criterion.importance === 'preferred' ? 'gold' : 'default'}>
+              {PRIORITY_LABELS[criterion.importance]}
+            </Tag>
+            <Tag color={criterion.origin === 'hr_added' ? 'purple' : 'blue'}>
+              {criterion.origin === 'hr_added' ? 'HR 补充' : '来自 JD'}
+            </Tag>
+          </div>
+        </div>
+        <p className="recruitment-v5-criterion-description">{criterion.description}</p>
+        <p><strong>初筛重点：</strong>{criterion.screeningFocus}</p>
+        {criterion.hrNote && <p className="recruitment-plan-hr-note">HR 说明：{criterion.hrNote}</p>}
+        {criterion.sources.length > 0 ? (
+          <details className="recruitment-report-fact-sources">
+            <summary>查看 JD 原文依据（{criterion.sources.length}）</summary>
+            {criterion.sources.map(source => (
+              <blockquote key={`${source.sourceField}-${source.sourceQuote}`}>
+                <span>{SOURCE_FIELD_LABELS[source.sourceField]}</span><p>{source.sourceQuote}</p>
+              </blockquote>
+            ))}
+          </details>
+        ) : <p className="recruitment-plan-hr-source">此项由 HR 补充，不冒充 JD 原文。</p>}
+        {assessment.score === 0 && (
+          <div className="recruitment-zero-score-note">0 分语义：当前可用简历未体现，不等同于候选人不会。</div>
+        )}
+        <p>{assessment.reason}</p>
+        {assessment.calculationNote && <p className="recruitment-calculation-note">判断说明：{assessment.calculationNote}</p>}
+        <Collapse
+          className="recruitment-evidence-collapse"
+          ghost
+          items={[{
+            key: 'evidence',
+            label: assessment.evidence.length > 0 ? `查看简历证据（${assessment.evidence.length}）` : '证据说明',
+            children: <EvidenceList evidence={assessment.evidence} />,
+          }]}
+        />
+      </div>
+    </article>
+  );
+};
+
+const FindingList: React.FC<{ findings: V5ReportFinding[]; empty: string }> = ({ findings, empty }) => (
+  findings.length === 0
+    ? <Empty description={empty} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+    : <div className="recruitment-v5-findings">
+      {findings.map((finding, index) => (
+        <article key={`${index}-${finding.summary}`}>
+          <p>{finding.summary}</p>
+          {finding.criterionIds.length > 0 && <div>{finding.criterionIds.map(id => <Tag key={id}>{id}</Tag>)}</div>}
+          {finding.evidence.length > 0 && (
+            <Collapse ghost items={[{ key: 'evidence', label: `查看简历证据（${finding.evidence.length}）`, children: <EvidenceList evidence={finding.evidence} /> }]} />
+          )}
+        </article>
+      ))}
+    </div>
+);
+
 const ScreeningReportView: React.FC<Props> = ({ report, plan }) => {
+  if (report.v5Report) {
+    const v5 = report.v5Report;
+    return (
+      <div className="recruitment-ai-report recruitment-v5-report">
+        {!report.isCurrent && (
+          <Alert description="这是过去一次成功评价的只读快照，不会覆盖当前报告。" message="正在查看历史报告" showIcon type="info" />
+        )}
+        {report.isOutdated && (
+          <Alert
+            className="recruitment-ai-report-outdated"
+            description={<div className="recruitment-outdated-reasons">{report.outdatedReasons.map(reason => <Tag key={reason}>{OUTDATED_REASON_LABELS[reason]}</Tag>)}<span>旧报告继续保留；系统不会自动调用 AI，请由 HR 主动重新评估。</span></div>}
+            message="当前报告基于旧输入"
+            showIcon
+            type="warning"
+          />
+        )}
+        <section className="recruitment-report-overview">
+          <div className="recruitment-report-score" aria-label={`AI 岗位匹配建议分 ${v5.overallScore} 分`}>
+            <Progress format={() => <><strong>{v5.overallScore}</strong><span>/ 100</span></>} percent={v5.overallScore} size={132} strokeColor="#3f6fd9" trailColor="#e8edf7" type="circle" />
+            <span>AI 岗位匹配建议分</span>
+          </div>
+          <div className="recruitment-report-overview-copy">
+            <Tag bordered={false} className="recruitment-report-label">{v5.displayLabel}</Tag>
+            <h2>AI 建议与 HR 决策相互独立</h2>
+            <p>总分由 AI 直接给出，程序不平均、不加权、不重算；展示标签也不会自动通过或淘汰候选人。</p>
+            <div className="recruitment-report-overview-meta">
+              <span><CalendarOutlined /> 生成于 {formatDateTime(report.generatedAt)}</span>
+              <span><CalendarOutlined /> {formatEvaluationReference(report)}</span>
+              <span>报告 #{report.id} · Resume #{report.resumeId}</span>
+              <span>评价计划 #{report.jobEvaluationPlanId} · Schema 5.0</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="recruitment-report-section recruitment-report-summary">
+          <div className="recruitment-report-section-mark"><CheckCircleOutlined /></div>
+          <div><span>综合说明</span><h3>当前简历与当前岗位的整体匹配解释</h3><p>{v5.overallSummary}</p></div>
+        </section>
+
+        <section className="recruitment-report-section recruitment-report-assessments">
+          <div className="recruitment-report-section-mark"><FileSearchOutlined /></div>
+          <div className="recruitment-report-section-body">
+            <span>评价点逐项结论</span><h3>{v5.criterionAssessments.length} 个已确认评价点</h3>
+            <p className="recruitment-report-section-intro">每项 0—10 分；非零分必须有当前简历证据，0 分只表示当前简历未发现相关证据。</p>
+            <div className="recruitment-requirement-list">
+              {v5.criterionAssessments.map((item, index) => <V5AssessmentCard item={item} index={index} key={item.criterion.criterionId} />)}
+            </div>
+          </div>
+        </section>
+
+        <div className="recruitment-v5-report-grid">
+          <section className="recruitment-report-section is-strength"><div className="recruitment-report-section-mark is-highlight"><BulbOutlined /></div><div className="recruitment-report-section-body"><span>主要优势</span><h3>有简历证据支持的匹配点</h3><FindingList findings={v5.strengths} empty="当前报告没有单列主要优势" /></div></section>
+          <section className="recruitment-report-section is-gap"><div className="recruitment-report-section-mark is-tradeoff"><SwapOutlined /></div><div className="recruitment-report-section-body"><span>主要差距</span><h3>与岗位要求之间的缺口</h3><FindingList findings={v5.gaps} empty="当前报告没有单列差距" /></div></section>
+          <section className="recruitment-report-section is-risk"><div className="recruitment-report-section-mark is-risk"><WarningOutlined /></div><div className="recruitment-report-section-body"><span>风险与事实冲突</span><h3>需要谨慎解释或核对的内容</h3><FindingList findings={v5.risksOrConflicts} empty="当前报告未发现需要单列的风险或事实冲突" /></div></section>
+          <section className="recruitment-report-section is-missing"><div className="recruitment-report-section-mark is-question"><QuestionCircleOutlined /></div><div className="recruitment-report-section-body"><span>缺失信息</span><h3>简历没有充分说明的内容</h3><FindingList findings={v5.missingInfo} empty="当前报告没有单列缺失信息" /></div></section>
+        </div>
+
+        <section className="recruitment-report-section">
+          <div className="recruitment-report-section-mark is-question"><QuestionCircleOutlined /></div>
+          <div className="recruitment-report-section-body"><span>HR 后续核实</span><h3>面试或沟通时建议确认的问题</h3><ol className="recruitment-interview-questions">{v5.hrFollowUpQuestions.map((question, index) => <li key={`${index}-${question}`}><span>{String(index + 1).padStart(2, '0')}</span><p>{question}</p></li>)}</ol></div>
+        </section>
+
+        <footer className="recruitment-report-versions">
+          <span>Prompt {report.promptVersion}</span><span>模型 {report.modelVersion}</span><span>Schema {report.schemaVersion}</span><span>脱敏规则 {report.redactionVersion}</span><span>时间事实 {report.experiencePeriodFactsRuleVersion || '历史版本未记录'}</span>
+        </footer>
+      </div>
+    );
+  }
   const matchingV4Plan = plan?.id === report.jobEvaluationPlanId && plan.schemaVersion === '4.0'
     ? plan
     : null;

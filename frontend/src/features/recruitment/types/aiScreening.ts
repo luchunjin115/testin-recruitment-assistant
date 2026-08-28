@@ -36,13 +36,26 @@ export type JobEvaluationPlanWarningCode =
   | 'overly_broad_jd'
   | 'conflicting_requirements'
   | 'ambiguous_requirement'
-  | 'non_evaluation_content';
+  | 'non_evaluation_content'
+  | 'many_criteria'
+  | 'importance_review_required';
+
+export type JobEvaluationPlanV5ImportanceReviewReason =
+  | 'explicit_strong_signal_mismatch'
+  | 'explicit_weak_signal_mismatch'
+  | 'no_explicit_signal_non_general'
+  | 'mixed_strength_signals'
+  | 'complex_qualification_language'
+  | 'source_field_signal_mismatch'
+  | 'multi_source_signal_conflict';
 
 export type JobEvaluationPlanWarningDetail = {
   code: JobEvaluationPlanWarningCode;
   message: string;
   sourceUnitIds: string[];
   factIds: string[];
+  criterionId: string | null;
+  reasons: JobEvaluationPlanV5ImportanceReviewReason[];
 };
 
 export type JobEvaluationPlanWarning = 'limited_basis' | JobEvaluationPlanWarningDetail;
@@ -81,6 +94,28 @@ export type EvaluationCriterion = {
   criterionId: string;
   name: string;
   factIds: string[];
+};
+
+export type V5CriterionSource = {
+  sourceField: FiveSectionSourceField;
+  sourceQuote: string;
+};
+
+export type V5CriterionOrigin = 'ai_from_jd' | 'hr_added';
+
+export type V5Criterion = {
+  criterionId: string;
+  name: string;
+  importance: EvaluationItemPriority;
+  description: string;
+  screeningFocus: string;
+  origin: V5CriterionOrigin;
+  sources: V5CriterionSource[];
+  hrNote: string | null;
+};
+
+export type V5CriterionDraft = Omit<V5Criterion, 'criterionId'> & {
+  criterionId: string | null;
 };
 
 export type StructuredFieldCoverage = {
@@ -177,7 +212,7 @@ export type JobEvaluationPlanInputSnapshotV3 = {
 };
 
 export type JobEvaluationPlanInputSnapshotV4 = {
-  schemaVersion: '4.0';
+  schemaVersion: '4.0' | '5.0';
   jobContext: {
     title: string;
     department: string | null;
@@ -218,10 +253,13 @@ export type JobEvaluationPlan = {
   evaluationCriteria: EvaluationCriterion[];
   coverageReviewSummary: JobEvaluationPlanCoverageReviewSummary | null;
   generationAudit: JobEvaluationPlanGenerationAudit | null;
+  v5Criteria: V5Criterion[];
+  editVersion: number | null;
+  confirmedAt: string | null;
   warnings: JobEvaluationPlanWarning[];
   promptVersion: string;
   modelVersion: string;
-  schemaVersion: '1.0' | '2.0' | '3.0' | '4.0';
+  schemaVersion: '1.0' | '2.0' | '3.0' | '4.0' | '5.0';
   inputFingerprint: string;
   contractOutdated: boolean;
   inputSnapshot: JobEvaluationPlanInputSnapshot;
@@ -272,6 +310,29 @@ export type RequirementAssessment = {
   evidence: ScreeningEvidence[];
 };
 
+export type V5ReportFinding = {
+  summary: string;
+  criterionIds: string[];
+  evidence: ScreeningEvidence[];
+};
+
+export type V5PersistedCriterionAssessment = {
+  criterion: V5Criterion;
+  assessment: Omit<RequirementAssessment, 'requirementKey'> & { criterionId: string };
+};
+
+export type ScreeningV5Report = {
+  overallScore: number;
+  displayLabel: string;
+  overallSummary: string;
+  criterionAssessments: V5PersistedCriterionAssessment[];
+  strengths: V5ReportFinding[];
+  gaps: V5ReportFinding[];
+  risksOrConflicts: V5ReportFinding[];
+  missingInfo: V5ReportFinding[];
+  hrFollowUpQuestions: string[];
+};
+
 export type BonusHighlight = {
   title: string;
   score: number;
@@ -303,6 +364,8 @@ export type ScreeningReport = {
   evaluationReferenceAt: string | null;
   evaluationTimezone: string | null;
   experiencePeriodFactsRuleVersion: string | null;
+  v5Report: ScreeningV5Report | null;
+  isCurrent: boolean;
   isOutdated: boolean;
   outdatedReasons: ScreeningOutdatedReason[];
   outdatedAt: string | null;
@@ -356,7 +419,17 @@ export type ScreeningTriggerResult = {
 
 export type ScreeningBatchReassessmentResult = {
   jobId: number;
+  totalCount: number;
+  reusedCount: number;
+  queuedCount: number;
+  failedCount: number;
   results: ScreeningTriggerResult[];
+  failures: Array<{
+    applicationId: number;
+    errorCode: string;
+    errorMessage: string;
+    retryable: boolean;
+  }>;
 };
 
 export type AIScreeningApiError = {

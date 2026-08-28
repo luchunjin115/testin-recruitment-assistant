@@ -172,7 +172,7 @@ try {
   assert.equal(mappedV4Plan.generationAudit.businessCallCount, 3);
   assert.deepEqual(mappedV4Plan.warnings[0].factIds, ['fact:0001']);
   assert.equal('publicNotes' in mappedV4Plan.inputSnapshot, false);
-  const confirmedPlan = await service.confirmJobEvaluationPlan(7);
+  const confirmedPlan = await service.confirmJobEvaluationPlan(7, 1);
   assert.equal(confirmedPlan.status, 'ready');
 
   const state = await service.getApplicationScreening(11);
@@ -212,8 +212,9 @@ try {
     ['post', '/jobs/7/screening/re-evaluate-batch'],
     ['put', '/applications/11/current-resume'],
   ]);
-  assert.equal(requests[3].data, undefined);
-  assert.deepEqual(JSON.parse(requests[7].data), { application_ids: [11, 12] });
+  assert.deepEqual(JSON.parse(requests[3].data), { edit_version: 1 });
+  assert.deepEqual(JSON.parse(requests[6].data), { confirmed: true });
+  assert.deepEqual(JSON.parse(requests[7].data), { application_ids: [11, 12], confirmed: true });
   assert.deepEqual(JSON.parse(requests[8].data), { resume_id: 9 });
 
   const safe = service.getAIScreeningApiError({

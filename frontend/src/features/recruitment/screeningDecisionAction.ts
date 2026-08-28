@@ -59,7 +59,7 @@ export const getStage7DecisionEntry = (
   pending: boolean,
 ): Stage7DecisionEntry => {
   const { application } = item;
-  if (pending) return { allowed: false, label: '正在处理', reason: '这份申请正在提交，请勿重复操作。' };
+  if (pending) return { allowed: false, label: 'AI 评估进行中', reason: 'AI 正在排队或运行；完成或失败后再作决定，避免误以为报告已经完成。' };
   if (application.lifecycleStatus === 'voided') {
     return { allowed: false, label: '申请已作废', reason: '作废申请不能继续执行 HR 决策。' };
   }

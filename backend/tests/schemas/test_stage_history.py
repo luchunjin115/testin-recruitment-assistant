@@ -26,7 +26,10 @@ class DecisionRequestSchemaTest(TestCase):
 
 
     def test_backup_and_reject_only_accept_job_related_reason_codes(self) -> None:
-        backup = BackupApplicationRequest(reason_code="limited_headcount")
+        backup = BackupApplicationRequest(
+            reason_code="limited_headcount",
+            reason_detail="岗位当前名额有限",
+        )
         self.assertEqual(backup.reason_code.value, "limited_headcount")
 
         for payload in (
@@ -35,13 +38,16 @@ class DecisionRequestSchemaTest(TestCase):
             {"reason_code": "manual_override"},
         ):
             with self.subTest(payload=payload), self.assertRaises(ValidationError):
-                RejectApplicationRequest.model_validate({**payload, "confirmed": True})
+                RejectApplicationRequest.model_validate(
+                    {**payload, "reason_detail": "岗位相关说明", "confirmed": True}
+                )
 
     def test_reject_and_void_require_strict_confirmation(self) -> None:
         for confirmed in (False, "true", 1):
             with self.subTest(confirmed=confirmed), self.assertRaises(ValidationError):
                 RejectApplicationRequest(
                     reason_code="required_skill_missing",
+                    reason_detail="缺少岗位必需技能证据",
                     confirmed=confirmed,
                 )
             with self.subTest(confirmed=confirmed), self.assertRaises(ValidationError):
@@ -49,6 +55,7 @@ class DecisionRequestSchemaTest(TestCase):
 
         rejected = RejectApplicationRequest(
             reason_code="required_skill_missing",
+            reason_detail="缺少岗位必需技能证据",
             confirmed=True,
         )
         voided = VoidApplicationRequest(reason_code="wrong_job", confirmed=True)

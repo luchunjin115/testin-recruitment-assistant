@@ -143,6 +143,16 @@ class Settings(BaseSettings):
         min_length=1,
         max_length=20,
     )
+    SCREENING_EVALUATION_V5_PROMPT_VERSION: str = Field(
+        default="screening_evaluation_lightweight_v1",
+        min_length=1,
+        max_length=100,
+    )
+    SCREENING_EVALUATION_V5_SCHEMA_VERSION: str = Field(
+        default="5.0",
+        min_length=1,
+        max_length=20,
+    )
     SCREENING_EVALUATION_TIMEZONE: str = Field(
         default="Asia/Shanghai",
         min_length=1,

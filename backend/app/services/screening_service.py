@@ -33,10 +33,11 @@ from app.schemas.screening import (
     ScreeningRunTriggerType,
     ScreeningWaitingReason,
 )
+from app.services.application_decision_service import application_decision_service
 from app.services.job_evaluation_plan_service import job_evaluation_plan_service
 from app.services.experience_period_service import experience_period_service
 from app.services.screening_evaluation_service import (
-    ScreeningEvaluationResult,
+    ScreeningEvaluationV5Result,
     screening_evaluation_service,
 )
 
@@ -81,8 +82,12 @@ class ScreeningRunStateError(ScreeningServiceError):
     code = "SCREENING_RUN_STATE_INVALID"
 
 
+class ScreeningReassessmentConfirmationRequiredError(ScreeningServiceError):
+    code = "SCREENING_REASSESSMENT_CONFIRMATION_REQUIRED"
+
+
 class ScreeningAdapter(Protocol):
-    async def evaluate(
+    async def evaluate_v5(
         self,
         *,
         job_snapshot: dict[str, Any],
@@ -132,6 +137,24 @@ class ScreeningStateResult:
     latest_run: ScreeningRun | None
 
 
+@dataclass(frozen=True, slots=True)
+class ScreeningBatchFailure:
+    application_id: int
+    error_code: str
+    error_message: str
+    retryable: bool
+
+
+@dataclass(frozen=True, slots=True)
+class ScreeningBatchResult:
+    job_id: int
+    total_count: int
+    reused_count: int
+    queued_count: int
+    results: tuple[ScreeningTriggerResult, ...]
+    failures: tuple[ScreeningBatchFailure, ...]
+
+
 class ScreeningService:
     _NONTERMINAL_STATUSES = (
         ScreeningRunStatus.WAITING_RESUME.value,
@@ -156,7 +179,8 @@ class ScreeningService:
             raise ScreeningApplicationNotFoundError("Application 不存在")
         report = await db.scalar(
             select(ScreeningReport).where(
-                ScreeningReport.application_id == application_id
+                ScreeningReport.application_id == application_id,
+                ScreeningReport.is_current.is_(True),
             )
         )
         if report is not None:
@@ -172,6 +196,25 @@ class ScreeningService:
         )
         return ScreeningStateResult(application_id, report, latest_run)
 
+    async def list_reports(
+        self,
+        db: AsyncSession,
+        application_id: int,
+    ) -> list[ScreeningReport]:
+        application = await db.get(Application, application_id)
+        if application is None:
+            raise ScreeningApplicationNotFoundError("Application 不存在")
+        rows = await db.scalars(
+            select(ScreeningReport)
+            .where(ScreeningReport.application_id == application_id)
+            .order_by(
+                ScreeningReport.is_current.desc(),
+                ScreeningReport.generated_at.desc(),
+                ScreeningReport.id.desc(),
+            )
+        )
+        return list(rows.all())
+
     async def trigger(
         self,
         db: AsyncSession,
@@ -179,9 +222,14 @@ class ScreeningService:
         *,
         trigger_type: ScreeningRunTriggerType = ScreeningRunTriggerType.AUTOMATIC,
         force: bool = False,
+        confirmed: bool = False,
         settings: Settings | None = None,
         allow_closed_pending: bool = False,
     ) -> ScreeningTriggerResult:
+        if force and not confirmed:
+            raise ScreeningReassessmentConfirmationRequiredError(
+                "重新评估必须由 HR 二次确认"
+            )
         resolved = settings or get_settings()
         context: ScreeningInputContext | None = None
         try:
@@ -205,7 +253,10 @@ class ScreeningService:
 
             report = await db.scalar(
                 select(ScreeningReport)
-                .where(ScreeningReport.application_id == application_id)
+                .where(
+                    ScreeningReport.application_id == application_id,
+                    ScreeningReport.is_current.is_(True),
+                )
                 .with_for_update()
             )
             if report is not None:
@@ -248,9 +299,9 @@ class ScreeningService:
                     context.waiting_reason.value if context.waiting_reason else None
                 ),
                 input_fingerprint=context.input_fingerprint,
-                prompt_version=resolved.SCREENING_EVALUATION_PROMPT_VERSION,
+                prompt_version=resolved.SCREENING_EVALUATION_V5_PROMPT_VERSION,
                 model_version=resolved.SCREENING_EVALUATION_MODEL,
-                schema_version=resolved.SCREENING_EVALUATION_SCHEMA_VERSION,
+                schema_version=resolved.SCREENING_EVALUATION_V5_SCHEMA_VERSION,
                 redaction_version=resolved.SCREENING_REDACTION_VERSION,
                 evaluation_reference_at=context.evaluation_reference_at,
                 evaluation_timezone=context.evaluation_timezone,
@@ -278,7 +329,8 @@ class ScreeningService:
                 raise
             report = await db.scalar(
                 select(ScreeningReport).where(
-                    ScreeningReport.application_id == application_id
+                    ScreeningReport.application_id == application_id,
+                    ScreeningReport.is_current.is_(True),
                 )
             )
             return ScreeningTriggerResult(
@@ -297,12 +349,17 @@ class ScreeningService:
         job_id: int,
         application_ids: list[int],
         *,
+        confirmed: bool = False,
         settings: Settings | None = None,
-    ) -> list[ScreeningTriggerResult]:
-        if not 1 <= len(application_ids) <= 20 or len(application_ids) != len(
+    ) -> ScreeningBatchResult:
+        if not confirmed:
+            raise ScreeningReassessmentConfirmationRequiredError(
+                "批量重新评估必须由 HR 二次确认"
+            )
+        if not 1 <= len(application_ids) <= 5 or len(application_ids) != len(
             set(application_ids)
         ):
-            raise ScreeningBatchLimitError("一次只能重新评估 1—20 个不同 Application")
+            raise ScreeningBatchLimitError("一次只能重新评估 1—5 个不同 Application")
         job = await db.get(Job, job_id)
         if job is None:
             raise ScreeningBatchJobMismatchError("批量重新评估岗位不存在")
@@ -321,17 +378,47 @@ class ScreeningService:
         await db.rollback()
 
         results: list[ScreeningTriggerResult] = []
+        failures: list[ScreeningBatchFailure] = []
         for application_id in application_ids:
-            results.append(
-                await self.trigger(
+            try:
+                results.append(await self.trigger(
                     db,
                     application_id,
                     trigger_type=ScreeningRunTriggerType.BATCH_REASSESSMENT,
                     force=True,
+                    confirmed=True,
                     settings=settings,
+                ))
+            except ScreeningServiceError as exc:
+                failures.append(
+                    ScreeningBatchFailure(
+                        application_id=application_id,
+                        error_code=self._safe_code(exc.code),
+                        error_message=self._safe_batch_error(exc),
+                        retryable=False,
+                    )
                 )
-            )
-        return results
+            except Exception:
+                await self._safe_rollback(db)
+                failures.append(
+                    ScreeningBatchFailure(
+                        application_id=application_id,
+                        error_code="SCREENING_OPERATION_FAILED",
+                        error_message="该 Application 提交失败，请稍后重试",
+                        retryable=True,
+                    )
+                )
+        reused_count = sum(
+            1 for item in results if item.reused_report or item.reused_run
+        )
+        return ScreeningBatchResult(
+            job_id=job_id,
+            total_count=len(application_ids),
+            reused_count=reused_count,
+            queued_count=len(results) - reused_count,
+            results=tuple(results),
+            failures=tuple(failures),
+        )
 
     async def switch_current_resume(
         self,
@@ -367,7 +454,10 @@ class ScreeningService:
             application.current_resume_id = resume_id
             report = await db.scalar(
                 select(ScreeningReport)
-                .where(ScreeningReport.application_id == application_id)
+                .where(
+                    ScreeningReport.application_id == application_id,
+                    ScreeningReport.is_current.is_(True),
+                )
                 .with_for_update()
             )
             if report is not None:
@@ -435,7 +525,8 @@ class ScreeningService:
                 continue
             report = await db.scalar(
                 select(ScreeningReport).where(
-                    ScreeningReport.application_id == application_id
+                    ScreeningReport.application_id == application_id,
+                    ScreeningReport.is_current.is_(True),
                 )
             )
             if report is not None:
@@ -601,11 +692,11 @@ class ScreeningService:
             resolved_adapter = adapter or DeepSeekScreeningEvaluationAdapter(
                 settings=resolved
             )
-            result: ScreeningEvaluationResult | None = None
+            result: ScreeningEvaluationV5Result | None = None
             for attempt in range(2):
                 attempts = attempt + 1
                 try:
-                    result = await screening_evaluation_service.evaluate(
+                    result = await screening_evaluation_service.evaluate_v5(
                         job_snapshot=context.job_snapshot,
                         evaluation_plan=context.evaluation_plan,
                         resume_text=context.sanitized_resume,
@@ -675,7 +766,7 @@ class ScreeningService:
         db: AsyncSession,
         run_id: int,
         original: ScreeningInputContext,
-        result: ScreeningEvaluationResult,
+        result: ScreeningEvaluationV5Result,
         *,
         completed_at: datetime,
         attempts: int,
@@ -706,30 +797,35 @@ class ScreeningService:
                 duration_ms=duration_ms,
             )
 
-        report = await db.scalar(
+        previous_report = await db.scalar(
             select(ScreeningReport)
-            .where(ScreeningReport.application_id == application.id)
+            .where(
+                ScreeningReport.application_id == application.id,
+                ScreeningReport.is_current.is_(True),
+            )
             .with_for_update()
         )
-        if report is None:
-            report = ScreeningReport(application_id=application.id)
-            db.add(report)
+        if previous_report is not None:
+            previous_report.is_current = False
+            await db.flush()
+        report = ScreeningReport(
+            application_id=application.id,
+            is_current=True,
+        )
+        db.add(report)
         payload = result.report
         report.job_id = current.job_id
         report.resume_id = current.resume_id
         assert current.plan_id is not None
         report.job_evaluation_plan_id = current.plan_id
         report.overall_score = payload.overall_score
-        report.display_label = result.display_label
+        report.display_label = payload.display_label
         report.overall_summary = payload.overall_summary
-        report.requirement_assessments = [
-            item.model_dump(mode="json") for item in payload.requirement_assessments
-        ]
-        report.bonus_highlights = [
-            item.model_dump(mode="json") for item in payload.bonus_highlights
-        ]
-        report.tradeoff_reason = payload.tradeoff_reason
-        report.interview_questions = list(payload.interview_questions)
+        report.requirement_assessments = []
+        report.bonus_highlights = []
+        report.tradeoff_reason = None
+        report.interview_questions = list(payload.hr_follow_up_questions)
+        report.v5_report = payload.model_dump(mode="json")
         report.input_fingerprint = current.input_fingerprint
         report.jd_fingerprint = current.jd_fingerprint
         report.plan_fingerprint = current.plan_fingerprint
@@ -751,6 +847,14 @@ class ScreeningService:
         report.outdated_at = None
         report.generated_at = completed_at
 
+        await db.flush()
+        await application_decision_service.append_screening_handoff(
+            db,
+            application,
+            report_id=report.id,
+            succeeded=True,
+        )
+
         run.status = ScreeningRunStatus.SUCCEEDED.value
         run.waiting_reason = None
         run.completed_at = completed_at
@@ -761,6 +865,8 @@ class ScreeningService:
         run.duration_ms = duration_ms
         run.attempt_count = attempts
         run.model_version = result.metadata.model_version
+        run.prompt_version = result.metadata.prompt_version
+        run.schema_version = result.metadata.schema_version
         run.evaluation_reference_at = current.evaluation_reference_at
         run.evaluation_timezone = current.evaluation_timezone
         run.experience_period_facts_rule_version = (
@@ -803,6 +909,24 @@ class ScreeningService:
             run.duration_ms = duration_ms
             run.lease_owner = None
             run.lease_expires_at = None
+            application = await db.scalar(
+                select(Application)
+                .where(Application.id == run.application_id)
+                .with_for_update()
+            )
+            if application is not None:
+                report_id = await db.scalar(
+                    select(ScreeningReport.id).where(
+                        ScreeningReport.application_id == application.id,
+                        ScreeningReport.is_current.is_(True),
+                    )
+                )
+                await application_decision_service.append_screening_handoff(
+                    db,
+                    application,
+                    report_id=report_id,
+                    succeeded=False,
+                )
             await db.commit()
             await db.refresh(run)
             return run
@@ -842,7 +966,8 @@ class ScreeningService:
                 return
             report = await db.scalar(
                 select(ScreeningReport).where(
-                    ScreeningReport.application_id == application_id
+                    ScreeningReport.application_id == application_id,
+                    ScreeningReport.is_current.is_(True),
                 )
             )
             if (
@@ -851,7 +976,8 @@ class ScreeningService:
             ):
                 await db.rollback()
                 return
-            context = await self._build_context(db, application, get_settings())
+            settings = get_settings()
+            context = await self._build_context(db, application, settings)
             duplicate = await self._find_nonterminal_run(
                 db,
                 application_id,
@@ -868,6 +994,10 @@ class ScreeningService:
                 run.resume_id = context.resume_id
                 run.job_evaluation_plan_id = context.plan_id
                 run.input_fingerprint = context.input_fingerprint
+                run.prompt_version = settings.SCREENING_EVALUATION_V5_PROMPT_VERSION
+                run.model_version = settings.SCREENING_EVALUATION_MODEL
+                run.schema_version = settings.SCREENING_EVALUATION_V5_SCHEMA_VERSION
+                run.redaction_version = settings.SCREENING_REDACTION_VERSION
                 run.evaluation_reference_at = context.evaluation_reference_at
                 run.evaluation_timezone = context.evaluation_timezone
                 run.experience_period_facts_rule_version = (
@@ -902,7 +1032,7 @@ class ScreeningService:
         resume = await db.get(Resume, application.current_resume_id)
         if job is None or resume is None:
             raise ScreeningResumeNotFoundError("Application 的岗位或 Resume 不存在")
-        snapshot = job_evaluation_plan_service.build_v4_input_snapshot(job)
+        snapshot = job_evaluation_plan_service.build_v5_input_snapshot(job)
         jd_fingerprint = job_evaluation_plan_service.fingerprint_snapshot(snapshot)
         plan = await db.scalar(
             select(JobEvaluationPlan).where(
@@ -927,7 +1057,7 @@ class ScreeningService:
             else ""
         )
         resume_ready = resume_ready and bool(sanitized_resume)
-        plan_ready, plan_waiting_reason = self._classify_v4_plan(
+        plan_ready, plan_waiting_reason = self._classify_v5_plan(
             snapshot,
             jd_fingerprint,
             plan,
@@ -951,8 +1081,11 @@ class ScreeningService:
                 "id": plan.id,
                 "jd_fingerprint": plan.jd_fingerprint,
                 "input_fingerprint": plan.input_fingerprint,
-                "requirement_facts": plan.requirement_facts,
-                "evaluation_criteria": plan.evaluation_criteria,
+                "edit_version": plan.edit_version,
+                "confirmed_at": (
+                    plan.confirmed_at.isoformat() if plan.confirmed_at else None
+                ),
+                "criteria": plan.v5_criteria,
                 "prompt_version": plan.prompt_version,
                 "model_version": plan.model_version,
                 "schema_version": plan.schema_version,
@@ -993,9 +1126,9 @@ class ScreeningService:
             "resume_fingerprint": resume_fingerprint,
             "plan_id": plan.id if plan_ready and plan is not None else None,
             "plan_fingerprint": plan_fingerprint,
-            "prompt_version": settings.SCREENING_EVALUATION_PROMPT_VERSION,
+            "prompt_version": settings.SCREENING_EVALUATION_V5_PROMPT_VERSION,
             "model_version": settings.SCREENING_EVALUATION_MODEL,
-            "schema_version": settings.SCREENING_EVALUATION_SCHEMA_VERSION,
+            "schema_version": settings.SCREENING_EVALUATION_V5_SCHEMA_VERSION,
             "redaction_version": settings.SCREENING_REDACTION_VERSION,
             "evaluation_reference_at": evaluation_reference_at.isoformat(),
             "evaluation_timezone": settings.SCREENING_EVALUATION_TIMEZONE,
@@ -1029,9 +1162,8 @@ class ScreeningService:
             job_snapshot=snapshot.model_dump(mode="json") if plan_ready else None,
             evaluation_plan=(
                 {
-                    "schema_version": "4.0",
-                    "requirement_facts": list(plan.requirement_facts or []),
-                    "evaluation_criteria": list(plan.evaluation_criteria or []),
+                    "schema_version": "5.0",
+                    "criteria": list(plan.v5_criteria or []),
                 }
                 if plan_ready and plan is not None
                 else None
@@ -1046,6 +1178,7 @@ class ScreeningService:
         current: JobEvaluationPlan | None,
         latest: JobEvaluationPlan | None,
     ) -> tuple[bool, ScreeningWaitingReason | None]:
+        """Historical 4.0 classifier kept for read-only regression evidence."""
         if current is None:
             return False, (
                 ScreeningWaitingReason.PLAN_OUTDATED
@@ -1078,9 +1211,7 @@ class ScreeningService:
             criteria = read_model.evaluation_criteria or []
             fact_ids = {fact.fact_id for fact in facts}
             grouped_fact_ids = [
-                fact_id
-                for criterion in criteria
-                for fact_id in criterion.fact_ids
+                fact_id for criterion in criteria for fact_id in criterion.fact_ids
             ]
             shape_ready = (
                 read_model.schema_version == "4.0"
@@ -1089,6 +1220,57 @@ class ScreeningService:
                 and bool(criteria)
                 and len(grouped_fact_ids) == len(fact_ids)
                 and set(grouped_fact_ids) == fact_ids
+            )
+        except (AttributeError, TypeError, ValueError):
+            shape_ready = False
+        if not shape_ready:
+            return False, ScreeningWaitingReason.PLAN_CONTRACT_OUTDATED
+        return True, None
+
+    @staticmethod
+    def _classify_v5_plan(
+        current_snapshot: Any,
+        current_jd_fingerprint: str,
+        current: JobEvaluationPlan | None,
+        latest: JobEvaluationPlan | None,
+    ) -> tuple[bool, ScreeningWaitingReason | None]:
+        if current is None:
+            return False, (
+                ScreeningWaitingReason.PLAN_OUTDATED
+                if latest is not None
+                else ScreeningWaitingReason.PLAN_MISSING
+            )
+        if current.schema_version != "5.0":
+            return False, ScreeningWaitingReason.PLAN_CONTRACT_OUTDATED
+        if current.jd_fingerprint != current_jd_fingerprint:
+            return False, ScreeningWaitingReason.PLAN_OUTDATED
+        if job_evaluation_plan_service.is_contract_outdated(current):
+            return False, ScreeningWaitingReason.PLAN_CONTRACT_OUTDATED
+        if current.input_fingerprint != job_evaluation_plan_service.fingerprint_input(
+            current_snapshot
+        ):
+            return False, ScreeningWaitingReason.PLAN_OUTDATED
+        if current.status == JobEvaluationPlanStatus.GENERATING.value:
+            return False, ScreeningWaitingReason.PLAN_GENERATING
+        if current.status == "pending_confirmation":
+            return False, ScreeningWaitingReason.PLAN_PENDING_CONFIRMATION
+        if current.status == JobEvaluationPlanStatus.FAILED.value:
+            return False, ScreeningWaitingReason.PLAN_FAILED
+        if current.status == JobEvaluationPlanStatus.OUTDATED.value:
+            return False, ScreeningWaitingReason.PLAN_OUTDATED
+        if current.status != JobEvaluationPlanStatus.READY.value or not current.is_current:
+            return False, ScreeningWaitingReason.PLAN_CONTRACT_OUTDATED
+        try:
+            read_model = job_evaluation_plan_service.build_read_model(current)
+            criteria = read_model.v5_criteria or []
+            criterion_ids = [item.criterion_id for item in criteria]
+            shape_ready = (
+                read_model.schema_version == "5.0"
+                and read_model.input_snapshot.schema_version == "5.0"
+                and bool(criteria)
+                and len(criterion_ids) == len(set(criterion_ids))
+                and read_model.edit_version is not None
+                and read_model.confirmed_at is not None
             )
         except (AttributeError, TypeError, ValueError):
             shape_ready = False
@@ -1188,12 +1370,12 @@ class ScreeningService:
                 JobEvaluationPlan.is_current.is_(True),
             )
         )
-        current_v4_plan_matches_report = (
+        current_v5_plan_matches_report = (
             plan is not None
-            and plan.schema_version == "4.0"
+            and plan.schema_version == "5.0"
             and report.job_evaluation_plan_id == plan.id
         )
-        if not current_v4_plan_matches_report:
+        if not current_v5_plan_matches_report:
             changed |= self._add_outdated_reason(
                 report,
                 ScreeningOutdatedReason.EVALUATION_PLAN_CHANGED,
@@ -1202,7 +1384,7 @@ class ScreeningService:
         else:
             job = await db.get(Job, application.job_id)
             if job is not None:
-                snapshot = job_evaluation_plan_service.build_v4_input_snapshot(job)
+                snapshot = job_evaluation_plan_service.build_v5_input_snapshot(job)
                 current_jd = job_evaluation_plan_service.fingerprint_snapshot(snapshot)
                 if report.jd_fingerprint != current_jd:
                     changed |= self._add_outdated_reason(
@@ -1231,13 +1413,12 @@ class ScreeningService:
     async def _find_nonterminal_run(
         db: AsyncSession,
         application_id: int,
-        fingerprint: str,
+        _fingerprint: str,
         *,
         exclude_run_id: int | None = None,
     ) -> ScreeningRun | None:
         statement = select(ScreeningRun).where(
             ScreeningRun.application_id == application_id,
-            ScreeningRun.input_fingerprint == fingerprint,
             ScreeningRun.status.in_(ScreeningService._NONTERMINAL_STATUSES),
         )
         if exclude_run_id is not None:
@@ -1306,6 +1487,15 @@ class ScreeningService:
             "SCREENING_EVALUATION_CONFIGURATION_ERROR": "AI 初筛服务配置不可用",
         }
         return messages.get(code, "AI 初筛运行失败，旧成功报告未受影响")
+
+    @staticmethod
+    def _safe_batch_error(exc: ScreeningServiceError) -> str:
+        messages = {
+            "SCREENING_APPLICATION_NOT_ELIGIBLE": "该 Application 当前不可重新评估",
+            "SCREENING_JOB_NOT_OPEN": "岗位关闭时不能重新评估",
+            "SCREENING_REASSESSMENT_CONFIRMATION_REQUIRED": "重新评估缺少 HR 二次确认",
+        }
+        return messages.get(exc.code, "该 Application 当前无法提交重新评估")
 
     @staticmethod
     async def _safe_rollback(db: AsyncSession) -> None:

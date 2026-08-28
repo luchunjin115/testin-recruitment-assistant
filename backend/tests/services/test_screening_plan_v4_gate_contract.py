@@ -27,9 +27,10 @@ def test_screening_gate_no_longer_accepts_v3_as_current_input() -> None:
     assert 'schema_version != "3.0"' not in source
 
 
-def test_screening_context_reads_requirement_facts_not_legacy_items() -> None:
+def test_new_screening_context_reads_v5_criteria_not_v4_facts() -> None:
     source = inspect.getsource(screening_service._build_context)
-    assert "requirement_facts" in source
+    assert '"criteria": list(plan.v5_criteria' in source
+    assert "requirement_facts" not in source
     assert '"items": plan.items' not in source
 
 

@@ -13,8 +13,11 @@ from app.models.application import Application
 from app.schemas.application import ApplicationRead
 from app.schemas.screening import (
     ApplicationResumeSwitchRequest,
+    ScreeningBatchFailureRead,
     ScreeningBatchReassessmentRead,
     ScreeningBatchReassessmentRequest,
+    ScreeningReassessmentRequest,
+    ScreeningReportRead,
     ScreeningStateRead,
     ScreeningTriggerRead,
     ScreeningRunTriggerType,
@@ -26,6 +29,7 @@ from app.services.screening_service import (
     ScreeningJobClosedError,
     ScreeningResumeNotFoundError,
     ScreeningResumeOwnershipError,
+    ScreeningReassessmentConfirmationRequiredError,
     ScreeningServiceError,
     ScreeningTriggerResult,
     screening_service,
@@ -36,6 +40,9 @@ router = APIRouter(tags=["screening"])
 _BATCH_REASSESSMENT_PATH = re.compile(
     r"^(?:/api/v2)?/jobs/-?\d+/screening/re-evaluate-batch/?$"
 )
+_SINGLE_REASSESSMENT_PATH = re.compile(
+    r"^(?:/api/v2)?/applications/-?\d+/screening/re-evaluate/?$"
+)
 
 
 def install_screening_exception_handlers(app: FastAPI) -> None:
@@ -45,6 +52,26 @@ def install_screening_exception_handlers(app: FastAPI) -> None:
     )
 
     async def combined_handler(request: Request, exc: RequestValidationError):
+        invalid_fields = {
+            str(error["loc"][-1]) for error in exc.errors() if error.get("loc")
+        }
+        if (
+            request.method == "POST"
+            and (
+                _BATCH_REASSESSMENT_PATH.fullmatch(request.url.path)
+                or _SINGLE_REASSESSMENT_PATH.fullmatch(request.url.path)
+            )
+            and "confirmed" in invalid_fields
+        ):
+            return JSONResponse(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                content={
+                    "detail": {
+                        "code": "SCREENING_REASSESSMENT_CONFIRMATION_REQUIRED",
+                        "message": "重新评估必须由 HR 二次确认",
+                    }
+                },
+            )
         if (
             request.method == "POST"
             and _BATCH_REASSESSMENT_PATH.fullmatch(request.url.path)
@@ -54,7 +81,7 @@ def install_screening_exception_handlers(app: FastAPI) -> None:
                 content={
                     "detail": {
                         "code": "SCREENING_BATCH_SIZE_INVALID",
-                        "message": "一次只能重新评估 1—20 个不同 Application",
+                        "message": "一次只能重新评估 1—5 个不同 Application",
                     }
                 },
             )
@@ -81,7 +108,13 @@ def _map_error(exc: Exception) -> HTTPException:
         return _error(
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             exc.code,
-            "一次只能重新评估 1—20 个不同 Application",
+            "一次只能重新评估 1—5 个不同 Application",
+        )
+    if isinstance(exc, ScreeningReassessmentConfirmationRequiredError):
+        return _error(
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            exc.code,
+            "重新评估必须由 HR 二次确认",
         )
     if isinstance(exc, ScreeningBatchJobMismatchError):
         return _error(
@@ -127,6 +160,20 @@ async def get_application_screening(
         raise _map_error(exc) from exc
 
 
+@router.get(
+    "/applications/{application_id}/screening/reports",
+    response_model=list[ScreeningReportRead],
+)
+async def list_application_screening_reports(
+    application_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> list[ScreeningReportRead]:
+    try:
+        return await screening_service.list_reports(db, application_id)
+    except Exception as exc:
+        raise _map_error(exc) from exc
+
+
 @router.post(
     "/applications/{application_id}/screening",
     response_model=ScreeningTriggerRead,
@@ -150,6 +197,7 @@ async def trigger_application_screening(
 )
 async def reassess_application_screening(
     application_id: int,
+    data: ScreeningReassessmentRequest,
     db: AsyncSession = Depends(get_db),
 ) -> ScreeningTriggerRead:
     try:
@@ -158,6 +206,7 @@ async def reassess_application_screening(
             application_id,
             trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
             force=True,
+            confirmed=data.confirmed,
         )
         return _trigger_response(result)
     except Exception as exc:
@@ -179,10 +228,24 @@ async def reassess_job_applications(
             db,
             job_id,
             list(data.application_ids),
+            confirmed=data.confirmed,
         )
         return ScreeningBatchReassessmentRead(
             job_id=job_id,
-            results=[_trigger_response(result) for result in results],
+            total_count=results.total_count,
+            reused_count=results.reused_count,
+            queued_count=results.queued_count,
+            failed_count=len(results.failures),
+            results=[_trigger_response(result) for result in results.results],
+            failures=[
+                ScreeningBatchFailureRead(
+                    application_id=item.application_id,
+                    error_code=item.error_code,
+                    error_message=item.error_message,
+                    retryable=item.retryable,
+                )
+                for item in results.failures
+            ],
         )
     except Exception as exc:
         raise _map_error(exc) from exc

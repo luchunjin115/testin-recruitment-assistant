@@ -4,9 +4,22 @@ from datetime import datetime
 from enum import Enum
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, StringConstraints, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictInt,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
-from app.schemas.screening_evaluation import BonusHighlight, RequirementAssessment
+from app.schemas.screening_evaluation import (
+    BonusHighlight,
+    RequirementAssessment,
+    ScreeningEvaluationV5ReportPayload,
+)
 from app.schemas.experience_period import ExperiencePeriodFactsSnapshot
 
 
@@ -87,6 +100,8 @@ class ScreeningReportRead(BaseModel):
         default=None,
         exclude=True,
     )
+    v5_report: ScreeningEvaluationV5ReportPayload | None = None
+    is_current: bool
     is_outdated: bool
     outdated_reasons: list[ScreeningOutdatedReason] = Field(max_length=3)
     outdated_at: datetime | None
@@ -105,6 +120,17 @@ class ScreeningReportRead(BaseModel):
             raise ValueError("报告过期状态与原因不一致")
         if self.is_outdated != (self.outdated_at is not None):
             raise ValueError("报告过期状态与时间不一致")
+        if self.schema_version == "5.0":
+            if self.v5_report is None:
+                raise ValueError("5.0 报告必须包含完整 v5_report")
+            if (
+                self.v5_report.overall_score != self.overall_score
+                or self.v5_report.display_label != self.display_label
+                or self.v5_report.overall_summary != self.overall_summary
+            ):
+                raise ValueError("5.0 JSONB 报告与索引列不一致")
+        elif self.v5_report is not None:
+            raise ValueError("旧报告不得伪装为 5.0 report payload")
         return self
 
 
@@ -186,8 +212,22 @@ class ScreeningTriggerRead(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class ScreeningReassessmentRequest(BaseModel):
+    confirmed: StrictBool
+
+    model_config = ConfigDict(extra="forbid")
+
+    @field_validator("confirmed")
+    @classmethod
+    def require_confirmation(cls, value: bool) -> bool:
+        if not value:
+            raise ValueError("重新评估必须由 HR 二次确认")
+        return value
+
+
 class ScreeningBatchReassessmentRequest(BaseModel):
-    application_ids: list[PositiveId] = Field(min_length=1, max_length=20)
+    application_ids: list[PositiveId] = Field(min_length=1, max_length=5)
+    confirmed: StrictBool
 
     model_config = ConfigDict(extra="forbid")
 
@@ -197,12 +237,43 @@ class ScreeningBatchReassessmentRequest(BaseModel):
             raise ValueError("批量重新评估不能包含重复 Application")
         return self
 
+    @field_validator("confirmed")
+    @classmethod
+    def require_confirmation(cls, value: bool) -> bool:
+        if not value:
+            raise ValueError("批量重新评估必须由 HR 二次确认")
+        return value
+
+
+class ScreeningBatchFailureRead(BaseModel):
+    application_id: PositiveId
+    error_code: SafeErrorCode
+    error_message: SafeErrorMessage
+    retryable: bool
+
+    model_config = ConfigDict(extra="forbid")
+
 
 class ScreeningBatchReassessmentRead(BaseModel):
     job_id: PositiveId
-    results: list[ScreeningTriggerRead] = Field(min_length=1, max_length=20)
+    total_count: int = Field(strict=True, ge=1, le=5)
+    reused_count: int = Field(strict=True, ge=0, le=5)
+    queued_count: int = Field(strict=True, ge=0, le=5)
+    failed_count: int = Field(strict=True, ge=0, le=5)
+    results: list[ScreeningTriggerRead] = Field(max_length=5)
+    failures: list[ScreeningBatchFailureRead] = Field(max_length=5)
 
     model_config = ConfigDict(extra="forbid")
+
+    @model_validator(mode="after")
+    def validate_batch_totals(self) -> ScreeningBatchReassessmentRead:
+        if self.total_count != len(self.results) + len(self.failures):
+            raise ValueError("批量结果总数与逐项结果不一致")
+        if self.failed_count != len(self.failures):
+            raise ValueError("批量失败计数与逐项失败不一致")
+        if self.reused_count + self.queued_count != len(self.results):
+            raise ValueError("批量复用/排队计数与成功提交结果不一致")
+        return self
 
 
 class ApplicationResumeSwitchRequest(BaseModel):

@@ -4,16 +4,12 @@ Verifies that the three-dimensional status model (AI run status, HR decision,
 recruitment stage), decision transitions, stage history audit trail, and
 AI-to-HR handoff contracts are in place.
 
-Tests that verify already-implemented behaviour are expected to PASS.
-Tests for v5.0-only requirements that have not yet been built are marked
-``xfail(strict=True)`` with a ``7R5-F:`` reason prefix.
+These are executable 7R5-F completion contracts.
 """
 
 from __future__ import annotations
 
 import inspect
-
-import pytest
 
 # ---------------------------------------------------------------------------
 # Production imports
@@ -111,10 +107,6 @@ class TestStageHistoryFields:
         actor_values = {m.value for m in StageHistoryActorType}
         assert {"hr", "system"}.issubset(actor_values)
 
-    @pytest.mark.xfail(
-        reason="7R5-F: StageHistory does not yet have a report_id field linking to screening report",
-        strict=True,
-    )
     def test_has_report_id_field(self) -> None:
         """StageHistory audit rows should reference the screening report
         that was current at the time of the transition."""
@@ -157,10 +149,6 @@ class TestDecisionServiceMethods:
                 f"{method_name} is not callable"
             )
 
-    @pytest.mark.xfail(
-        reason="7R5-F: backup decision does not yet enforce mandatory reason_detail text",
-        strict=True,
-    )
     def test_backup_decision_requires_reason_detail(self) -> None:
         """BackupApplicationRequest should make reason_detail required
         (not optional) so HR must always explain a backup decision."""
@@ -172,10 +160,6 @@ class TestDecisionServiceMethods:
             "reason_detail should be required for backup decisions"
         )
 
-    @pytest.mark.xfail(
-        reason="7R5-F: reject decision does not yet enforce mandatory reason_detail text",
-        strict=True,
-    )
     def test_reject_decision_requires_reason_detail(self) -> None:
         """RejectApplicationRequest should make reason_detail required
         (not optional) so HR must always explain a rejection."""
@@ -206,10 +190,6 @@ class TestAIToHRHandoff:
     """Verify the v5.0 contract for AI completion automatically advancing
     the recruitment stage and HR being able to override AI."""
 
-    @pytest.mark.xfail(
-        reason="7R5-F: AI completion does not yet auto-advance applied -> hr_review",
-        strict=True,
-    )
     def test_ai_completion_auto_advances_to_hr_review(self) -> None:
         """When an AI screening run succeeds and the application is still
         at the 'applied' stage, the system should automatically advance
@@ -227,10 +207,6 @@ class TestAIToHRHandoff:
             "from applied to hr_review after AI screening completes"
         )
 
-    @pytest.mark.xfail(
-        reason="7R5-F: AI failure does not yet leave HR decision authority intact",
-        strict=True,
-    )
     def test_ai_failure_does_not_block_hr_decision(self) -> None:
         """When AI screening fails, the application must remain accessible
         for HR manual decision -- AI failure must not set hr_decision to
@@ -254,10 +230,6 @@ class TestAIToHRHandoff:
             "HR decisions when AI screening has failed"
         )
 
-    @pytest.mark.xfail(
-        reason="7R5-F: HR direct pass does not yet skip AI and go straight to screening_passed",
-        strict=True,
-    )
     def test_hr_direct_pass_skips_ai(self) -> None:
         """When HR directly passes an application, the recruitment stage
         should jump to screening_passed immediately and any pending or

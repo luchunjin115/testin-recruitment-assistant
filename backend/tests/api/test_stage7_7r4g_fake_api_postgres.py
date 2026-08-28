@@ -180,7 +180,7 @@ class Stage7R4GFakeApiPostgresTest(IsolatedAsyncioTestCase):
         await self.engine.dispose()
         self.assertEqual(counts_after, self.counts_before)
 
-    async def test_legacy_v4_fact_screening_regression_across_services_and_db(self) -> None:
+    async def test_legacy_v4_plan_is_read_only_and_cannot_start_new_screening(self) -> None:
         job = Job(
             title="7R4-G Fake integration job",
             department="Engineering",
@@ -250,7 +250,7 @@ class Stage7R4GFakeApiPostgresTest(IsolatedAsyncioTestCase):
         )
         self.assertEqual(
             pending_state.latest_run.waiting_reason,
-            ScreeningWaitingReason.PLAN_PENDING_CONFIRMATION,
+            ScreeningWaitingReason.PLAN_CONTRACT_OUTDATED,
         )
 
         ready_plan = await job_evaluation_plan_service.confirm_current_plan(
@@ -265,74 +265,17 @@ class Stage7R4GFakeApiPostgresTest(IsolatedAsyncioTestCase):
             job.id,
             plan_ready=True,
         )
-
-        claimed = await screening_service.claim_next_run(
-            self.db,
-            worker_id="7r4g-fake-worker",
-            lease_seconds=300,
-            clock=lambda: NOW,
-        )
-        self.assertIsNotNone(claimed)
-        screening_adapter = FakeScreeningEvaluationAdapter([_screening_result()])
-        completed = await screening_service.execute_run(
-            self.db,
-            claimed.id,
-            adapter=screening_adapter,
-            settings=self.settings,
-            clock=lambda: NOW,
-        )
-        self.assertEqual(completed.status, ScreeningRunStatus.SUCCEEDED.value)
-        self.assertEqual(len(screening_adapter.calls), 1)
-        self.assertEqual(
-            screening_adapter.calls[0]["evaluation_plan"]["requirement_facts"][0][
-                "fact_id"
-            ],
-            "fact:0001",
-        )
-
         final_state = await screening_api.get_application_screening(
             application_id,
             self.db,
         )
-        self.assertEqual(final_state.latest_run.status, ScreeningRunStatus.SUCCEEDED)
+        self.assertEqual(final_state.latest_run.status, ScreeningRunStatus.WAITING_PLAN)
         self.assertEqual(
-            final_state.report.requirement_assessments[0].requirement_key,
-            "fact:0001",
+            final_state.latest_run.waiting_reason,
+            ScreeningWaitingReason.PLAN_CONTRACT_OUTDATED,
         )
+        screening_adapter = FakeScreeningEvaluationAdapter([_screening_result()])
+        self.assertEqual(len(screening_adapter.calls), 0)
+        self.assertIsNone(final_state.report)
         self.assertEqual(application.recruitment_stage, "applied")
         self.assertEqual(application.hr_decision, "pending")
-
-        invalid_evidence = _screening_payload()
-        invalid_evidence["requirement_assessments"][0]["evidence"][0]["quote"] = (
-            "简历中不存在的证据"
-        )
-        unsafe_summary = _screening_payload()
-        unsafe_summary["overall_summary"] = "候选人年龄 28 岁，因此岗位匹配。"
-        for payload in (invalid_evidence, unsafe_summary):
-            triggered = await screening_service.trigger(
-                self.db,
-                application_id,
-                trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
-                force=True,
-                settings=self.settings,
-            )
-            claimed = await screening_service.claim_next_run(
-                self.db,
-                worker_id="7r4g-content-error-worker",
-                lease_seconds=300,
-                clock=lambda: NOW,
-            )
-            self.assertEqual(triggered.run.id, claimed.id)
-            content_adapter = FakeScreeningEvaluationAdapter(
-                [_screening_result(payload)]
-            )
-            failed = await screening_service.execute_run(
-                self.db,
-                claimed.id,
-                adapter=content_adapter,
-                settings=self.settings,
-                clock=lambda: NOW,
-            )
-            self.assertEqual(failed.status, ScreeningRunStatus.FAILED.value)
-            self.assertEqual(failed.attempt_count, 1)
-            self.assertEqual(len(content_adapter.calls), 1)

@@ -179,6 +179,31 @@ class DeepSeekScreeningEvaluationAdapterTest(IsolatedAsyncioTestCase):
         self.assertEqual(request["response_format"], {"type": "json_object"})
         self.assertEqual(request["temperature"], 0.1)
         self.assertFalse(request["stream"])
+
+    async def test_v5_success_uses_separate_prompt_contract_without_extra_call(self) -> None:
+        client = Mock()
+        client.chat.completions.create = AsyncMock(return_value=make_response())
+        adapter = DeepSeekScreeningEvaluationAdapter(
+            settings=make_settings(),
+            client=client,
+        )
+        call_input = make_call_input()
+        call_input["evaluation_plan"] = {
+            "schema_version": "5.0",
+            "criteria": [{"criterion_id": "criterion:0001"}],
+        }
+
+        result = await adapter.evaluate_v5(**call_input)
+
+        self.assertEqual(result.model, "deepseek-test-0820")
+        self.assertEqual(client.chat.completions.create.await_count, 1)
+        request = client.chat.completions.create.await_args.kwargs
+        self.assertEqual(request["response_format"], {"type": "json_object"})
+        self.assertEqual(request["extra_body"], {"thinking": {"type": "disabled"}})
+        self.assertIn(
+            "BEGIN UNTRUSTED CONFIRMED_EVALUATION_PLAN DATA",
+            request["messages"][1]["content"],
+        )
         self.assertEqual(request["extra_body"], {"thinking": {"type": "disabled"}})
 
     async def test_transport_errors_use_stable_safe_mappings(self) -> None:

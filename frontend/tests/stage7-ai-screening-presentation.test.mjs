@@ -38,13 +38,13 @@ try {
     { applicationId: 1, jobId: 7 }, { applicationId: 1, jobId: 7 },
   ]).valid, false);
   assert.equal(presentation.validateBatchSelection(
-    Array.from({ length: 21 }, (_, index) => ({ applicationId: index + 1, jobId: 7 })),
+    Array.from({ length: 6 }, (_, index) => ({ applicationId: index + 1, jobId: 7 })),
   ).valid, false);
-  const twenty = presentation.validateBatchSelection(
-    Array.from({ length: 20 }, (_, index) => ({ applicationId: index + 1, jobId: 7 })),
+  const five = presentation.validateBatchSelection(
+    Array.from({ length: 5 }, (_, index) => ({ applicationId: index + 1, jobId: 7 })),
   );
-  assert.equal(twenty.valid, true);
-  assert.equal(twenty.applicationIds.length, 20);
+  assert.equal(five.valid, true);
+  assert.equal(five.applicationIds.length, 5);
   assert.deepEqual(presentation.validateBatchSelection([{ applicationId: 9, jobId: 7 }]), {
     valid: true, jobId: 7, applicationIds: [9],
   });

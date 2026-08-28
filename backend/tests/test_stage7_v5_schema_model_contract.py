@@ -25,7 +25,7 @@ from app.schemas.job_evaluation_plan import (
 from app.schemas.screening_evaluation import (
     ScreeningEvaluationPlanInput,
 )
-from app.schemas.screening_evaluation import AIScreeningEvaluationOutput
+from app.schemas.screening_evaluation import AIScreeningEvaluationV5Output
 
 
 # ---------------------------------------------------------------------------
@@ -283,34 +283,30 @@ class TestV5ReportStructureMissing:
 
     These fields don't exist yet; 7R5-E will add them."""
 
-    @pytest.mark.xfail(reason="7R5-E: AIScreeningEvaluationOutput has no 'strengths' field yet", strict=True)
     def test_ai_output_has_no_strengths(self) -> None:
         """v5.0 reports need a 'strengths' section listing candidate strengths
         relative to the criteria."""
-        assert "strengths" in AIScreeningEvaluationOutput.model_fields, (
+        assert "strengths" in AIScreeningEvaluationV5Output.model_fields, (
             "AIScreeningEvaluationOutput should have a 'strengths' field for v5.0"
         )
 
-    @pytest.mark.xfail(reason="7R5-E: AIScreeningEvaluationOutput has no 'gaps' field yet", strict=True)
     def test_ai_output_has_no_gaps(self) -> None:
         """v5.0 reports need a 'gaps' section listing where the candidate
         falls short of criteria requirements."""
-        assert "gaps" in AIScreeningEvaluationOutput.model_fields, (
+        assert "gaps" in AIScreeningEvaluationV5Output.model_fields, (
             "AIScreeningEvaluationOutput should have a 'gaps' field for v5.0"
         )
 
-    @pytest.mark.xfail(reason="7R5-E: AIScreeningEvaluationOutput has no 'risks' field yet", strict=True)
     def test_ai_output_has_no_risks(self) -> None:
         """v5.0 reports need a 'risks' section for concerns about the candidate
         (e.g., short tenures, unexplained gaps)."""
-        assert "risks" in AIScreeningEvaluationOutput.model_fields, (
-            "AIScreeningEvaluationOutput should have a 'risks' field for v5.0"
+        assert "risks_or_conflicts" in AIScreeningEvaluationV5Output.model_fields, (
+            "AIScreeningEvaluationV5Output should have a 'risks_or_conflicts' field"
         )
 
-    @pytest.mark.xfail(reason="7R5-E: AIScreeningEvaluationOutput has no 'missing_info' field yet", strict=True)
     def test_ai_output_has_no_missing_info(self) -> None:
         """v5.0 reports need a 'missing_info' section for information that
         could not be determined from the resume."""
-        assert "missing_info" in AIScreeningEvaluationOutput.model_fields, (
+        assert "missing_info" in AIScreeningEvaluationV5Output.model_fields, (
             "AIScreeningEvaluationOutput should have a 'missing_info' field for v5.0"
         )

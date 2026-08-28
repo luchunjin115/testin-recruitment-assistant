@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.activity_log import ActivityLog
 from app.models.application import Application
+from app.models.screening_report import ScreeningReport
 from app.models.stage_history import StageHistory
 from app.schemas.stage_history import (
     BackupApplicationRequest,
@@ -51,6 +52,15 @@ class _TransitionTarget:
 
 
 class ApplicationDecisionService:
+    async def hr_direct_pass(
+        self,
+        db: AsyncSession,
+        application_id: int,
+        data: PassApplicationRequest,
+    ) -> Application:
+        """Explicit HR override: pass without waiting for an AI outcome."""
+        return await self.pass_application(db, application_id, data)
+
     async def pass_application(
         self,
         db: AsyncSession,
@@ -190,6 +200,98 @@ class ApplicationDecisionService:
         result = await db.scalars(statement)
         return list(result.all())
 
+    async def advance_to_hr_review_after_screening(
+        self,
+        db: AsyncSession,
+        application_id: int,
+        *,
+        report_id: int | None,
+        succeeded: bool,
+    ) -> Application:
+        """Advance only untouched applications; never overwrite an HR decision."""
+        try:
+            application = await self._get_application_for_update(db, application_id)
+            if application is None:
+                raise ApplicationNotFoundError("Application 不存在")
+            await self.append_screening_handoff(
+                db,
+                application,
+                report_id=report_id,
+                succeeded=succeeded,
+            )
+            await db.commit()
+            await db.refresh(application)
+            return application
+        except Exception:
+            await db.rollback()
+            raise
+
+    async def on_screening_failed(
+        self,
+        db: AsyncSession,
+        application_id: int,
+        *,
+        report_id: int | None = None,
+    ) -> Application:
+        """Keep manual HR authority available after an AI failure."""
+        return await self.advance_to_hr_review_after_screening(
+            db,
+            application_id,
+            report_id=report_id,
+            succeeded=False,
+        )
+
+    @staticmethod
+    async def append_screening_handoff(
+        db: AsyncSession,
+        application: Application,
+        *,
+        report_id: int | None,
+        succeeded: bool,
+    ) -> bool:
+        """Append the system handoff inside the caller's transaction."""
+        if (
+            application.lifecycle_status != "active"
+            or application.hr_decision != "pending"
+            or application.recruitment_stage != "applied"
+        ):
+            return False
+        application.recruitment_stage = "hr_review"
+        reason_code = (
+            "ai_screening_completed" if succeeded else "ai_screening_failed"
+        )
+        history = StageHistory(
+            application_id=application.id,
+            report_id=report_id,
+            from_recruitment_stage="applied",
+            to_recruitment_stage="hr_review",
+            from_hr_decision="pending",
+            to_hr_decision="pending",
+            reason_code=reason_code,
+            reason_detail=None,
+            actor_type="system",
+            actor_id=None,
+            actor_label="AI 初筛系统",
+        )
+        activity_log = ActivityLog(
+            user_id=None,
+            action=reason_code,
+            target_type="application",
+            target_id=application.id,
+            detail={
+                "from_recruitment_stage": "applied",
+                "to_recruitment_stage": "hr_review",
+                "from_hr_decision": "pending",
+                "to_hr_decision": "pending",
+                "report_id": report_id,
+                "actor_type": "system",
+                "actor_label": "AI 初筛系统",
+            },
+        )
+        db.add_all([history, activity_log])
+        await db.flush()
+        return True
+
     async def _transition(
         self,
         db: AsyncSession,
@@ -258,8 +360,16 @@ class ApplicationDecisionService:
         application.recruitment_stage = target.recruitment_stage
         application.hr_decision = target.hr_decision
 
+        report_id = await db.scalar(
+            select(ScreeningReport.id).where(
+                ScreeningReport.application_id == application.id,
+                ScreeningReport.is_current.is_(True),
+            )
+        )
+
         history = StageHistory(
             application_id=application.id,
+            report_id=report_id,
             from_recruitment_stage=from_recruitment_stage,
             to_recruitment_stage=target.recruitment_stage,
             from_hr_decision=from_hr_decision,
@@ -284,6 +394,7 @@ class ApplicationDecisionService:
                 "to_hr_decision": target.hr_decision,
                 "reason_code": reason_code,
                 "reason_detail": data.reason_detail,
+                "report_id": report_id,
                 "actor_type": "hr",
                 "actor_label": LOCAL_HR_ACTOR_LABEL,
             },

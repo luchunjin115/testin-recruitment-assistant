@@ -1,6 +1,6 @@
 # 项目当前状态
 
-> 最新更新：2026-08-26
+> 最新更新：2026-08-27
 >
 > 本文件只记录“现在是什么状态、下一步做什么”。完整开发过程已归档到 `docs/archive/history/2026-08-20-project-history.md`，不再作为新对话的默认阅读材料。
 
@@ -8,10 +8,10 @@
 
 - 项目正在建设新版招聘主链，旧 React + FastAPI + SQLite + Mock LLM 演示系统已经退役。
 - 阶段 4“简历上传与原文提取”和阶段 5“AI 结构化草稿”已经完成；阶段 6 五段式 JD 整改的 6R-A—6R-D 已全部完成，自动化、真实 PostgreSQL/API 和 Microsoft Playwright 三档浏览器验收通过。
-- 阶段 7”Application 与 AI 初筛底座”已有 Application、Resume 隔离、异步运行、幂等、当前成功报告、固定投递时间、React 报告和 HR 决策历史等可复用能力。4.0 正式 20 份计划质量只通过 `15/20`，因此 7R4-I/J 从未获准继续。用户随后重新确认产品目标，决定不再按 `RequirementFact + EvaluationCriterion` 做原子级 JD 拆解，改为 5.0”完整 JD + HR 可编辑轻量评价清单 + 独立简历报告”：通常约 5—12 个评价点、每项 0—10 分、AI 直接给总体 0—100 分、不采用权重、HR 保留最终决定。5.0 业务合同已经逐项确认并写入新权威设计；7R5-A—7R5-D 已逐批确认并完成。公开计划入口现已使用 5.0，HR 草稿编辑、新增/删除/合并、稳定 ID、warning 重算、乐观并发、确认和只读版本历史已接入 API 与 PostgreSQL；来源、安全、擅自新增和越权继续硬失败。当前 Alembic head 为 `b4c6d8e0f212`，最近全套为 1100 passed、32 xfailed（严格，属于 7R5-E/F）、419 subtests passed、0 failures。当前停止等待用户确认 7R5-E。
+- 阶段 7“Application 与 AI 初筛底座”已有 Application、Resume 隔离、异步运行、幂等、当前/历史成功报告、固定投递时间、React 报告和 HR 决策历史等可复用能力。4.0 正式 20 份计划质量只通过 `15/20`，因此 7R4-I/J 从未获准继续。用户随后重新确认产品目标，决定不再按 `RequirementFact + EvaluationCriterion` 做原子级 JD 拆解，改为 5.0“完整 JD + HR 可编辑轻量评价清单 + 独立简历报告”：通常约 5—12 个评价点、每项 0—10 分、AI 直接给总体 0—100 分、不采用权重、HR 保留最终决定。7R5-A—7R5-H 已逐批确认并完成：新运行只接受 5.0 ready 清单，支持单人/最多 5 人、普通复用、显式确认重评、逐人失败、唯一非终态运行、current/历史切换、迟到保护以及 AI→HR 审计移交；React 已提供清单编辑确认、报告证据、历史只读、批量部分失败和独立 HR 决策交互；H 已冻结质量运行器、费用和结果门禁。Python 只校验并生成五档展示标签，不平均、不加权、不重算 AI 总分。H 的浏览器非模型路径由用户于 2026-08-28 手工测试并明确确认通过，未伪写成 Codex 自动浏览器日志。当前 Alembic head 为 `d6e8f0a2b434`，最近后端全量为 1195 passed、425 subtests passed、0 failures；前端 20 组 Node 测试、TypeScript strict 和生产构建通过。真实 DeepSeek 调用和费用均为 0；当前停止等待 7R5-I 美元金额上限确认。
 - 小步骤 9-I 已完成 20 次 JD 正式复验和 60 次下游真实诊断。18/18 正常 JD 可用、主要要求与结构化覆盖均为 100%，但 JD18 没有形成预期 `too_many_items`，因此 `step9_quality_gate_passed=false`，小步骤 9 仍未通过；下游诊断也仅有 9/20 至少一份合法报告、1/20 三次全部合法。
 - Application、Resume 隔离、HR 内部录入和 HR 决策等公共能力继续保留。
-- 旧 Rubric、五维权重、确定性评分、`unknown`、证据覆盖率、Python 加权总分和多报告历史方案已经废弃。
+- 旧 Rubric、五维权重、确定性评分、`unknown`、证据覆盖率和 Python 加权总分已经废弃。
 - 阶段 7 暂停前的公共业务方案已经确认并实现：旧 Rubric 删除、`JobEvaluationPlan`、严格单次评价、异步运行、幂等、当前成功报告替换、React 完整报告交互以及固定投递时间事实已经完成。SR05/SR15 最终 6 次真实 DeepSeek 定向复验的严重年限事实冲突为 0，但合法报告只有 3/6；原 Playwright 浏览器验收仍为 60 项中 57 通过、2 失败、1 未验证、0 阻塞。五段式计划 3.0 的程序生成链已在 Fake 下完成，不代表真实模型质量、Screening、React 或阶段 7 整体通过。
 
 ## 2. 当前权威文档
@@ -36,7 +36,7 @@
 
 ## 3. 当前阶段 7 方案摘要
 
-> 当前说明：5.0 是新增实现的目标合同，现有运行代码仍主要是 4.0。4.0 的正式质量失败和 1.0—4.0 历史数据继续保留，但不能继续按 4.0 扩展。下文第 4—9 节记录可复用的既有能力和历史实现基线；若与 5.0 设计冲突，以 5.0 为准。
+> 当前说明：5.0 已完成从 Schema、生成、编辑确认、报告、运行接线到 React 的 7R5-A—7R5-G 非付费实现。4.0 的正式质量失败和 1.0—4.0 历史数据继续保留，但不能继续按 4.0 扩展。真实 5.0 模型质量、真实 PostgreSQL/API/浏览器完整收尾仍未验收；下文第 4—9 节同时记录可复用能力和历史基线，若与 5.0 设计冲突，以 5.0 为准。
 
 ### 3.1 固定流程
 
@@ -120,31 +120,32 @@ HR 阅读报告并独立作出通过 / 备选 / 淘汰决定
 
 ## 7. 已完成的异步运行、幂等与当前报告能力
 
-- 新增 `ScreeningReport` 当前成功报告和 `ScreeningRun` 必要运行日志；每个 Application 由数据库唯一约束保护最多一份当前报告，运行日志不保存完整旧报告、原始模型响应或未脱敏 Resume。
+- `ScreeningReport.is_current` 部分唯一索引保护每个 Application 最多一份 current 成功报告，旧成功行作为只读历史保留；`ScreeningRun` 保存必要运行日志，不保存原始模型响应或未脱敏 Resume。
 - 使用稳定 JSON 序列化和 SHA-256 组合 Application、`Application.applied_at`、`Asia/Shanghai`、经历时间事实/规则版本、JD、当前 Resume、当前 ready 评价计划及 Prompt/模型/Schema/脱敏版本；普通请求复用相同报告或运行，主动“重新评估”即使输入相同也会建立新运行。
 - 采用 PostgreSQL 持久运行表加 FastAPI 生命周期轮询器作为当前架构下的最小可靠后台机制；`FOR UPDATE SKIP LOCKED`、部分唯一索引和租约恢复共同保护多进程认领、并发重复及服务重启后的可解释状态，没有引入 Celery、RQ、Arq 或无持久状态的任务假象。
 - Application 提交、Resume 解析完成、岗位重新开放和4.0计划确认会在相关业务提交后协调首次自动初筛或等待任务；HTTP 请求不等待筛选模型，触发失败不回滚已经提交的 Candidate、Resume、Application 或 Job。
 - Resume/计划不可用分别保留 `waiting_resume/waiting_plan`；计划原因稳定区分缺失、生成中、失败、过期和合同过期，岗位关闭以 `job_closed` 暂停未开始任务且允许 `running` 完成；岗位重开按最新输入恢复仍然有效的自动任务和人工重新评估。
-- 只有 active Application、开放 Job、可用 Resume 与当前合法4.0 ready计划能够 queued；1.0—3.0只读且阻止新筛选，`pending_confirmation`使用独立`plan_pending_confirmation`等待原因。运行中输入变化以 `SCREENING_INPUT_OUTDATED_DURING_RUN` 失败，不替换旧报告。revision `d6f4a2b8e913` 扩展 PostgreSQL 等待原因约束并提供有数据降级阻断。
+- 只有 active Application、开放 Job、可用 Resume 与当前合法 5.0 ready 计划能够 queued；1.0—4.0 只读且阻止新筛选，`pending_confirmation` 使用独立 `plan_pending_confirmation` 等待原因。运行中输入变化以 `SCREENING_INPUT_OUTDATED_DURING_RUN` 失败，不替换旧报告。
 - 成功响应会重新核对最新 Resume、JD 和计划，只在严格 Schema/业务校验通过后，以同一数据库事务替换当前报告并把运行标记成功；迟到响应、内容失败或数据库提交失败都保留旧报告。
 - 网络、限流、超时和模型服务端故障最多额外重试 1 次；认证、配额、JSON、Schema、事项、证据、安全及业务内容错误不自动重试，SDK 自动重试仍关闭。
 - Resume、JD 或当前计划变化只把旧报告标记过期，不删除、不自动批量重评；普通 Prompt、模型或 Schema 版本升级不会自动使历史报告过期。
-- 当前 4.0 代码已有普通触发、单人重新评估、同岗位 1—20 人批量重新评估和切换当前 Resume 的最小 `/api/v2` 接口；5.0 将复用独立提交和部分失败语义，并把阶段 7 批量上限收紧为 5。
-- AI 初筛链路不写 `hr_decision`、`recruitment_stage` 或 `lifecycle_status`。当前仍沿用内部开发接口边界，没有临时伪造登录/RBAC。
+- 当前 5.0 代码已有普通触发、显式确认的单人重新评估、同岗位 1—5 人批量重新评估、逐人稳定失败结果、current/历史报告读取和切换当前 Resume 的最小 `/api/v2` 接口。
+- AI 初筛链路不写 HR 通过/备选/淘汰决定；成功或失败只把仍处于 `pending + applied + active` 的 Application 推进到 `hr_review` 并追加 system StageHistory，HR 已先行决策时不倒退或覆盖。当前仍沿用内部开发接口边界，没有临时伪造登录/RBAC。
 - `ScreeningReport` 额外审计评价基准、时区、事实规则版本和成功评价使用的完整时间事实快照；`ScreeningRun` 审计评价基准、时区、规则版本和时间事实指纹，不保存完整 Resume 或模型原始响应。
 - 新迁移 `d9a1f4c7e820` 只向既有 `ScreeningReport`/`ScreeningRun` 增加上述审计字段。真实数据库没有历史行；migration 对假设存在的旧行也只从关联 `Application.applied_at` 回填基准，不伪造旧事实快照。
 
 ## 8. 已完成的 React 完整报告与交互
 
-- 新增严格 TypeScript 合同和集中 `v2Http` Service，覆盖当前 JobEvaluationPlan、Screening 状态/报告/运行、普通初筛、单人重新评估、同岗位批量重新评估和切换当前 Resume；组件中不散落裸 `fetch`，也不使用 `any` 绕过合同。
-- 岗位列表的评价计划抽屉已接入 4.0：按 `EvaluationCriterion` 组织、逐 `RequirementFact` 展示 ID/分类/priority/主原文和全部多来源，支持 `pending_confirmation` 无正文确认、五类 warning、coverage/audit、生成中/ready/failed/outdated/旧合同/关闭状态和历史只读。没有计划编辑、criterion 分数/权重、自动淘汰或同输入 ready 重生成；修正只能回到 JD 编辑。
-- AI 初筛工作台读取每个 Application 当前 Screening 状态；报告抽屉展示建议分、程序标签、综合评价、逐项分数/理由/计算说明/折叠证据、额外亮点、综合权衡、面试问题、版本、生成时间和“按该申请 YYYY-MM-DD 的投递时间计算”的评价基准。旧报告缺字段时诚实显示“历史报告未记录评价基准”。
+- 严格 TypeScript 合同和集中 `v2Http` Service 已扩展到 5.0 评价点、草稿保存、乐观并发版本、确认/分叉、计划历史、完整报告、报告历史和五人批量逐项结果；组件中不散落裸 `fetch`，也不使用 `any` 绕过合同。
+- 岗位列表的评价计划抽屉已接入 5.0：HR 可编辑重要程度、名称、说明、初筛重点和备注，可新增、删除、合并后整份保存；AI 来源与 HR 补充、JD 原文和稳定 ID 明确区分，warning 指向具体评价点/原文/复核原因。未保存编辑时禁止确认；确认后当前版本只读，只能创建新编辑版本，旧 1.0—4.0 计划继续历史只读。
+- AI 初筛工作台读取每个 Application 当前 Screening 状态；5.0 报告抽屉展示 AI 直接建议分、程序标签、综合说明、每项 0—10 分、评价点快照、JD 原文和 Resume 证据，以及优势、差距、风险/事实冲突、缺失信息、HR 后续问题和审计元数据。0 分固定说明“当前简历未发现相关证据，不等同于不会”；旧 1.0—4.0 报告可在成功历史中切换并保持只读。
 - 0 分固定解释为“当前简历未体现”，AI 分数和标签固定说明为辅助建议；查看、普通初筛、重新评估和批量操作均不调用 HR 决策接口，不修改 `hr_decision`、`recruitment_stage` 或 `lifecycle_status`。
 - 报告过期时继续展示旧报告和 Resume/JD/评价计划变化原因；现有 4.0 页面在计划与报告一致时按 criterion 分组并逐 fact 展示，5.0 将改为直接逐评价点评分。旧计划不可读取或 ID 不一致时仍必须诚实回退，不能使用新计划内容冒充旧报告。
 - `queued/running` 使用 4 秒最小轮询；终态、关闭抽屉或组件卸载后停止。请求序号阻止迟到响应覆盖新状态，递归 `setTimeout` 保证只保留一个定时器。
 - 评价计划 `generating` 同样使用单个 4 秒递归轮询，在 ready/failed/outdated、关闭抽屉、关闭岗位或组件卸载时停止；前端只停止查询，不声称取消后台任务。
-- 普通初筛明确允许复用报告或运行；单人“重新评估”需要确认，新运行期间及失败后继续展示旧成功报告；岗位关闭时禁用开始和重新评估。
-- 现有 AI 初筛工作台支持同一开放岗位 1—20 个 Application 批量选择；这是 4.0 实现基线，不是 5.0 产品合同。7R5-F/G 必须把上限收紧为 5，并继续拒绝空选、重复、跨岗位和重复提交。
+- 普通初筛明确允许复用报告或运行；单人“重新评估”需要危险确认，新运行期间及失败后继续展示旧成功报告；岗位关闭时禁用开始和重新评估。AI queued/running 时 HR 决策按钮明确禁用，但终态 AI 结果不会替代或自动改写 HR 决定。
+- AI 初筛工作台只允许同一开放岗位选择 1—5 个 Application，达到 5 个后第 6 个选择被禁用；批量结果分别展示总计、复用、排队、失败及每个 Application 的状态/安全错误，部分失败不抹掉已提交项。
+- 计划和报告抽屉在移动端占满可用宽度且无页面横向溢出；关闭计划抽屉后焦点回到原“评价计划”按钮。危险确认、表单可访问名称、键盘焦点和迟到请求保护继续保留。
 - `/app/reports` 继续保持通用 Report 只读中心；Application 当前 AI 报告从 `/app/screening` 进入，避免混淆两类数据模型。
 
 ## 9. 已完成删除的旧阶段 7 能力
@@ -164,11 +165,11 @@ HR 阅读报告并独立作出通过 / 备选 / 淘汰决定
 
 ## 10. 当前工作区状态与风险
 
-- 当前分支是 `2lcj`，本轮基线 HEAD 与 `origin/2lcj` 均为 `16ae835f50b9cd7f67f08ce2a8fbf12eaf2f3082`。开始 7R5-D 时工作区已有本对话中已完成但未提交的 7R5-C1 修改；当前未提交差异只包含 7R5-C1 与本轮 7R5-D 的 Prompt/配置、Schema、Service、API、Model、migration、专项测试和状态文档，没有发现范围外用户修改。没有实现 5.0 Screening 报告、React 或真实 DeepSeek 调用，也没有修改 4.0 历史质量结果文件。
+- 当前分支是 `2lcj`，7R5-E 开始时 HEAD 与 `origin/2lcj` 均为 `8dac1a55575e3f9592d2a3553b2539649a9d3fd7`。当时已有的 `PROJECT_STATE.md` 和当前阶段 7 权威设计两份未提交修改已在后续 7R5-E/F/G/H 中完整保留；当前工作区同时包含这些已确认批次的后端、migration、前端、质量运行器、测试和文档改动，尚未提交。7R5-H 没有覆盖前几批代码或历史 4.0 质量结果，也没有进入真实 7R5-I。
 - 项目由旧电脑压缩迁移后，旧 `.venv` 因保存 `C:\Users\GYAI\...Python311` 绝对路径而失效。本轮已用本机 Python 3.11.9 原地重建 `.venv`，安装 `backend/requirements.txt` 和本地测试依赖 pytest 9.1.1；`.venv` 继续由 Git 忽略，不提交、不再跨电脑复制。
 - 本机 PostgreSQL Docker 卷原停在 `b4e8c2d7f913`，且保留 1 个 Job、2 个 Candidate、2 个 Resume 和 1 个 3.0 failed 计划。升级前已生成 `data/backups/pre_a3b5c7d9e101_20260826.dump`，SHA-256 为 `F8F8AD2EB6C3E6D399562D7DDC2146C262A87A4D9BDBC85FD858325C0D962C4C`。7R5-D 新增 revision `b4c6d8e0f212` 并完成真实 `b4 → a3 → b4` 往返；计划表保持 1 行，整行内容 MD5 往返前后均为 `0819ebafc4168daf6b99d8a848911221`，最终 `current=head` 且 `alembic check` 无待生成操作。
 - 4.0 的 7R4-A—7R4-H2 均停在各自历史停止点；HR2 定向为 `6/6`，正式 H2 为 `15/20` 且失败。7R4-I/J 永久停止，不再通过追加 4.0 样本整改继续推进；所有既有结果只作历史证据。
-- 用户已经逐项确认 5.0 的产品目标、轻量评价清单、无权重评分、单人/最多 5 人批量、状态、审计、隐私和验收标准。5.0 原权威设计和 7R5-A—7R5-J 顺序已获整体确认，7R5-A—7R5-D 已分别确认并完成；Schema、Model、PostgreSQL、纯单次生成 Prompt/Adapter/Service、importance warning、API、HR 编辑/确认与并发版本已具备 5.0 能力。5.0 Screening 报告与运行接线和 React 仍未实施。
+- 用户已经逐项确认 5.0 的产品目标、轻量评价清单、无权重评分、单人/最多 5 人批量、状态、审计、隐私和验收标准。5.0 原权威设计和 7R5-A—7R5-J 顺序已获整体确认，7R5-A—7R5-H 已分别确认并完成；Schema、Model、PostgreSQL、计划生成/编辑确认、5.0 纯报告 Prompt/Adapter/Service、异步运行/批量/决策接线、React 产品交互和真实质量运行前门禁已经具备。7R5-I 仍未获得金额授权。
 - 用户已最终确认并完成小步骤 9 的 9-A—9-I。此前助手误解用户意图产生的独立 20 份 JD 结果继续保留为历史诊断；正式 9-I 已使用新路径独立落盘，没有复用或覆盖该记录。JD18 的正式边界失败和当时返回阶段 6 整改的决定均为历史事实；当前新增实现依据已经切换为 5.0 设计。
 - 用户已最终确认五段式 JD 业务合同和 6R-A—6R-D 顺序；四个批次已经全部完成并通过 6R-D 验收。
 - 用户明确授权无备份删除唯一 Job #19；该历史操作不能从当前数据库直接恢复。7R4-B开始时正式开发库revision为 `e4c7a1b9d632`，四张直接相关表计数均为0；7R4-E结束时`current=head=d6f4a2b8e913`、`alembic check`通过，相关业务表均为0。d6已在正式空库完成真实`downgrade c7 -> upgrade d6`往返，没有写入或删除业务行。
@@ -186,12 +187,19 @@ HR 阅读报告并独立作出通过 / 备选 / 淘汰决定
 - HR 决策始终独立，敏感属性和自动招聘决定为零容忍；
 - 真实验收为 10 份新鲜 JD、20 组新鲜 JD/Resume、其中 5 组各 3 次稳定性，以及真实 PostgreSQL/API/浏览器。
 
-7R5-A”合同测试与离线基线”、7R5-B”计划 Schema / Model / migration”、7R5-C”单次计划生成链”、7R5-C1”importance 原文语义与 HR 复核 warning”和 7R5-D”计划编辑、确认、版本和 API”均已完成。数据库和代码迁移头为 `b4c6d8e0f212`；1.0—4.0 历史计划保持公开只读兼容，没有回填或改写旧行。公开 5.0 生成链继续只做一次业务模型调用；AI 成功草稿进入 pending，HR 可以原子编辑、新增/删除/合并、处理 warning 并用版本号确认，ready 后再次编辑形成新历史行。最近全量为 1100 passed、32 xfailed（严格，属于 7R5-E/F）、419 subtests passed、0 failures；真实 DeepSeek 调用和费用均为 0。
+7R5-A—7R5-H 均已完成。7R5-H 已实现冻结质量合同、零调用运行器、人工审计/费用/不可覆盖保护；应用内自动测试浏览器当时不可用，但用户于 2026-08-28 亲自完成浏览器手工测试并明确确认验收成功，因此 H 的非付费门槛已完成。数据库和代码迁移头为 `d6e8f0a2b434`；1.0—4.0 历史计划和报告保持只读兼容，没有回填、覆盖或改写旧行。5.0 报告已接入异步运行、最多 5 人批量、current/历史切换和 HR 审计移交；React 已接入清单编辑确认、完整报告、历史切换、批量部分失败和独立决策。内容错误不重试、不保存部分报告，失败不替换旧成功。最近后端全量为 1195 passed、425 subtests passed、0 failures；前端 20 组 Node 测试、TypeScript strict 和 Vite 生产构建通过。真实 DeepSeek 调用和费用均为 0。
 
-当前唯一下一步是等待用户明确确认权威设计第 28 节 7R5-E”5.0 初筛报告后端”。未经确认不得修改筛选报告 Schema/Prompt/Adapter/Service 或报告持久化，不得进入 7R5-F、React 或真实 DeepSeek。
+7R5-E Prompt 已按用户确认的结构化分区、输入隔离、严格 JSON Schema、4 个虚构脱敏且类别平衡的 Few-shot、静默完整性检查及 Prompt 版本/Bad Case 回归六项方法实现。Prompt 不要求或保存完整思维链；正式质量样本未用于反向调 Prompt。该结论只由静态合同和 Fake/Mock 行为验证支持，不能证明真实模型语言质量。
+
+当前唯一下一步是停止并等待用户给出 7R5-I 本轮美元金额上限，或明确确认“不设金额上限”。未经金额确认不得读取真实 API Key、调用 DeepSeek、创建三个正式质量结果文件、进入 7R5-J 或阶段 8/9。
 
 ## 12. 最近验证基线
 
+- 2026-08-27 至 2026-08-28，7R5-H“零调用质量运行器与非付费预检”已完成并停止。新增 `scripts/stage7_7r5_quality_contract.py`、`scripts/run_stage7_7r5_quality.py`、`backend/tests/test_stage7_7r5_quality_runner.py` 和非授权价格快照；冻结 10 JD、20 对、5×3、5 组独立样本/标签 hash、13 份历史结果 hash、三个不可覆盖新结果路径、45 次业务调用/90 次 API attempt、正常/重试输出 token 上界 500,000/1,000,000、内容错误 0 重试、逐 attempt 原始响应/token/cache/费用审计、失败 attempt 保守费用预留和人工审计后二次 final gate。修改前 4.0 基线为 42 passed；H 专项 20 passed；真实 PostgreSQL Fake API/migration/H 合跑 23 passed；后端全量 1195 passed、425 subtests passed、0 failures；前端全部 20 组 Node、TypeScript strict、Vite build（3121 modules）通过；真实 PostgreSQL `d6 → c5 → d6` 后 `current=head`、`alembic check` 通过且 8 张核心表均从 0 恢复到 0；`py_compile`、`git diff --check`、dry-run、Fake normal/failure、正式结果不存在和历史 hash 均通过。本机 HTTP fixture 的根页/5.0 plan/5.0 report 返回正常；Codex 应用内浏览器当时两次发现均为空，没有自动交互/控制台/网络日志，但用户于 2026-08-28 明确确认亲自完成浏览器手工测试且验收成功，本批据此接受浏览器非模型路径通过，不将其伪写为自动浏览器证据。2026-08-28 08:35（北京时间）重新查询 DeepSeek 官方页，当时属于 off-peak，`deepseek-v4-flash` off_peak/peak 单价仍为 `$0.007/$0.22/$0.66` 与 `$0.014/$0.44/$1.32`（cache-hit input/cache-miss input/output，USD/1M tokens）；快照仅 24 小时有效。开发中第一次 Fake 调试在离线 Settings 修复前可能加载过 `.env` 配置字符串，但没有输出秘密、实例化真实 Adapter、联网或产生费用；最终 Fake/dry-run 已显式 `_env_file=None`、空 Key，并由测试锁死。真实 DeepSeek 调用和费用仍为 0；唯一下一步是等待用户确认 7R5-I 美元金额上限或明确不设上限。
+- 2026-08-27 7R5-G“React 评价清单与初筛报告”已完成并停止。阶段 7 TypeScript/集中 Service 已接入 5.0 清单草稿保存、乐观并发、确认/分叉、计划/报告历史、强制确认重评和五人批量逐项结果；计划抽屉支持编辑、新增、删除、合并、来源/原文/warning、未保存禁止确认和确认后只读；报告视图展示 AI 直接总分、逐项 0—10、JD/Resume 证据、0 分语义、优势/差距/风险/缺失/HR 问题及审计，旧 1.0—4.0 只读兼容。修改前 19 组前端 Node 基线与生产构建通过；修改后 20 组前端 Node 测试全部通过，`npm run build` 完成 TypeScript strict 与 Vite production build（3121 modules）；受影响后端回归为 61 passed、17 subtests passed。静态扫描未发现生产目录裸 `fetch`、`any` 或危险 HTML，`git diff --check` 通过。Fake 浏览器在 1440×1000 验证待确认编辑、HR 新增保存（edit version 3→4）、编辑中禁止确认、确认后只读/新版本入口、完整 5.0 报告、0 分语义、旧 4.0 历史报告、五人上限、4 排队+1 失败、AI 运行中决策禁用和关闭抽屉焦点恢复；390×844 下抽屉宽 390、无横向溢出，当前页面控制台无新错误。浏览器网络仅访问 `127.0.0.1` Fake API，真实 DeepSeek/API Key/费用均为 0。该结果证明 Fake 前端合同、交互和响应式边界，不能证明真实模型质量、真实 PostgreSQL/API 完整链路或最终真实浏览器验收；唯一下一步是等待用户确认 7R5-H。
+- 2026-08-27 7R5-F“单人、小批量、状态与决策接线”已完成并停止。5.0 ready gate 已接入 `ScreeningRun`；单人/批量重评强制 `confirmed=true`，批量上限 5 并返回逐人部分失败；运行和报告按 Application 分别由部分唯一索引保护唯一非终态与唯一 current。成功重评新增 current 并冻结旧成功历史，失败/迟到/提交异常保留旧 current；旧 1.0—4.0 只读且不再驱动新评分。AI 成功或失败只把未决 `applied` 推进 `hr_review`，不覆盖 HR 决策；`StageHistory.report_id` 保存当时报告关联。revision `d6e8f0a2b434` 已完成真实 PostgreSQL `c5 → d6 → c5 → d6`，最终 `current=head` 且 `alembic check` 无差异。修改前直接相关基线为 182 passed、12 xfailed、36 subtests passed；7R5-F 核心专项为 181 passed、54 subtests passed；后端全量为 1175 passed、425 subtests passed、0 failures；`py_compile` 和 `git diff --check` 通过。全部 AI 行为使用 Fake/Mock，真实 DeepSeek 调用、API Key 读取和费用均为 0；未修改 React、阶段 8/9 或历史质量结果。这能证明本地 Fake/PostgreSQL 下的运行/事务/审计合同，不能证明真实模型质量、React 体验或完整端到端验收；唯一下一步是等待用户确认 7R5-G。
+- 2026-08-27 7R5-E“5.0 初筛报告后端”已完成并停止。新增严格 5.0 报告输入/输出/持久化 Schema、十段式 Prompt 与 4 个虚构脱敏平衡 Few-shot、单次 Adapter 兼容、纯 Service 确定性校验、`ScreeningReport.v5_report` JSONB 合同及 revision `c5d7e9f1a323`；保留 1.0—4.0 报告只读兼容，不回填、不覆盖历史证据。专项合跑 183 passed、12 xfailed、52 subtests passed；受影响回归 154 passed、55 subtests passed；后端全量 1149 passed、12 xfailed、419 subtests passed、0 failures。真实 PostgreSQL 完成 `a3 → b4 → c5 → b4 → c5`，最终 `current=head=c5d7e9f1a323`、`alembic check` 无待生成操作，关键业务表往返前后均为 0 行；`py_compile` 和 `git diff --check` 通过。全部报告行为使用 Fake/Mock，真实 DeepSeek 调用、API Key 读取和费用均为 0。该结果证明离线 Schema/Prompt/Adapter/Service/Model/migration 合同和既有后端回归稳定，不能证明真实模型质量、React 体验、异步运行接线或完整端到端验收；唯一下一步是等待用户确认 7R5-F。
+- 2026-08-27 用户确认 7R5-E Prompt 采用六项工程方法：结构化分区、输入隔离、严格 JSON Schema、3—5 个虚构脱敏且与正式样本隔离的平衡 Few-shot、输出前静默完整性检查，以及 Prompt 版本与 Bad Case 回归。权威设计同时固定不采用输出思维链、普通流程多次投票、内容错误 Self-Refine、动态 RAG/Few-shot 检索或 LLM-as-Judge 单独代替人工/程序校验。本轮只修改阶段设计与状态文档，没有修改生产代码、测试、Schema、Prompt、Adapter、Service、Model、migration、API、React 或数据库，真实 DeepSeek 调用和费用为 0；该记录不能证明 7R5-E 已实现或 Prompt 真实质量，唯一下一步仍是等待用户明确确认实施 7R5-E。
 - 2026-08-26 7R5-D 计划编辑、确认、版本和 API 已完成并停止。公开生成/失败重生入口切换到 5.0；新增整份草稿原子保存、确认、ready 分叉和历史列表 API，Service 落地 HR 编辑/新增/删除/合并、`hr_added`、全历史稳定 ID、warning 重算、乐观并发、JD 过期、非评价字段不误伤和迟到响应保护。Model/migration 用两套部分唯一索引分别保护旧 1.0—4.0 输入唯一与 5.0 编辑版本唯一，并增加完整草稿/失败无部分 payload/确认时间约束。真实 PostgreSQL `b4 → a3 → b4` 往返保持计划表 1 行及整行 MD5 `0819ebafc4168daf6b99d8a848911221` 不变；最终 `current=head=b4c6d8e0f212`、`alembic check` 通过。专项 PostgreSQL/API/迁移合同 15 passed；D 与静态合同 56 passed、4 xfailed；受影响回归 119 passed、2 xfailed、12 subtests passed；后端全量 1100 passed、32 xfailed、419 subtests passed、0 failures，用时 102.07 秒。`py_compile`、`git diff --check` 通过。全部 AI 行为使用 Fake/Mock，真实 DeepSeek 调用和费用为 0；没有实现 5.0 Screening 报告或 React，没有修改 4.0 历史质量结果。当前结果不能证明真实模型质量、前端 HR 体验或 5.0 筛选报告链；唯一下一步是等待用户确认 7R5-E。
 - 2026-08-26 7R5-C1 importance 原文语义与 HR 复核 warning 已完成并停止。Prompt 升级为 `job_evaluation_plan_lightweight_v2`，按七段固定结构组织，加入 5 个虚构、去标识化且类别平衡的边界 Few-shot，并以静态合同保护业务输出字段、正式冻结样本隔离和禁止输出思维链；行为合同升级为 `lightweight_plan_generation_v2`。新增受控 warning code、稳定 criterion ID 引用及 7 类复核原因；Service 保留模型 importance/origin，只在来源、安全、擅自新增和结构硬门禁通过后生成 warning，warning 成功返回、不内容重试。纯生成专项 36 passed；专项与配置合跑 47 passed、16 subtests passed；受影响回归 274 passed、2 xfailed、59 subtests passed；后端全量 1075 passed、42 xfailed、419 subtests passed、0 failures，用时 97.88 秒；静态扫描 20 passed、2 xfailed，`py_compile` 与 `git diff --check` 通过。全部 AI 路径使用 Fake/AsyncMock，真实 DeepSeek 调用和费用为 0；Alembic `current=head=a3b5c7d9e101`。没有 API、持久化 Model、migration、HR 编辑确认、Screening、React、正式业务数据或 4.0 历史质量结果改动。该结果证明 Prompt 静态结构及离线 warning/硬失败/重试合同，不能证明 Few-shot 已改善真实模型语言质量或 HR 页面体验；唯一下一步是等待用户确认 7R5-D。
 - 2026-08-26 用户确认 importance 业务方向后，只完成权威设计第 5.3/5.5/6/7/18/19 节合同补充、新增第 26A 节 7R5-C1 书面实施顺序并同步本状态文件；没有修改 Prompt、Schema、Adapter、Service、测试、API、Model、migration、Screening、React 或数据库。当前仅证明实施门禁和停止点已经写清，不能证明 warning 行为已实现；唯一下一步是等待用户确认 7R5-C1。

@@ -37,6 +37,7 @@ export const mapStage7Application = (
 const mapStage7History = (value: Stage7StageHistoryApiResponse): Stage7StageHistory => ({
   id: value.id,
   applicationId: value.application_id,
+  reportId: value.report_id,
   fromRecruitmentStage: value.from_recruitment_stage,
   toRecruitmentStage: value.to_recruitment_stage,
   fromHrDecision: value.from_hr_decision,

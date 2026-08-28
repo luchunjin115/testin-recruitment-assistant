@@ -2,14 +2,14 @@
 
 Tests are organized by responsibility:
 
-- A. Batch limit: current v4.0 limit is 20, v5.0 should reduce to 5
+- A. Batch limit: v5.0 limit is 5
 - B. v5.0 plan gate: screening must require a v5.0-ready plan
 - C. Pre-run checks: service validates Application, Resume, plan, concurrency
 - D. Idempotency: same fingerprint reuses result, force re-evaluate needs confirmation
 - E. Concurrency protection: at most one non-terminal run per Application
 - F. Status enums completeness: all required states, waiting reasons, outdated reasons
 
-xfail tests use strict=True so they alert us when v5.0 implementation lands.
+These are executable 7R5-F completion contracts.
 """
 
 from __future__ import annotations
@@ -38,10 +38,9 @@ from app.services.screening_service import (
 
 
 class TestBatchLimit:
-    """Batch limit is 20 in v4.0; v5.0 should reduce it to 5."""
+    """v5.0 batch reassessment is capped at five Applications."""
 
-    def test_current_batch_schema_max_is_20(self) -> None:
-        """ScreeningBatchReassessmentRequest.application_ids max_length is 20."""
+    def test_batch_schema_max_is_5(self) -> None:
         field_info = ScreeningBatchReassessmentRequest.model_fields["application_ids"]
         assert field_info.metadata is not None
         # Pydantic stores max_length on the field or via annotated metadata.
@@ -51,12 +50,9 @@ class TestBatchLimit:
                 if hasattr(meta, "max_length"):
                     max_len = meta.max_length
                     break
-        assert max_len == 20, (
-            f"v4.0 batch schema max_length should be 20, got {max_len}"
-        )
+        assert max_len == 5
 
-    def test_current_batch_response_max_is_20(self) -> None:
-        """ScreeningBatchReassessmentRead.results max_length is 20."""
+    def test_batch_response_max_is_5(self) -> None:
         field_info = ScreeningBatchReassessmentRead.model_fields["results"]
         max_len = getattr(field_info, "max_length", None)
         if max_len is None:
@@ -64,26 +60,7 @@ class TestBatchLimit:
                 if hasattr(meta, "max_length"):
                     max_len = meta.max_length
                     break
-        assert max_len == 20, (
-            f"v4.0 batch response max_length should be 20, got {max_len}"
-        )
-
-    @pytest.mark.xfail(
-        reason="7R5-F: v5.0 batch limit should be 5, currently 20",
-        strict=True,
-    )
-    def test_v5_batch_limit_should_be_5(self) -> None:
-        """v5.0 reduces the batch limit from 20 to 5."""
-        field_info = ScreeningBatchReassessmentRequest.model_fields["application_ids"]
-        max_len = getattr(field_info, "max_length", None)
-        if max_len is None:
-            for meta in field_info.metadata:
-                if hasattr(meta, "max_length"):
-                    max_len = meta.max_length
-                    break
-        assert max_len == 5, (
-            f"v5.0 batch limit should be 5, got {max_len}"
-        )
+        assert max_len == 5
 
     def test_batch_reassessment_rejects_duplicates(self) -> None:
         """Duplicate application_ids are rejected at schema level."""
@@ -96,12 +73,9 @@ class TestBatchLimit:
         assert callable(getattr(ScreeningService, "trigger_batch_reassessment"))
 
     def test_service_batch_limit_enforces_upper_bound(self) -> None:
-        """trigger_batch_reassessment checks len(application_ids) <= 20."""
+        """trigger_batch_reassessment checks len(application_ids) <= 5."""
         source = inspect.getsource(ScreeningService.trigger_batch_reassessment)
-        # The service checks "1 <= len(application_ids) <= 20"
-        assert "20" in source, (
-            "Service batch validation must reference current limit of 20"
-        )
+        assert "<= 5" in source
 
 
 # ---------------------------------------------------------------------------
@@ -120,10 +94,6 @@ class TestPlanGate:
             "Current plan gate must check for schema_version '4.0'"
         )
 
-    @pytest.mark.xfail(
-        reason="7R5-F: no v5.0 plan gate exists yet",
-        strict=True,
-    )
     def test_v5_plan_gate_exists(self) -> None:
         """A v5.0 plan classification method should exist."""
         # v5.0 needs either _classify_v5_plan or an updated gate accepting "5.0".
@@ -136,10 +106,6 @@ class TestPlanGate:
             "v5.0 requires a plan classification that accepts schema_version '5.0'"
         )
 
-    @pytest.mark.xfail(
-        reason="7R5-F: schema_version '5.0' not in accepted plan set",
-        strict=True,
-    )
     def test_v5_schema_version_not_accepted_by_build_context(self) -> None:
         """_build_context should route to a v5.0 plan gate when schema_version is '5.0'."""
         source = inspect.getsource(ScreeningService._build_context)
@@ -218,10 +184,6 @@ class TestIdempotencyContract:
             "trigger must accept a force parameter for re-evaluation"
         )
 
-    @pytest.mark.xfail(
-        reason="7R5-F: force re-evaluate confirmation gate not implemented",
-        strict=True,
-    )
     def test_force_reevaluate_requires_hr_confirmation(self) -> None:
         """v5.0 force re-evaluate should require explicit HR confirmation token.
 
@@ -230,15 +192,7 @@ class TestIdempotencyContract:
         a two-step process) to prevent accidental re-evaluations.
         """
         sig = inspect.signature(ScreeningService.trigger)
-        # v5.0 should introduce either a confirmation_token or
-        # require_confirmation parameter
-        has_confirmation = (
-            "confirmation_token" in sig.parameters
-            or "require_confirmation" in sig.parameters
-        )
-        assert has_confirmation, (
-            "v5.0 force re-evaluate must require HR confirmation"
-        )
+        assert "confirmed" in sig.parameters
 
 
 # ---------------------------------------------------------------------------

@@ -5,11 +5,12 @@ import {
   RobotOutlined,
   SafetyCertificateOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Drawer, Empty, Modal, Skeleton, Tag, Tooltip } from 'antd';
+import { Alert, Button, Drawer, Empty, Modal, Select, Skeleton, Tag, Tooltip } from 'antd';
 import {
   getAIScreeningApiError,
   getApplicationScreening,
   getJobEvaluationPlan,
+  listApplicationScreeningReports,
   reassessApplicationScreening,
   triggerApplicationScreening,
 } from './services/aiScreening';
@@ -21,7 +22,7 @@ import {
   shouldApplyScreeningResponse,
   shouldPollScreeningStatus,
 } from './screeningPresentation';
-import type { JobEvaluationPlan, ScreeningState } from './types/aiScreening';
+import type { JobEvaluationPlan, ScreeningReport, ScreeningState } from './types/aiScreening';
 import ScreeningReportView from './ScreeningReportView';
 
 type Props = {
@@ -34,6 +35,14 @@ type Props = {
   open: boolean;
   onClose: () => void;
   onStateChange?: (state: ScreeningState) => void;
+};
+
+const formatReportDate = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '时间未记录';
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(date);
 };
 
 const ApplicationScreeningDrawer: React.FC<Props> = ({
@@ -49,6 +58,8 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
 }) => {
   const [state, setState] = useState<ScreeningState | null>(initialState);
   const [plan, setPlan] = useState<JobEvaluationPlan | null>(null);
+  const [reportHistory, setReportHistory] = useState<ScreeningReport[]>([]);
+  const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
   const [initialLoading, setInitialLoading] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [actionPending, setActionPending] = useState(false);
@@ -85,6 +96,8 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
     let cancelled = false;
     setState(initialState);
     setPlan(null);
+    setReportHistory([]);
+    setSelectedReportId(null);
     setRefreshError(null);
     void loadState(initialState === null);
     if (jobId) {
@@ -92,6 +105,9 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
         .then(nextPlan => { if (!cancelled) setPlan(nextPlan); })
         .catch(() => { if (!cancelled) setPlan(null); });
     }
+    void listApplicationScreeningReports(applicationId)
+      .then(reports => { if (!cancelled) setReportHistory(reports); })
+      .catch(() => { if (!cancelled) setReportHistory([]); });
     return () => {
       cancelled = true;
       requestIdRef.current += 1;
@@ -132,6 +148,8 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
         latestRun: result.run ?? state?.latestRun ?? null,
       };
       applyState(next);
+      setSelectedReportId(null);
+      void listApplicationScreeningReports(applicationId).then(setReportHistory).catch(() => undefined);
       if (result.reusedReport) {
         modal.info({ title: '已复用当前报告', content: '输入没有变化，普通初筛没有重复调用模型。' });
       } else if (result.reusedRun) {
@@ -155,7 +173,10 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
   };
 
   const run = state?.latestRun ?? null;
-  const report = state?.report ?? null;
+  const currentReport = state?.report ?? null;
+  const report = selectedReportId === null
+    ? currentReport
+    : reportHistory.find(item => item.id === selectedReportId) ?? currentReport;
   const polling = shouldPollScreeningStatus(run?.status);
   const waitingReason = run?.waitingReason ?? null;
   const waitingReasonMeta = waitingReason
@@ -208,6 +229,21 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
         <strong>{jobTitle}</strong>
         <p>报告只解释当前简历与岗位的匹配情况，不会代替 HR 作出决定。</p>
       </div>
+
+      {reportHistory.length > 1 && (
+        <div className="recruitment-screening-report-history" aria-label="成功报告历史">
+          <div><span>报告版本</span><strong>{selectedReportId === null ? '当前成功报告' : '历史只读报告'}</strong></div>
+          <Select
+            aria-label="选择成功报告版本"
+            value={selectedReportId ?? currentReport?.id}
+            onChange={reportId => setSelectedReportId(reportId === currentReport?.id ? null : reportId)}
+            options={reportHistory.map(item => ({
+              value: item.id,
+              label: `报告 #${item.id} · ${item.isCurrent ? '当前' : '历史'} · ${item.overallScore} 分 · ${formatReportDate(item.generatedAt)}`,
+            }))}
+          />
+        </div>
+      )}
 
       {initialLoading && !state && <Skeleton active paragraph={{ rows: 10 }} />}
 

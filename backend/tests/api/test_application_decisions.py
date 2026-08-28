@@ -78,7 +78,7 @@ class ApplicationDecisionApiTest(TestCase):
         cases = (
             (
                 "/applications/1/pass",
-                "pass_application",
+                "hr_direct_pass",
                 {"reason_code": "meets_requirements"},
                 make_application(
                     recruitment_stage="screening_passed",
@@ -88,13 +88,20 @@ class ApplicationDecisionApiTest(TestCase):
             (
                 "/applications/1/backup",
                 "backup_application",
-                {"reason_code": "waiting_for_comparison"},
+                {
+                    "reason_code": "waiting_for_comparison",
+                    "reason_detail": "等待同岗位候选人比较",
+                },
                 make_application(recruitment_stage="backup", hr_decision="backup"),
             ),
             (
                 "/applications/1/reject",
                 "reject_application",
-                {"reason_code": "role_mismatch", "confirmed": True},
+                {
+                    "reason_code": "role_mismatch",
+                    "reason_detail": "岗位方向不匹配",
+                    "confirmed": True,
+                },
                 make_application(
                     lifecycle_status="ended",
                     recruitment_stage="rejected",
@@ -161,7 +168,7 @@ class ApplicationDecisionApiTest(TestCase):
             with self.subTest(code=expected_code):
                 with patch.object(
                     application_decision_service,
-                    "pass_application",
+                    "hr_direct_pass",
                     AsyncMock(side_effect=error),
                 ):
                     response = self.client.post(
@@ -192,7 +199,7 @@ class ApplicationDecisionApiTest(TestCase):
             (
                 "/applications/1/pass",
                 {"reason_code": "role_mismatch"},
-                "pass_application",
+                "hr_direct_pass",
             ),
         )
         for path, payload, method_name in cases:

@@ -17,8 +17,9 @@ import inspect
 import pytest
 
 from app.schemas.screening_evaluation import (
+    AIScreeningEvaluationV5Output,
     AIScreeningEvaluationOutput,
-    RequirementAssessment,
+    CriterionAssessment,
     ScreeningEvidence,
 )
 from app.schemas.screening import ScreeningReportRead
@@ -56,7 +57,7 @@ class TestNoWeightFields:
         """AIScreeningEvaluationOutput must not contain any field whose name
         includes 'weight' (e.g. weight, weights, weighted_score)."""
         weight_fields = [
-            name for name in _all_field_names(AIScreeningEvaluationOutput)
+            name for name in _all_field_names(AIScreeningEvaluationV5Output)
             if "weight" in name.lower()
         ]
         assert weight_fields == [], (
@@ -67,7 +68,7 @@ class TestNoWeightFields:
         """RequirementAssessment must not contain any field whose name
         includes 'weight'."""
         weight_fields = [
-            name for name in _all_field_names(RequirementAssessment)
+            name for name in _all_field_names(CriterionAssessment)
             if "weight" in name.lower()
         ]
         assert weight_fields == [], (
@@ -146,38 +147,32 @@ class TestDirectionContradictionDetection:
     do not exist yet, proving the gap that v5.0 must fill.
     """
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 dedicated high-score-no-evidence validator not yet implemented", strict=True)
     def test_validate_high_score_no_evidence_method_exists(self) -> None:
         """v5.0 must have a dedicated method to reject score 7-10 when
         evidence says 'not found'."""
         assert hasattr(ScreeningEvaluationService, "validate_v5_high_score_no_evidence")
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 dedicated low-score-full-match validator not yet implemented", strict=True)
     def test_validate_low_score_full_match_method_exists(self) -> None:
         """v5.0 must have a dedicated method to reject score 0-3 when
         reason says 'fully satisfies'."""
         assert hasattr(ScreeningEvaluationService, "validate_v5_low_score_full_match")
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 dedicated overall-high-mismatch validator not yet implemented", strict=True)
     def test_validate_overall_high_but_mismatch_method_exists(self) -> None:
         """v5.0 must have a dedicated method to reject overall 70-100 when
         summary says 'obviously does not match'."""
         assert hasattr(ScreeningEvaluationService, "validate_v5_overall_high_mismatch")
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 dedicated overall-low-high-match validator not yet implemented", strict=True)
     def test_validate_overall_low_but_high_match_method_exists(self) -> None:
         """v5.0 must have a dedicated method to reject overall 0-49 when
         summary says 'highly matching'."""
         assert hasattr(ScreeningEvaluationService, "validate_v5_overall_low_high_match")
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 dedicated required-low-overall-high tradeoff validator not yet implemented", strict=True)
     def test_validate_required_low_overall_high_tradeoff_method_exists(self) -> None:
         """v5.0 must have a dedicated method to require an explicit
         risk/tradeoff explanation when a required item scores 0-3 and
         overall >= 70."""
         assert hasattr(ScreeningEvaluationService, "validate_v5_required_low_tradeoff")
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 contradiction check methods not yet added to service", strict=True)
     def test_v5_contradiction_validators_are_registered(self) -> None:
         """v5.0 must expose a list or registry of all contradiction-check
         validators on the service class."""
@@ -203,25 +198,21 @@ class TestV5ReportStructureFieldsMissing:
     AIScreeningEvaluationOutput, proving the gap that v5.0 must fill.
     """
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 structured 'strengths' field not yet added", strict=True)
     def test_ai_output_has_strengths_field(self) -> None:
         """v5.0 report must include a structured 'strengths' section."""
-        assert "strengths" in _field_names(AIScreeningEvaluationOutput)
+        assert "strengths" in _field_names(AIScreeningEvaluationV5Output)
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 structured 'gaps' field not yet added", strict=True)
     def test_ai_output_has_gaps_field(self) -> None:
         """v5.0 report must include a structured 'gaps' section."""
-        assert "gaps" in _field_names(AIScreeningEvaluationOutput)
+        assert "gaps" in _field_names(AIScreeningEvaluationV5Output)
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 structured 'risks_or_conflicts' field not yet added", strict=True)
     def test_ai_output_has_risks_or_conflicts_field(self) -> None:
         """v5.0 report must include a structured 'risks_or_conflicts' section."""
-        assert "risks_or_conflicts" in _field_names(AIScreeningEvaluationOutput)
+        assert "risks_or_conflicts" in _field_names(AIScreeningEvaluationV5Output)
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 structured 'missing_info' field not yet added", strict=True)
     def test_ai_output_has_missing_info_field(self) -> None:
         """v5.0 report must include a structured 'missing_info' section."""
-        assert "missing_info" in _field_names(AIScreeningEvaluationOutput)
+        assert "missing_info" in _field_names(AIScreeningEvaluationV5Output)
 
     def test_bonus_highlights_is_current_mechanism(self) -> None:
         """v4.0 uses bonus_highlights as the unstructured mechanism.
@@ -246,37 +237,30 @@ class TestEvidenceContract:
     These tests confirm the v5.0-specific enforcement does not exist yet.
     """
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 will enforce non-zero score requires evidence at schema level", strict=True)
     def test_requirement_assessment_rejects_empty_evidence_with_nonzero_score(self) -> None:
         """v5.0 schema must reject a RequirementAssessment with score > 0
         and empty evidence list at Pydantic validation time.
 
         Current v4.0 allows construction (service validates later), so
         this test proves the schema-level gap."""
-        assessment = RequirementAssessment(
-            requirement_key="test-key",
-            score=5,
-            reason="Some reason text here",
-            evidence=[],
-        )
-        # If we get here, schema allowed it -- v5.0 should not
-        pytest.fail(
-            "v5.0 must reject empty evidence for non-zero score at schema level"
-        )
+        with pytest.raises(ValueError):
+            CriterionAssessment(
+                criterion_id="criterion:0001",
+                score=5,
+                reason="Some reason text here",
+                evidence=[],
+            )
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 evidence validator function not yet implemented", strict=True)
     def test_v5_evidence_validator_exists(self) -> None:
         """v5.0 must have a dedicated evidence validation function that
         enforces the non-zero-score-needs-evidence rule."""
         assert hasattr(ScreeningEvaluationService, "validate_v5_evidence_required")
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 zero-score reason validator not yet implemented", strict=True)
     def test_v5_zero_score_reason_validator_exists(self) -> None:
         """v5.0 must have a validator ensuring zero-score reasons say
         '当前简历未发现证据' rather than asserting candidate inability."""
         assert hasattr(ScreeningEvaluationService, "validate_v5_zero_score_reason")
 
-    @pytest.mark.xfail(reason="7R5-E: v5.0 criterion cross-reference validator not yet implemented", strict=True)
     def test_v5_criterion_cross_reference_validator_exists(self) -> None:
         """v5.0 must validate that each assessment's criterion_id matches
         a criterion in the evaluation plan, not legacy requirement_key/fact_id."""
@@ -303,7 +287,7 @@ class TestReportSafety:
         auto_pass, auto_reject, auto_fail."""
         prohibited_fragments = ("decision", "recommendation", "auto_pass", "auto_reject", "auto_fail")
         unsafe_fields = [
-            name for name in _all_field_names(AIScreeningEvaluationOutput)
+            name for name in _all_field_names(AIScreeningEvaluationV5Output)
             if any(fragment in name.lower() for fragment in prohibited_fragments)
         ]
         assert unsafe_fields == [], (
@@ -313,7 +297,7 @@ class TestReportSafety:
     def test_ai_output_forbids_extra_fields(self) -> None:
         """AIScreeningEvaluationOutput must use extra='forbid' so the model
         cannot sneak in undeclared fields like 'decision' or 'auto_pass'."""
-        config = AIScreeningEvaluationOutput.model_config
+        config = AIScreeningEvaluationV5Output.model_config
         assert config.get("extra") == "forbid", (
             "AIScreeningEvaluationOutput must set extra='forbid' to prevent "
             "undeclared fields from model output"
@@ -331,7 +315,7 @@ class TestReportSafety:
             "sensitive_attribute", "race", "religion", "nationality",
         )
         unsafe_fields = [
-            name for name in _all_field_names(AIScreeningEvaluationOutput)
+            name for name in _all_field_names(AIScreeningEvaluationV5Output)
             if any(fragment in name.lower() for fragment in prohibited_fragments)
         ]
         assert unsafe_fields == [], (

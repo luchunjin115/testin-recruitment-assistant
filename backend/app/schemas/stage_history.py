@@ -47,6 +47,8 @@ class StageHistoryReasonCode(str, Enum):
     DUPLICATE_ENTRY = "duplicate_entry"
     WRONG_JOB = "wrong_job"
     ENTRY_ERROR = "entry_error"
+    AI_SCREENING_COMPLETED = "ai_screening_completed"
+    AI_SCREENING_FAILED = "ai_screening_failed"
 
 
 class PassReasonCode(str, Enum):
@@ -124,14 +126,14 @@ class PassApplicationRequest(BaseModel):
 
 class BackupApplicationRequest(BaseModel):
     reason_code: BackupReasonCode
-    reason_detail: OptionalReasonDetail | None = None
+    reason_detail: RequiredReasonDetail
 
     model_config = ConfigDict(extra="forbid")
 
 
 class RejectApplicationRequest(BaseModel):
     reason_code: RejectReasonCode
-    reason_detail: OptionalReasonDetail | None = None
+    reason_detail: RequiredReasonDetail
     confirmed: StrictBool
 
     model_config = ConfigDict(extra="forbid")
@@ -166,6 +168,7 @@ class VoidApplicationRequest(BaseModel):
 
 class StageHistoryCreate(BaseModel):
     application_id: PositiveId
+    report_id: PositiveId | None = None
     from_recruitment_stage: RecruitmentStage | None
     to_recruitment_stage: RecruitmentStage
     from_hr_decision: HRDecision | None

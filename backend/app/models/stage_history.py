@@ -10,6 +10,7 @@ from app.core.database import Base
 
 if TYPE_CHECKING:
     from app.models.application import Application
+    from app.models.screening_report import ScreeningReport
 
 
 class StageHistory(Base):
@@ -46,6 +47,10 @@ class StageHistory(Base):
         nullable=False,
         index=True,
     )
+    report_id: Mapped[int | None] = mapped_column(
+        ForeignKey("screening_reports.id", ondelete="SET NULL"),
+        index=True,
+    )
     from_recruitment_stage: Mapped[str | None] = mapped_column(String(30))
     to_recruitment_stage: Mapped[str] = mapped_column(String(30), nullable=False)
     from_hr_decision: Mapped[str | None] = mapped_column(String(20))
@@ -63,3 +68,6 @@ class StageHistory(Base):
     )
 
     application: Mapped["Application"] = relationship(back_populates="stage_histories")
+    screening_report: Mapped["ScreeningReport | None"] = relationship(
+        back_populates="stage_histories"
+    )

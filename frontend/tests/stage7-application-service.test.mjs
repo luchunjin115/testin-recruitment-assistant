@@ -8,7 +8,7 @@ const application = {
   created_at: '2026-08-18T08:00:00Z', updated_at: '2026-08-18T08:10:00Z',
 };
 const history = {
-  id: 30, application_id: 11, from_recruitment_stage: 'applied',
+  id: 30, application_id: 11, report_id: 91, from_recruitment_stage: 'applied',
   to_recruitment_stage: 'hr_review', from_hr_decision: 'pending',
   to_hr_decision: 'passed', reason_code: 'meets_requirements', reason_detail: null,
   actor_type: 'hr', actor_id: null, actor_label: '本地 HR（未认证）',
@@ -61,6 +61,7 @@ try {
   await service.voidStage7Application(11, { reason_code: 'wrong_job', confirmed: true });
   const histories = await service.listStage7ApplicationHistory(11);
   assert.equal(histories[0].reasonCode, 'meets_requirements');
+  assert.equal(histories[0].reportId, 91);
   assert.equal('screeningResultId' in histories[0], false);
   assert.deepEqual(requests.slice(1).map(request => [request.method, request.url]), [
     ['get', '/applications/11'], ['post', '/applications/intake'],

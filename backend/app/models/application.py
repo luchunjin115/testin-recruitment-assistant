@@ -117,10 +117,10 @@ class Application(Base):
         back_populates="application",
         order_by="StageHistory.created_at",
     )
-    screening_report: Mapped["ScreeningReport | None"] = relationship(
+    screening_reports: Mapped[list["ScreeningReport"]] = relationship(
         back_populates="application",
-        uselist=False,
         passive_deletes=True,
+        order_by="ScreeningReport.generated_at.desc()",
     )
     screening_runs: Mapped[list["ScreeningRun"]] = relationship(
         back_populates="application",

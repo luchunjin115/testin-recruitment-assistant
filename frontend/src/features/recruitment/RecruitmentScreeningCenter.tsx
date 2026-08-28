@@ -422,10 +422,10 @@ const RecruitmentScreeningCenter: React.FC = () => {
         <div className="recruitment-screening-batch-bar">
           <div>
             <span>批量操作</span>
-            <p>同一开放岗位最多选择 20 份申请；每份申请会建立独立任务。</p>
+            <p>同一开放岗位最多选择 5 份申请；每份申请独立排队、独立成功或失败。</p>
           </div>
           <div className="recruitment-screening-batch-actions">
-            <span>已选 <strong>{selectedApplicationIds.length}</strong> / 20</span>
+            <span>已选 <strong>{selectedApplicationIds.length}</strong> / 5</span>
             {selectedApplicationIds.length > 0 && <Button onClick={() => setSelectedApplicationIds([])}>清空</Button>}
             <Button
               disabled={selectedApplicationIds.length === 0}
@@ -448,6 +448,7 @@ const RecruitmentScreeningCenter: React.FC = () => {
             closable
             description={(
               <div className="recruitment-batch-result-list">
+                <span>总计 {batchResult.totalCount} · 复用 {batchResult.reusedCount} · 排队 {batchResult.queuedCount} · 失败 {batchResult.failedCount}</span>
                 {batchResult.results.map(result => (
                   <span key={result.applicationId}>
                     Application #{result.applicationId}
@@ -456,12 +457,21 @@ const RecruitmentScreeningCenter: React.FC = () => {
                     </Tag>
                   </span>
                 ))}
+                {batchResult.failures.map(failure => (
+                  <span key={failure.applicationId}>
+                    Application #{failure.applicationId}
+                    <Tag color="error">{failure.errorCode}</Tag>
+                    <span>{failure.errorMessage}{failure.retryable ? ' · 可处理后重试' : ' · 需先处理内容或状态问题'}</span>
+                  </span>
+                ))}
               </div>
             )}
-            message={`岗位 #${batchResult.jobId} 已提交 ${batchResult.results.length} 个独立后台任务`}
+            message={batchResult.failedCount > 0
+              ? `岗位 #${batchResult.jobId} 批量提交已完成，部分 Application 未能提交`
+              : `岗位 #${batchResult.jobId} 已处理 ${batchResult.totalCount} 个独立请求`}
             onClose={() => setBatchResult(null)}
             showIcon
-            type="success"
+            type={batchResult.failedCount > 0 ? 'warning' : 'success'}
           />
         )}
 
@@ -501,7 +511,8 @@ const RecruitmentScreeningCenter: React.FC = () => {
         {loadState.status === 'ready' && items.length > 0 && (
           <div aria-label="AI 初筛申请列表" className="recruitment-screening-list">
             {items.map(item => {
-              const decisionEntry = getStage7DecisionEntry(item, false);
+              const aiInProgress = ['queued', 'running'].includes(item.screeningState?.latestRun?.status ?? '');
+              const decisionEntry = getStage7DecisionEntry(item, aiInProgress);
               return (
                 <article className="recruitment-screening-card" key={item.application.id}>
                   <Checkbox
@@ -509,7 +520,7 @@ const RecruitmentScreeningCenter: React.FC = () => {
                     checked={selectedApplicationIds.includes(item.application.id)}
                     disabled={item.jobStatus !== 'open'
                       || (selectedJobId !== null && selectedJobId !== item.application.jobId)
-                      || (selectedApplicationIds.length >= 20 && !selectedApplicationIds.includes(item.application.id))}
+                      || (selectedApplicationIds.length >= 5 && !selectedApplicationIds.includes(item.application.id))}
                     onChange={event => toggleBatchSelection(item, event.target.checked)}
                   />
                   <div>

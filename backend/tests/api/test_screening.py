@@ -12,6 +12,8 @@ from app.models.application import Application
 from app.models.screening_run import ScreeningRun
 from app.services.screening_service import (
     ScreeningApplicationNotFoundError,
+    ScreeningBatchFailure,
+    ScreeningBatchResult,
     ScreeningBatchJobMismatchError,
     ScreeningStateResult,
     ScreeningTriggerResult,
@@ -98,6 +100,17 @@ class ScreeningApiTest(TestCase):
         self.assertNotIn("resume_text", serialized)
         self.assertNotIn("api_key", serialized)
 
+    def test_list_reports_exposes_current_and_history_endpoint(self) -> None:
+        with patch.object(
+            screening_service,
+            "list_reports",
+            AsyncMock(return_value=[]),
+        ) as service_mock:
+            response = self.client.get("/applications/1/screening/reports")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), [])
+        service_mock.assert_awaited_once_with(self.db, 1)
+
     def test_normal_and_single_reassessment_return_accepted_run_ids(self) -> None:
         normal = ScreeningTriggerResult(1, make_run(), None)
         reassessed_run = make_run(run_id=11)
@@ -109,7 +122,10 @@ class ScreeningApiTest(TestCase):
             AsyncMock(side_effect=[normal, reassessed]),
         ) as trigger:
             first = self.client.post("/applications/1/screening")
-            second = self.client.post("/applications/1/screening/re-evaluate")
+            second = self.client.post(
+                "/applications/1/screening/re-evaluate",
+                json={"confirmed": True},
+            )
         self.assertEqual(first.status_code, 202)
         self.assertEqual(first.json()["run"]["id"], 10)
         self.assertEqual(second.status_code, 202)
@@ -117,10 +133,17 @@ class ScreeningApiTest(TestCase):
         self.assertEqual(trigger.await_count, 2)
 
     def test_batch_returns_each_application_run(self) -> None:
-        results = [
-            ScreeningTriggerResult(1, make_run(1, 10), None),
-            ScreeningTriggerResult(2, make_run(2, 11), None),
-        ]
+        results = ScreeningBatchResult(
+            job_id=3,
+            total_count=2,
+            reused_count=0,
+            queued_count=2,
+            results=(
+                ScreeningTriggerResult(1, make_run(1, 10), None),
+                ScreeningTriggerResult(2, make_run(2, 11), None),
+            ),
+            failures=(),
+        )
         with patch.object(
             screening_service,
             "trigger_batch_reassessment",
@@ -128,12 +151,12 @@ class ScreeningApiTest(TestCase):
         ):
             response = self.client.post(
                 "/jobs/3/screening/re-evaluate-batch",
-                json={"application_ids": [1, 2]},
+                json={"application_ids": [1, 2], "confirmed": True},
             )
         self.assertEqual(response.status_code, 202)
         self.assertEqual([item["run"]["id"] for item in response.json()["results"]], [10, 11])
 
-    def test_batch_rejects_more_than_twenty_before_service(self) -> None:
+    def test_batch_rejects_more_than_five_before_service(self) -> None:
         service_mock = AsyncMock()
         with patch.object(
             screening_service,
@@ -142,7 +165,7 @@ class ScreeningApiTest(TestCase):
         ):
             response = self.client.post(
                 "/jobs/3/screening/re-evaluate-batch",
-                json={"application_ids": list(range(1, 22))},
+                json={"application_ids": list(range(1, 7)), "confirmed": True},
             )
         self.assertEqual(response.status_code, 422)
         self.assertEqual(
@@ -150,6 +173,59 @@ class ScreeningApiTest(TestCase):
             "SCREENING_BATCH_SIZE_INVALID",
         )
         service_mock.assert_not_awaited()
+
+    def test_batch_returns_stable_partial_failure_counts(self) -> None:
+        batch = ScreeningBatchResult(
+            job_id=3,
+            total_count=2,
+            reused_count=0,
+            queued_count=1,
+            results=(ScreeningTriggerResult(1, make_run(1, 10), None),),
+            failures=(
+                ScreeningBatchFailure(
+                    application_id=2,
+                    error_code="SCREENING_APPLICATION_NOT_ELIGIBLE",
+                    error_message="该 Application 当前不可重新评估",
+                    retryable=False,
+                ),
+            ),
+        )
+        with patch.object(
+            screening_service,
+            "trigger_batch_reassessment",
+            AsyncMock(return_value=batch),
+        ):
+            response = self.client.post(
+                "/jobs/3/screening/re-evaluate-batch",
+                json={"application_ids": [1, 2], "confirmed": True},
+            )
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.json()["total_count"], 2)
+        self.assertEqual(response.json()["queued_count"], 1)
+        self.assertEqual(response.json()["failed_count"], 1)
+        self.assertFalse(response.json()["failures"][0]["retryable"])
+
+    def test_reassessment_requires_explicit_true_confirmation(self) -> None:
+        paths = (
+            ("/applications/1/screening/re-evaluate", {}),
+            ("/applications/1/screening/re-evaluate", {"confirmed": False}),
+            (
+                "/jobs/3/screening/re-evaluate-batch",
+                {"application_ids": [1]},
+            ),
+            (
+                "/jobs/3/screening/re-evaluate-batch",
+                {"application_ids": [1], "confirmed": False},
+            ),
+        )
+        for path, payload in paths:
+            with self.subTest(path=path, payload=payload):
+                response = self.client.post(path, json=payload)
+                self.assertEqual(response.status_code, 422)
+                self.assertEqual(
+                    response.json()["detail"]["code"],
+                    "SCREENING_REASSESSMENT_CONFIRMATION_REQUIRED",
+                )
 
     def test_errors_are_stable_and_do_not_echo_private_exception(self) -> None:
         cases = (
@@ -176,7 +252,11 @@ class ScreeningApiTest(TestCase):
                 method,
                 AsyncMock(side_effect=error),
             ):
-                kwargs = {"json": {"application_ids": [1]}} if verb == "post" else {}
+                kwargs = (
+                    {"json": {"application_ids": [1], "confirmed": True}}
+                    if verb == "post"
+                    else {}
+                )
                 response = getattr(self.client, verb)(path, **kwargs)
             self.assertEqual(response.status_code, expected_status)
             self.assertEqual(response.json()["detail"]["code"], code)

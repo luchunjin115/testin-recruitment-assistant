@@ -29,7 +29,7 @@ from app.services.screening_service import (
 NOW = datetime(2026, 8, 22, 12, 0, tzinfo=timezone.utc)
 
 
-class ScreeningPlanV4GateContractTest(IsolatedAsyncioTestCase):
+class ScreeningPlanV5GateContractTest(IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         self.settings = Settings(_env_file=None)
         self.engine = create_async_engine(
@@ -96,9 +96,71 @@ class ScreeningPlanV4GateContractTest(IsolatedAsyncioTestCase):
         self,
         *,
         status: str = "ready",
-        schema_version: str = "4.0",
+        schema_version: str = "5.0",
         is_current: bool = True,
     ) -> JobEvaluationPlan:
+        if schema_version == "5.0":
+            snapshot = job_evaluation_plan_service.build_v5_input_snapshot(self.job)
+            has_payload = status in {
+                "pending_confirmation",
+                "ready",
+                "outdated",
+            }
+            plan = JobEvaluationPlan(
+                job_id=self.job.id,
+                jd_fingerprint=job_evaluation_plan_service.fingerprint_snapshot(
+                    snapshot
+                ),
+                status=status,
+                is_current=is_current,
+                items=null(),
+                structured_coverage=null(),
+                free_text_coverage=null(),
+                source_review_summary=null(),
+                requirement_facts=null(),
+                evaluation_criteria=null(),
+                coverage_review_summary=null(),
+                generation_audit=null(),
+                v5_criteria=(
+                    [
+                        {
+                            "criterion_id": "criterion:0001",
+                            "name": "Python 后端开发",
+                            "importance": "required",
+                            "description": "核对 Python 后端开发实践。",
+                            "screening_focus": "寻找 Python 项目证据。",
+                            "origin": "ai_from_jd",
+                            "sources": [
+                                {
+                                    "source_field": "candidate_requirements",
+                                    "source_quote": self.job.candidate_requirements,
+                                }
+                            ],
+                            "hr_note": None,
+                        }
+                    ]
+                    if has_payload
+                    else null()
+                ),
+                edit_version=1,
+                confirmed_at=NOW if status == "ready" else None,
+                warnings=[],
+                prompt_version="job_evaluation_plan_lightweight_v2",
+                model_version="fake-plan-model",
+                schema_version="5.0",
+                input_fingerprint=job_evaluation_plan_service.fingerprint_input(
+                    snapshot
+                ),
+                input_snapshot=snapshot.model_dump(mode="json"),
+                error_code=(
+                    "JOB_EVALUATION_PLAN_FAILED" if status == "failed" else None
+                ),
+                error_message=("评价计划生成失败" if status == "failed" else None),
+                completed_at=None if status == "generating" else NOW,
+            )
+            self.db.add(plan)
+            await self.db.commit()
+            return plan
         snapshot = (
             job_evaluation_plan_service.build_v4_input_snapshot(self.job)
             if schema_version == "4.0"
@@ -326,7 +388,7 @@ class ScreeningPlanV4GateContractTest(IsolatedAsyncioTestCase):
                 settings=self.settings,
             )
 
-    async def test_only_current_ready_v4_plan_can_queue_screening(self) -> None:
+    async def test_only_current_ready_v5_plan_can_queue_screening(self) -> None:
         plan = await self._add_plan()
         result = await screening_service.trigger(
             self.db,
@@ -454,7 +516,7 @@ class ScreeningPlanV4GateContractTest(IsolatedAsyncioTestCase):
             before,
         )
 
-    async def test_ready_v4_plan_runs_by_fact_and_preserves_hr_state(self) -> None:
+    async def test_ready_v5_plan_runs_by_criterion_and_preserves_hr_authority(self) -> None:
         application_id = self.application.id
         plan = await self._add_plan()
         plan_id = plan.id
@@ -477,12 +539,13 @@ class ScreeningPlanV4GateContractTest(IsolatedAsyncioTestCase):
                         {
                             "overall_score": 80,
                             "overall_summary": "候选人的 Python 经历与岗位要求匹配。",
-                            "requirement_assessments": [
+                            "criterion_assessments": [
                                 {
-                                    "requirement_key": "fact:0001",
+                                    "criterion_id": "criterion:0001",
                                     "score": 8,
                                     "reason": "简历包含 Python AI 应用开发经历。",
                                     "calculation_note": None,
+                                    "experience_period_fact_keys": [],
                                     "evidence": [
                                         {
                                             "quote": "使用 Python 开发 AI 应用",
@@ -491,9 +554,34 @@ class ScreeningPlanV4GateContractTest(IsolatedAsyncioTestCase):
                                     ],
                                 }
                             ],
-                            "bonus_highlights": [],
-                            "tradeoff_reason": None,
-                            "interview_questions": ["请介绍该 AI 应用的职责。"],
+                            "strengths": [
+                                {
+                                    "summary": "有 Python AI 应用开发经历。",
+                                    "criterion_ids": ["criterion:0001"],
+                                    "evidence": [
+                                        {
+                                            "quote": "使用 Python 开发 AI 应用",
+                                            "section": "工作经历",
+                                        }
+                                    ],
+                                }
+                            ],
+                            "gaps": [
+                                {
+                                    "summary": "项目规模仍需核实。",
+                                    "criterion_ids": ["criterion:0001"],
+                                    "evidence": [],
+                                }
+                            ],
+                            "risks_or_conflicts": [],
+                            "missing_info": [
+                                {
+                                    "summary": "缺少项目规模信息。",
+                                    "criterion_ids": ["criterion:0001"],
+                                    "evidence": [],
+                                }
+                            ],
+                            "hr_follow_up_questions": ["请介绍该 AI 应用的职责。"],
                         },
                         ensure_ascii=False,
                     ),
@@ -525,7 +613,12 @@ class ScreeningPlanV4GateContractTest(IsolatedAsyncioTestCase):
             (completed.error_code, completed.error_message),
         )
         self.assertEqual(report.job_evaluation_plan_id, plan_id)
-        self.assertEqual(report.requirement_assessments[0]["requirement_key"], "fact:0001")
+        self.assertEqual(
+            report.v5_report["criterion_assessments"][0]["assessment"][
+                "criterion_id"
+            ],
+            "criterion:0001",
+        )
         self.assertEqual(application.hr_decision, "pending")
-        self.assertEqual(application.recruitment_stage, "applied")
+        self.assertEqual(application.recruitment_stage, "hr_review")
         self.assertEqual(application.lifecycle_status, "active")

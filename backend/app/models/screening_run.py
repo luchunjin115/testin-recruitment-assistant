@@ -80,11 +80,13 @@ class ScreeningRun(Base):
         Index("ix_screening_runs_status", "status"),
         Index("ix_screening_runs_created_at", "created_at"),
         Index(
-            "uq_screening_runs_active_input",
+            "uq_screening_runs_active_application",
             "application_id",
-            "input_fingerprint",
             unique=True,
-            postgresql_where=text("status IN ('queued', 'running')"),
+            postgresql_where=text(
+                "status IN ('waiting_resume', 'waiting_plan', 'queued', "
+                "'running', 'paused')"
+            ),
         ),
     )
 

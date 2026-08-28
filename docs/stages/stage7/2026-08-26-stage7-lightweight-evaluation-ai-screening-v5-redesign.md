@@ -1,7 +1,7 @@
 # 阶段 7：轻量评价清单驱动的 AI 初筛 5.0 重设计
 
 > 日期：2026-08-26  
-> 状态：7R5-A（合同测试与离线基线）、7R5-B（计划 Schema/Model/migration）和 7R5-C（单次计划生成链）已完成；用户已确认 importance 改为“完整原文语气为主、五段式字段作一致性信号、HR 最终审核”，并确认 7R5-C1 主要采用“结构化 Prompt + 少量边界 Few-shot”改进模型判断，Schema/Service 只保留 warning 所需的最小兜底；补充批次的书面实施顺序待确认；Alembic head=`a3b5c7d9e101`；全套 1056 测试通过、42 xfailed（严格）；当前不得进入 7R5-D
+> 状态：7R5-A—7R5-E 已分别确认并完成；Alembic head=`c5d7e9f1a323`；最近全套 1149 passed、12 xfailed（严格，全部属于 7R5-F）、419 subtests passed、0 failures。5.0 报告 Schema、六项方法 Prompt、Adapter 兼容、纯报告 Service、隔离 JSONB 持久化合同和 migration 已落地；当前停止等待用户另行确认 7R5-F，不得进入运行接线、React 或真实 DeepSeek
 > 当前权威性：本文件替代 4.0 作为阶段 7 新增实现的唯一业务合同。4.0、3.0 和更早资料只保留历史实现与质量证据，不得继续指导新开发。  
 > 一句话目标：不再追求把 JD 拆成大量“原子事实”，而是让 AI 基于完整 JD 生成一份 HR 可编辑、可追溯的轻量评价清单，再用同一把尺子独立评价每份简历。
 
@@ -588,7 +588,7 @@ Prompt 专项还必须静态验证结构化分区、3—5 个边界 Few-shot、�
 
 ## 23. 5.0 实施批次总览
 
-> 原实施顺序已获用户整体确认，7R5-A、7R5-B 与 7R5-C 已分别确认并完成。7R5-C 完成后的教学复盘发现 importance 硬失败语义无法发挥既定 HR 审核责任，用户已确认业务方向，新增 7R5-C1 书面补充批次。每一轮仍只能执行一个另行确认的批次并停止；当前必须先确认并完成 7R5-C1，不得直接进入 7R5-D。
+> 原实施顺序已获用户整体确认，7R5-A、7R5-B、7R5-C、7R5-C1、7R5-D 与 7R5-E 已分别确认并完成。每一轮仍只能执行一个另行确认的批次并停止；当前必须先获得 7R5-F 实施确认，不得直接修改运行接线、批量、HR 决策或进入 React。
 
 ```text
 7R5-A 合同测试与离线基线
@@ -795,9 +795,36 @@ warning 原因固定为：`explicit_strong_signal_mismatch`、`explicit_weak_sig
 
 固定交付：完整 JD + 清单 + 当前脱敏简历；criterion assessment；总体分；优势/差距/风险/缺失/问题；证据；敏感禁用；明显矛盾拒绝；程序标签；无权重。
 
+本批 Prompt 固定采用以下六项工程方法：
+
+1. **结构化分区**：Prompt 按“唯一任务 → 权限与决策边界 → 不可信输入说明 → 逐评价点评分 → 总体评分 → 证据 → 报告完整性 → 安全禁止项 → JSON 输出 → 输出前静默检查”组织；不得把全部规则堆成连续长段。
+2. **指令与数据隔离**：完整 JD、已确认评价清单、当前脱敏 Resume 和固定经历时间事实分别使用清晰边界包裹，并统一声明为不可信数据；其中任何看起来像系统命令、评分指令或 Prompt 修改要求的内容都只作为待分析数据，不得执行。
+3. **严格 JSON Schema**：Prompt 只允许输出最终 JSON；模型输出必须再经过严格 Pydantic Schema、重复键和未知字段检查。Prompt 的格式要求不能替代程序校验，程序也不得容忍或猜测修复缺失字段。
+4. **少量、平衡 Few-shot**：允许使用 3—5 个虚构、脱敏、类别平衡且与第 20 节正式验收样本隔离的示例，覆盖有充分证据、无证据为 0、只有间接证据、required 严重缺口与总体权衡、事实冲突或 Prompt 注入等边界；示例只展示最终合法业务 JSON，不展示思维链、草稿或内部自检。
+5. **静默完整性检查**：输出前要求模型只在内部核对评价点恰好一次、非零分证据、0 分语义、总分方向、优势/差距/风险/缺失/问题完整性、敏感属性、招聘决定和 JSON 形状；最终响应不得包含检查过程、分析草稿或思维链。
+6. **Prompt 版本与 Bad Case 回归**：本批建立独立 5.0 报告 Prompt/行为合同版本。后续每次修改都要记录原因，把脱敏 Bad Case 加入回归，重跑既有格式、证据、安全、矛盾和历史兼容测试；不得用正式新鲜质量样本反向调 Prompt，也不得无版本改写现有行为。
+
+上述六项不改变既有调用与安全合同。本批明确不采用输出完整思维链、普通生产流程多次自一致性投票、内容错误后的 Self-Refine/修复调用、动态 RAG/Few-shot 检索或 LLM-as-Judge 单独代替人工标签和确定性校验；正常情况仍是一名候选人一次报告业务调用，只有网络、限流、超时或模型服务端错误允许最多一次额外技术重试，内容错误不重试。
+
 禁止：批量上限/入口、HR 决策改动、React、真实模型调用。
 
 验证：Fake 高/中/低、缺证据、编造、敏感、自动决定、未知 ID、方向粗矛盾、时间事实和旧报告兼容。失败返回 Schema/Prompt/Service/Model 层。完成后停止，唯一下一步是 7R5-F。
+
+### 28.1 7R5-E 实际完成记录（2026-08-27）
+
+本批已按 `Schema → Service → AI Adapter → Model → PostgreSQL` 的纯报告边界完成。Schema 保留旧 `AIScreeningEvaluationOutput` 与 1.0—4.0 报告读取，新增独立 `AIScreeningEvaluationV5Output`、`CriterionAssessment`、五类结构化报告分区和程序补齐的 `ScreeningEvaluationV5ReportPayload`。模型只返回 criterion ID、0—10 分、理由、经历时间事实 key、当前 Resume 证据、AI 直接 0—100 总分、综合说明、优势、差距、风险/事实冲突、缺失信息和 HR 核实问题；程序生成五档标签，并把 HR 已确认 criterion 的 importance、origin、JD 来源和 hr_note 快照与 assessment 一一绑定后，才形成可安全持久化 payload。Python 没有平均、加权或重算总分，也没有恢复 RequirementFact 评分。
+
+5.0 报告 Prompt 版本为 `screening_evaluation_lightweight_v1`，行为合同为 `lightweight_report_generation_v1`，输出 Schema 为 `5.0`。Prompt 按“唯一任务 → 权限与决策边界 → 不可信输入说明 → 逐评价点评分 → 总体评分 → 证据与时间事实 → 报告完整性 → 安全禁止项 → 严格 JSON Schema → 输出前静默完整性检查”十段组织；Job、已确认清单、脱敏 Resume、评价基准和经历时间事实使用五组独立不可信数据边界。固定 4 个虚构、脱敏、类别平衡且可由同一 Pydantic Schema 验证的完整 JSON Few-shot，覆盖充分证据、0 分无证据、间接证据以及 required 严重缺口与 Prompt 注入；冻结正式质量样本内容未进入 Prompt。最终响应明确禁止思维链、草稿或自检过程；没有多次 Self-Consistency、内容 Self-Refine、动态 RAG/Few-shot 或 LLM-as-Judge。
+
+Adapter 新增独立 `evaluate_v5` 单请求合同，继续使用 JSON object、thinking disabled、temperature 0.1、SDK 自动重试 0 和现有安全错误分类；不改变旧 4.0 调用。纯 Service 的 `evaluate_v5/parse_and_validate_v5_output` 在持久化前拒绝重复 JSON key、未知/遗漏/重复 criterion ID、非零分无证据、0 分错误语义、证据无法定位、编造数字或综合事实、敏感属性、学校/公司品牌推断、自动招聘决定、Prompt 注入复述、未知经历时间事实、时间冲突和明显分数文字矛盾。required 项 0—3 分而总体达到 70 时，必须同时存在引用该 criterion 的风险/缺口说明和有 Resume 证据的优势；内容错误一次调用后直接失败，不返回部分报告。基础设施最多一次额外重试继续由既有运行底座负责，本批没有提前接入 5.0 `ScreeningRun`。
+
+`ScreeningReport` 新增隔离的可空 `v5_report JSONB`，数据库约束要求只有 `schema_version='5.0'` 才能携带完整对象，旧版本必须为 `NULL`；旧 `requirement_assessments/bonus_highlights` 等列不删除、不回填、不改写。Pydantic 读取还会复核 JSONB 内的总分、程序标签和综合说明与索引列一致。新 migration `c5d7e9f1a323`（`down_revision=b4c6d8e0f212`）只增加该列和约束；downgrade 在存在任何 5.0 报告时以 `STAGE7_SCREENING_V5_DOWNGRADE_BLOCKED` 阻止有损删除。
+
+修改前直接基线为 `62 passed、18 xfailed、43 subtests passed`。完成后 5.0 专项与合同为 `183 passed、12 xfailed、52 subtests passed`，12 个严格 xfail 全部仍属于 7R5-F；受影响的 4.0 Screening、运行底座、API、5.0 计划及历史 migration 回归为 `154 passed、55 subtests passed`。后端全量为 `1149 passed、12 xfailed、419 subtests passed、0 failures`，用时 `53.00` 秒；仅有既有 PyPDF2 弃用 warning 和一次既有 asyncpg cancel RuntimeWarning。受影响 Python 文件 `py_compile` 与 `git diff --check` 通过。
+
+本机 PostgreSQL 启动后确认原开发库为 `current=a3b5c7d9e101` 且 `jobs/applications/job_evaluation_plans/screening_reports/screening_runs` 全为 0；实际执行 `a3 → b4 → c5 → b4 → c5`，最终 `current=head=c5d7e9f1a323`，`alembic check` 为 `No new upgrade operations detected`，`v5_report` 为可空 JSONB 且约束存在，关键表计数前后仍全为 0。全部 AI 行为使用 Fake/Mock，未读取真实 API Key，真实 DeepSeek 调用和费用均为 0；没有修改 Screening 运行入口、批量上限、HR 决策、API 主流程、React 或 4.0 历史质量结果。
+
+这些结果能证明 5.0 报告的离线结构、Prompt 工程方法、一次业务调用边界、确定性证据/安全/方向/时间校验、程序标签、旧报告兼容和 PostgreSQL JSONB 合同按当前 Fake 与冻结测试工作；不能证明真实 DeepSeek 报告质量、真实 token/费用、5.0 异步运行与 current 报告替换、最多 5 人批量、HR 页面体验或完整端到端验收。若模型 JSON 形状或必填字段错误，返回 Schema；若模型普遍误判或遗漏报告内容，返回 Prompt；若 ID、证据、安全、事实或方向校验误报/漏报，返回 Service；若外部响应、finish reason 或基础设施分类错误，返回 Adapter；若 JSONB/版本隔离或往返失败，返回 Model/migration。7R5-E 到此完成并停止，唯一下一步是等待用户另行确认 7R5-F。
 
 ## 29. 7R5-F：单人、小批量、状态与决策接线
 
@@ -817,6 +844,18 @@ warning 原因固定为：`explicit_strong_signal_mismatch`、`explicit_weak_sig
 
 验证：Fake API/PostgreSQL 幂等、并发、重启恢复、跨关系隔离、批量部分失败、HR 决策和审计。失败返回运行/事务/决策层。完成后停止，唯一下一步是 7R5-G。
 
+### 7R5-F 实际结果（2026-08-27 执行）
+
+5.0 报告已接入既有 `ScreeningRun`：新运行只接受当前合法 5.0 `ready` 计划，按 Application 原投递时间、当前 Resume、计划编辑版本、Prompt/模型/Schema/脱敏版本形成输入指纹，并调用 7R5-E 的单次 `evaluate_v5`。普通触发复用相同 current 报告或唯一非终态运行；单人和批量强制重评都要求显式 `confirmed=true`；同岗位批量上限由 20 收紧为 5，返回总数、复用数、排队数、失败数和逐 Application 的安全失败原因/可重试标记，逐项失败不回滚已成功提交项。内容错误仍不重试，基础设施错误最多额外技术重试一次，迟到响应和数据库提交失败不会切换 current。
+
+`ScreeningReport` 由“每个 Application 只能一行”调整为“每个 Application 只能一行 `is_current=true`”：成功重评先在同一事务中冻结旧 current，再新建 5.0 current；失败则整笔回滚并保留旧 current。历史 1.0—4.0 行不改写，新 `/applications/{id}/screening/reports` 只读接口按 current 优先、时间倒序返回全部成功历史。`ScreeningRun` 的部分唯一索引覆盖 `waiting_resume / waiting_plan / queued / running / paused`，数据库保证每个 Application 最多一个非终态运行。
+
+AI 运行、HR 决策和招聘阶段继续使用三套字段。AI 成功或失败只会把仍处于 `pending + applied + active` 的 Application 推进到 `hr_review`，不写通过/备选/淘汰；如果 HR 已先行决策，AI 结果不得回退或覆盖。HR 直接通过使用显式覆盖入口；备选、淘汰和反转要求岗位相关说明。每次系统移交或 HR 决策都追加 `StageHistory`，可关联当时 current `report_id`；历史只追加。revision `d6e8f0a2b434` 新增报告 current 部分唯一索引、全非终态运行唯一索引和 `StageHistory.report_id` 外键，并在既有冲突数据或有损 downgrade 时给出稳定阻断码。
+
+修改前直接相关基线为 `182 passed、12 xfailed、36 subtests passed`。完成后 7R5-F 核心专项为 `181 passed、54 subtests passed`，后端全量为 `1175 passed、425 subtests passed、0 failures`；原 12 个 7R5-F 严格 xfail 已全部转为通过合同。真实 PostgreSQL 已执行 `c5 → d6 → c5 → d6`，最终 `current=head=d6e8f0a2b434`，`alembic check` 为 `No new upgrade operations detected`；本批 Python 文件 `py_compile` 与 `git diff --check` 通过。全部 AI 行为使用 Fake/Mock，没有读取真实 API Key，真实 DeepSeek 调用和费用为 0；未修改 React、批量阶段 8、真实质量结果或历史 4.0 证据。
+
+这些结果证明 Fake/本地 PostgreSQL 下的 5.0 gate、幂等、唯一非终态运行、强制确认、五人批量/部分失败、current/历史切换、失败回滚、迟到保护、HR 状态隔离和审计合同成立；不能证明真实 DeepSeek 质量、真实费用、React 体验、浏览器交互或完整端到端验收。若请求形状、确认或批量计数错误，返回 Schema/API；若复用、逐项失败、迟到或事务错误，返回 Screening Service；若 HR 状态被覆盖或审计缺失，返回决策 Service；若 current/唯一索引/外键或往返失败，返回 Model/migration。7R5-F 到此完成并停止，唯一下一步是等待用户另行确认 7R5-G。
+
 ## 30. 7R5-G：React 评价清单与报告
 
 依赖：7R5-F 完成且用户另行确认。
@@ -835,6 +874,16 @@ warning 原因固定为：`explicit_strong_signal_mismatch`、`explicit_weak_sig
 
 验证：Node 测试、TypeScript strict、生产构建、无裸 `fetch`/`any`/危险 HTML，Fake 浏览器状态矩阵。失败返回组件/类型/API 映射层。完成后停止，唯一下一步是 7R5-H。
 
+### 7R5-G 实际结果（2026-08-27 执行）
+
+React 的 5.0 合同已落地到集中 TypeScript 类型和 `v2Http` Service。岗位评价计划抽屉现在读取/保存整份 5.0 草稿，支持修改 importance、名称、说明、初筛重点和 HR 备注，以及新增、删除、合并；AI 来源、HR 补充、稳定 criterion ID、JD 原文和 warning 复核原因分开展示。未保存编辑期间不能误确认数据库旧版本；保存使用 `edit_version` 乐观并发；确认需要危险操作确认，确认后当前版本只读，只能创建新编辑版本。历史 1.0—4.0 计划继续只读，不用新结构覆盖旧解释。
+
+初筛工作台把批量选择固定为同一开放岗位最多 5 人，展示总计、复用、排队、失败及逐 Application 安全结果；部分失败不隐藏已提交项。普通复用、单人重新评估确认、轮询和迟到响应保护继续保留。AI queued/running 时 HR 决策入口禁用；终态 AI 结果和 HR 决策仍是两套独立状态。报告抽屉支持当前/历史成功报告切换：5.0 页面明确总体分由 AI 直接给出，程序不平均、不加权、不重算，并逐评价点展示 0—10 分、确认时评价点快照、JD 原文、Resume 证据、0 分边界、优势、差距、风险/事实冲突、缺失信息、HR 后续问题及 Prompt/模型/Schema/脱敏/时间事实审计；旧 1.0—4.0 报告保持历史只读。
+
+修改前 19 组前端 Node 基线和生产构建通过。完成后 20 组前端 Node 测试全部通过；`npm run build` 完成 TypeScript strict 与 Vite production build（3121 modules）；受影响后端回归为 `61 passed、17 subtests passed`。静态扫描未发现生产目录裸 `fetch`、显式 `any` 或 `dangerouslySetInnerHTML`，`git diff --check` 通过。Fake 浏览器在 1440×1000 下实际完成清单编辑、HR 新增、保存（edit version `3 → 4`）、编辑中确认禁用、确认后只读、5.0 报告、旧 4.0 历史、五人上限、`4 queued + 1 failed` 部分失败和焦点返回；390×844 下报告抽屉宽度为 390、页面无横向溢出，最后一轮控制台无新错误。Fake 网络只访问本机 `127.0.0.1`，没有读取真实 API Key，真实 DeepSeek 调用和费用为 0；没有修改后端合同、migration、阶段 8/9 页面或历史质量结果。
+
+这些结果证明 Fake/本地静态构建下的 React 类型映射、主要 HR 交互、只读历史、批量部分失败、可访问性焦点和响应式边界成立；不能证明真实 DeepSeek 质量、真实 PostgreSQL/API 全链、真实费用或最终完整端到端验收。若字段映射、请求体或兼容默认值错误，返回 TypeScript/API 映射层；若局部状态、确认、选择、轮询、迟到或焦点错误，返回 React 组件层；若布局溢出或证据层级不清，返回样式/组件层；若后端响应本身违反已确认合同，不在 G 中扩展前端绕过，返回 Schema/API/Service 责任层。7R5-G 到此完成并停止，唯一下一步是等待用户另行确认 7R5-H。
+
 ## 31. 7R5-H：零调用质量运行器与非付费预检
 
 依赖：7R5-G 完成且用户另行确认。
@@ -852,6 +901,14 @@ warning 原因固定为：`explicit_strong_signal_mismatch`、`explicit_weak_sig
 禁止：改 Prompt/业务合同来迎合样本、读取 API Key、真实调用、创建正式结果、覆盖 4.0 结果。
 
 验证：后端/前端全量、构建、migration、真实 PostgreSQL/API 非付费链、浏览器非模型路径、Fake 正常与失败、dry-run 0 调用、历史 hash、`git diff --check`。任何红灯都返回责任层，不能带病付费。完成后展示官方价格和调用边界，停止等待金额确认。
+
+2026-08-27 至 2026-08-28 实施记录（**7R5-H 已完成并停止**）：已新增独立 5.0 质量合同、运行器、20 个专项测试和仅用于价格预检的官方价格快照。冻结 fixture 仍为 10 JD、20 对、5 组各 3 次，完整 SHA-256 为 `2ecc2da188f09883c1b6acaa40d0ca25f2306f2894e7f060a3a26aefb2fa9643`；计划样本/标签、报告样本/标签和稳定性选择另有独立 hash，人工分母固定为 55 个计划必备标签、26 个非评价标签、22 个禁止新增标签、107 个报告 required 方向标签。正常业务调用固定为计划 10 + 报告 20 + 稳定性 15 = 45；只有网络、限流、超时或服务端错误可各多 1 次，API attempt 硬上限 90，内容错误重试 0。输出 token 安全上界为正常 500,000、全部发生一次技术重试时 1,000,000。raw、人工审计和 final 使用 `v5-quality-results/` 下三个独立、不可覆盖且当前不存在的 7R5-I 路径；13 份 4.0/历史质量证据 hash 前后完全一致。
+
+运行器只在显式 `real` 模式、官方价格快照 24 小时内有效且用户给出美元上限或明确不设上限后，才加载真实 Settings 和 Adapter；`dry-run`/Fake 使用 `_env_file=None` 且显式空 `DEEPSEEK_API_KEY`。逐 attempt 记录业务样本、attempt 编号、请求/返回模型、finish reason、token/cache、耗时、原始响应和费用；成功按实际 token 计费，超时等无 usage 的失败 attempt 保留调用前最坏费用预留，避免连续失败低估金额。raw 结果无权直接宣布质量通过；必须再绑定 raw hash、fixture hash、人工审阅人/时间以及 12 个固定人工指标，最终程序才合并人工语义门槛与确定性结构门槛。正式新结果路径当前均不存在，真实 DeepSeek Adapter 未实例化，真实模型调用和费用均为 0。
+
+已通过：修改前 4.0 质量合同/运行器基线 `42 passed`；7R5-H 专项 `20 passed`；真实 PostgreSQL Fake API、两份 migration 合同与 H 专项合跑 `23 passed`；后端全量 `1195 passed + 425 subtests passed`、0 failures（只有既有 PyPDF2 弃用 warning 和一次异步连接清理 RuntimeWarning）；前端全部 20 组 Node 测试、TypeScript strict 和 Vite production build（3121 modules）；真实 PostgreSQL `d6e8f0a2b434 → c5d7e9f1a323 → d6e8f0a2b434`，最终 `current=head`、`alembic check` 无差异，8 张核心表往返前后均为 0；dry-run 为 0 调用/0 写入/无 Adapter/无质量结论，Fake normal 为计划 `10/10`、报告 `20/20`、稳定性 `15/15` 结构合法，Fake failure 能拒绝非法来源和缺证据内容且不重试、不写部分结果；`py_compile` 与 `git diff --check` 通过。本机 fixture HTTP 根页面、5.0 plan 和 5.0 report 均返回 200/合法固定响应。
+
+浏览器补充验收：Codex 应用内测试浏览器当时两次发现结果均为空，因此没有生成自动点击、控制台或网络日志证据；2026-08-28 用户已明确确认亲自完成浏览器手工测试且验收成功，本批据此接受浏览器非模型路径通过。该结论的证据类型是“用户手工验收确认”，不能改写成 Codex 自动浏览器验收，也不能替代 7R5-J 仍需执行的真实 PostgreSQL/API/浏览器最终全链验收。开发中第一次 Fake 调试调用在显式离线 Settings 修复前曾走 Service 默认配置加载器，因此可能读取过本机 `.env` 配置字符串；没有输出秘密、没有实例化真实 Adapter、没有网络请求或费用，随后已改成显式空 Key并由测试锁死，但这段中间过程不能倒推成“从未读取配置”。至此 7R5-H 的非付费门槛全部完成，真实 DeepSeek 调用和费用仍为 0；本批立即停止，唯一下一步是等待用户另行确认 7R5-I 的美元金额上限或明确“不设上限”。
 
 ## 32. 7R5-I：真实 AI 质量验收
 
@@ -901,6 +958,6 @@ warning 原因固定为：`explicit_strong_signal_mismatch`、`explicit_weak_sig
 
 ## 35. 当前停止点
 
-7R5-A、7R5-B、7R5-C、7R5-C1 与 7R5-D 已分别获得授权并完成；5.0 合同测试、Schema、Model、migration、纯单次生成、importance warning、API 落库、HR 草稿编辑、乐观并发、确认和只读版本历史均已落地，Alembic head 为 `b4c6d8e0f212`。当前程序会保留模型 importance，在来源、安全和擅自新增等硬门禁通过后，为明显冲突或复杂语气生成关联稳定 criterion ID 的受控 warning；HR 可以编辑或明确确认 warning，但不能绕过硬门禁。公开生成链已使用 5.0，一次业务模型调用和最多一次基础设施重试不变；本批真实 DeepSeek 调用为 0。5.0 Screening 报告后端、运行接线和 React 尚未实现，本阶段也尚未执行 5.0 真实 DeepSeek 质量验收。
+7R5-A、7R5-B、7R5-C、7R5-C1、7R5-D、7R5-E、7R5-F、7R5-G 与 7R5-H 已分别获得授权并完成；H 的浏览器非模型路径由用户于 2026-08-28 手工测试并明确确认通过，证据类型不是 Codex 自动浏览器日志。5.0 评价计划、纯报告引擎、单人/最多 5 人运行、current/历史报告、AI→HR 移交、审计后端、React 清单/报告产品交互和真实质量运行前门禁均已落地，Alembic head 为 `d6e8f0a2b434`。新运行只接受当前合法 5.0 ready 计划；旧 1.0—4.0 计划/报告继续只读兼容，不再驱动新评分。真实 DeepSeek 调用和费用为 0；尚未证明真实模型质量或 7R5-J 最终完整端到端验收。
 
-当前唯一下一步是等待用户明确确认第 28 节 7R5-E“5.0 初筛报告后端”。未经确认不得修改 screening evaluation Schema/Prompt/Adapter/Service 或报告持久化，不得进入 7R5-F、React 或真实 DeepSeek。
+当前唯一下一步是停止并等待用户另行确认 7R5-I 的美元金额上限，或明确确认本轮“不设金额上限”。未经金额确认不得执行真实质量运行、读取真实 API Key、调用 DeepSeek、创建三个正式结果文件、进入 7R5-J 或阶段 8/9。

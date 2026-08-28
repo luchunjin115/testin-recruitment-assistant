@@ -21,10 +21,12 @@ from app.models.job_evaluation_plan import JobEvaluationPlan
 from app.models.resume import Resume
 from app.models.screening_report import ScreeningReport
 from app.models.screening_run import ScreeningRun
+from app.models.stage_history import StageHistory
 from app.schemas.screening import ScreeningRunStatus, ScreeningRunTriggerType
 from app.services.screening_service import (
     ScreeningBatchJobMismatchError,
     ScreeningBatchLimitError,
+    ScreeningReassessmentConfirmationRequiredError,
     screening_service,
 )
 from app.services.job_evaluation_plan_service import job_evaluation_plan_service
@@ -129,18 +131,69 @@ def make_v4_plan(
     )
 
 
+def make_v5_plan(
+    job: Job,
+    *,
+    status: str = "ready",
+    is_current: bool = True,
+) -> JobEvaluationPlan:
+    snapshot = job_evaluation_plan_service.build_v5_input_snapshot(job)
+    criteria = [
+        {
+            "criterion_id": "criterion:0001",
+            "name": "Python 后端工程能力",
+            "importance": "required",
+            "description": "核对 Python 后端开发实践。",
+            "screening_focus": "寻找 Python API 服务项目证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+                {
+                    "source_field": "candidate_requirements",
+                    "source_quote": job.candidate_requirements,
+                }
+            ],
+            "hr_note": None,
+        }
+    ]
+    return JobEvaluationPlan(
+        job_id=job.id,
+        jd_fingerprint=job_evaluation_plan_service.fingerprint_snapshot(snapshot),
+        status=status,
+        is_current=is_current,
+        items=null(),
+        structured_coverage=null(),
+        free_text_coverage=null(),
+        source_review_summary=null(),
+        requirement_facts=null(),
+        evaluation_criteria=null(),
+        coverage_review_summary=null(),
+        generation_audit=null(),
+        v5_criteria=criteria,
+        edit_version=1,
+        confirmed_at=NOW if status == "ready" else None,
+        warnings=[],
+        prompt_version="job_evaluation_plan_lightweight_v2",
+        model_version="fake-plan-model",
+        schema_version="5.0",
+        input_fingerprint=job_evaluation_plan_service.fingerprint_input(snapshot),
+        input_snapshot=snapshot.model_dump(mode="json"),
+        completed_at=NOW,
+    )
+
+
 def valid_model_result(*, score: int = 80) -> ScreeningEvaluationAdapterResult:
     return ScreeningEvaluationAdapterResult(
         content=json.dumps(
             {
                 "overall_score": score,
                 "overall_summary": "Python 项目经验与岗位要求整体较匹配。",
-                "requirement_assessments": [
+                "criterion_assessments": [
                     {
-                        "requirement_key": "fact:0001",
+                        "criterion_id": "criterion:0001",
                         "score": 8,
-                        "reason": "使用 Python 开发 API 服务，岗位相关经验较充分。",
+                        "reason": "使用 Python 开发 API 服务。",
                         "calculation_note": None,
+                        "experience_period_fact_keys": [],
                         "evidence": [
                             {
                                 "quote": "使用 Python 开发 API 服务",
@@ -149,9 +202,34 @@ def valid_model_result(*, score: int = 80) -> ScreeningEvaluationAdapterResult:
                         ],
                     }
                 ],
-                "bonus_highlights": [],
-                "tradeoff_reason": None,
-                "interview_questions": ["请介绍 Python API 项目的职责。"],
+                "strengths": [
+                    {
+                        "summary": "有 Python API 服务开发经历。",
+                        "criterion_ids": ["criterion:0001"],
+                        "evidence": [
+                            {
+                                "quote": "使用 Python 开发 API 服务",
+                                "section": "工作经历",
+                            }
+                        ],
+                    }
+                ],
+                "gaps": [
+                    {
+                        "summary": "API 项目规模仍需核实。",
+                        "criterion_ids": ["criterion:0001"],
+                        "evidence": [],
+                    }
+                ],
+                "risks_or_conflicts": [],
+                "missing_info": [
+                    {
+                        "summary": "缺少 API 服务规模信息。",
+                        "criterion_ids": ["criterion:0001"],
+                        "evidence": [],
+                    }
+                ],
+                "hr_follow_up_questions": ["请介绍 Python API 项目的规模和职责。"],
             },
             ensure_ascii=False,
         ),
@@ -212,7 +290,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             )
             self.db.add(job)
             await self.db.flush()
-            self.db.add(make_v4_plan(job))
+            self.db.add(make_v5_plan(job))
         if candidate is None:
             candidate = Candidate(name="测试候选人")
             self.db.add(candidate)
@@ -326,6 +404,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             self.application.id,
             trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
             force=True,
+            confirmed=True,
             settings=self.settings,
         )
         self.assertEqual(reassessed.run.evaluation_reference_at, original_reference)
@@ -386,13 +465,19 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         plan = await self.db.scalar(
             select(JobEvaluationPlan).where(JobEvaluationPlan.job_id == job.id)
         )
-        plan.evaluation_criteria = [
+        plan.v5_criteria = [
             {
                 "criterion_id": "criterion:0001",
                 "name": "Python API",
-                "fact_ids": ["fact:0001"],
+                "importance": "required",
+                "description": "核对 Python API 开发实践。",
+                "screening_focus": "寻找 Python API 项目证据。",
+                "origin": "hr_edited",
+                "sources": [],
+                "hr_note": "测试修改",
             }
         ]
+        plan.edit_version += 1
         plan_changed = await screening_service._build_context(
             self.db, self.application, self.settings
         )
@@ -422,11 +507,8 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             )
         )
         plan.status = "generating"
-        plan.source_review_summary = null()
-        plan.requirement_facts = null()
-        plan.evaluation_criteria = null()
-        plan.coverage_review_summary = null()
-        plan.generation_audit = null()
+        plan.v5_criteria = null()
+        plan.confirmed_at = None
         plan.completed_at = None
         await self.db.commit()
         result = await screening_service.trigger(
@@ -443,6 +525,31 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         )
         self.assertEqual(first.run.id, second.run.id)
         self.assertTrue(second.reused_run)
+
+    async def test_changed_input_still_reuses_the_only_nonterminal_run(self) -> None:
+        first = await screening_service.trigger(
+            self.db, self.application.id, settings=self.settings
+        )
+        resume = await self.db.get(Resume, self.application.current_resume_id)
+        resume.raw_text += "\n补充异步任务经历"
+        await self.db.commit()
+
+        second = await screening_service.trigger(
+            self.db, self.application.id, settings=self.settings
+        )
+
+        self.assertTrue(second.reused_run)
+        self.assertEqual(second.run.id, first.run.id)
+
+    async def test_forced_reassessment_requires_explicit_confirmation(self) -> None:
+        with self.assertRaises(ScreeningReassessmentConfirmationRequiredError):
+            await screening_service.trigger(
+                self.db,
+                self.application.id,
+                trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
+                force=True,
+                settings=self.settings,
+            )
 
     async def test_success_saves_one_report_and_normal_request_reuses_it(self) -> None:
         completed, adapter = await self._complete_success()
@@ -500,6 +607,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             self.application.id,
             trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
             force=True,
+            confirmed=True,
             settings=self.settings,
         )
         claimed = await screening_service.claim_next_run(
@@ -546,9 +654,10 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         )
         old_plan.is_current = False
         old_plan.status = "outdated"
+        old_plan.confirmed_at = None
         job = await self.db.get(Job, self.application.job_id)
         job.candidate_requirements = "具备 Python 开发经验\n至少 2 年工作经验"
-        self.db.add(make_v4_plan(job))
+        self.db.add(make_v5_plan(job))
         await self.db.commit()
         context = await screening_service._build_context(
             self.db,
@@ -561,6 +670,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             application_id,
             trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
             force=True,
+            confirmed=True,
             settings=self.settings,
         )
         claimed = await screening_service.claim_next_run(
@@ -572,9 +682,9 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         conflicting_payload = {
             "overall_score": 80,
             "overall_summary": "Python 项目经验与岗位要求整体较匹配。",
-            "requirement_assessments": [
+            "criterion_assessments": [
                 {
-                    "requirement_key": "fact:0001",
+                    "criterion_id": "criterion:0001",
                     "score": 8,
                     "reason": "相关开发经历满足至少 2 年要求。",
                     "calculation_note": "相关经历精确为 3 年，满足至少 2 年要求。",
@@ -587,9 +697,23 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
                     ],
                 },
             ],
-            "bonus_highlights": [],
-            "tradeoff_reason": None,
-            "interview_questions": [],
+            "strengths": [],
+            "gaps": [
+                {
+                    "summary": "项目规模仍需核实。",
+                    "criterion_ids": ["criterion:0001"],
+                    "evidence": [],
+                }
+            ],
+            "risks_or_conflicts": [],
+            "missing_info": [
+                {
+                    "summary": "缺少项目规模信息。",
+                    "criterion_ids": ["criterion:0001"],
+                    "evidence": [],
+                }
+            ],
+            "hr_follow_up_questions": ["请核实项目规模。"],
         }
         failed = await screening_service.execute_run(
             self.db,
@@ -617,7 +741,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(current.id, old_report_id)
         self.assertEqual(current.overall_score, old_score)
 
-    async def test_screening_never_changes_hr_decision_or_recruitment_state(self) -> None:
+    async def test_screening_handoff_changes_only_recruitment_stage(self) -> None:
         before = (
             self.application.hr_decision,
             self.application.recruitment_stage,
@@ -625,14 +749,71 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         )
         await self._complete_success()
         await self.db.refresh(self.application)
-        self.assertEqual(
-            (
-                self.application.hr_decision,
-                self.application.recruitment_stage,
-                self.application.lifecycle_status,
-            ),
-            before,
+        self.assertEqual(self.application.hr_decision, before[0])
+        self.assertEqual(self.application.recruitment_stage, "hr_review")
+        self.assertEqual(self.application.lifecycle_status, before[2])
+        history = await self.db.scalar(
+            select(StageHistory).where(
+                StageHistory.application_id == self.application.id,
+                StageHistory.reason_code == "ai_screening_completed",
+            )
         )
+        report = await self.db.scalar(
+            select(ScreeningReport).where(
+                ScreeningReport.application_id == self.application.id
+            )
+        )
+        self.assertEqual(history.report_id, report.id)
+        self.assertEqual(history.from_hr_decision, "pending")
+        self.assertEqual(history.to_hr_decision, "pending")
+
+    async def test_screening_failure_hands_off_without_auto_decision(self) -> None:
+        run = await self._queue_and_claim()
+        failed = await screening_service.execute_run(
+            self.db,
+            run.id,
+            adapter=FakeScreeningEvaluationAdapter(
+                [
+                    ScreeningEvaluationAdapterResult(
+                        content="not-json",
+                        model="fake",
+                        finish_reason="stop",
+                    )
+                ]
+            ),
+            settings=self.settings,
+            clock=lambda: NOW,
+        )
+        await self.db.refresh(self.application)
+        history = await self.db.scalar(
+            select(StageHistory).where(
+                StageHistory.application_id == self.application.id
+            )
+        )
+        self.assertEqual(failed.status, "failed")
+        self.assertEqual(self.application.recruitment_stage, "hr_review")
+        self.assertEqual(self.application.hr_decision, "pending")
+        self.assertEqual(history.reason_code, "ai_screening_failed")
+        self.assertIsNone(history.report_id)
+
+    async def test_ai_completion_never_overwrites_an_existing_hr_decision(self) -> None:
+        run = await self._queue_and_claim()
+        self.application.recruitment_stage = "screening_passed"
+        self.application.hr_decision = "passed"
+        await self.db.commit()
+
+        completed = await screening_service.execute_run(
+            self.db,
+            run.id,
+            adapter=FakeScreeningEvaluationAdapter([valid_model_result()]),
+            settings=self.settings,
+            clock=lambda: NOW,
+        )
+
+        await self.db.refresh(self.application)
+        self.assertEqual(completed.status, "succeeded")
+        self.assertEqual(self.application.recruitment_stage, "screening_passed")
+        self.assertEqual(self.application.hr_decision, "passed")
 
     async def test_reassessment_same_input_creates_new_run(self) -> None:
         completed, _ = await self._complete_success()
@@ -641,10 +822,101 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             self.application.id,
             trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
             force=True,
+            confirmed=True,
             settings=self.settings,
         )
         self.assertNotEqual(completed.id, reassessed.run.id)
         self.assertEqual(reassessed.run.trigger_type, "single_reassessment")
+
+    async def test_successful_reassessment_keeps_old_report_as_history(self) -> None:
+        await self._complete_success()
+        old_report = await self.db.scalar(
+            select(ScreeningReport).where(
+                ScreeningReport.application_id == self.application.id,
+                ScreeningReport.is_current.is_(True),
+            )
+        )
+        old_report_id = old_report.id
+        old_score = old_report.overall_score
+        triggered = await screening_service.trigger(
+            self.db,
+            self.application.id,
+            trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
+            force=True,
+            confirmed=True,
+            settings=self.settings,
+        )
+        claimed = await screening_service.claim_next_run(
+            self.db, worker_id="worker", lease_seconds=300, clock=lambda: NOW
+        )
+        completed = await screening_service.execute_run(
+            self.db,
+            claimed.id,
+            adapter=FakeScreeningEvaluationAdapter([valid_model_result(score=90)]),
+            settings=self.settings,
+            clock=lambda: NOW,
+        )
+        reports = await screening_service.list_reports(
+            self.db, self.application.id
+        )
+
+        self.assertEqual(triggered.run.id, completed.id)
+        self.assertEqual(len(reports), 2)
+        self.assertTrue(reports[0].is_current)
+        self.assertEqual(reports[0].overall_score, 90)
+        self.assertFalse(reports[1].is_current)
+        self.assertEqual(reports[1].id, old_report_id)
+        self.assertEqual(reports[1].overall_score, old_score)
+
+    async def test_v5_success_never_overwrites_legacy_report_evidence(self) -> None:
+        await self._complete_success()
+        legacy = await self.db.scalar(
+            select(ScreeningReport).where(
+                ScreeningReport.application_id == self.application.id,
+                ScreeningReport.is_current.is_(True),
+            )
+        )
+        legacy.schema_version = "4.0"
+        legacy.v5_report = null()
+        legacy.overall_score = 33
+        legacy.display_label = "存在明显差距"
+        legacy.overall_summary = "旧 4.0 报告证据"
+        await self.db.commit()
+        legacy_id = legacy.id
+
+        await screening_service.trigger(
+            self.db,
+            self.application.id,
+            trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
+            force=True,
+            confirmed=True,
+            settings=self.settings,
+        )
+        claimed = await screening_service.claim_next_run(
+            self.db, worker_id="worker", lease_seconds=300, clock=lambda: NOW
+        )
+        completed = await screening_service.execute_run(
+            self.db,
+            claimed.id,
+            adapter=FakeScreeningEvaluationAdapter([valid_model_result()]),
+            settings=self.settings,
+            clock=lambda: NOW,
+        )
+        historical = await self.db.get(ScreeningReport, legacy_id)
+        current = await self.db.scalar(
+            select(ScreeningReport).where(
+                ScreeningReport.application_id == self.application.id,
+                ScreeningReport.is_current.is_(True),
+            )
+        )
+
+        self.assertEqual(completed.status, "succeeded")
+        self.assertFalse(historical.is_current)
+        self.assertEqual(historical.schema_version, "4.0")
+        self.assertEqual(historical.overall_score, 33)
+        self.assertEqual(historical.overall_summary, "旧 4.0 报告证据")
+        self.assertNotEqual(current.id, legacy_id)
+        self.assertEqual(current.schema_version, "5.0")
 
     async def test_late_response_after_resume_switch_cannot_replace_report(self) -> None:
         run = await self._queue_and_claim()
@@ -782,7 +1054,8 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         )
         old_plan.is_current = False
         old_plan.status = "outdated"
-        self.db.add(make_v4_plan(job))
+        old_plan.confirmed_at = None
+        self.db.add(make_v5_plan(job))
         await self.db.commit()
         await screening_service.after_plan_changed(self.db, job.id, plan_ready=True)
         await self.db.refresh(report)
@@ -843,9 +1116,10 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         old_plan = await self.db.get(JobEvaluationPlan, old_plan_id)
         old_plan.status = "outdated"
         old_plan.is_current = False
+        old_plan.confirmed_at = None
         job = await self.db.get(Job, self.application.job_id)
         job.candidate_requirements = "具备 Python 后端和异步任务开发经验"
-        new_plan = make_v4_plan(job)
+        new_plan = make_v5_plan(job)
         self.db.add(new_plan)
         await self.db.commit()
         await screening_service.after_plan_changed(
@@ -881,6 +1155,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             application_id,
             trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
             force=True,
+            confirmed=True,
             settings=self.settings,
         )
         claimed = await screening_service.claim_next_run(
@@ -907,6 +1182,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             application_id,
             trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
             force=True,
+            confirmed=True,
             settings=self.settings,
         )
         self.assertEqual(failed_status, "failed")
@@ -935,6 +1211,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             self.application.id,
             trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
             force=True,
+            confirmed=True,
             settings=self.settings,
         )
         job = await self.db.get(Job, self.application.job_id)
@@ -956,17 +1233,22 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             self.db,
             self.application.job_id,
             [self.application.id, second.id],
+            confirmed=True,
             settings=self.settings,
         )
-        self.assertEqual(len(results), 2)
+        self.assertEqual(len(results.results), 2)
         self.assertTrue(
-            all(item.run.trigger_type == "batch_reassessment" for item in results)
+            all(
+                item.run.trigger_type == "batch_reassessment"
+                for item in results.results
+            )
         )
         with self.assertRaises(ScreeningBatchLimitError):
             await screening_service.trigger_batch_reassessment(
                 self.db,
                 self.application.job_id,
-                list(range(1, 22)),
+                list(range(1, 7)),
+                confirmed=True,
                 settings=self.settings,
             )
         other = await self._create_application()
@@ -975,6 +1257,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
                 self.db,
                 self.application.job_id,
                 [self.application.id, other.id],
+                confirmed=True,
                 settings=self.settings,
             )
 
@@ -989,6 +1272,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             self.db,
             job_id,
             [first_application_id, second_application_id],
+            confirmed=True,
             settings=self.settings,
         )
         first_run = await screening_service.claim_next_run(
@@ -1033,6 +1317,33 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         ).all()
         self.assertEqual(len(reports), 1)
 
+    async def test_batch_trigger_returns_per_application_partial_failure(self) -> None:
+        job_id = self.application.job_id
+        second = await self._create_application(job=await self.db.get(Job, job_id))
+        second.lifecycle_status = "ended"
+        second.recruitment_stage = "rejected"
+        second.hr_decision = "rejected"
+        await self.db.commit()
+        second_id = second.id
+
+        batch = await screening_service.trigger_batch_reassessment(
+            self.db,
+            job_id,
+            [self.application.id, second_id],
+            confirmed=True,
+            settings=self.settings,
+        )
+
+        self.assertEqual(batch.total_count, 2)
+        self.assertEqual(batch.queued_count, 1)
+        self.assertEqual(len(batch.results), 1)
+        self.assertEqual(len(batch.failures), 1)
+        self.assertEqual(batch.failures[0].application_id, second_id)
+        self.assertEqual(
+            batch.failures[0].error_code,
+            "SCREENING_APPLICATION_NOT_ELIGIBLE",
+        )
+
     async def test_database_commit_failure_preserves_old_report(self) -> None:
         application_id = self.application.id
         await self._complete_success()
@@ -1047,6 +1358,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             application_id,
             trigger_type=ScreeningRunTriggerType.SINGLE_REASSESSMENT,
             force=True,
+            confirmed=True,
             settings=self.settings,
         )
         run = await screening_service.claim_next_run(
