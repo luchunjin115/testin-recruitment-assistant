@@ -175,7 +175,7 @@ def test_v5_normal_generation_is_one_call_and_program_owns_versions_and_ids() ->
     assert content.breaking_contract_version == (
         JOB_EVALUATION_PLAN_V5_BREAKING_CONTRACT_VERSION
     )
-    assert content.breaking_contract_version == "lightweight_plan_generation_v2"
+    assert content.breaking_contract_version == "lightweight_plan_generation_v3"
     assert content.model_version == "fake-plan-model"
     assert [item.criterion_id for item in content.criteria] == [
         f"criterion:{index:04d}" for index in range(1, 6)
@@ -551,6 +551,174 @@ def test_v5_more_than_thirty_criteria_is_a_non_retryable_content_error() -> None
             )
         )
     assert raised.value.code == "JOB_EVALUATION_PLAN_V5_TOO_MANY_CRITERIA"
+    assert raised.value.business_call_count == 1
+    assert len(adapter.v5_calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("row", "criterion"),
+    [
+        (
+            (
+                "job_responsibilities",
+                "负责 Node.js 服务端开发，并参与 SSR 性能优化。",
+            ),
+            _criterion(
+                "Node.js 与 SSR 开发",
+                "job_responsibilities",
+                "负责 Node.js 服务端开发，并参与 SSR 性能优化。",
+                "general",
+            ),
+        ),
+        (
+            (
+                "job_responsibilities",
+                "负责 UX/UI 设计规范建设与交互方案落地。",
+            ),
+            _criterion(
+                "UX/UI 设计规范",
+                "job_responsibilities",
+                "负责 UX/UI 设计规范建设与交互方案落地。",
+                "general",
+            ),
+        ),
+        (
+            (
+                "job_responsibilities",
+                "负责撰写产品需求文档并推动评审。",
+            ),
+            _criterion(
+                "产品需求文档（PRD）",
+                "job_responsibilities",
+                "负责撰写产品需求文档并推动评审。",
+                "general",
+            ),
+        ),
+        (
+            (
+                "job_responsibilities",
+                "负责常见 OLAP 引擎的建设与维护。",
+            ),
+            _criterion(
+                "OLAP 引擎实践（如 Hive、Presto）",
+                "job_responsibilities",
+                "负责常见 OLAP 引擎的建设与维护。",
+                "general",
+            ),
+        ),
+    ],
+    ids=["node-dot", "ux-ui-slash", "prd-alias", "olap-related-examples"],
+)
+def test_v5_related_language_variants_are_valid_plan_candidates_without_retry(
+    row: tuple[str, str],
+    criterion: dict,
+) -> None:
+    payload = _normal_payload()
+    payload["criteria"].append(criterion)
+    adapter = FakeJobEvaluationPlanAdapter(
+        [_result(payload), _result(_normal_payload())]
+    )
+
+    content = asyncio.run(
+        JobEvaluationPlanService().build_v5_plan_content(
+            _snapshot([*NORMAL_ROWS, row]),
+            adapter=adapter,
+        )
+    )
+
+    accepted = next(
+        item for item in content.criteria if item.name == criterion["name"]
+    )
+    assert accepted.origin == "ai_from_jd"
+    assert accepted.importance.value == "general"
+    assert len(content.criteria) == 6
+    assert len(adapter.v5_calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("row", "criterion"),
+    [
+        (
+            ("candidate_requirements", "具备软件开发经验。"),
+            _criterion(
+                "至少 5 年软件开发经验",
+                "candidate_requirements",
+                "具备软件开发经验。",
+                "required",
+            ),
+        ),
+        (
+            ("candidate_requirements", "具备后端项目经验。"),
+            _criterion(
+                "本科及以上学历",
+                "candidate_requirements",
+                "具备后端项目经验。",
+                "required",
+            ),
+        ),
+        (
+            ("candidate_requirements", "具备后端项目经验。"),
+            _criterion(
+                "学士学位",
+                "candidate_requirements",
+                "具备后端项目经验。",
+                "required",
+            ),
+        ),
+        (
+            ("candidate_requirements", "具备项目管理经验。"),
+            _criterion(
+                "PMP 证书",
+                "candidate_requirements",
+                "具备项目管理经验。",
+                "required",
+            ),
+        ),
+        (
+            ("candidate_requirements", "具备云平台实践经验。"),
+            _criterion(
+                "AWS 认证",
+                "candidate_requirements",
+                "具备云平台实践经验。",
+                "required",
+            ),
+        ),
+        (
+            ("candidate_requirements", "熟悉关系型数据库。"),
+            _criterion(
+                "仅限 MySQL，不接受其他数据库",
+                "candidate_requirements",
+                "熟悉关系型数据库。",
+                "required",
+            ),
+        ),
+    ],
+    ids=[
+        "invented-years",
+        "invented-education",
+        "invented-degree",
+        "invented-certificate",
+        "invented-certification",
+        "invented-exclusive-technology",
+    ],
+)
+def test_v5_invented_explicit_hard_requirements_still_fail_without_retry(
+    row: tuple[str, str],
+    criterion: dict,
+) -> None:
+    adapter = FakeJobEvaluationPlanAdapter(
+        [_result({"criteria": [criterion]}), _result(_normal_payload())]
+    )
+
+    with pytest.raises(JobEvaluationPlanV5GenerationError) as raised:
+        asyncio.run(
+            JobEvaluationPlanService().build_v5_plan_content(
+                _snapshot([row]),
+                adapter=adapter,
+            )
+        )
+
+    assert raised.value.code == "JOB_EVALUATION_PLAN_V5_UNSUPPORTED_CRITERION"
     assert raised.value.business_call_count == 1
     assert len(adapter.v5_calls) == 1
 

@@ -104,7 +104,7 @@ from app.schemas.job_evaluation_plan import (
 LEGACY_JOB_EVALUATION_PLAN_PROMPT_VERSION = "job_evaluation_plan_v4"
 JOB_EVALUATION_PLAN_V5_AI_SCHEMA_VERSION = "5.0"
 JOB_EVALUATION_PLAN_V5_BREAKING_CONTRACT_VERSION = (
-    "lightweight_plan_generation_v2"
+    "lightweight_plan_generation_v3"
 )
 JOB_EVALUATION_PLAN_V5_FINGERPRINT_RULE_VERSION = "job_evaluation_input_v5"
 
@@ -454,6 +454,16 @@ class JobEvaluationPlanService:
         "cet-4",
         "cet-6",
         "pmp",
+    )
+    _V5_QUANTIFIED_REQUIREMENT_RE = re.compile(
+        r"(?:\d+(?:\.\d+)?|[一二三四五六七八九十两]+)\s*"
+        r"(?:年|个月|月|级|%|人)"
+    )
+    _V5_EXCLUSIVE_REQUIREMENT_RE = re.compile(
+        r"(?:仅限|只限|限定为|只能(?:使用|采用|接受)|必须(?:使用|采用)|"
+        r"不接受(?:其他|其它)|不得(?:使用|采用)|排除(?:其他|其它)|"
+        r"\bexclusive(?:ly)?\b|\bonly\b|\bmust\s+use\b)",
+        re.IGNORECASE,
     )
     _V5_GENERIC_ASCII_TOKENS = {
         "ai",
@@ -2125,37 +2135,58 @@ class JobEvaluationPlanService:
         criterion: V5CriterionItem,
         source_texts: list[str],
     ) -> bool:
-        source = self._v5_support_normalize("\n".join(source_texts))
+        source_text = "\n".join(source_texts)
+        source = self._v5_support_normalize(source_text)
         candidate_text = "\n".join(
             (criterion.name, criterion.description, criterion.screening_focus)
         )
-        for token in re.findall(r"[A-Za-z][A-Za-z0-9+#./-]{1,}", candidate_text):
-            lowered = token.casefold()
-            if lowered in self._V5_GENERIC_ASCII_TOKENS:
-                continue
-            if lowered not in source:
-                return False
-        for number_requirement in re.findall(
-            r"\d+(?:\.\d+)?\s*(?:年|个月|月|级|%|人)",
-            candidate_text,
+        for number_requirement in self._V5_QUANTIFIED_REQUIREMENT_RE.findall(
+            candidate_text
         ):
             if self._v5_support_normalize(number_requirement) not in source:
                 return False
         candidate_lower = candidate_text.casefold()
         for marker in self._V5_EXPLICIT_REQUIREMENT_MARKERS:
-            if marker in candidate_lower and marker not in source:
+            normalized_marker = self._v5_support_normalize(marker)
+            if marker in candidate_lower and normalized_marker not in source:
                 return False
+        if self._V5_EXCLUSIVE_REQUIREMENT_RE.search(
+            candidate_text
+        ) and not self._V5_EXCLUSIVE_REQUIREMENT_RE.search(source_text):
+            return False
 
         name = criterion.name
+        source_theme = source_text
         for term in self._V5_GENERIC_NAME_TERMS:
             name = name.replace(term, "")
+            source_theme = source_theme.replace(term, "")
         normalized_name = self._v5_support_normalize(name)
-        han = "".join(re.findall(r"[\u4e00-\u9fff]", normalized_name))
-        if len(han) >= 2 and not any(
-            han[index : index + 2] in source for index in range(len(han) - 1)
-        ):
+        normalized_source_theme = self._v5_support_normalize(source_theme)
+        if not normalized_name:
             return False
-        return bool(normalized_name)
+
+        name_ascii = self._v5_support_ascii_tokens(name)
+        source_ascii = self._v5_support_ascii_tokens(source_theme)
+        if name_ascii & source_ascii:
+            return True
+
+        name_han = "".join(re.findall(r"[\u4e00-\u9fff]", normalized_name))
+        source_han = "".join(
+            re.findall(r"[\u4e00-\u9fff]", normalized_source_theme)
+        )
+        return len(name_han) >= 2 and any(
+            name_han[index : index + 2] in source_han
+            for index in range(len(name_han) - 1)
+        )
+
+    @classmethod
+    def _v5_support_ascii_tokens(cls, value: str) -> set[str]:
+        return {
+            normalized
+            for token in re.findall(r"[A-Za-z][A-Za-z0-9+#./-]{1,}", value)
+            if (normalized := cls._v5_support_normalize(token))
+            and normalized not in cls._V5_GENERIC_ASCII_TOKENS
+        }
 
     @staticmethod
     def _v5_support_normalize(value: str) -> str:

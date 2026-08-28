@@ -41,6 +41,7 @@ _SCREENING_SCHEMA_PATH = _SCHEMAS_DIR / "screening.py"
 _SCREENING_EVAL_SERVICE_PATH = _SERVICES_DIR / "screening_evaluation_service.py"
 _SCREENING_SERVICE_PATH = _SERVICES_DIR / "screening_service.py"
 _JOB_EVAL_PLAN_SERVICE_PATH = _SERVICES_DIR / "job_evaluation_plan_service.py"
+_QUALITY_CONTRACT_PATH = _PROJECT_ROOT / "scripts" / "stage7_7r5_quality_contract.py"
 
 _V4_FORMAL_RESULTS_PATH = (
     _PROJECT_ROOT
@@ -220,6 +221,17 @@ class TestNoWeightInServices:
         )
 
 
+class TestV5NoEvidenceFindingResponsibility:
+    """Keep deterministic finding checks while removing synonym judging."""
+
+    def test_v5_service_has_no_no_evidence_keyword_whitelist(self) -> None:
+        source = _read_source(_SCREENING_EVAL_SERVICE_PATH)
+        assert "_NO_EVIDENCE_FINDING_TERMS" not in source
+        assert "无直接证据的报告结论只能表达缺口、风险或待核实信息" not in source
+        assert "_validate_v5_findings" in source
+        assert "无直接证据的报告结论必须关联当前评价点" in source
+
+
 # ===========================================================================
 # C. RequirementFact separation proof (4 tests)
 # ===========================================================================
@@ -364,8 +376,8 @@ class TestQualityBaselineConstants:
 
 
 class TestHistoricalResultProtection:
-    """Verify that v4.0 results are preserved and v5.0 results directory
-    starts clean."""
+    """Verify that historical evidence is preserved and v5.0 uses an
+    explicit result lifecycle instead of requiring an empty directory."""
 
     def test_v4_formal_results_file_exists(self) -> None:
         """The 4.0 formal results JSON file must exist at its expected
@@ -387,16 +399,13 @@ class TestHistoricalResultProtection:
             "4.0 revalidation results file is empty"
         )
 
-    def test_v5_results_directory_is_clean(self) -> None:
-        """The v5-quality-results/ directory must either not exist or be
-        empty -- clean separation from v4."""
-        if not _V5_RESULTS_DIR.exists():
-            return  # Directory absent is fine -- cleanest state
-        contents = list(_V5_RESULTS_DIR.iterdir())
-        assert contents == [], (
-            f"v5-quality-results/ should be empty but contains: "
-            f"{[p.name for p in contents]}"
-        )
+    def test_v5_results_use_registered_i2_lifecycle_not_empty_directory(self) -> None:
+        """A preserved raw/helper directory is legal; the contract must
+        identify the sealed run and the active I2 lifecycle explicitly."""
+        source = _QUALITY_CONTRACT_PATH.read_text(encoding="utf-8")
+        assert "7R5-I2" in source
+        assert "validate_result_lifecycle" in source
+        assert "2026-08-28-stage7-7r5i2-zero-call-preflight.json" in source
 
 
 # ===========================================================================

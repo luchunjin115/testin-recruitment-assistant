@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import re
 
+import pytest
+
 from app.prompts.screening_evaluation import (
     SCREENING_EVALUATION_V5_BEHAVIOR_VERSION,
     SCREENING_EVALUATION_V5_PROMPT_VERSION,
@@ -13,10 +15,48 @@ from app.schemas.screening_evaluation import AIScreeningEvaluationV5Output
 
 
 def test_v5_prompt_has_fixed_version_and_ten_structured_sections() -> None:
-    assert SCREENING_EVALUATION_V5_PROMPT_VERSION == "screening_evaluation_lightweight_v1"
-    assert SCREENING_EVALUATION_V5_BEHAVIOR_VERSION == "lightweight_report_generation_v1"
+    assert SCREENING_EVALUATION_V5_PROMPT_VERSION == "screening_evaluation_lightweight_v3"
+    assert SCREENING_EVALUATION_V5_BEHAVIOR_VERSION == "lightweight_report_generation_v3"
     headings = re.findall(r"^## (\d+)\.", _V5_SYSTEM_PROMPT, flags=re.MULTILINE)
     assert headings == [str(index) for index in range(1, 11)]
+
+
+@pytest.mark.parametrize(
+    "required_instruction",
+    (
+        "通常只保留 1—5 条",
+        "最高价值",
+        "合并同义或重复",
+        "不得穷举",
+        "最多 20 条",
+    ),
+)
+def test_v5_prompt_prioritizes_concise_non_exhaustive_hr_material(
+    required_instruction: str,
+) -> None:
+    assert required_instruction in _V5_SYSTEM_PROMPT
+
+
+def test_v5_duration_responsibility_contract_requires_prompt_v3() -> None:
+    assert SCREENING_EVALUATION_V5_PROMPT_VERSION == "screening_evaluation_lightweight_v3"
+
+
+@pytest.mark.parametrize(
+    "required_instruction",
+    (
+        "区分 JD 年限门槛与候选人实际经历",
+        "区分总工作年限与岗位相关年限",
+        "区分单段经历与合计经历",
+        "统一换算为月份后比较",
+        "证据不足时必须写“无法确认达到”",
+        "不得把无法确认写成“未达到”",
+        "静默核对年限门槛方向",
+    ),
+)
+def test_v5_prompt_v3_constrains_duration_comparison_and_uncertainty(
+    required_instruction: str,
+) -> None:
+    assert required_instruction in _V5_SYSTEM_PROMPT
 
 
 def test_v5_prompt_has_four_balanced_full_json_few_shots() -> None:

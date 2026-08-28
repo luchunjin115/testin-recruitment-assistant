@@ -267,6 +267,38 @@ class JobEvaluationPlanV5EditPostgresTest(IsolatedAsyncioTestCase):
         )
         self.assertNotIn(python_item["criterion_id"], _importance_warning_ids(saved))
 
+    async def test_ai_from_jd_common_abbreviation_edit_remains_pending(self) -> None:
+        plan, _ = await self._generate()
+        draft = _draft_payload(plan)
+        kubernetes_item = next(
+            item for item in draft if "Kubernetes" in item["name"]
+        )
+        original_sources = list(kubernetes_item["sources"])
+        kubernetes_item["name"] = "Kubernetes（K8s）生产实践"
+        kubernetes_item["description"] = (
+            "根据 JD 核对 Kubernetes（K8s）生产实践。"
+        )
+        kubernetes_item["screening_focus"] = (
+            "寻找 Kubernetes 或 K8s 生产环境实践证据。"
+        )
+
+        saved = await job_evaluation_plan_service.save_draft(
+            self.db,
+            self.job_id,
+            {"edit_version": 1, "criteria": draft},
+        )
+
+        saved_item = next(
+            item
+            for item in saved.v5_criteria
+            if item["criterion_id"] == kubernetes_item["criterion_id"]
+        )
+        self.assertEqual(saved.status, "pending_confirmation")
+        self.assertEqual(saved.edit_version, 2)
+        self.assertEqual(saved_item["origin"], "ai_from_jd")
+        self.assertEqual(saved_item["sources"], original_sources)
+        self.assertIn("K8s", saved_item["name"])
+
     async def test_atomic_save_supports_hr_add_delete_and_merge(self) -> None:
         plan, _ = await self._generate()
         original = _draft_payload(plan)

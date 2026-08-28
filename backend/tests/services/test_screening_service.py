@@ -635,16 +635,16 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(len(adapter.calls), 1)
         self.assertEqual(old_report.overall_score, old_score)
 
-    async def test_year_fact_conflict_fails_and_preserves_old_report(self) -> None:
+    async def test_year_fact_language_conflict_is_not_rejected_by_service(self) -> None:
         application_id = self.application.id
         await self._complete_success()
         old_report = await self.db.scalar(
             select(ScreeningReport).where(
-                ScreeningReport.application_id == application_id
+                ScreeningReport.application_id == application_id,
+                ScreeningReport.is_current.is_(True),
             )
         )
         old_report_id = old_report.id
-        old_score = old_report.overall_score
         resume = await self.db.get(Resume, self.application.current_resume_id)
         resume.raw_text = "工作经历\n2021.07—至今，使用 Python 开发 API 服务"
         old_plan = await self.db.scalar(
@@ -715,7 +715,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
             ],
             "hr_follow_up_questions": ["请核实项目规模。"],
         }
-        failed = await screening_service.execute_run(
+        completed = await screening_service.execute_run(
             self.db,
             claimed.id,
             adapter=FakeScreeningEvaluationAdapter(
@@ -732,14 +732,14 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         )
         current = await self.db.scalar(
             select(ScreeningReport).where(
-                ScreeningReport.application_id == application_id
+                ScreeningReport.application_id == application_id,
+                ScreeningReport.is_current.is_(True),
             )
         )
         self.assertEqual(triggered.run.id, claimed.id)
-        self.assertEqual(failed.status, "failed")
-        self.assertEqual(failed.error_code, "SCREENING_EVALUATION_INVALID_MODEL_OUTPUT")
-        self.assertEqual(current.id, old_report_id)
-        self.assertEqual(current.overall_score, old_score)
+        self.assertEqual(completed.status, "succeeded")
+        self.assertNotEqual(current.id, old_report_id)
+        self.assertEqual(current.overall_score, 80)
 
     async def test_screening_handoff_changes_only_recruitment_stage(self) -> None:
         before = (

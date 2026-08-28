@@ -58,11 +58,13 @@ from app.services.screening_evaluation_service import (  # noqa: E402
     screening_evaluation_service,
 )
 from stage7_7r5_quality_contract import (  # noqa: E402
+    ACTIVE_RUN_ID,
     BASELINE_BUSINESS_CALLS,
     FINAL_RESULT_PATH,
     FROZEN_FIXTURE_SHA256,
     HUMAN_AUDIT_PATH,
     HISTORICAL_RESULT_HASHES,
+    I2_RAW_RESULT_PATH,
     MAXIMUM_API_ATTEMPTS,
     PLAN_MAX_OUTPUT_TOKENS,
     PLANNED_MODEL,
@@ -77,7 +79,7 @@ from stage7_7r5_quality_contract import (  # noqa: E402
     validate_frozen_fixture,
     validate_historical_results,
     validate_pricing_snapshot,
-    validate_result_path_isolation,
+    validate_result_lifecycle,
     write_new_json,
 )
 from tests.fixtures.v5_quality_samples import (  # noqa: E402
@@ -395,10 +397,12 @@ async def _run_report(
     }
 
 
-async def fake_payload(*, failure: bool) -> dict[str, Any]:
+async def fake_payload(
+    *, failure: bool, run_id: str = ACTIVE_RUN_ID
+) -> dict[str, Any]:
     historical_before = validate_historical_results()
     fixture = validate_frozen_fixture()
-    validate_result_path_isolation(require_empty=True)
+    lifecycle = validate_result_lifecycle(run_id=run_id)
     plan_records: list[dict[str, Any]] = []
     plans: list[GeneratedPlanContentV5 | None] = []
     for index, case in enumerate(V5_PLAN_JDS):
@@ -426,11 +430,13 @@ async def fake_payload(*, failure: bool) -> dict[str, Any]:
         raise RuntimeError("Fake 运行期间历史质量证据发生变化")
     return {
         "stage": "7R5-H",
+        "future_execution_stage": run_id,
         "mode": "fake_failure" if failure else "fake_normal",
         "generated_at": _utc_now(),
         "fixture": fixture,
         "execution_contract": execution_contract(),
         "call_budget": call_budget(),
+        "result_lifecycle": lifecycle,
         "plan_records": plan_records,
         "report_records": report_records,
         "stability_records": stability_records,
@@ -449,18 +455,19 @@ async def fake_payload(*, failure: bool) -> dict[str, Any]:
     }
 
 
-def dry_run_payload() -> dict[str, Any]:
+def dry_run_payload(*, run_id: str = ACTIVE_RUN_ID) -> dict[str, Any]:
     historical_before = validate_historical_results()
+    lifecycle = validate_result_lifecycle(run_id=run_id)
     payload = {
         "stage": "7R5-H",
-        "future_execution_stage": "7R5-I",
+        "future_execution_stage": run_id,
         "mode": "dry_run",
         "status": "prepared_but_not_authorized",
         "generated_at": _utc_now(),
         "fixture": validate_frozen_fixture(),
         "execution_contract": execution_contract(),
         "call_budget": call_budget(),
-        "result_path_contract": validate_result_path_isolation(require_empty=True),
+        "result_path_contract": lifecycle,
         "quality_thresholds": {
             "plan_legal": "10/10",
             "plan_required_coverage": "100%",
@@ -594,11 +601,18 @@ def summarize_attempts(attempts: list[dict[str, Any]], guard: CostGuard) -> dict
     }
 
 
-async def real_payload(*, pricing_path: Path, monetary_cap_usd: float | None) -> dict[str, Any]:
+async def real_payload(
+    *,
+    pricing_path: Path,
+    monetary_cap_usd: float | None,
+    run_id: str = ACTIVE_RUN_ID,
+) -> dict[str, Any]:
     fixture = validate_frozen_fixture()
     historical_before = validate_historical_results()
-    validate_result_path_isolation(require_empty=True)
     pricing = validate_pricing_snapshot(json.loads(pricing_path.read_text(encoding="utf-8")))
+    lifecycle = validate_result_lifecycle(
+        run_id=run_id, expected_state="i2_preflight_complete"
+    )
     settings = get_settings()
     if not settings.DEEPSEEK_API_KEY.strip():
         raise RuntimeError("真实运行已授权但 DeepSeek API Key 未配置")
@@ -639,12 +653,13 @@ async def real_payload(*, pricing_path: Path, monetary_cap_usd: float | None) ->
     if historical_before != historical_after:
         raise RuntimeError("真实运行期间历史结果被修改")
     payload = {
-        "stage": "7R5-I",
+        "stage": run_id,
         "mode": "real_raw",
         "generated_at": _utc_now(),
         "fixture": fixture,
         "execution_contract": expected,
         "call_budget": call_budget(),
+        "result_lifecycle_before": lifecycle,
         "official_pricing_snapshot": pricing,
         "monetary_cap_usd": monetary_cap_usd,
         "estimated_spend_usd": guard.estimated_spend_usd,
@@ -661,7 +676,12 @@ async def real_payload(*, pricing_path: Path, monetary_cap_usd: float | None) ->
         "quality_gate_passed": None,
         "quality_conclusion_allowed": False,
     }
-    write_new_json(RAW_RESULT_PATH, payload)
+    write_new_json(
+        I2_RAW_RESULT_PATH,
+        payload,
+        run_id=run_id,
+        expected_state="i2_preflight_complete",
+    )
     return payload
 
 
@@ -780,6 +800,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Stage 7 5.0 quality runner")
     parser.add_argument("--mode", choices=("dry-run", "fake-normal", "fake-failure", "real", "finalize"), required=True)
     parser.add_argument("--pricing-snapshot", type=Path)
+    parser.add_argument("--run-id", default=ACTIVE_RUN_ID)
     money = parser.add_mutually_exclusive_group()
     money.add_argument("--monetary-cap-usd", type=float)
     money.add_argument("--no-monetary-cap", action="store_true")
@@ -789,11 +810,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 async def main(argv: list[str] | None = None) -> None:
     args = _parse_args(argv)
     if args.mode == "dry-run":
-        payload = dry_run_payload()
+        payload = dry_run_payload(run_id=args.run_id)
     elif args.mode == "fake-normal":
-        payload = await fake_payload(failure=False)
+        payload = await fake_payload(failure=False, run_id=args.run_id)
     elif args.mode == "fake-failure":
-        payload = await fake_payload(failure=True)
+        payload = await fake_payload(failure=True, run_id=args.run_id)
     elif args.mode == "finalize":
         payload = finalize_payload()
     else:
@@ -803,7 +824,11 @@ async def main(argv: list[str] | None = None) -> None:
             raise RuntimeError("真实运行必须明确金额上限或 --no-monetary-cap")
         if args.monetary_cap_usd is not None and args.monetary_cap_usd <= 0:
             raise RuntimeError("金额上限必须大于 0")
-        payload = await real_payload(pricing_path=args.pricing_snapshot, monetary_cap_usd=args.monetary_cap_usd)
+        payload = await real_payload(
+            pricing_path=args.pricing_snapshot,
+            monetary_cap_usd=args.monetary_cap_usd,
+            run_id=args.run_id,
+        )
     print(json.dumps(payload, ensure_ascii=False, indent=2), flush=True)
 
 

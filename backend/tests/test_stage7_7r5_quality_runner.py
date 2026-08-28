@@ -25,6 +25,26 @@ from app.adapters.screening_evaluation import (  # noqa: E402
 )
 
 
+LEGACY_RAW_SHA256 = "de093654e76ffba4812dd1feb2e093e060dcf325f04a6a8aeec93a0c47ff31ac"
+I2_PREFLIGHT_PATH = (
+    PROJECT_ROOT
+    / "docs"
+    / "stages"
+    / "stage7"
+    / "v5-quality-results"
+    / "2026-08-28-stage7-7r5i2-zero-call-preflight.json"
+)
+I2_RAW_PATH = I2_PREFLIGHT_PATH.with_name(
+    "2026-08-28-stage7-7r5i2-quality-raw-results.json"
+)
+I2_HUMAN_AUDIT_PATH = I2_PREFLIGHT_PATH.with_name(
+    "2026-08-28-stage7-7r5i2-quality-human-audit.json"
+)
+I2_FINAL_PATH = I2_PREFLIGHT_PATH.with_name(
+    "2026-08-28-stage7-7r5i2-quality-final-results.json"
+)
+
+
 def _pricing_snapshot(*, age: timedelta = timedelta()) -> dict:
     return {
         "checked_at": (datetime.now(timezone.utc) - age).isoformat(),
@@ -73,9 +93,11 @@ def test_execution_contract_freezes_model_prompt_schema_and_parameters() -> None
         "response_format": "json_object",
         "sdk_automatic_retries": 0,
         "plan_prompt_version": "job_evaluation_plan_lightweight_v2",
-        "report_prompt_version": "screening_evaluation_lightweight_v1",
+        "report_prompt_version": "screening_evaluation_lightweight_v3",
         "plan_schema_version": "5.0",
         "report_schema_version": "5.0",
+        "plan_service_behavior_version": "lightweight_plan_generation_v3",
+        "report_service_behavior_version": "lightweight_report_generation_v3",
         "normal_business_calls_per_sample": 1,
     }
 
@@ -110,11 +132,90 @@ def test_historical_quality_evidence_hashes_are_unchanged() -> None:
     assert contract.validate_historical_results() == contract.HISTORICAL_RESULT_HASHES
 
 
-def test_new_result_paths_are_isolated_empty_and_non_overwriting() -> None:
-    isolation = contract.validate_result_path_isolation(require_empty=True)
-    assert isolation["existing"] == []
-    assert isolation["overlap_count"] == 0
-    assert all("v5-quality-results" in path for path in isolation["paths"].values())
+def test_i2_lifecycle_contract_freezes_run_identity_paths_and_states() -> None:
+    lifecycle = contract.result_lifecycle_contract()
+    assert lifecycle == {
+        "sealed_run_id": "7R5-I",
+        "active_run_id": "7R5-I2",
+        "sealed_raw_sha256": LEGACY_RAW_SHA256,
+        "active_paths": {
+            "preflight": str(I2_PREFLIGHT_PATH),
+            "raw": str(I2_RAW_PATH),
+            "human_audit": str(I2_HUMAN_AUDIT_PATH),
+            "final": str(I2_FINAL_PATH),
+        },
+        "states": [
+            "i2_not_started",
+            "i2_preflight_complete",
+            "i2_raw_complete",
+            "i2_human_complete",
+            "i2_final_complete",
+        ],
+        "unknown_json_policy": "reject",
+        "helper_can_satisfy_human_audit": False,
+        "write_policy": "registered_active_path_once_only",
+    }
+
+
+def test_i2_preflight_complete_accepts_sealed_raw_and_helper_directory() -> None:
+    observed = contract.validate_result_lifecycle(
+        run_id="7R5-I2", expected_state="i2_preflight_complete"
+    )
+    assert observed["state"] == "i2_preflight_complete"
+    assert observed["sealed_raw_sha256"] == LEGACY_RAW_SHA256
+    assert observed["active_existing"] == [str(I2_PREFLIGHT_PATH)]
+    assert observed["historical_result_hashes"] == contract.HISTORICAL_RESULT_HASHES
+    assert observed["helper_can_satisfy_human_audit"] is False
+
+
+def test_i2_result_entry_classification_rejects_unknown_json_and_isolates_helper() -> None:
+    helper = contract.V5_RESULTS_DIR / "7r5i-human-review-helper"
+    assert contract.classify_result_entry(helper) == "helper"
+    assert contract.classify_result_entry(contract.RAW_RESULT_PATH) == "sealed_raw"
+    assert contract.classify_result_entry(I2_RAW_PATH) == "active_formal"
+    with pytest.raises(RuntimeError, match="未登记"):
+        contract.classify_result_entry(contract.V5_RESULTS_DIR / "unknown-result.json")
+
+
+def test_i2_write_guard_blocks_cross_run_overwrite_without_writing() -> None:
+    with pytest.raises(RuntimeError, match="封存"):
+        contract.assert_result_write_allowed(
+            run_id="7R5-I2",
+            target=contract.RAW_RESULT_PATH,
+            expected_state="i2_not_started",
+        )
+    allowed = contract.assert_result_write_allowed(
+        run_id="7R5-I2",
+        target=I2_RAW_PATH,
+        expected_state="i2_preflight_complete",
+    )
+    assert allowed["target"] == str(I2_RAW_PATH)
+    assert allowed["write_count"] == 0
+
+
+def test_sealed_i_run_cannot_reenter_or_receive_late_results(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(RuntimeError, match="封存"):
+        runner.dry_run_payload(run_id="7R5-I")
+    with pytest.raises(RuntimeError, match="封存"):
+        contract.write_new_json(contract.HUMAN_AUDIT_PATH, {"late": True})
+
+    fresh = tmp_path / "fresh-pricing.json"
+    fresh.write_text(json.dumps(_pricing_snapshot()), encoding="utf-8")
+    with patch.object(
+        runner,
+        "get_settings",
+        side_effect=AssertionError("封存批次不得读取 Key"),
+    ):
+        with pytest.raises(RuntimeError, match="封存"):
+            asyncio.run(
+                runner.real_payload(
+                    pricing_path=fresh,
+                    monetary_cap_usd=0.1,
+                    run_id="7R5-I",
+                )
+            )
 
 
 def test_write_new_json_only_accepts_registered_new_path_and_never_overwrites(
@@ -138,7 +239,7 @@ def test_write_new_json_only_accepts_registered_new_path_and_never_overwrites(
 
 def test_dry_run_has_zero_calls_zero_writes_and_does_not_load_settings() -> None:
     with patch.object(runner, "get_settings", side_effect=AssertionError("不应读取配置")):
-        payload = runner.dry_run_payload()
+        payload = runner.dry_run_payload(run_id="7R5-I2")
     assert payload["real_model_call_count"] == 0
     assert payload["adapter_instantiated"] is False
     assert payload["api_key_read"] is False
@@ -154,7 +255,7 @@ def test_offline_settings_ignores_environment_api_key(monkeypatch: pytest.Monkey
 
 def test_fake_normal_runs_full_service_contract_without_key_network_or_writes() -> None:
     with patch.object(runner, "get_settings", side_effect=AssertionError("不应读取默认配置")):
-        payload = asyncio.run(runner.fake_payload(failure=False))
+        payload = asyncio.run(runner.fake_payload(failure=False, run_id="7R5-I2"))
     assert len(payload["plan_records"]) == 10
     assert len(payload["report_records"]) == 20
     assert len(payload["stability_records"]) == 15
@@ -172,7 +273,7 @@ def test_fake_normal_runs_full_service_contract_without_key_network_or_writes() 
 
 
 def test_fake_failure_is_rejected_without_content_retry_or_partial_write() -> None:
-    payload = asyncio.run(runner.fake_payload(failure=True))
+    payload = asyncio.run(runner.fake_payload(failure=True, run_id="7R5-I2"))
     assert payload["summaries"]["plans"]["structure_legal_count"] == 9
     assert payload["summaries"]["reports"]["legal_report_count"] < 20
     assert any(record["status"] == "failed" for record in payload["report_records"])
@@ -251,7 +352,7 @@ def test_report_audit_does_not_retry_non_retryable_content_or_input_error() -> N
     assert guard.failed_attempt_reserve_usd > 0
 
 
-def test_real_mode_checks_pricing_and_empty_paths_before_loading_settings(
+def test_real_mode_checks_pricing_and_i2_lifecycle_before_loading_settings(
     tmp_path: Path,
 ) -> None:
     stale = tmp_path / "stale-pricing.json"
@@ -261,7 +362,11 @@ def test_real_mode_checks_pricing_and_empty_paths_before_loading_settings(
     with patch.object(runner, "get_settings", side_effect=AssertionError("不能提前读取 Key")):
         with pytest.raises(RuntimeError, match="过期"):
             asyncio.run(
-                runner.real_payload(pricing_path=stale, monetary_cap_usd=0.1)
+                runner.real_payload(
+                    pricing_path=stale,
+                    monetary_cap_usd=0.1,
+                    run_id="7R5-I2",
+                )
             )
 
 

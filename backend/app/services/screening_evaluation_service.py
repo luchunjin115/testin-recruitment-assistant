@@ -190,20 +190,6 @@ class ScreeningEvaluationService:
     )
     _TRADEOFF_STRENGTH_TERMS = ("优势", "亮点", "支持", "弥补", "充分", "较强", "突出")
     _TRADEOFF_GAP_TERMS = ("短板", "不足", "未体现", "差距", "仍需", "需要确认", "待确认")
-    _NO_EVIDENCE_FINDING_TERMS = (
-        "缺少",
-        "缺失",
-        "未发现",
-        "未体现",
-        "不足",
-        "无法确认",
-        "待核实",
-        "仍需",
-        "风险",
-        "冲突",
-        "缺口",
-        "尚未",
-    )
     _ASSERTED_INABILITY = re.compile(
         r"(?:候选人|其|该求职者).{0,8}(?:不会|不具备|没有能力|无法胜任|不能完成)"
     )
@@ -436,7 +422,6 @@ class ScreeningEvaluationService:
         self.validate_v5_overall_high_mismatch(output)
         self.validate_v5_overall_low_high_match(output)
         self.validate_v5_required_low_tradeoff(output, plan)
-        self._validate_v5_unscoped_duration_claims(output)
 
         display_label = self.display_label_for_score(output.overall_score)
         enriched = [
@@ -630,12 +615,6 @@ class ScreeningEvaluationService:
                     raise ScreeningEvaluationInvalidOutputError(
                         "无直接证据的报告结论必须关联当前评价点"
                     )
-                elif not any(
-                    term in finding.summary for term in self._NO_EVIDENCE_FINDING_TERMS
-                ):
-                    raise ScreeningEvaluationInvalidOutputError(
-                        "无直接证据的报告结论只能表达缺口、风险或待核实信息"
-                    )
 
     def _validate_v5_overall_grounding(
         self,
@@ -719,58 +698,9 @@ class ScreeningEvaluationService:
             raise ScreeningEvaluationInvalidOutputError(
                 "非经历时间评价点不得引用经历时间事实"
             )
-        combined = "\n".join(
-            value for value in (assessment.reason, assessment.calculation_note) if value
-        )
-        claims = list(self._DURATION_CLAIM.finditer(combined))
-        threshold_not_satisfied = bool(self._DURATION_THRESHOLD_NOT_SATISFIED.search(combined))
-        threshold_satisfied = not threshold_not_satisfied and bool(
-            self._DURATION_THRESHOLD_SATISFIED.search(combined)
-        )
-        if (claims or threshold_satisfied or threshold_not_satisfied) and not keys:
-            raise ScreeningEvaluationInvalidOutputError(
-                "AI 年限结论必须引用后端经历时间事实"
-            )
         if keys and assessment.calculation_note is None:
             raise ScreeningEvaluationInvalidOutputError(
                 "引用经历时间事实时必须提供 calculation_note"
-            )
-        if not claims and not threshold_satisfied and not threshold_not_satisfied:
-            return
-        bounds = experience_period_service.duration_bounds_for_keys(snapshot.facts, keys)
-        if bounds is None:
-            raise ScreeningEvaluationInvalidOutputError("经历时间事实无法支持年限结论")
-        lower, upper = bounds
-        threshold_months = self._duration_threshold_months(criterion_text)
-        for claim in claims:
-            if self._is_parenthetical_threshold_conversion(combined, claim, threshold_months):
-                continue
-            self._validate_duration_claim(claim.group(0), lower, upper)
-        if threshold_months is not None:
-            if threshold_not_satisfied and upper >= threshold_months:
-                raise ScreeningEvaluationInvalidOutputError(
-                    "AI 年限门槛结论与后端经历时间事实冲突"
-                )
-            if threshold_satisfied and lower < threshold_months:
-                raise ScreeningEvaluationInvalidOutputError(
-                    "AI 年限门槛结论与后端经历时间事实冲突"
-                )
-
-    def _validate_v5_unscoped_duration_claims(
-        self,
-        report: AIScreeningEvaluationV5Output,
-    ) -> None:
-        values = [report.overall_summary, *report.hr_follow_up_questions]
-        for findings in (
-            report.strengths,
-            report.gaps,
-            report.risks_or_conflicts,
-            report.missing_info,
-        ):
-            values.extend(item.summary for item in findings)
-        if any(self._DURATION_CLAIM.search(value) for value in values):
-            raise ScreeningEvaluationInvalidOutputError(
-                "5.0 综合报告中的年限必须放入可校验的逐评价点评价"
             )
 
     def parse_and_validate_output(

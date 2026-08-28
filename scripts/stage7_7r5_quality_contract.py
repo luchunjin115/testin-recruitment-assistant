@@ -28,9 +28,24 @@ from tests.fixtures.v5_quality_samples import (  # noqa: E402
 
 STAGE7_RESULTS_DIR = PROJECT_ROOT / "docs" / "stages" / "stage7"
 V5_RESULTS_DIR = STAGE7_RESULTS_DIR / "v5-quality-results"
+SEALED_RUN_ID = "7R5-I"
+ACTIVE_RUN_ID = "7R5-I2"
 RAW_RESULT_PATH = V5_RESULTS_DIR / "2026-08-27-stage7-7r5i-quality-raw-results.json"
 HUMAN_AUDIT_PATH = V5_RESULTS_DIR / "2026-08-27-stage7-7r5i-human-audit.json"
 FINAL_RESULT_PATH = V5_RESULTS_DIR / "2026-08-27-stage7-7r5i-quality-final-results.json"
+SEALED_RAW_SHA256 = "de093654e76ffba4812dd1feb2e093e060dcf325f04a6a8aeec93a0c47ff31ac"
+I2_PREFLIGHT_PATH = V5_RESULTS_DIR / "2026-08-28-stage7-7r5i2-zero-call-preflight.json"
+I2_RAW_RESULT_PATH = V5_RESULTS_DIR / "2026-08-28-stage7-7r5i2-quality-raw-results.json"
+I2_HUMAN_AUDIT_PATH = V5_RESULTS_DIR / "2026-08-28-stage7-7r5i2-quality-human-audit.json"
+I2_FINAL_RESULT_PATH = V5_RESULTS_DIR / "2026-08-28-stage7-7r5i2-quality-final-results.json"
+I2_LIFECYCLE_STATES = (
+    "i2_not_started",
+    "i2_preflight_complete",
+    "i2_raw_complete",
+    "i2_human_complete",
+    "i2_final_complete",
+)
+I2_HELPER_PATH = V5_RESULTS_DIR / "7r5i-human-review-helper"
 
 FROZEN_FIXTURE_SHA256 = "2ecc2da188f09883c1b6acaa40d0ca25f2306f2894e7f060a3a26aefb2fa9643"
 PLAN_SAMPLE_SHA256 = "c86ed29acc38206714c253a022d9b4ca2fe9aa32078aae599115bac40ea8823f"
@@ -57,7 +72,7 @@ HISTORICAL_RESULT_HASHES = {
 
 PLANNED_MODEL = "deepseek-v4-flash"
 PLAN_PROMPT_VERSION = "job_evaluation_plan_lightweight_v2"
-REPORT_PROMPT_VERSION = "screening_evaluation_lightweight_v1"
+REPORT_PROMPT_VERSION = "screening_evaluation_lightweight_v3"
 PLAN_SCHEMA_VERSION = "5.0"
 REPORT_SCHEMA_VERSION = "5.0"
 TEMPERATURE = 0.1
@@ -157,11 +172,161 @@ def validate_historical_results() -> dict[str, str]:
     return observed
 
 
-def result_paths() -> dict[str, str]:
+def result_paths(run_id: str = SEALED_RUN_ID) -> dict[str, str]:
+    if run_id == SEALED_RUN_ID:
+        return {
+            "raw": str(RAW_RESULT_PATH),
+            "human_audit": str(HUMAN_AUDIT_PATH),
+            "final": str(FINAL_RESULT_PATH),
+        }
+    if run_id == ACTIVE_RUN_ID:
+        return {
+            "preflight": str(I2_PREFLIGHT_PATH),
+            "raw": str(I2_RAW_RESULT_PATH),
+            "human_audit": str(I2_HUMAN_AUDIT_PATH),
+            "final": str(I2_FINAL_RESULT_PATH),
+        }
+    raise RuntimeError(f"未登记的 5.0 质量运行批次：{run_id}")
+
+
+def result_lifecycle_contract() -> dict[str, Any]:
     return {
-        "raw": str(RAW_RESULT_PATH),
-        "human_audit": str(HUMAN_AUDIT_PATH),
-        "final": str(FINAL_RESULT_PATH),
+        "sealed_run_id": SEALED_RUN_ID,
+        "active_run_id": ACTIVE_RUN_ID,
+        "sealed_raw_sha256": SEALED_RAW_SHA256,
+        "active_paths": result_paths(ACTIVE_RUN_ID),
+        "states": list(I2_LIFECYCLE_STATES),
+        "unknown_json_policy": "reject",
+        "helper_can_satisfy_human_audit": False,
+        "write_policy": "registered_active_path_once_only",
+    }
+
+
+def classify_result_entry(path: Path) -> str:
+    resolved = path.resolve()
+    if resolved == RAW_RESULT_PATH.resolve():
+        return "sealed_raw"
+    if resolved in {
+        HUMAN_AUDIT_PATH.resolve(),
+        FINAL_RESULT_PATH.resolve(),
+    }:
+        return "sealed_formal"
+    if resolved in {
+        Path(value).resolve() for value in result_paths(ACTIVE_RUN_ID).values()
+    }:
+        return "active_formal"
+    if resolved == I2_HELPER_PATH.resolve():
+        return "helper"
+    if resolved.parent == V5_RESULTS_DIR.resolve() and resolved.suffix.lower() == ".json":
+        raise RuntimeError(f"v5-quality-results 存在未登记 JSON：{resolved.name}")
+    return "other"
+
+
+def _active_lifecycle_state() -> tuple[str, list[str]]:
+    paths = result_paths(ACTIVE_RUN_ID)
+    existing_keys = [key for key, value in paths.items() if Path(value).exists()]
+    state_by_existing = {
+        (): "i2_not_started",
+        ("preflight",): "i2_preflight_complete",
+        ("preflight", "raw"): "i2_raw_complete",
+        ("preflight", "raw", "human_audit"): "i2_human_complete",
+        ("preflight", "raw", "human_audit", "final"): "i2_final_complete",
+    }
+    state = state_by_existing.get(tuple(existing_keys))
+    if state is None:
+        raise RuntimeError(
+            "7R5-I2 正式结果状态非法或发生越级写入："
+            + ", ".join(existing_keys)
+        )
+    return state, [paths[key] for key in existing_keys]
+
+
+def validate_result_lifecycle(
+    *, run_id: str, expected_state: str | None = None
+) -> dict[str, Any]:
+    if run_id != ACTIVE_RUN_ID:
+        raise RuntimeError(f"质量运行批次已经封存或未登记：{run_id}")
+    historical = validate_historical_results()
+    if not RAW_RESULT_PATH.exists():
+        raise RuntimeError("封存的 7R5-I raw 证据缺失")
+    sealed_digest = sha256_file(RAW_RESULT_PATH)
+    if sealed_digest != SEALED_RAW_SHA256:
+        raise RuntimeError("封存的 7R5-I raw SHA-256 已变化")
+    if HUMAN_AUDIT_PATH.exists() or FINAL_RESULT_PATH.exists():
+        raise RuntimeError("封存的 7R5-I human/final 路径不应被补写")
+    active_paths = tuple(
+        Path(value).resolve() for value in result_paths(ACTIVE_RUN_ID).values()
+    )
+    historical_paths = {
+        (STAGE7_RESULTS_DIR / filename).resolve()
+        for filename in HISTORICAL_RESULT_HASHES
+    }
+    sealed_paths = {
+        RAW_RESULT_PATH.resolve(),
+        HUMAN_AUDIT_PATH.resolve(),
+        FINAL_RESULT_PATH.resolve(),
+    }
+    if (
+        len(active_paths) != len(set(active_paths))
+        or set(active_paths) & historical_paths
+        or set(active_paths) & sealed_paths
+        or any(path.parent != V5_RESULTS_DIR.resolve() for path in active_paths)
+    ):
+        raise RuntimeError("7R5-I2 路径重复、越界或覆盖旧证据")
+    if V5_RESULTS_DIR.exists():
+        for entry in V5_RESULTS_DIR.iterdir():
+            classify_result_entry(entry)
+    state, active_existing = _active_lifecycle_state()
+    if expected_state is not None and expected_state not in I2_LIFECYCLE_STATES:
+        raise RuntimeError(f"未登记的 7R5-I2 生命周期状态：{expected_state}")
+    if expected_state is not None and state != expected_state:
+        raise RuntimeError(
+            f"7R5-I2 生命周期状态不符：期望 {expected_state}，实际 {state}"
+        )
+    return {
+        "run_id": ACTIVE_RUN_ID,
+        "state": state,
+        "sealed_raw_sha256": sealed_digest,
+        "active_paths": result_paths(ACTIVE_RUN_ID),
+        "active_existing": active_existing,
+        "historical_result_hashes": historical,
+        "helper_can_satisfy_human_audit": False,
+    }
+
+
+def assert_result_write_allowed(
+    *, run_id: str, target: Path, expected_state: str
+) -> dict[str, Any]:
+    resolved = target.resolve()
+    if resolved in {
+        RAW_RESULT_PATH.resolve(),
+        HUMAN_AUDIT_PATH.resolve(),
+        FINAL_RESULT_PATH.resolve(),
+    }:
+        raise RuntimeError("7R5-I 已封存，拒绝跨轮覆盖")
+    lifecycle = validate_result_lifecycle(
+        run_id=run_id, expected_state=expected_state
+    )
+    active_paths = {
+        key: Path(value).resolve()
+        for key, value in result_paths(ACTIVE_RUN_ID).items()
+    }
+    allowed_key_by_state = {
+        "i2_not_started": "preflight",
+        "i2_preflight_complete": "raw",
+        "i2_raw_complete": "human_audit",
+        "i2_human_complete": "final",
+    }
+    allowed_key = allowed_key_by_state.get(lifecycle["state"])
+    if allowed_key is None or resolved != active_paths[allowed_key]:
+        raise RuntimeError("当前 7R5-I2 状态不允许写入该正式结果路径")
+    if resolved.exists():
+        raise RuntimeError("7R5-I2 质量结果已经存在，拒绝覆盖")
+    return {
+        "run_id": ACTIVE_RUN_ID,
+        "state": lifecycle["state"],
+        "target": str(target),
+        "write_count": 0,
     }
 
 
@@ -208,6 +373,8 @@ def execution_contract() -> dict[str, Any]:
         "report_prompt_version": REPORT_PROMPT_VERSION,
         "plan_schema_version": PLAN_SCHEMA_VERSION,
         "report_schema_version": REPORT_SCHEMA_VERSION,
+        "plan_service_behavior_version": "lightweight_plan_generation_v3",
+        "report_service_behavior_version": "lightweight_report_generation_v3",
         "normal_business_calls_per_sample": 1,
     }
 
@@ -306,9 +473,34 @@ def estimate_attempt_cost_usd(
     }
 
 
-def write_new_json(path: Path, payload: dict[str, Any]) -> None:
-    allowed = {Path(value).resolve() for value in result_paths().values()}
+def write_new_json(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    run_id: str | None = None,
+    expected_state: str | None = None,
+) -> None:
     resolved = path.resolve()
+    sealed_paths = {
+        RAW_RESULT_PATH.resolve(),
+        HUMAN_AUDIT_PATH.resolve(),
+        FINAL_RESULT_PATH.resolve(),
+    }
+    if resolved in sealed_paths:
+        raise RuntimeError("7R5-I 已封存，拒绝补写或覆盖旧结果")
+    if run_id is not None:
+        if expected_state is None:
+            raise RuntimeError("I2 正式写入必须声明预期生命周期状态")
+        assert_result_write_allowed(
+            run_id=run_id,
+            target=path,
+            expected_state=expected_state,
+        )
+        allowed = {
+            Path(value).resolve() for value in result_paths(run_id).values()
+        }
+    else:
+        allowed = {Path(value).resolve() for value in result_paths().values()}
     if resolved not in allowed:
         raise RuntimeError("拒绝写入未登记的 5.0 质量结果路径")
     if resolved.exists():

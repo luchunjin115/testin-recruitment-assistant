@@ -144,7 +144,7 @@ class Settings(BaseSettings):
         max_length=20,
     )
     SCREENING_EVALUATION_V5_PROMPT_VERSION: str = Field(
-        default="screening_evaluation_lightweight_v1",
+        default="screening_evaluation_lightweight_v3",
         min_length=1,
         max_length=100,
     )

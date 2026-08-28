@@ -16,6 +16,7 @@ SCREENING_EVALUATION_SCHEMA_VERSION = "2.0"
 SCREENING_EVALUATION_V5_SCHEMA_VERSION = "5.0"
 SCREENING_EVALUATION_MAX_REQUIREMENTS = 512
 SCREENING_EVALUATION_V5_MAX_CRITERIA = 30
+SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS = 20
 SCREENING_EVALUATION_MAX_BONUSES = 5
 SCREENING_EVALUATION_MAX_QUESTIONS = 5
 
@@ -201,11 +202,24 @@ class AIScreeningEvaluationV5Output(BaseModel):
         min_length=1,
         max_length=SCREENING_EVALUATION_V5_MAX_CRITERIA,
     )
-    strengths: list[V5ReportFinding] = Field(max_length=10)
-    gaps: list[V5ReportFinding] = Field(min_length=1, max_length=10)
-    risks_or_conflicts: list[V5ReportFinding] = Field(max_length=10)
-    missing_info: list[V5ReportFinding] = Field(min_length=1, max_length=10)
-    hr_follow_up_questions: list[InterviewQuestion] = Field(min_length=1, max_length=5)
+    strengths: list[V5ReportFinding] = Field(
+        max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS
+    )
+    gaps: list[V5ReportFinding] = Field(
+        min_length=1,
+        max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS,
+    )
+    risks_or_conflicts: list[V5ReportFinding] = Field(
+        max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS
+    )
+    missing_info: list[V5ReportFinding] = Field(
+        min_length=1,
+        max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS,
+    )
+    hr_follow_up_questions: list[InterviewQuestion] = Field(
+        min_length=1,
+        max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS,
+    )
 
     model_config = ConfigDict(extra="forbid")
 
@@ -235,10 +249,23 @@ class ScreeningEvaluationV5ReportPayload(BaseModel):
         min_length=1,
         max_length=SCREENING_EVALUATION_V5_MAX_CRITERIA,
     )
-    strengths: list[V5ReportFinding] = Field(max_length=10)
-    gaps: list[V5ReportFinding] = Field(min_length=1, max_length=10)
-    risks_or_conflicts: list[V5ReportFinding] = Field(max_length=10)
-    missing_info: list[V5ReportFinding] = Field(min_length=1, max_length=10)
-    hr_follow_up_questions: list[InterviewQuestion] = Field(min_length=1, max_length=5)
+    strengths: list[V5ReportFinding] = Field(
+        max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS
+    )
+    gaps: list[V5ReportFinding] = Field(
+        min_length=1,
+        max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS,
+    )
+    risks_or_conflicts: list[V5ReportFinding] = Field(
+        max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS
+    )
+    missing_info: list[V5ReportFinding] = Field(
+        min_length=1,
+        max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS,
+    )
+    hr_follow_up_questions: list[InterviewQuestion] = Field(
+        min_length=1,
+        max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS,
+    )
 
     model_config = ConfigDict(extra="forbid")
