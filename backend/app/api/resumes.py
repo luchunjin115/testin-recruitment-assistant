@@ -162,7 +162,7 @@ async def upload_resume(
 async def extract_resume_text(
     resume_id: int,
     db: AsyncSession = Depends(get_db),
-) -> Resume:
+) -> ResumeRead:
     settings = get_settings()
     try:
         resume = await resume_service.extract_text(
@@ -187,12 +187,13 @@ async def extract_resume_text(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=RESUME_NOT_FOUND,
         )
+    response = ResumeRead.model_validate(resume)
     try:
-        await screening_service.after_resume_ready(db, resume.id)
+        await screening_service.after_resume_ready(db, response.id)
     except Exception:
         # Resume extraction is already committed and remains successful.
         pass
-    return resume
+    return response
 
 
 @router.post(

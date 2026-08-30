@@ -1,6 +1,6 @@
 # 项目当前状态
 
-> 最新更新：2026-08-28
+> 最新更新：2026-08-30
 >
 > 本文件只记录“现在是什么状态、下一步做什么”。完整开发过程已归档到 `docs/archive/history/2026-08-20-project-history.md`，不再作为新对话的默认阅读材料。
 
@@ -8,7 +8,7 @@
 
 - 项目正在建设新版招聘主链，旧 React + FastAPI + SQLite + Mock LLM 演示系统已经退役。
 - 阶段 4“简历上传与原文提取”和阶段 5“AI 结构化草稿”已经完成；阶段 6 五段式 JD 整改的 6R-A—6R-D 已全部完成，自动化、真实 PostgreSQL/API 和 Microsoft Playwright 三档浏览器验收通过。
-- 阶段 7“Application 与 AI 初筛底座”已有 Application、Resume 隔离、异步运行、幂等、当前/历史成功报告、固定投递时间、React 报告和 HR 决策历史等可复用能力。4.0 正式 20 份计划质量只通过 `15/20`，因此 7R4-I/J 从未获准继续。用户随后重新确认产品目标，决定不再按 `RequirementFact + EvaluationCriterion` 做原子级 JD 拆解，改为 5.0“完整 JD + HR 可编辑轻量评价清单 + 独立简历报告”：通常约 5—12 个评价点、每项 0—10 分、AI 直接给总体 0—100 分、不采用权重、HR 保留最终决定。7R5-A—7R5-H 已逐批确认并完成；7R5-I 唯一真实 raw 已在 USD 10 上限下执行，实际 29 次业务调用/API attempt、估算 `$0.11033604`，自动结构门槛为计划 `6/10`、报告 `1/20`、稳定性合法运行 `0/15`。用户完成 10 份计划引导式审核后暂停其余人工审核；计划误拒绝整改 `7R5-IR-A/B`、独立复验生命周期/零调用预检 `7R5-I2-A—C`、报告数量问题 `7R5-I2-R1-A—C` 和年限问题 `7R5-I2-R2-A—E` 已完成。无直接证据结论整改 `7R5-I2-R3-A—C` 已完成，关键词机械裁判已删除且全量回归通过；交接复核已把 R3-D 从四例纠正为六例，下一步等待六例零调用回放确认。`pricing_gate_allowed=false`。原 raw、I2 preflight、I2 raw/human/final 空路径和 13 份历史证据不得重算、覆盖或追认为通过。当前 Alembic head 为 `d6e8f0a2b434`。
+- 阶段 7 的 5.0 产品主链已实现，但真实质量和最终收尾尚未通过。I2-E 在 USD 2 上限下完成 45/45 次调用，费用 `$0.09143638`；计划 `10/10`，报告仅 `17/20`，稳定性达标组仅 `2/5`。CLOSE-03A/B 已完成唯一正式 human audit 和 final，19 项门槛通过 13 项、失败 6 项，`quality_gate_passed=false`，生命周期为 `i2_final_complete`；raw/human/final 均不可覆盖。CLOSE-04R 已按用户确认把后续修订为验收合同、计划 Service、计划 Prompt、报告 Service、报告 Prompt 五批，并明确 Service 只硬判结构/真实引用/时间身份/安全，“至今”只按 `Application.applied_at`；当前停止并等待单独确认 CLOSE-05A，不得自动整改、执行 I3 或进入 7R5-J。本机 Alembic 为 current=head=`d6e8f0a2b434`。
 - 小步骤 9-I 已完成 20 次 JD 正式复验和 60 次下游真实诊断。18/18 正常 JD 可用、主要要求与结构化覆盖均为 100%，但 JD18 没有形成预期 `too_many_items`，因此 `step9_quality_gate_passed=false`，小步骤 9 仍未通过；下游诊断也仅有 9/20 至少一份合法报告、1/20 三次全部合法。
 - Application、Resume 隔离、HR 内部录入和 HR 决策等公共能力继续保留。
 - 旧 Rubric、五维权重、确定性评分、`unknown`、证据覆盖率和 Python 加权总分已经废弃。
@@ -20,23 +20,24 @@
 
 当前阶段的权威顺序是：
 
-1. 阶段 7 轻量评价清单 5.0 当前设计：`docs/stages/stage7/2026-08-26-stage7-lightweight-evaluation-ai-screening-v5-redesign.md`，负责当前产品目标、轻量清单、无权重评分、报告、状态、数据、安全、验收和待确认的 7R5-A—7R5-J 顺序
-2. 阶段 7 评价计划 4.0 历史实现与失败证据：`docs/stages/stage7/2026-08-24-stage7-job-evaluation-plan-v4-redesign.md`，保留 RequirementFact、三/四次调用、HR2 `6/6` 和正式 20 份 `15/20` 的不可覆盖记录，不再授权新增实现
-3. 阶段 7 五段式计划 3.0 记录：`docs/stages/stage7/2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md`，只负责已完成实现事实和历史失败证据
-4. 阶段 7 原设计：`docs/stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`，其已实现的 Application、Resume、异步运行、报告、时间事实和 HR 决策底座继续有效
-5. 阶段 6 五段式 JD 整改：`docs/stages/stage6/2026-08-21-stage6-five-section-jd-remediation-design.md`
-6. 阶段 6 原设计：`docs/stages/stage6/2026-08-15-stage6-structured-job-management-design.md`，除被五段式补充替代的 JD 字段合同外继续有效
-7. 本文件：只负责当前进度、工作区风险和下一步
-8. `CLAUDE.md`：项目长期架构、技术栈和稳定约束
-9. `docs/planning/implementation-plan.md`：跨阶段实施顺序
-10. `docs/planning/2026-08-14-post-stage5-product-roadmap.md`：阶段 5 后产品路线
-11. `docs/architecture/2026-07-15-hr-agent-platform-design.md`：总体架构背景
+1. 阶段 7 轻量评价清单 5.0 当前设计：`docs/stages/stage7/2026-08-26-stage7-lightweight-evaluation-ai-screening-v5-redesign.md`，负责产品目标、业务合同、状态、数据、安全、验收标准和完整历史证据
+2. 阶段 7 剩余工作与收尾计划：`docs/stages/stage7/2026-08-30-stage7-remaining-work-plan.md`，只负责从当前状态到阶段完成评审的执行看板、依赖、逐批边界和停止点；用户已整体确认，CLOSE-02、CLOSE-03A、CLOSE-03B、CLOSE-04、CLOSE-04R 已完成，当前等待单独确认 CLOSE-05A
+3. 阶段 7 评价计划 4.0 历史实现与失败证据：`docs/stages/stage7/2026-08-24-stage7-job-evaluation-plan-v4-redesign.md`，保留 RequirementFact、三/四次调用、HR2 `6/6` 和正式 20 份 `15/20` 的不可覆盖记录，不再授权新增实现
+4. 阶段 7 五段式计划 3.0 记录：`docs/stages/stage7/2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md`，只负责已完成实现事实和历史失败证据
+5. 阶段 7 原设计：`docs/stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`，其已实现的 Application、Resume、异步运行、报告、时间事实和 HR 决策底座继续有效
+6. 阶段 6 五段式 JD 整改：`docs/stages/stage6/2026-08-21-stage6-five-section-jd-remediation-design.md`
+7. 阶段 6 原设计：`docs/stages/stage6/2026-08-15-stage6-structured-job-management-design.md`，除被五段式补充替代的 JD 字段合同外继续有效
+8. 本文件：只负责当前进度、工作区风险和下一步
+9. `CLAUDE.md`：项目长期架构、技术栈和稳定约束
+10. `docs/planning/implementation-plan.md`：跨阶段实施顺序
+11. `docs/planning/2026-08-14-post-stage5-product-roadmap.md`：阶段 5 后产品路线
+12. `docs/architecture/2026-07-15-hr-agent-platform-design.md`：总体架构背景
 
 发生冲突时，当前阶段专项设计优先于旧总体示例和历史记录。归档文档不具有当前业务权威性。
 
 ## 3. 当前阶段 7 方案摘要
 
-> 当前说明：5.0 已完成从 Schema、生成、编辑确认、报告、运行接线到 React 的 7R5-A—7R5-G 非付费实现，7R5-H 门禁和 7R5-I 唯一 raw 也已执行。4.0 的正式质量失败和 1.0—4.0 历史数据继续保留。7R5-I 后续人工审核当前暂停；计划 Service 支持性整改 `7R5-IR-A/B`、独立复验生命周期与零调用预检 `7R5-I2-A—C`、报告问题 1 的 `7R5-I2-R1-A—C`、报告年限问题的 `7R5-I2-R2-A—E` 已完成。无直接证据结论的 `7R5-I2-R3-A—C` 已完成：关键词裁判删除、报告行为版本 v3、直接相关及后端全量回归均通过；交接复核确认 R3-D 必须覆盖六例旧拒绝，尚未执行。真实 5.0 最终质量、真实 PostgreSQL/API/浏览器完整收尾仍未验收；下文第 4—9 节同时记录可复用能力和历史基线，若与 5.0 设计冲突，以 5.0 为准。
+> 当前说明：5.0 已完成从 Schema、生成、编辑确认、报告、运行接线到 React 的 7R5-A—7R5-G 非付费实现，7R5-H 门禁和 I2 real raw 已执行。I2-E 自动结果为计划 `10/10`、报告 `17/20`、稳定性 `9/15`，稳定性达标组 `2/5`，费用 `$0.09143638`。CLOSE-03A/B 已基于封存 raw 完成人工审计与正式 final，19 项门槛通过 13 项、失败 6 项，生命周期为 `i2_final_complete`；CLOSE-04/04R 已完成综合归因和五批整改设计。真实 5.0 最终质量、真实 PostgreSQL/API/浏览器完整收尾仍未验收。当前只等待用户单独确认 CLOSE-05A，不自动修改质量工具、Service、Prompt 或进入 I3；下文第 4—9 节同时记录可复用能力和历史基线，若与 5.0 设计冲突，以 5.0 为准。
 
 ### 3.1 固定流程
 
@@ -167,7 +168,7 @@ HR 阅读报告并独立作出通过 / 备选 / 淘汰决定
 
 - 当前分支是 `2lcj`，当前基线包含提交 `44b7626191d82b11760c7e56588f7799ea7629ba`。工作区已有的 `PROJECT_STATE.md`、当前阶段 7 权威设计、7R5-I 价格快照、raw 和人工审核辅助目录均为用户工作成果，必须完整保护；本次只在两份既有权威文档上追加 Service 整改门禁，没有覆盖 raw、人工记录、前几批代码或历史 4.0 质量结果。
 - 项目由旧电脑压缩迁移后，旧 `.venv` 因保存 `C:\Users\GYAI\...Python311` 绝对路径而失效。本轮已用本机 Python 3.11.9 原地重建 `.venv`，安装 `backend/requirements.txt` 和本地测试依赖 pytest 9.1.1；`.venv` 继续由 Git 忽略，不提交、不再跨电脑复制。
-- 本机 PostgreSQL Docker 卷原停在 `b4e8c2d7f913`，且保留 1 个 Job、2 个 Candidate、2 个 Resume 和 1 个 3.0 failed 计划。升级前已生成 `data/backups/pre_a3b5c7d9e101_20260826.dump`，SHA-256 为 `F8F8AD2EB6C3E6D399562D7DDC2146C262A87A4D9BDBC85FD858325C0D962C4C`。7R5-D 新增 revision `b4c6d8e0f212` 并完成真实 `b4 → a3 → b4` 往返；计划表保持 1 行，整行内容 MD5 往返前后均为 `0819ebafc4168daf6b99d8a848911221`，最终 `current=head` 且 `alembic check` 无待生成操作。
+- 本机 PostgreSQL Docker 卷原停在 `b4e8c2d7f913`，且保留 1 个 Job、2 个 Candidate、2 个 Resume 和 1 个 3.0 failed 计划。升级前已生成 `data/backups/pre_a3b5c7d9e101_20260826.dump`；2026-08-29 再次核对大小为 87,224 bytes，SHA-256 仍为 `F8F8AD2EB6C3E6D399562D7DDC2146C262A87A4D9BDBC85FD858325C0D962C4C`。7R5-D 曾新增 revision `b4c6d8e0f212` 并完成真实 `b4 → a3 → b4` 往返；HASH-B 全量回归前发现本机仍停在 `b4c6d8e0f212`，经用户单独明确授权执行 `b4c6d8e0f212 → c5d7e9f1a323 → d6e8f0a2b434`，现为 `current=head=d6e8f0a2b434`，`alembic check` 无待生成操作。
 - 4.0 的 7R4-A—7R4-H2 均停在各自历史停止点；HR2 定向为 `6/6`，正式 H2 为 `15/20` 且失败。7R4-I/J 永久停止，不再通过追加 4.0 样本整改继续推进；所有既有结果只作历史证据。
 - 用户已经逐项确认 5.0 的产品目标、轻量评价清单、无权重评分、单人/最多 5 人批量、状态、审计、隐私和验收标准。7R5-A—7R5-H 已分别确认并完成，7R5-I raw 已按独立金额授权执行。用户于 2026-08-28 完成 10 份计划的引导式审核后，确认相关缩写、符号和非排他举例可以作为 HR 可编辑草稿，但不得变成新增硬门槛；并明确暂停其余人工审核，先处理 Service 逐词支持性误拒绝。`7R5-IR-A/B` 已分别确认并完成；I2 独立复验实施顺序已写入权威设计，但当前未授权 I2-A 测试、质量运行器生命周期调整或任何真实调用。
 - 用户已最终确认并完成小步骤 9 的 9-A—9-I。此前助手误解用户意图产生的独立 20 份 JD 结果继续保留为历史诊断；正式 9-I 已使用新路径独立落盘，没有复用或覆盖该记录。JD18 的正式边界失败和当时返回阶段 6 整改的决定均为历史事实；当前新增实现依据已经切换为 5.0 设计。
@@ -177,6 +178,20 @@ HR 阅读报告并独立作出通过 / 备选 / 淘汰决定
 - 新功能应复用 Candidate、Application、Resume、Job、StageHistory、Report 和通用 DeepSeek/数据库基础设施。
 
 ## 11. 当前唯一下一步
+
+2026-08-30 已把阶段 7 的剩余工作从完整历史中拆分为 `docs/stages/stage7/2026-08-30-stage7-remaining-work-plan.md`。当前状态应统一理解为：5.0 产品主链已实现，CLOSE-02 已恢复 post-raw 全绿基线，CLOSE-03A/B 已完成 I2 正式人工审计与 final，CLOSE-04/04R 已完成综合整改设计和 Service 职责修订；final 真实判定失败，整改尚未实现，7R5-J 未开始，因此阶段 7 仍未完成。
+
+用户已于 2026-08-30 整体确认收尾计划并逐批授权。`7R5-CLOSE-02` 已完成：专项 `65 passed`、阶段 7 扩大回归 `149 passed`、后端全量 `1321 passed + 425 subtests passed`，9 个旧状态失败全部消失且没有新失败。I2 raw 身份与大小不变，模型调用、费用和 PostgreSQL 写入新增均为 0。
+
+`7R5-CLOSE-03A/B` 已完成并停止。问题总账和正式 human audit 已覆盖 107/107 个 required 标签、15/15 次稳定性和 12 项人工指标；final 合并后 19 项门槛通过 13 项、失败 6 项，`quality_gate_passed=false`。验证确认 raw/human 指纹不变、生命周期为 `i2_final_complete`，第二次 finalize 被拒绝；质量专项 `66 passed`，后端全量 `1322 passed + 425 subtests passed + 2 warnings`、0 failures，本批新增模型调用、费用和 PostgreSQL 写入均为 0。
+
+`7R5-CLOSE-04` 已完成初次归因；用户随后确认 Service 应只硬判确定性结构、真实引用、时间身份与明确安全边界，普通语义和分数合理性交由 HR，并重申“至今”只按投递时间。`7R5-CLOSE-04R` 已据此完成文档修订并停止：CLOSE-05A 纠正 I3 质量合同、重要发现标签、逐案 `application_applied_at` 与 HR 确认计划快照；CLOSE-05B 把计划 Service 目标升级为 `lightweight_plan_generation_v4`，语义支持启发式改为 HR warning；CLOSE-05C 把计划 Prompt 升级为 `job_evaluation_plan_lightweight_v3` 并保留条件；CLOSE-05D 把报告 Service 升级为 `lightweight_report_generation_v8`，退出普通语义裁判；CLOSE-05E 把报告 Prompt 升级为 `screening_evaluation_lightweight_v5`。计划与报告 Schema 版本均保持 5.0，质量合同目标为 `stage7_v5_quality_contract_v2`，I3 继续使用 19 项门槛。
+
+CLOSE-04R 只修改三份权威文档，没有修改或执行质量工具、Service、Prompt、Schema、API、Model、React、数据库或正式证据；模型调用、费用、PostgreSQL 写入和 I2/I3 结果写入均为 0。
+
+当前唯一下一步是等待用户另行确认 CLOSE-05A。不得提前修改质量工具、Service 或 Prompt，不得连续进入 CLOSE-05B—05E、I3、7R5-J 或阶段完成评审。
+
+以下内容保留为 5.0 业务合同和历史上下文，不再承担“当前下一步”职责。
 
 5.0 权威设计已经写入 `docs/stages/stage7/2026-08-26-stage7-lightweight-evaluation-ai-screening-v5-redesign.md`。它保留现有 Application、异步运行、报告历史、投递时间和 HR 决策底座，只替换过度精细的 4.0 计划生成与逐 fact 接线。核心合同是：
 
@@ -193,9 +208,13 @@ HR 阅读报告并独立作出通过 / 备选 / 淘汰决定
 
 `7R5-I2-A—C` 和问题 1 的 `7R5-I2-R1-A—C` 已完成并停止。六例旧结构响应均被当前 Schema 接受，证明辅助列表数量问题解决；R1-C 当时的 Service 继续拒绝全部六例：4 个年限时间事实冲突、1 个高分/无证据方向矛盾、1 个无直接证据结论。隔离诊断不含原始响应。
 
-用户已确认无直接证据结论的新职责：5.0 报告 Service 不再靠同义词表判断 gap/risk/missing 的自然语言是否像“缺口”，但继续要求无 evidence 结论关联合法评价点，并保留 strengths/非零分证据、证据原文定位、事实/非时间数字、时间 fact key、ID、结构、敏感属性、招聘决定和 Prompt 注入等硬门禁。`7R5-I2-R3-A—C` 已完成，报告行为版本为 `lightweight_report_generation_v3`；R3-B 8 个红灯全部转绿，直接相关 126 通过，后端全量 1268 通过。已知无 evidence 关键词旧拒绝的完整分母为 R07、R10、R16、R18、R19、S04-2；测试态只说明它们在当前 Service 下的去向，不等于内容正确。R3-D 的权威范围已从四例纠正为六例，但尚未执行；当前唯一下一步是等待用户在六例范围下重新明确确认 `7R5-I2-R3-D`。不得沿用原四例版确认，也不得进入 I2-D/E、读取 API Key、调用 DeepSeek、创建 I2 raw/human/final、恢复人工审核、补跑或覆盖原 7R5-I、进入 7R5-J 或阶段 8/9；`pricing_gate_allowed=false`。
+用户已确认逐个解决 I2-E 问题。第一项时间事实 key 误用的 R7-A—D 已完成：生产为 Prompt v4 / Service v7；六份 I2-E 旧响应的原关键词门禁全部消失，但都进入非空 key 缺少 calculation_note 的确定性门禁。新隔离诊断不含 raw response，真实调用和费用为 0；这只能证明 Service 职责修正和旧响应的下一错误，不能证明 Prompt v4 改善真实模型输出或旧响应内容正确。
 
-### 11.1 2026-08-28 跨电脑交接清单
+2026-08-30 简历提取 500 回归的 `7R5-RESUME-R1-A/B` 已完成并停止。新增 API 组合测试准确模拟 `after_resume_ready` 使 ORM 属性失效，生产修改前精确返回 500；Resume API 随后只在协调前创建并返回现有 `ResumeRead` 快照，协调器及其 `rollback`、Resume Service、Schema 字段、Model、migration、React 和提取器均未改。新测试转为 200，Resume 定向为 `77 passed + 21 subtests passed`；Docker/PostgreSQL healthy 后后端全量为 `1312 passed + 425 subtests passed`，仅剩已登记的 9 个 post-raw 生命周期旧失败。真实 Resume `#2301` 接口从历史 500 恢复为 200，调用前后 PostgreSQL 均为 `parsed`、原文 2060 字符、`not_started`、错误为空；其 Application 绑定数为 0，没有调用 DeepSeek 或产生费用。临时 Uvicorn 已关闭，Docker/PostgreSQL 当前保持运行。
+
+R1-B 完成时的停止点恢复为讨论并登记 post-raw 生命周期测试整改顺序。该顺序现已写入 2026-08-30 收尾计划草案；在计划整体确认且 CLOSE-02 另行确认前，不得修改那 9 个测试。Resume 修复能证明“成功响应不再被协调回滚连带失效”，不能证明所有文件都可提取、AI 结构化正确或初筛质量达标。
+
+### 11.1 2026-08-29 跨电脑交接清单
 
 用户计划在当前电脑提交并推送，然后在另一台电脑拉取后继续。交接时必须以本文件和 5.0 权威设计为准，不依赖聊天记忆。
 
@@ -204,27 +223,43 @@ HR 阅读报告并独立作出通过 / 备选 / 淘汰决定
 - 计划 Service 的 JD 支持性机械误拒绝已由 `7R5-IR-A/B` 解决；原 raw 计划 10/10 已零调用回放通过。
 - 报告辅助列表数量问题已由 `7R5-I2-R1-A—C` 解决；Prompt 要求通常只保留 1—5 条最高价值内容，Schema 技术上限为 20。
 - 报告自然语言年限机械判断已由 `7R5-I2-R2-A—E` 取消；后端月份事实和 fact key 硬校验保留，Prompt v3 负责年限表达。
-- 报告无 evidence 结论的同义词裁判已由 `7R5-I2-R3-A—C` 取消；Service 行为版本为 `lightweight_report_generation_v3`，证据、事实、数字、ID、结构和安全硬门禁保留。
-- 最新验证为直接相关 `126 passed`、后端全量 `1268 passed + 425 subtests passed`、13 份历史 hash 不变、I2 raw/human/final 均不存在；`pricing_gate_allowed=false`。
+- 报告无 evidence 结论的同义词裁判已由 `7R5-I2-R3-A—D` 取消并完成六例回放；旧门禁 6/6 消失，Service 接受不等于内容正确，证据、事实、数字、ID、结构和安全硬门禁保留。
+- 剩余 Service 总盘点/红灯/实现/回放 `7R5-I2-R5-A—D` 已完成：旧门禁 11/11 消失，9 份接受，R16/S00-3 两份进入下一来源表示门禁；另有 7 份报告和 9 次稳定性无响应。
+- 自由文本来源裁判退出的 `7R5-I2-R6-A—D` 已完成：不为 R16/S00-3 增加编号或日期特例；R6-C 删除整类扫描并升级行为 v6，R6-D 将全部 19 份已有响应统一回放为 Service 接受 `19/19`、旧门禁消失 `2/2`。R5-D 固定为历史 v5 诊断，R6-D 固定为 v6 独占诊断，均只读且禁止覆盖；全部 19 例仍待未来人工质量判断。
+- 文件字节 hash 阻塞已经由 `7R5-HASH-A/B` 取消；CRLF 副本能通过，缺文件、损坏 JSON、错误身份、case 分母/ID 不完整、生命周期越级和覆盖仍会失败。CLOSE-02 已将质量运行器/I2 预检专项恢复为 `65 passed`、阶段 7 扩大回归 `149 passed`、后端全量 `1321 passed + 425 subtests passed`。本机 PostgreSQL 为 `current=head=d6e8f0a2b434`。I2 raw 与 human 已完成且不可覆盖，final 不存在；生命周期合同验证为 `i2_human_complete`。
 
-回家后的唯一下一步：先确认分支为 `2lcj`、拉取完整提交、检查 `git status`，重新阅读 `CLAUDE.md`、本文件、`docs/DOCUMENT_INDEX.md` 和 5.0 权威设计第 32E/35 节；然后只有在用户按纠正后的六例范围重新明确输入 `确认实施 7R5-I2-R3-D` 后，才能对 R07、R10、R16、R18、R19、S04-2 做零调用回放并写一份独立诊断。R3-D 不读取 Key、不调用 DeepSeek、不创建 I2 raw/human/final，也不宣布内容质量通过。
+2026-08-29 当时的停止点是先讨论 post-raw 生命周期测试为什么仍硬编码 `i2_preflight_complete`。该问题已在 CLOSE-02 修复并全绿，CLOSE-03A 也已完成唯一正式 human audit。I2 raw、human、既有诊断和历史证据继续只读且禁止覆盖；当前停止点是等待用户另行确认 CLOSE-03B。
 
-R3-D 之后已知但尚未登记实施顺序、不得提前修改的问题队列：
+新一轮真实复验后需要重点核对的模型内容与验收队列：
 
-1. 敏感属性门禁：R07 当前进入该门禁；R00、S00-2 也属于同类。先判断是模型真的使用敏感属性，还是 Service 词语误判。
-2. Resume 不支持的普通事实：原 I2-C 的 R06，以及后续诊断中的 R18、R16、R15。先逐句核对 Resume、证据和报告文字，再决定返回 Prompt、Service 还是人工标签层。
-3. Resume 不支持的非时间数字：原 I2-C 的 R04、S04-1，以及后续诊断中的 R17、S04-3。先区分模型编造数字与 Service 对数字语境的机械误判。
-4. 理由与证据联系不足：S00-1。先核对引用原文能否支持 reason，不能因为引用存在就默认结论成立。
-5. 高分与无证据方向矛盾：R09、S00-3。先判断分数、reason、gap/risk 是否真实冲突，再决定是否调整 Prompt 或 Service 的确定性边界。
+1. 敏感属性门禁：R4-A—C 已完成；R07/R00/S00-2 的旧敏感拒绝 `3/3` 消失，当前 Service `3/3` 接受且没有下一程序错误。该项机械误拒绝已解决，但三例仍待未来人工质量审核，不能宣布内容或敏感属性语义正确。
+2. Resume 不支持的普通事实：R06/R15/R18 已被 Service v5 接受；R06/R15 年限内容风险仍保留。R16 已在 v6 越过合法 criterion ID 尾号来源门禁，但能力迁移推断仍需人工审核；程序接受不代表事实正确。
+3. Resume 不支持的非时间数字：R04/R17/S04-1/S04-3 已被 Service v5 接受；完全无来源数字硬保护继续保留。
+4. 理由与证据联系不足：S00-1 的旧二字词门禁消失并被 Service v5 接受；内容正确性仍待人工审核。
+5. 高分与无证据方向矛盾：R09 已被 Service v5 接受；S00-3 的旧方向门禁和后续自由文本来源门禁均已在 v6 消失，当前被 Service 接受，但实际分数与表述方向仍留给质量审核。
 6. 报告五分区完整性：R14 虽是原 I2-C 中唯一通过 Service 的报告，但 `strengths` 为空，因此仍不满足每份报告必须包含优势、差距、风险/冲突、缺失信息和 HR 问题的人工质量门槛。
 7. 旧 raw 缺少模型回答：R01、R02、R03、R08、R11、R12、R13 共 7 份报告，以及 S01-1—3、S02-1—3、S03-1—3 共 9 次稳定性响应，当时因上游计划被拒而没有调用模型；零调用回放不能补出这些内容。
 8. 稳定性当前不可计算：没有任何一组获得 3 份合法报告，因此不能说“已经证明不稳定”，只能说旧 raw 无法测量稳定性门槛。
-9. 上述报告门禁逐个解决并完成零调用回放后，才能重新讨论 I2-D 官方价格/美元金额门禁和 I2-E 唯一新 raw；人工审核继续暂停，真实 raw 后仍必须由用户人工审核，不能自动 finalize。
+9. Service 机械门禁整改和 19 份总回放已经结束。下一步必须先由用户决定：是先人工阅读已有 19 份内容风险、先基于风险设计 Prompt 改进，还是直接按 I2-D/E 获取完整新 raw 后统一人工审核。任何选择都要先写入权威设计并逐批确认，不能从 Service `19/19` 自动跳到付费运行或 finalize。
 
-提交/拉取保护：当前 `git status` 仍包含大量本轮已授权的 tracked 修改，以及尚未跟踪的 `backend/tests/test_stage7_7r5i2_preflight.py`、`scripts/run_stage7_7r5i2_preflight.py`、`docs/stages/stage7/2026-08-28-stage7-7r5i-pricing-snapshot.json` 和 `docs/stages/stage7/v5-quality-results/`。提交前应逐项确认这些预检、价格、raw、诊断和人工审核辅助材料都被纳入预期提交；不得提交 `.env`、API Key 或本机秘密。拉取后若受保护证据缺失、hash 改变或 I2 正式路径意外出现，必须停止，不得继续 R3-D。
+提交/拉取保护：提交前应检查 `git status` 和 `git diff`，逐项确认预检、价格、raw、诊断和人工审核辅助材料都被纳入预期提交；不得提交 `.env`、API Key 或本机秘密。拉取后不再因质量证据文件的 LF/CRLF 或字节 hash 差异停止；若证据缺失、JSON 无法解析、`stage/run_id/batch/mode` 身份错误、case 分母/ID 不完整、既有结果被覆盖或 I2 正式路径意外出现，仍必须停止。
 
 ## 12. 最近验证基线
 
+- 2026-08-29，`7R5-I2-R6-D：十九份已有响应零调用总回放` 已完成并停止。预检脚本和测试新增行为 v6 的 19 例固定顺序、R1-C/R2-E/R3-D/R4-C/R5-D 只读身份与最近来源追溯、七份报告/九次稳定性缺失回答清单、R06/R14/R15/R16/R19 五项内容风险和独占写入保护。预检专项从修改前 `32 passed`，经过诊断缺失的精确 `33 passed + 4 failed`，写入唯一诊断后转为 `37 passed`；19 份已有响应全部被 Service 接受，R16/S00-3 的旧自由文本来源门禁 `2/2` 消失，没有下一程序错误。独占诊断 `2026-08-29-stage7-7r5i2-r6d-service-v6-full-replay.json` 为 26,250 bytes，不含完整响应、Prompt、Key、堆栈或思维链。R6 直接合同 `173 passed`，扩大回归 `228 passed + 43 subtests passed`，后端全量 `1312 passed + 425 subtests passed`、0 failures；`py_compile` 和精确敏感字段扫描通过。生产 Prompt/Schema/Service/Adapter/API/Model/migration/React、fixture、旧 raw/诊断、PostgreSQL 和 I2 正式路径未改，模型调用/API attempt/token/费用为 0。Service 接受不证明内容正确，全部 19 例仍待人工质量判断；`pricing_gate_allowed=false`，唯一下一步是讨论 Prompt/人工/独立真实复验顺序。
+- 2026-08-29，`7R5-I2-R6-C：删除 5.0 自由文本来源扫描` 已完成并停止。assessment reason 与 finding summary 不再调用 `_validate_v5_explicit_sources`，相关评价点/fact/assessment 来源拼接和正则 helper 已删除，没有增加白名单、日期归一化、词典、模糊匹配或 Judge；结构化 evidence/criterion ID/fact key/required 双面说明和明确安全规则保留，旧 1.0—4.0 逻辑未改。报告行为升级为 v6，Prompt 正文/版本仍为 v3，活动质量合同同步。R6-B 直接合同转为 `168 passed`；首次运行的 4 个 R5-D 失败只因旧测试尝试用活动 v6 动态重建历史 v5 结果，现已改为只读封存诊断并新增动态重建拒绝合同。扩大回归 `243 passed + 43 subtests passed`，后端全量 `1307 passed + 425 subtests passed`、0 failures；`py_compile`、静态扫描、`git diff --check`、历史诊断大小、I2 空路径和 Alembic `current=head=d6e8f0a2b434` 通过。Schema/Adapter/API/Model/migration/React、Prompt 正文、fixture、旧 raw/诊断、PostgreSQL 和 `.gitattributes` 未改，真实调用/费用为 0。该结果不能证明 19 份旧响应已完成 v6 回放或内容正确；`pricing_gate_allowed=false`，唯一下一步是等待用户明确确认 R6-D。
+- 2026-08-29，`7R5-I2-R6-B：Service v6 职责合同红灯` 已完成并停止。五份允许测试修改前为 `160 passed + 1 warning`；实际只修改三份测试，形成精确 `11 failed + 156 passed + 1 warning`，没有额外失败、skip 或 xfail。11 个红灯为 assessment 数字/英文词/日期、finding 程序 ID/英文词+数字共 5 个通用自由文本样本，两条主解析路径停止调用、旧 helper 删除共 3 个扫描退出合同，以及 Service/Prompt/质量执行合同 3 个行为 v6 元数据。结构化非零分 evidence/零分形状、finding/criterion ID、优势 evidence、无法定位 evidence、隐私泄露、招聘决定、Prompt 注入、required 双面说明、经历 fact key 和重复 JSON key 定向为 `17 passed + 51 deselected + 1 warning`。测试 `py_compile` 与 `git diff --check` 通过；生产 Prompt/Schema/Service/Adapter/API/Model/migration/React、质量脚本/合同、fixture、历史证据、I2 正式路径和 PostgreSQL 未改，真实调用/费用为 0。生产行为仍为 v5；该红灯不能证明 R6-C 已实现或内容正确。`pricing_gate_allowed=false`，唯一下一步是等待用户明确确认 R6-C。
+- 2026-08-29，`7R5-I2-R6-A：自由文本来源裁判退出职责文档门禁` 已完成并停止。用户确认不为 R16/S00-3 增加编号白名单、日期归一化或其他场景特例，而让 5.0 Service 整体退出 reason/finding 自由文本数字和英文词来源判断。只读代码核对确认行为 v5 的 `_validate_v5_explicit_sources` 位于 assessment 与 finding 两条主解析路径；第 32I 节已登记确定性结构/evidence/ID/fact/明确安全规则继续保留，同时主动接受 Oracle/99 等疑似自由文本编造不再由 Service 兜底的风险，并固定 R6-B 红灯、R6-C 实现、R6-D 19 份零调用回放顺序。本批只修改两份权威文档，没有修改或执行生产代码、测试、fixture、质量脚本/合同、诊断、结果或 PostgreSQL，没有创建 I2 raw/human/final，没有读取 Key、实例化真实 Adapter、调用 DeepSeek 或产生费用。该结果不能证明 Service v6 已实现或任何报告内容正确；`pricing_gate_allowed=false`，唯一下一步是等待用户明确确认 R6-B。
+- 2026-08-29，`7R5-I2-R5-D：十一份旧拒绝零调用总回放` 已完成并停止。固定 11 例和 P00/P04/P06/P07/P09 五份支持计划只读回放，旧五类门禁 11/11 消失；9 份被 Service v5 接受，R16/S00-3 进入程序 ID 数字及合法截止月日期分隔符的下一来源门禁。R06/R15 年限和 R16 推断风险继续保留，11 例全部仍需未来人工质量审核。新增不可覆盖诊断 `v5-quality-results/7r5i2-diagnostics/2026-08-29-stage7-7r5i2-r5d-service-v5-replay.json`，18,833 bytes，不含完整响应、Prompt、Key、堆栈或思维链。预检 `31 passed`、R5 直接相关 `154 passed`、扩大回归 `313 passed + 43 subtests passed`、后端全量 `1299 passed + 425 subtests passed`、0 failures；`py_compile`、诊断身份/字段、既有诊断大小、不可覆盖、I2 空路径、Alembic `current=head=d6e8f0a2b434` 和 `git diff --check` 通过。生产代码、fixture、旧 raw/诊断和 PostgreSQL 未改，真实调用/费用为 0。`pricing_gate_allowed=false`；唯一下一步是先讨论 R16/S00-3，不得直接实现或进入 I2-D/E。
+- 2026-08-29，`7R5-I2-R5-C：Service v5 职责收口实现` 已完成并停止。assessment/finding 明确数字和英文词来源扩展到 Resume、当前评价点及合法 fact/calculation note；5.0 主解析停止调用 reason/evidence、overall/evidence 二字词裁判和四个高低分方向词表裁判，旧 1.0—4.0 共用逻辑未改。无来源 Oracle/99、证据、ID、fact key、明确隐私/决定/注入等硬门禁继续保留。报告行为升级为 `lightweight_report_generation_v5`，Prompt 正文/版本仍为 v3，活动质量合同同步 v5；R4-C 动态构建已退休，`--r4c` 只读既有 10,385-byte 诊断且文件未改变。直接合同 `149 passed`，扩大回归 `308 passed + 43 subtests passed`，后端全量 `1294 passed + 425 subtests passed`、0 failures；`py_compile`、静态扫描、`git diff --check`、I2 空路径和 Alembic `current=head=d6e8f0a2b434` 通过。Schema/Adapter/API/Model/migration/React、fixture、旧结果/诊断、PostgreSQL 业务数据和 `.gitattributes` 未改；Key/真实 Adapter/DeepSeek/API attempt/token/费用/正式结果写入为 0。该结果不能证明旧 11 份响应已经回放或内容正确。`pricing_gate_allowed=false`；唯一下一步是等待用户明确确认 R5-D。
+- 2026-08-29，`7R5-I2-R5-B：Service v5 新职责合同红灯` 已完成并停止。五份允许测试修改前为 `138 passed + 1 warning`；新增/调整合同后精确为 `13 failed + 136 passed + 1 warning`，没有额外失败、skip 或 xfail。13 个红灯包括 9 个 Service 自然语言职责、3 个报告行为 v5 元数据接线和 1 个 R4-C 动态重建退休合同；无来源英文词/数字、证据定位、明确隐私泄露、重复/未知/不可用 fact key 定向为 `6 passed + 55 deselected + 1 warning`。测试文件 `py_compile`、`git diff --check` 和 I2 raw/human/final 空路径检查通过。生产 Prompt/Schema/Service、质量脚本/合同、fixture、历史结果/诊断、PostgreSQL 和 `.gitattributes` 均未在本批修改；没有读取 Key、实例化真实 Adapter、调用 DeepSeek、产生 API attempt/token/费用或写正式结果。生产报告行为仍为 v4，Prompt 正文/版本仍为 v3；红灯只证明 R5-C 目标被准确捕获，不能证明问题已修复或旧响应内容正确。`pricing_gate_allowed=false`；唯一下一步是等待用户明确确认 R5-C。
+- 2026-08-29，`7R5-I2-R5-A：剩余 Service 总盘点与职责文档门禁` 已完成并停止。只读重建当前报告行为 v4 的全部封存去向：13 份有响应报告为 6 接受、7 拒绝，6 份有响应稳定性为 2 接受、4 拒绝，合计 8/19 接受、11/19 拒绝；另有 7 份报告和 9 次稳定性无封存响应。11 份拒绝完整归为数字来源 R04/R17/S04-1/S04-3、英文词来源 R06/R15、综合说明重合 R16/R18、理由/证据重合 S00-1、分数方向关键词 R09/S00-3，并只读核实 ROI、Spring Cloud/Dubbo、0 到 50 万及年限数字的评价点/fact 来源。第 32H 节已登记 Service 硬规则、自然语言职责边界和 R5-B—D 独立实施顺序；本批只修改两份权威文档，没有修改 Prompt/Schema/Service、测试、fixture、质量脚本、诊断、结果或 PostgreSQL，没有创建 I2 raw/human/final，没有读取 Key、实例化 Adapter、调用 DeepSeek、产生 API attempt/token/费用。当前生产报告行为仍为 v4，Prompt 仍为 v3；该结果不能证明 Service v5 已实现或 11 份内容正确。`pricing_gate_allowed=false`；唯一下一步是等待用户明确确认 R5-B。
+- 2026-08-29，`7R5-I2-R4-C：R07/R00/S00-2 零调用回放` 已完成并停止。回放只读取封存 raw、R2-E/R3-D 来源诊断及 P00/P07 支持计划，固定报告行为 `lightweight_report_generation_v4`；旧“5.0 AI 初筛输出包含不得参与评价的敏感个人属性”门禁 `3/3` 消失，R07、R00、S00-2 当前均被 Service 接受，没有下一程序错误。三例全部标记为未来人工质量审核，Service 接受没有被写成内容正确、敏感属性语义安全或真实质量通过。新增独占诊断 `v5-quality-results/7r5i2-diagnostics/2026-08-29-stage7-7r5i2-r4c-sensitive-replay.json`，大小 10,385 bytes，不含完整原始响应、Key、Prompt、堆栈或思维链。预检专项由 `21 passed` 增至 `25 passed`；R4 直接相关 `118 passed`，扩大阶段 7 回归 `170 passed + 43 subtests passed`，后端全量 `1283 passed + 425 subtests passed`、0 failures；`py_compile`、诊断字段扫描、静态检查和 `git diff --check` 通过。生产 Prompt/Schema/Service/Adapter/API/Model/migration/React、fixture、旧诊断和 PostgreSQL 均未改；I2 raw/human/final 与 `.gitattributes` 不存在，Key/真实 Adapter/DeepSeek/API attempt/token/费用/PostgreSQL/正式结果写入均为 0。`pricing_gate_allowed=false`；唯一下一步是先讨论 R06/R15/R16/R18 的 Resume 不支持普通事实门禁，不得直接整改。
+- 2026-08-29，第二次修正后的 `7R5-I2-R4-B：缩小 5.0 Service 敏感扫描职责` 已完成并停止。5.0 Service 不再扫描整份 JSON 或用受保护属性通用关键词裁决自然语言，只提取 HR 可见文字并检查明确隐私标识、邮箱、电话和身份证；程序 ID、结构键和合法 fact key 不参与，明确隐私泄露、招聘决定、Prompt 注入及事实/证据/结构门禁继续保留，旧 1.0—4.0 行为不变。报告行为版本递增为 `lightweight_report_generation_v4`，Prompt 正文、Schema、Adapter、API、Model、migration、React 和 PostgreSQL 均未改。R1-C、R2-E、R3-D 已改为只读取并验证各自既有诊断，三个动态构建入口均会直接拒绝；只读命令成功，历史文件未覆盖。R4-B 相关为 `114 passed`，扩大阶段 7 回归为 `166 passed + 43 subtests passed`，后端全量为 `1279 passed + 425 subtests passed`、0 failures；`py_compile`、静态扫描和 `git diff --check` 通过。I2 raw/human/final 与 `.gitattributes` 均不存在；未读取 Key、实例化真实 Adapter、调用 DeepSeek、产生 API attempt/token/费用或写 PostgreSQL。结果证明误报职责和历史回放隔离已修复，不能证明 R07/R00/S00-2 当前整份报告通过或内容正确。`pricing_gate_allowed=false`；唯一下一步是等待用户确认 R4-C。
+- 2026-08-29，`7R5-I2-R4-A：敏感属性职责红灯合同` 已完成并停止。三份允许测试修改前为 `89 passed + 1 warning`，新增合同后为 `7 failed + 86 passed + 1 warning`；红灯固定为“用户增长相关”子串误报、合法 fact key 数字误报、受保护属性语义仍由 Service 关键词裁决、整份 `model_dump_json()` 扫描，以及 Service/Prompt/质量合同三个报告行为 v4 接线。明确邮箱泄露、招聘决定、Prompt 注入、重复/不存在 fact key 定向为 `5 passed + 1 warning`；测试 `py_compile` 和 `git diff --check` 通过。生产代码、质量脚本/合同、fixture、历史证据、数据库和正式路径均未改，真实调用与费用为 0。该红灯不能证明问题已修复；`pricing_gate_allowed=false`，唯一下一步是等待用户确认 R4-B。
+- 2026-08-29，`7R5-I2-R3-D：六个旧拒绝零调用回放` 已完成并停止。只读取封存 raw 与 I2-C/R1-C/R2-E 三层结构证据，固定回放 R07/R10/R16/R18/R19/S04-2 及 P00/P04/P05/P06/P07 五份必要支持计划；旧“无直接证据结论只能表达缺口、风险或待核实信息”门禁 6/6 消失。R10/R19/S04-2 当前被 Service 接受；R07 转入敏感属性门禁；R16/R18 转入综合说明含 Resume 不支持事实门禁。六例均保留未来人工审核，Service 接受没有被写成内容正确。新增独占诊断 `v5-quality-results/7r5i2-diagnostics/2026-08-29-stage7-7r5i2-r3d-no-evidence-replay.json`，大小 13,452 bytes，完整原始响应字段为 0。预检专项 `19 passed`，六份直接相关回归 `136 passed + 20 subtests passed`；第一次全量因 Docker/PostgreSQL 在运行期间非正常重启而为 `1259 passed + 14 connection failures`，容器自动恢复后失败两份合同 `25 passed`、数据库 `current=head=d6e8f0a2b434` 且 `alembic check` 无差异，稳定全量重跑为 `1273 passed + 425 subtests passed`、0 failures。`py_compile`、JSON 字段扫描和 `git diff --check` 通过；生产 Prompt/Schema/Service/Adapter/API/Model/migration/React、fixture、旧证据和 PostgreSQL 业务数据未改，I2 raw/human/final 未创建，Key/Adapter/DeepSeek/API attempt/token/费用新增为 0。`pricing_gate_allowed=false`；唯一下一步是先讨论 R07 及同类 R00/S00-2 的敏感属性门禁，不得直接整改。
+- 2026-08-29，`7R5-HASH-B：移除文件字节 hash 阻塞并保留结构保护` 已完成并停止。旧 4.0/当前 5.0 质量合同、运行器和 I2 预检不再以历史结果、raw、preflight/诊断或后续正式结果的整文件 SHA 决定通过；改为校验文件存在/可读、JSON 身份、固定 case 分母与唯一 ID、来源关系、write-once 和 I2 生命周期。CRLF 副本通过，损坏 JSON、错误 stage 和缺少分母仍失败；规范化 fixture、业务输入和数据库备份指纹保留。相关四份测试 `78 passed + 1 warning`，后端全量 `1269 passed + 425 subtests passed + 2 warnings`，0 failures；`py_compile`、删除门禁静态扫描和 `git diff --check` 通过。全量回归最初因本机数据库缺少 5.0 列产生同源 48 个失败；经用户单独明确授权、并在复核 87,224 bytes 备份及 SHA-256 后，已执行 `b4c6d8e0f212 → c5d7e9f1a323 → d6e8f0a2b434`，最终 `current=head` 且 `alembic check` 无差异。历史证据/诊断、fixture、产品 Prompt/Schema/Service/API/Model/migration/React、`.gitattributes` 和 Git 配置未改，I2 raw/human/final 未创建；Key/真实 Adapter/DeepSeek/API attempt/token/费用新增为 0。该结果不能证明六例内容正确或真实质量通过；`pricing_gate_allowed=false`，唯一下一步是等待用户按新合同重新确认 `7R5-I2-R3-D`。
+- 2026-08-28，`7R5-HASH-A：文件 hash 职责与实施顺序文档门禁` 已完成并停止。触发原因是跨电脑拉取后 Windows LF/CRLF 转换使 `2026-08-20-stage7-quality-acceptance-results.json` 的字节 SHA 与旧常量不同，I2 专项基线为 `13 failed + 1 passed`，13 个失败均在同一历史证据 hash 前置检查停止，R3-D 业务回放尚未运行；这不证明证据内容被修改，也不证明 R3-D 失败。新合同取消旧 4.0/当前 5.0 质量证据文件 SHA 的阻塞职责，保留 Git 差异、文件存在、JSON 身份、case 分母/ID、来源关系、生命周期和不可覆盖保护；规范化 fixture 指纹、业务输入指纹和数据库备份校验不在取消范围。本批只修改两份权威文档，`git diff --check` 通过，`.gitattributes` 和 I2 raw/human/final 均不存在；代码、测试、证据、Git 配置和数据库未改，未执行 R3-D、读取 Key 或调用 DeepSeek。`pricing_gate_allowed=false`；唯一下一步是等待用户确认 `7R5-HASH-B`，R3-D 必须在 HASH-B 完成后重新确认。
 - 2026-08-28，完成跨电脑交接范围纠正并停止。重新以受保护 I2-C preflight 为总账，确认已知无 evidence 关键词旧拒绝的完整分母为 R10（I2-C）、R16（R1-C）和 R07/R18/R19/S04-2（R2-E），因此 R3-D 从四例更正为六例；同时补回待讨论的 R04/S04-1 数字事实、R06 普通事实、R14 五分区不完整、7 份报告/9 次稳定性无旧响应和稳定性不可计算状态。本次只修改 5.0 权威设计与 `PROJECT_STATE.md`；没有修改代码、测试、Prompt、Schema、Service、质量脚本或结果，没有执行 R3-D、读取 Key、调用 DeepSeek、写 PostgreSQL 或产生费用。原四例版确认不得沿用，`pricing_gate_allowed=false`；唯一下一步是等待用户在六例范围下确认 R3-D。
 - 2026-08-28，`7R5-I2-R3-C：删除无证据结论关键词裁判` 已完成并停止。5.0 报告 Service 删除 `_NO_EVIDENCE_FINDING_TERMS` 和对应固定词拒绝分支，保留合法评价点关联、strengths/非零分证据、证据定位、事实/数字、时间 fact key、结构和安全门禁；报告行为版本递增为 `lightweight_report_generation_v3`，Prompt 正文/Prompt v3/Schema 5.0 不变。R3-B 8 个红灯全部转绿，五份直接相关 `126 passed`，后端全量 `1268 passed + 425 subtests passed`；`py_compile`、静态扫描、`git diff --check`、受保护证据 hash 和 I2 空路径检查通过。测试态旧响应显示 R19/S04-2 当前 Service 接受，R07/R18/R16 进入其他门禁；没有创建诊断或追认质量。Key/Adapter/DeepSeek/API attempt/token/费用/正式结果/PostgreSQL 业务写入新增为 0。该结果不能证明真实模型质量；`pricing_gate_allowed=false`，唯一下一步是等待用户确认 R3-D。
 - 2026-08-28，`7R5-I2-R3-B：Service 新职责合同红灯` 已完成并停止。五份相关测试修改前为 `118 passed`，新增合同后为 `8 failed + 118 passed`：四个正常措辞误拒绝、一个关键词表静态删除、两个行为版本 v3 元数据和一个质量执行合同元数据红灯，全部只指向 R3-C 尚未实现的职责。合法评价点关联、strengths/非零分证据、证据定位、事实/非时间数字、敏感属性、自动招聘决定、Prompt 注入、内容错误不重试和 13 份历史 hash 定向 `13 passed`；五份测试 `py_compile`、`git diff --check` 通过。生产代码、配置、fixture、质量脚本、结果和 PostgreSQL 未改，Key/Adapter/DeepSeek/API attempt/token/费用新增为 0。该结果不能证明修复或真实质量；`pricing_gate_allowed=false`，唯一下一步是等待用户确认 R3-C。

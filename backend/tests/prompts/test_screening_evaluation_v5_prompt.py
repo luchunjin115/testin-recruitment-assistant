@@ -15,10 +15,14 @@ from app.schemas.screening_evaluation import AIScreeningEvaluationV5Output
 
 
 def test_v5_prompt_has_fixed_version_and_ten_structured_sections() -> None:
-    assert SCREENING_EVALUATION_V5_PROMPT_VERSION == "screening_evaluation_lightweight_v3"
-    assert SCREENING_EVALUATION_V5_BEHAVIOR_VERSION == "lightweight_report_generation_v3"
+    assert SCREENING_EVALUATION_V5_PROMPT_VERSION == "screening_evaluation_lightweight_v4"
+    assert SCREENING_EVALUATION_V5_BEHAVIOR_VERSION == "lightweight_report_generation_v7"
     headings = re.findall(r"^## (\d+)\.", _V5_SYSTEM_PROMPT, flags=re.MULTILINE)
     assert headings == [str(index) for index in range(1, 11)]
+
+
+def test_v5_report_service_behavior_requires_v7() -> None:
+    assert SCREENING_EVALUATION_V5_BEHAVIOR_VERSION == "lightweight_report_generation_v7"
 
 
 @pytest.mark.parametrize(
@@ -37,8 +41,8 @@ def test_v5_prompt_prioritizes_concise_non_exhaustive_hr_material(
     assert required_instruction in _V5_SYSTEM_PROMPT
 
 
-def test_v5_duration_responsibility_contract_requires_prompt_v3() -> None:
-    assert SCREENING_EVALUATION_V5_PROMPT_VERSION == "screening_evaluation_lightweight_v3"
+def test_v5_duration_responsibility_contract_requires_prompt_v4() -> None:
+    assert SCREENING_EVALUATION_V5_PROMPT_VERSION == "screening_evaluation_lightweight_v4"
 
 
 @pytest.mark.parametrize(
@@ -53,10 +57,19 @@ def test_v5_duration_responsibility_contract_requires_prompt_v3() -> None:
         "静默核对年限门槛方向",
     ),
 )
-def test_v5_prompt_v3_constrains_duration_comparison_and_uncertainty(
+def test_v5_prompt_v4_constrains_duration_comparison_and_uncertainty(
     required_instruction: str,
 ) -> None:
     assert required_instruction in _V5_SYSTEM_PROMPT
+
+
+def test_v5_prompt_v4_separates_duration_keys_from_work_evidence_sources() -> None:
+    for required_instruction in (
+        "experience_period_fact_keys 不是工作经历来源或 evidence 来源字段",
+        "即使 evidence 来自工作经历，只要不计算经历时间，也必须返回 experience_period_fact_keys=[] 和 calculation_note=null",
+        "普通工作经历证据但不计算年限",
+    ):
+        assert required_instruction in _V5_SYSTEM_PROMPT
 
 
 def test_v5_prompt_has_four_balanced_full_json_few_shots() -> None:

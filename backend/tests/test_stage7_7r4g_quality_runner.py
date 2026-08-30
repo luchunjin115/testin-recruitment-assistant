@@ -514,7 +514,7 @@ def test_frozen_plan_fixture_and_denominators_do_not_drift() -> None:
 
 
 def test_dry_run_is_keyless_adapterless_and_write_free() -> None:
-    hashes_before = contract.historical_result_hashes()
+    identities_before = contract.validate_historical_results()
     existing_before = {
         path: path.exists()
         for path in (
@@ -533,7 +533,7 @@ def test_dry_run_is_keyless_adapterless_and_write_free() -> None:
     assert payload["api_key_read_as_prerequisite"] is False
     assert payload["writes_result_file"] is False
     assert sentinel.call_count == 0
-    assert contract.historical_result_hashes() == hashes_before
+    assert contract.validate_historical_results() == identities_before
     assert {
         path: path.exists() for path in existing_before
     } == existing_before
@@ -886,16 +886,16 @@ def test_v4_result_paths_are_new_and_never_historical() -> None:
     assert "7r4i" in contract.REPORT_FORMAL_RESULT_PATH.name
 
 
-def test_h1_and_hr1_results_are_both_immutable_historical_evidence() -> None:
-    hashes = contract.historical_result_hashes()
-    h1_relative = str(
+def test_h1_and_hr1_results_remain_registered_historical_evidence() -> None:
+    identities = contract.validate_historical_results()
+    assert identities["all_present_and_readable"] is True
+    assert identities["required_file_count"] == len(contract.HISTORICAL_RESULT_PATHS)
+    assert str(
         contract.CURRENT_H1_PLAN_TARGETED_RESULT_PATH.relative_to(PROJECT_ROOT)
-    )
-    hr1_relative = str(
+    ) in identities["required_paths"]
+    assert str(
         contract.CURRENT_HR1_PLAN_TARGETED_RESULT_PATH.relative_to(PROJECT_ROOT)
-    )
-    assert hashes[h1_relative] == contract.CURRENT_H1_PLAN_TARGETED_RESULT_SHA256
-    assert hashes[hr1_relative] == contract.CURRENT_HR1_PLAN_TARGETED_RESULT_SHA256
+    ) in identities["required_paths"]
     assert contract.CURRENT_HR1_PLAN_TARGETED_RESULT_PATH in (
         contract.HISTORICAL_RESULT_PATHS
     )

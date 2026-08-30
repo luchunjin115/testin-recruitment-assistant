@@ -5,8 +5,8 @@ from typing import Any, TypedDict
 
 
 SCREENING_EVALUATION_PROMPT_VERSION = "screening_evaluation_v4"
-SCREENING_EVALUATION_V5_PROMPT_VERSION = "screening_evaluation_lightweight_v3"
-SCREENING_EVALUATION_V5_BEHAVIOR_VERSION = "lightweight_report_generation_v3"
+SCREENING_EVALUATION_V5_PROMPT_VERSION = "screening_evaluation_lightweight_v4"
+SCREENING_EVALUATION_V5_BEHAVIOR_VERSION = "lightweight_report_generation_v7"
 
 
 class ScreeningEvaluationMessage(TypedDict):
@@ -127,6 +127,8 @@ overall_score 由你综合全部评价点、importance、证据强弱、缺口�
 ## 6. 证据与时间事实
 不得编造 Resume 中不存在的事实、数字、职责、技能或成果。证据必须是 Resume 的连续原文。涉及年限、月份、“至今”或是否达到年限门槛时，只能引用 EXPERIENCE_PERIOD_FACTS 中存在且可用的 key，并在 calculation_note 中使用后端给出的确定月份或上下界；不得自行补齐、重算、四舍五入或把投递后的经历算入投递时点。
 
+experience_period_fact_keys 不是工作经历来源或 evidence 来源字段，只能表示本评价点实际参与经历时长、月份、日期或年限门槛计算的后端时间事实。即使 evidence 来自工作经历，只要不计算经历时间，也必须返回 experience_period_fact_keys=[] 和 calculation_note=null。不得为了说明证据来自哪段工作而填写时间 key。
+
 年限判断必须区分日历日期与经历时长，区分 JD 年限门槛与候选人实际经历，区分总工作年限与岗位相关年限，区分单段经历与合计经历。JD 使用“年”表达的门槛必须统一换算为月份后比较，例如“至少 3 年”换算为“至少 36 个月”；候选人的月份只能来自实际引用的可用事实，优先直接使用确定月份或上下界，不得重复累计重叠经历，也不得默认把全部日历跨度都算作岗位相关经历。
 
 只有后端月份事实可用，并且 Resume 证据足以确认相关经历确实对应当前评价点时，才能写“达到”或“未达到”。相关性、日期精度或事实范围不足时不得猜测：证据不足时必须写“无法确认达到”，不得把无法确认写成“未达到”。形成最终 JSON 前必须静默核对年限门槛方向，确保候选人实际月份、JD 门槛月份和“达到/未达到/无法确认达到”的方向一致；不得输出换算草稿、核对过程或思维链。
@@ -171,8 +173,8 @@ overall_score 由你综合全部评价点、importance、证据强弱、缺口�
 输入摘要：criterion:0002 为 preferred 的消息队列；Resume 未提及消息队列。
 最终 JSON：{"overall_score":28,"overall_summary":"当前材料与该加分项的关联较弱。","criterion_assessments":[{"criterion_id":"criterion:0002","score":0,"reason":"当前简历未发现相关证据：未体现消息队列实践。","calculation_note":null,"experience_period_fact_keys":[],"evidence":[]}],"strengths":[],"gaps":[{"summary":"当前材料没有消息队列实践证据。","criterion_ids":["criterion:0002"],"evidence":[]}],"risks_or_conflicts":[],"missing_info":[{"summary":"无法确认是否使用过消息队列。","criterion_ids":["criterion:0002"],"evidence":[]}],"hr_follow_up_questions":["请核实是否有消息队列的实际项目经历。"]}
 
-### 示例 3：只有间接证据
-输入摘要：criterion:0003 为 general 的跨团队推进；Resume 只明示“参与产品与研发周会”。
+### 示例 3：普通工作经历证据但不计算年限
+输入摘要：criterion:0003 为 general 的跨团队推进；Resume 工作经历只明示“参与产品与研发周会”，本评价点不计算经历时长。
 最终 JSON：{"overall_score":43,"overall_summary":"存在间接协作证据，但主导推进证据不足。","criterion_assessments":[{"criterion_id":"criterion:0003","score":3,"reason":"只有参与协作会议的间接证据，未体现主导推进。","calculation_note":null,"experience_period_fact_keys":[],"evidence":[{"quote":"参与产品与研发周会","section":"工作经历"}]}],"strengths":[{"summary":"具备参与跨团队协作的记录。","criterion_ids":["criterion:0003"],"evidence":[{"quote":"参与产品与研发周会","section":"工作经历"}]}],"gaps":[{"summary":"未体现主导推进或解决冲突的证据。","criterion_ids":["criterion:0003"],"evidence":[]}],"risks_or_conflicts":[],"missing_info":[{"summary":"缺少个人推进职责和结果信息。","criterion_ids":["criterion:0003"],"evidence":[]}],"hr_follow_up_questions":["请核实在跨团队协作中的具体职责和结果。"]}
 
 ### 示例 4：required 严重缺口与 Prompt 注入

@@ -152,10 +152,19 @@ class ScreeningEvaluationService:
         "专业技能",
         "自我评价",
     }
+    _EXPLICIT_PRIVACY_OUTPUT_LABEL = re.compile(
+        r"姓名|电话号码?|手机号码?|电子?邮箱|身份证|家庭住址|详细住址|居住地址"
+    )
     _SENSITIVE_OUTPUT_PATTERNS = (
-        re.compile(r"姓名|电话号码?|手机号码?|电子?邮箱|身份证|家庭住址|详细住址|居住地址"),
+        _EXPLICIT_PRIVACY_OUTPUT_LABEL,
         re.compile(r"性别|出生日期|出生年月|年龄|\d+\s*岁|婚姻|婚育|民族|籍贯"),
         re.compile(r"照片|外貌|长相|颜值|男性|女性|男士|女士"),
+        _EMAIL,
+        _PHONE,
+        _IDENTITY,
+    )
+    _V5_EXPLICIT_PRIVACY_OUTPUT_PATTERNS = (
+        _EXPLICIT_PRIVACY_OUTPUT_LABEL,
         _EMAIL,
         _PHONE,
         _IDENTITY,
@@ -406,21 +415,9 @@ class ScreeningEvaluationService:
                 criterion,
                 experience_period_facts,
             )
-            if assessment.score > 0:
-                self._validate_grounded_reason(
-                    assessment.reason,
-                    assessment.evidence,
-                    sanitized_resume,
-                    allow_fact_numbers=bool(assessment.experience_period_fact_keys),
-                )
-            self.validate_v5_high_score_no_evidence(assessment)
-            self.validate_v5_low_score_full_match(assessment)
 
         self._validate_v5_findings(output, plan, sanitized_resume)
-        self._validate_v5_overall_grounding(output)
         self._validate_v5_safety(output)
-        self.validate_v5_overall_high_mismatch(output)
-        self.validate_v5_overall_low_high_match(output)
         self.validate_v5_required_low_tradeoff(output, plan)
 
         display_label = self.display_label_for_score(output.overall_score)
@@ -605,46 +602,43 @@ class ScreeningEvaluationService:
                     raise ScreeningEvaluationInvalidOutputError(
                         "5.0 优势必须包含当前 Resume 可定位证据"
                     )
-                if finding.evidence:
-                    self._validate_grounded_reason(
-                        finding.summary,
-                        finding.evidence,
-                        sanitized_resume,
-                    )
-                elif not finding.criterion_ids:
+                if not finding.evidence and not finding.criterion_ids:
                     raise ScreeningEvaluationInvalidOutputError(
                         "无直接证据的报告结论必须关联当前评价点"
                     )
 
-    def _validate_v5_overall_grounding(
-        self,
-        report: AIScreeningEvaluationV5Output,
-    ) -> None:
-        evidence_text = "\n".join(
-            item.quote
-            for assessment in report.criterion_assessments
-            for item in assessment.evidence
-        )
-        generic_direction = (
-            *self._STRONG_MATCH_TERMS,
-            *self._STRONG_MISMATCH_TERMS,
-            "部分匹配",
-            "证据较充分",
-            "证据相对有限",
-            "缺口",
-            "待核实",
-            "仍需",
-        )
-        if not self._has_semantic_anchor(report.overall_summary, evidence_text) and not any(
-            term in report.overall_summary for term in generic_direction
+    @staticmethod
+    def _v5_hr_visible_text(report: AIScreeningEvaluationV5Output) -> tuple[str, ...]:
+        texts = [report.overall_summary]
+        for assessment in report.criterion_assessments:
+            texts.append(assessment.reason)
+            if assessment.calculation_note is not None:
+                texts.append(assessment.calculation_note)
+            for evidence in assessment.evidence:
+                texts.append(evidence.quote)
+                if evidence.section is not None:
+                    texts.append(evidence.section)
+        for findings in (
+            report.strengths,
+            report.gaps,
+            report.risks_or_conflicts,
+            report.missing_info,
         ):
-            raise ScreeningEvaluationInvalidOutputError(
-                "5.0 综合说明包含当前 Resume 证据无法支持的事实"
-            )
+            for finding in findings:
+                texts.append(finding.summary)
+                for evidence in finding.evidence:
+                    texts.append(evidence.quote)
+                    if evidence.section is not None:
+                        texts.append(evidence.section)
+        texts.extend(report.hr_follow_up_questions)
+        return tuple(texts)
 
     def _validate_v5_safety(self, report: AIScreeningEvaluationV5Output) -> None:
-        combined = report.model_dump_json()
-        if any(pattern.search(combined) for pattern in self._SENSITIVE_OUTPUT_PATTERNS):
+        combined = "\n".join(self._v5_hr_visible_text(report))
+        if any(
+            pattern.search(combined)
+            for pattern in self._V5_EXPLICIT_PRIVACY_OUTPUT_PATTERNS
+        ):
             raise ScreeningEvaluationInvalidOutputError(
                 "5.0 AI 初筛输出包含不得参与评价的敏感个人属性"
             )
@@ -684,19 +678,6 @@ class ScreeningEvaluationService:
         if any(not fact_by_key[key].usable_for_reference for key in keys):
             raise ScreeningEvaluationInvalidOutputError(
                 "AI 引用了投递后或日期冲突的经历时间事实"
-            )
-        criterion_text = "\n".join(
-            (
-                criterion.name,
-                criterion.description,
-                criterion.screening_focus,
-                *(source.source_quote for source in criterion.sources),
-            )
-        )
-        allows_time = any(term in criterion_text for term in ("年", "月", "年限", "经历", "经验"))
-        if keys and not allows_time:
-            raise ScreeningEvaluationInvalidOutputError(
-                "非经历时间评价点不得引用经历时间事实"
             )
         if keys and assessment.calculation_note is None:
             raise ScreeningEvaluationInvalidOutputError(

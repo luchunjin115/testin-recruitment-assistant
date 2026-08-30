@@ -36,15 +36,14 @@ from app.schemas.screening_evaluation import (  # noqa: E402
 from stage7_7r5_quality_contract import (  # noqa: E402
     ACTIVE_RUN_ID,
     FROZEN_FIXTURE_SHA256,
-    HISTORICAL_RESULT_HASHES,
     I2_PREFLIGHT_PATH,
+    I2_RAW_RESULT_PATH,
     RAW_RESULT_PATH,
-    SEALED_RAW_SHA256,
     execution_contract,
-    sha256_file,
     validate_frozen_fixture,
     validate_historical_results,
     validate_result_lifecycle,
+    validate_sealed_raw_identity,
     write_new_json,
 )
 from tests.fixtures.v5_quality_samples import (  # noqa: E402
@@ -56,8 +55,6 @@ from tests.fixtures.v5_quality_samples import (  # noqa: E402
 
 
 REFERENCE_AT = datetime(2026, 8, 27, 0, 0, tzinfo=timezone.utc)
-I2_PREFLIGHT_SHA256 = "185b42d7c55d6654cedfa251f340d89469470800336aa17be192ae3d1c28b6b2"
-R1C_DIAGNOSTIC_SHA256 = "f89426b3aa03b005cb533d6305590d17751dbada076dda526295b8a31b9ad3f3"
 R1C_TARGET_CASE_IDS = ("R00", "R09", "R16", "S00-1", "S00-2", "S00-3")
 R1C_DIAGNOSTIC_DIR = I2_PREFLIGHT_PATH.parent / "7r5i2-diagnostics"
 R1C_DIAGNOSTIC_PATH = (
@@ -84,6 +81,148 @@ R2E_DIAGNOSTIC_PATH = (
     / "2026-08-28-stage7-7r5i2-r2e-duration-replay.json"
 )
 OLD_DURATION_GATE_MESSAGE = "AI 年限结论与后端经历时间事实冲突"
+R3D_TARGET_CASE_IDS = ("R07", "R10", "R16", "R18", "R19", "S04-2")
+R3D_DIAGNOSTIC_PATH = (
+    R1C_DIAGNOSTIC_DIR
+    / "2026-08-29-stage7-7r5i2-r3d-no-evidence-replay.json"
+)
+OLD_NO_EVIDENCE_GATE_MESSAGE = (
+    "无直接证据的报告结论只能表达缺口、风险或待核实信息"
+)
+R4C_TARGET_CASE_IDS = ("R07", "R00", "S00-2")
+R4C_DIAGNOSTIC_PATH = (
+    R1C_DIAGNOSTIC_DIR
+    / "2026-08-29-stage7-7r5i2-r4c-sensitive-replay.json"
+)
+OLD_SENSITIVE_GATE_MESSAGE = "5.0 AI 初筛输出包含不得参与评价的敏感个人属性"
+R5D_TARGET_CASE_IDS = (
+    "R04",
+    "R06",
+    "R09",
+    "R15",
+    "R16",
+    "R17",
+    "R18",
+    "S00-1",
+    "S00-3",
+    "S04-1",
+    "S04-3",
+)
+R5D_KNOWN_MODEL_RISK_CASE_IDS = ("R06", "R15", "R16")
+R5D_DIAGNOSTIC_PATH = (
+    R1C_DIAGNOSTIC_DIR
+    / "2026-08-29-stage7-7r5i2-r5d-service-v5-replay.json"
+)
+R5D_PREVIOUS_GATE_SOURCES = {
+    "R04": ("7R5-I2-C", "AI 初筛理由包含 Resume 无法支持的数值事实"),
+    "R06": ("7R5-I2-C", "AI 初筛理由包含 Resume 无法支持的事实"),
+    "R09": ("7R5-I2-R1-C", "5.0 单项高分与未发现证据说明方向明显矛盾"),
+    "R15": ("7R5-I2-R2-E", "AI 初筛理由包含 Resume 无法支持的事实"),
+    "R16": ("7R5-I2-R3-D", "5.0 综合说明包含当前 Resume 证据无法支持的事实"),
+    "R17": ("7R5-I2-R2-E", "AI 初筛理由包含 Resume 无法支持的数值事实"),
+    "R18": ("7R5-I2-R3-D", "5.0 综合说明包含当前 Resume 证据无法支持的事实"),
+    "S00-1": ("7R5-I2-R2-E", "AI 初筛理由与引用证据缺少可核对联系"),
+    "S00-3": ("7R5-I2-R2-E", "5.0 单项高分与未发现证据说明方向明显矛盾"),
+    "S04-1": ("7R5-I2-C", "AI 初筛理由包含 Resume 无法支持的数值事实"),
+    "S04-3": ("7R5-I2-R2-E", "AI 初筛理由包含 Resume 无法支持的数值事实"),
+}
+R6D_TARGET_CASE_IDS = (
+    "R00",
+    "R04",
+    "R05",
+    "R06",
+    "R07",
+    "R09",
+    "R10",
+    "R14",
+    "R15",
+    "R16",
+    "R17",
+    "R18",
+    "R19",
+    "S00-1",
+    "S00-2",
+    "S00-3",
+    "S04-1",
+    "S04-2",
+    "S04-3",
+)
+R6D_MISSING_REPORT_CASE_IDS = (
+    "R01",
+    "R02",
+    "R03",
+    "R08",
+    "R11",
+    "R12",
+    "R13",
+)
+R6D_MISSING_STABILITY_CASE_IDS = (
+    "S01-1",
+    "S01-2",
+    "S01-3",
+    "S02-1",
+    "S02-2",
+    "S02-3",
+    "S03-1",
+    "S03-2",
+    "S03-3",
+)
+R6D_KNOWN_MODEL_RISKS = {
+    "R06": "评价点年限与报告年限结论仍需人工核对",
+    "R14": "五个报告分区的完整性和内容价值仍需人工核对",
+    "R15": "报告内部年限结论仍需人工核对",
+    "R16": "能力迁移推断仍需人工核对",
+    "R19": "既有模型内容风险仍需人工核对",
+}
+R6D_DIAGNOSTIC_PATH = (
+    R1C_DIAGNOSTIC_DIR
+    / "2026-08-29-stage7-7r5i2-r6d-service-v6-full-replay.json"
+)
+R7D_TARGET_CASE_IDS = (
+    "R00",
+    "S00-1",
+    "S00-2",
+    "S00-3",
+    "S04-2",
+    "S04-3",
+)
+R7D_DIAGNOSTIC_PATH = (
+    R1C_DIAGNOSTIC_DIR
+    / "2026-08-29-stage7-7r5i2-r7d-time-key-service-v7-replay.json"
+)
+R7D_OLD_KEYWORD_GATE_MESSAGE = "非经历时间评价点不得引用经历时间事实"
+R7D_NEXT_DETERMINISTIC_GATE_MESSAGE = (
+    "引用经历时间事实时必须提供 calculation_note"
+)
+R6D_PREVIOUS_SOURCES = {
+    "R00": ("7R5-I2-R4-C", "succeeded", None),
+    "R04": ("7R5-I2-R5-D", "succeeded", None),
+    "R05": ("7R5-I2-R2-E", "succeeded", None),
+    "R06": ("7R5-I2-R5-D", "succeeded", None),
+    "R07": ("7R5-I2-R4-C", "succeeded", None),
+    "R09": ("7R5-I2-R5-D", "succeeded", None),
+    "R10": ("7R5-I2-R3-D", "succeeded", None),
+    "R14": ("7R5-I2-C", "succeeded", None),
+    "R15": ("7R5-I2-R5-D", "succeeded", None),
+    "R16": (
+        "7R5-I2-R5-D",
+        "failed",
+        "AI 初筛理由包含 Resume 无法支持的数值事实",
+    ),
+    "R17": ("7R5-I2-R5-D", "succeeded", None),
+    "R18": ("7R5-I2-R5-D", "succeeded", None),
+    "R19": ("7R5-I2-R3-D", "succeeded", None),
+    "S00-1": ("7R5-I2-R5-D", "succeeded", None),
+    "S00-2": ("7R5-I2-R4-C", "succeeded", None),
+    "S00-3": (
+        "7R5-I2-R5-D",
+        "failed",
+        "AI 初筛理由包含 Resume 无法支持的数值事实",
+    ),
+    "S04-1": ("7R5-I2-R5-D", "succeeded", None),
+    "S04-2": ("7R5-I2-R3-D", "succeeded", None),
+    "S04-3": ("7R5-I2-R5-D", "succeeded", None),
+}
 
 
 def _utc_now() -> str:
@@ -119,11 +258,7 @@ def _plan_case_index(pair: dict[str, Any]) -> int:
 
 
 def _load_source_raw(source_path: Path) -> dict[str, Any]:
-    if not source_path.exists():
-        raise RuntimeError("7R5-I2 零调用预检缺少封存 raw")
-    digest = sha256_file(source_path)
-    if digest != SEALED_RAW_SHA256:
-        raise RuntimeError("7R5-I2 零调用预检的封存 raw SHA-256 不匹配")
+    validate_sealed_raw_identity(source_path)
     try:
         raw = json.loads(source_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
@@ -145,11 +280,6 @@ def _load_source_raw(source_path: Path) -> dict[str, Any]:
         or fixture.get("hashes", {}).get("fixture") != FROZEN_FIXTURE_SHA256
     ):
         raise RuntimeError("封存 raw 未绑定冻结 fixture")
-    if (
-        raw.get("historical_result_hashes_before") != HISTORICAL_RESULT_HASHES
-        or raw.get("historical_result_hashes_after") != HISTORICAL_RESULT_HASHES
-    ):
-        raise RuntimeError("封存 raw 未证明 13 份历史证据不变")
     attempts = raw["attempt_audit"]
     case_ids = [item.get("case_id") for item in attempts if isinstance(item, dict)]
     if len(case_ids) != len(set(case_ids)) or any(
@@ -166,6 +296,86 @@ def _load_source_raw(source_path: Path) -> dict[str, Any]:
     return raw
 
 
+def _load_i2_raw(source_path: Path = I2_RAW_RESULT_PATH) -> dict[str, Any]:
+    try:
+        raw = json.loads(source_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        raise RuntimeError("R7-D 无法读取 I2-E raw") from None
+    if raw.get("stage") != ACTIVE_RUN_ID or raw.get("mode") != "real_raw":
+        raise RuntimeError("R7-D 只接受登记的 7R5-I2 real raw")
+
+    expected_case_ids = {
+        "plan_records": [f"P{index:02d}" for index in range(10)],
+        "report_records": [f"R{index:02d}" for index in range(20)],
+        "stability_records": [
+            f"S{index:02d}-{run}"
+            for index in V5_STABILITY_SAMPLE_INDICES
+            for run in range(1, V5_STABILITY_RUNS_PER_SAMPLE + 1)
+        ],
+    }
+    for key, case_ids in expected_case_ids.items():
+        records = raw.get(key)
+        if not isinstance(records, list) or [
+            item.get("case_id") for item in records if isinstance(item, dict)
+        ] != case_ids:
+            raise RuntimeError(f"R7-D I2 raw 的 {key} case 身份或分母不完整")
+
+    fixture = raw.get("fixture")
+    if (
+        not isinstance(fixture, dict)
+        or fixture.get("hashes", {}).get("fixture") != FROZEN_FIXTURE_SHA256
+    ):
+        raise RuntimeError("R7-D I2 raw 未绑定冻结 fixture")
+    source_contract = raw.get("execution_contract")
+    if (
+        not isinstance(source_contract, dict)
+        or source_contract.get("report_prompt_version")
+        != "screening_evaluation_lightweight_v3"
+        or source_contract.get("report_service_behavior_version")
+        != "lightweight_report_generation_v6"
+    ):
+        raise RuntimeError("R7-D I2 raw 的原始 Prompt/Service 身份不匹配")
+
+    attempts = raw.get("attempt_audit")
+    all_case_ids = [
+        *expected_case_ids["plan_records"],
+        *expected_case_ids["report_records"],
+        *expected_case_ids["stability_records"],
+    ]
+    if (
+        not isinstance(attempts, list)
+        or len(attempts) != 45
+        or {item.get("case_id") for item in attempts if isinstance(item, dict)}
+        != set(all_case_ids)
+        or any(
+            item.get("attempt_number") != 1
+            or item.get("result") != "succeeded"
+            or not isinstance(item.get("raw_response"), str)
+            for item in attempts
+            if isinstance(item, dict)
+        )
+    ):
+        raise RuntimeError("R7-D I2 raw 的 45 次响应身份或分母不完整")
+    return raw
+
+
+def _i2_raw_identity(raw: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "stage": raw["stage"],
+        "mode": raw["mode"],
+        "plan_case_count": len(raw["plan_records"]),
+        "report_case_count": len(raw["report_records"]),
+        "stability_case_count": len(raw["stability_records"]),
+        "attempt_count": len(raw["attempt_audit"]),
+        "report_prompt_version": raw["execution_contract"][
+            "report_prompt_version"
+        ],
+        "report_service_behavior_version": raw["execution_contract"][
+            "report_service_behavior_version"
+        ],
+    }
+
+
 def _source_records(raw: dict[str, Any], key: str) -> dict[str, dict[str, Any]]:
     return {item["case_id"]: item for item in raw[key]}
 
@@ -177,8 +387,6 @@ def _source_attempts(raw: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def _load_source_preflight() -> dict[str, Any]:
     if not I2_PREFLIGHT_PATH.exists():
         raise RuntimeError("I2 定向诊断缺少受保护的 I2-C preflight")
-    if sha256_file(I2_PREFLIGHT_PATH) != I2_PREFLIGHT_SHA256:
-        raise RuntimeError("I2 定向诊断的 I2-C preflight SHA-256 不匹配")
     try:
         payload = json.loads(I2_PREFLIGHT_PATH.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
@@ -186,29 +394,468 @@ def _load_source_preflight() -> dict[str, Any]:
     if (
         payload.get("stage") != ACTIVE_RUN_ID
         or payload.get("mode") != "zero_call_full_category_preflight"
-        or payload.get("source_raw_sha256") != SEALED_RAW_SHA256
     ):
         raise RuntimeError("I2 定向诊断的 I2-C preflight 身份不匹配")
+    expected_ids = {
+        "plan_records": [f"P{index:02d}" for index in range(10)],
+        "report_records": [f"R{index:02d}" for index in range(20)],
+        "stability_records": [
+            f"S{index:02d}-{run}"
+            for index in V5_STABILITY_SAMPLE_INDICES
+            for run in range(1, V5_STABILITY_RUNS_PER_SAMPLE + 1)
+        ],
+    }
+    for key, case_ids in expected_ids.items():
+        records = payload.get(key)
+        if not isinstance(records, list) or [
+            item.get("case_id") for item in records if isinstance(item, dict)
+        ] != case_ids:
+            raise RuntimeError(f"I2-C preflight 的 {key} case 身份或分母不完整")
     return payload
 
 
 def _load_source_r1c_diagnostic() -> dict[str, Any]:
     if not R1C_DIAGNOSTIC_PATH.exists():
         raise RuntimeError("R2-E 缺少受保护的 R1-C 诊断")
-    if sha256_file(R1C_DIAGNOSTIC_PATH) != R1C_DIAGNOSTIC_SHA256:
-        raise RuntimeError("R2-E 的 R1-C 诊断 SHA-256 不匹配")
     try:
         payload = json.loads(R1C_DIAGNOSTIC_PATH.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         raise RuntimeError("R2-E 无法读取 R1-C 诊断") from None
+    records = payload.get("records")
     if (
         payload.get("stage") != ACTIVE_RUN_ID
         or payload.get("batch") != "7R5-I2-R1-C"
-        or payload.get("source_raw_sha256") != SEALED_RAW_SHA256
-        or payload.get("source_preflight_sha256") != I2_PREFLIGHT_SHA256
+        or payload.get("mode") != "zero_call_targeted_structure_replay"
+        or payload.get("target_case_ids") != list(R1C_TARGET_CASE_IDS)
+        or not isinstance(records, list)
+        or [item.get("case_id") for item in records if isinstance(item, dict)]
+        != list(R1C_TARGET_CASE_IDS)
     ):
-        raise RuntimeError("R2-E 的 R1-C 诊断身份不匹配")
+        raise RuntimeError("R2-E/R3-D 的 R1-C 诊断身份或分母不匹配")
     return payload
+
+
+def _load_source_r2e_diagnostic() -> dict[str, Any]:
+    if not R2E_DIAGNOSTIC_PATH.exists():
+        raise RuntimeError("R3-D 缺少受保护的 R2-E 诊断")
+    try:
+        payload = json.loads(R2E_DIAGNOSTIC_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        raise RuntimeError("R3-D 无法读取 R2-E 诊断") from None
+    records = payload.get("records")
+    if (
+        payload.get("stage") != ACTIVE_RUN_ID
+        or payload.get("batch") != "7R5-I2-R2-E"
+        or payload.get("mode") != "zero_call_targeted_duration_replay"
+        or payload.get("target_case_ids") != list(R2E_TARGET_CASE_IDS)
+        or not isinstance(records, list)
+        or [item.get("case_id") for item in records if isinstance(item, dict)]
+        != list(R2E_TARGET_CASE_IDS)
+    ):
+        raise RuntimeError("R3-D 的 R2-E 诊断身份或分母不匹配")
+    return payload
+
+
+def _load_historical_replay_diagnostic(
+    *,
+    path: Path,
+    batch: str,
+    mode: str,
+    target_case_ids: tuple[str, ...],
+    expected_summary: dict[str, int],
+) -> dict[str, Any]:
+    if not path.exists():
+        raise RuntimeError(f"R4-B 缺少已封存的 {batch} 诊断")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        raise RuntimeError(f"R4-B 无法读取已封存的 {batch} 诊断") from None
+
+    records = payload.get("records")
+    if (
+        payload.get("stage") != "7R5-I2"
+        or payload.get("batch") != batch
+        or payload.get("mode") != mode
+        or payload.get("target_case_ids") != list(target_case_ids)
+        or not isinstance(records, list)
+        or [item.get("case_id") for item in records if isinstance(item, dict)]
+        != list(target_case_ids)
+        or payload.get("summary") != expected_summary
+    ):
+        raise RuntimeError(f"已封存的 {batch} 诊断身份、分母或结论不完整")
+
+    serialized = json.dumps(payload, ensure_ascii=False)
+    if any(
+        marker in serialized
+        for marker in (
+            '"raw_response"',
+            "DEEPSEEK_API_KEY",
+            "chain_of_thought",
+            "stack_trace",
+        )
+    ):
+        raise RuntimeError(f"已封存的 {batch} 诊断包含禁止复制的敏感内容")
+    if (
+        payload.get("real_model_call_count") != 0
+        or payload.get("api_attempt_count") != 0
+        or payload.get("api_key_read") is not False
+        or payload.get("adapter_instantiated") is not False
+        or payload.get("postgresql_write_count") != 0
+        or payload.get("formal_result_write_count") != 0
+        or payload.get("diagnostic_write_count") != 1
+        or payload.get("raw_response_copied") is not False
+        or payload.get("pricing_gate_allowed") is not False
+        or payload.get("quality_conclusion_allowed") is not False
+    ):
+        raise RuntimeError(f"已封存的 {batch} 诊断零调用或质量限制合同不完整")
+    return payload
+
+
+def load_r1c_diagnostic(path: Path = R1C_DIAGNOSTIC_PATH) -> dict[str, Any]:
+    payload = _load_historical_replay_diagnostic(
+        path=path,
+        batch="7R5-I2-R1-C",
+        mode="zero_call_targeted_structure_replay",
+        target_case_ids=R1C_TARGET_CASE_IDS,
+        expected_summary={
+            "target_case_count": 6,
+            "quantity_gate_crossed_count": 6,
+            "full_report_accepted_count": 0,
+            "next_service_gate_rejected_count": 6,
+            "current_schema_rejected_count": 0,
+        },
+    )
+    if (
+        payload.get("supporting_plan_case_ids") != ["P00", "P06", "P09"]
+        or not all(
+            record.get("current_schema_accepted") is True
+            and record.get("quantity_gate_crossed") is True
+            for record in payload["records"]
+        )
+    ):
+        raise RuntimeError("已封存的 R1-C 诊断结构放宽结论不完整")
+    return payload
+
+
+def load_r2e_diagnostic(path: Path = R2E_DIAGNOSTIC_PATH) -> dict[str, Any]:
+    payload = _load_historical_replay_diagnostic(
+        path=path,
+        batch="7R5-I2-R2-E",
+        mode="zero_call_targeted_duration_replay",
+        target_case_ids=R2E_TARGET_CASE_IDS,
+        expected_summary={
+            "target_case_count": 12,
+            "old_duration_gate_removed_count": 12,
+            "old_duration_gate_still_rejected_count": 0,
+            "full_report_accepted_count": 1,
+            "next_service_gate_rejected_count": 11,
+            "future_human_quality_review_case_count": 2,
+        },
+    )
+    if (
+        payload.get("supporting_plan_case_ids") != ["P00", "P04", "P05", "P07"]
+        or payload.get("model_risk_case_ids") != ["R15", "R19"]
+        or not all(
+            record.get("old_duration_gate_removed") is True
+            for record in payload["records"]
+        )
+        or payload.get("replay_limitations")
+        != {
+            "responses_were_generated_before_prompt_v3": True,
+            "prompt_v3_real_model_behavior_evaluated": False,
+            "service_acceptance_proves_content_quality": False,
+            "r15_r19_require_future_human_quality_review": True,
+        }
+    ):
+        raise RuntimeError("已封存的 R2-E 诊断年限放宽结论或限制不完整")
+    return payload
+
+
+def load_r3d_diagnostic(path: Path = R3D_DIAGNOSTIC_PATH) -> dict[str, Any]:
+    if not path.exists():
+        raise RuntimeError("R4-B 缺少已封存的 R3-D 诊断")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        raise RuntimeError("R4-B 无法读取已封存的 R3-D 诊断") from None
+    expected_summary = {
+        "target_case_count": 6,
+        "old_no_evidence_gate_removed_count": 6,
+        "old_no_evidence_gate_still_rejected_count": 0,
+        "full_report_accepted_count": 3,
+        "next_service_gate_rejected_count": 3,
+        "future_human_quality_review_case_count": 6,
+    }
+    records = payload.get("records")
+    if (
+        payload.get("stage") != "7R5-I2"
+        or payload.get("batch") != "7R5-I2-R3-D"
+        or payload.get("mode") != "zero_call_targeted_no_evidence_replay"
+        or payload.get("target_case_ids") != list(R3D_TARGET_CASE_IDS)
+        or not isinstance(records, list)
+        or [item.get("case_id") for item in records if isinstance(item, dict)]
+        != list(R3D_TARGET_CASE_IDS)
+        or payload.get("summary") != expected_summary
+    ):
+        raise RuntimeError("已封存的 R3-D 诊断身份、分母或结论不完整")
+    serialized = json.dumps(payload, ensure_ascii=False)
+    if any(
+        marker in serialized
+        for marker in (
+            '"raw_response"',
+            "DEEPSEEK_API_KEY",
+            "chain_of_thought",
+            "stack_trace",
+        )
+    ):
+        raise RuntimeError("已封存的 R3-D 诊断包含禁止复制的敏感内容")
+    if (
+        payload.get("real_model_call_count") != 0
+        or payload.get("api_attempt_count") != 0
+        or payload.get("api_key_read") is not False
+        or payload.get("adapter_instantiated") is not False
+        or payload.get("postgresql_write_count") != 0
+        or payload.get("formal_result_write_count") != 0
+        or payload.get("diagnostic_write_count") != 1
+        or payload.get("raw_response_copied") is not False
+        or payload.get("pricing_gate_allowed") is not False
+        or payload.get("quality_conclusion_allowed") is not False
+        or payload.get("replay_limitations")
+        != {
+            "service_acceptance_proves_content_quality": False,
+            "responses_received_new_model_review": False,
+            "future_human_quality_review_required": True,
+        }
+    ):
+        raise RuntimeError("已封存的 R3-D 诊断零调用或质量限制合同不完整")
+    return payload
+
+
+def load_r4c_diagnostic(path: Path = R4C_DIAGNOSTIC_PATH) -> dict[str, Any]:
+    payload = _load_historical_replay_diagnostic(
+        path=path,
+        batch="7R5-I2-R4-C",
+        mode="zero_call_targeted_sensitive_replay",
+        target_case_ids=R4C_TARGET_CASE_IDS,
+        expected_summary={
+            "target_case_count": 3,
+            "old_sensitive_gate_removed_count": 3,
+            "old_sensitive_gate_still_rejected_count": 0,
+            "full_report_accepted_count": 3,
+            "next_service_gate_rejected_count": 0,
+            "future_human_quality_review_case_count": 3,
+        },
+    )
+    if (
+        payload.get("supporting_plan_case_ids") != ["P00", "P07"]
+        or not all(
+            record.get("old_sensitive_gate_removed") is True
+            for record in payload["records"]
+        )
+        or payload.get("replay_limitations")
+        != {
+            "service_acceptance_proves_content_quality": False,
+            "responses_received_new_model_review": False,
+            "protected_attribute_semantics_evaluated": False,
+            "future_human_quality_review_required": True,
+        }
+    ):
+        raise RuntimeError("已封存的 R4-C 诊断敏感门禁结论或限制不完整")
+    return payload
+
+
+def load_r5d_diagnostic(path: Path = R5D_DIAGNOSTIC_PATH) -> dict[str, Any]:
+    payload = _load_historical_replay_diagnostic(
+        path=path,
+        batch="7R5-I2-R5-D",
+        mode="zero_call_remaining_service_v5_replay",
+        target_case_ids=R5D_TARGET_CASE_IDS,
+        expected_summary={
+            "target_case_count": 11,
+            "previous_service_gate_removed_count": 11,
+            "previous_service_gate_still_rejected_count": 0,
+            "full_report_accepted_count": 9,
+            "next_service_gate_rejected_count": 2,
+            "future_human_quality_review_case_count": 11,
+        },
+    )
+    records = payload["records"]
+    if (
+        payload.get("supporting_plan_case_ids")
+        != ["P00", "P04", "P06", "P07", "P09"]
+        or payload.get("known_model_risk_case_ids") != ["R06", "R15", "R16"]
+        or payload.get("execution_contract", {}).get(
+            "report_service_behavior_version"
+        )
+        != "lightweight_report_generation_v5"
+        or not all(
+            record.get("previous_service_gate_removed") is True
+            and record.get("future_human_quality_review_required") is True
+            for record in records
+        )
+        or {
+            record["case_id"]
+            for record in records
+            if record.get("current_report_status") == "failed"
+        }
+        != {"R16", "S00-3"}
+        or payload.get("replay_limitations")
+        != {
+            "service_acceptance_proves_content_quality": False,
+            "responses_received_new_model_review": False,
+            "known_model_content_risks_resolved": False,
+            "future_human_quality_review_required": True,
+        }
+    ):
+        raise RuntimeError("已封存的 R5-D 诊断回放结论或限制不完整")
+    return payload
+
+
+def load_r6d_diagnostic(path: Path = R6D_DIAGNOSTIC_PATH) -> dict[str, Any]:
+    payload = _load_historical_replay_diagnostic(
+        path=path,
+        batch="7R5-I2-R6-D",
+        mode="zero_call_service_v6_full_replay",
+        target_case_ids=R6D_TARGET_CASE_IDS,
+        expected_summary={
+            "target_case_count": 19,
+            "report_response_count": 13,
+            "stability_response_count": 6,
+            "missing_report_response_count": 7,
+            "missing_stability_response_count": 9,
+            "previously_accepted_count": 17,
+            "previously_rejected_count": 2,
+            "old_free_text_source_gate_target_count": 2,
+            "old_free_text_source_gate_removed_count": 2,
+            "old_free_text_source_gate_still_rejected_count": 0,
+            "full_report_accepted_count": 19,
+            "next_service_gate_rejected_count": 0,
+            "future_human_quality_review_case_count": 19,
+        },
+    )
+    records = payload["records"]
+    if (
+        payload.get("missing_report_case_ids")
+        != list(R6D_MISSING_REPORT_CASE_IDS)
+        or payload.get("missing_stability_case_ids")
+        != list(R6D_MISSING_STABILITY_CASE_IDS)
+        or payload.get("known_model_risk_case_ids")
+        != list(R6D_KNOWN_MODEL_RISKS)
+        or payload.get("execution_contract", {}).get(
+            "report_service_behavior_version"
+        )
+        != "lightweight_report_generation_v6"
+        or not all(
+            record.get("current_report_status") == "succeeded"
+            and record.get("future_human_quality_review_required") is True
+            for record in records
+        )
+        or {
+            record["case_id"]
+            for record in records
+            if record.get("previous_free_text_source_gate") is True
+        }
+        != {"R16", "S00-3"}
+        or not all(
+            record.get("old_free_text_source_gate_removed") is True
+            for record in records
+            if record.get("previous_free_text_source_gate") is True
+        )
+        or payload.get("replay_limitations")
+        != {
+            "service_acceptance_proves_content_quality": False,
+            "responses_received_new_model_review": False,
+            "known_model_content_risks_resolved": False,
+            "missing_responses_were_reconstructed": False,
+            "future_human_quality_review_required": True,
+        }
+    ):
+        raise RuntimeError("已封存的 R6-D 诊断回放结论或限制不完整")
+    return payload
+
+
+def load_r7d_diagnostic(path: Path = R7D_DIAGNOSTIC_PATH) -> dict[str, Any]:
+    payload = _load_historical_replay_diagnostic(
+        path=path,
+        batch="7R5-I2-R7-D",
+        mode="zero_call_time_key_service_v7_replay",
+        target_case_ids=R7D_TARGET_CASE_IDS,
+        expected_summary={
+            "target_case_count": 6,
+            "report_response_count": 1,
+            "stability_response_count": 5,
+            "old_keyword_gate_target_count": 6,
+            "old_keyword_gate_removed_count": 6,
+            "old_keyword_gate_still_rejected_count": 0,
+            "full_report_accepted_count": 0,
+            "next_deterministic_gate_rejected_count": 6,
+            "missing_calculation_note_count": 6,
+            "future_human_quality_review_case_count": 6,
+        },
+    )
+    records = payload["records"]
+    if (
+        payload.get("supporting_plan_case_ids") != ["P00", "P04"]
+        or payload.get("source_raw_identity")
+        != {
+            "stage": "7R5-I2",
+            "mode": "real_raw",
+            "plan_case_count": 10,
+            "report_case_count": 20,
+            "stability_case_count": 15,
+            "attempt_count": 45,
+            "report_prompt_version": "screening_evaluation_lightweight_v3",
+            "report_service_behavior_version": "lightweight_report_generation_v6",
+        }
+        or payload.get("execution_contract", {}).get(
+            "report_service_behavior_version"
+        )
+        != "lightweight_report_generation_v7"
+        or not all(
+            record.get("source_status") == "failed"
+            and record.get("source_error_message")
+            == R7D_OLD_KEYWORD_GATE_MESSAGE
+            and record.get("old_keyword_gate_removed") is True
+            and record.get("current_report_status") == "failed"
+            and record.get("current_report_error_message")
+            == R7D_NEXT_DETERMINISTIC_GATE_MESSAGE
+            and record.get("missing_calculation_note_after_keyword_gate") is True
+            and record.get("future_human_quality_review_required") is True
+            and isinstance(record.get("raw_response_sha256"), str)
+            and len(record["raw_response_sha256"]) == 64
+            and record.get("raw_response_length", 0) > 0
+            for record in records
+        )
+        or payload.get("replay_limitations")
+        != {
+            "service_acceptance_proves_content_quality": False,
+            "responses_received_new_model_review": False,
+            "prompt_v4_was_applied_to_old_responses": False,
+            "time_key_content_was_corrected": False,
+            "future_human_quality_review_required": True,
+        }
+    ):
+        raise RuntimeError("已封存的 R7-D 诊断回放结论或限制不完整")
+    return payload
+
+
+def _preflight_identity(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "stage": payload["stage"],
+        "mode": payload["mode"],
+        "plan_case_count": len(payload["plan_records"]),
+        "report_case_count": len(payload["report_records"]),
+        "stability_case_count": len(payload["stability_records"]),
+    }
+
+
+def _diagnostic_identity(payload: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "stage": payload["stage"],
+        "batch": payload["batch"],
+        "mode": payload["mode"],
+        "target_case_ids": list(payload["target_case_ids"]),
+    }
 
 
 def _target_case_context(
@@ -274,6 +921,9 @@ def _auxiliary_counts(content: str) -> tuple[dict[str, int], bool, str | None]:
 async def build_r1c_replay_payload(
     *, source_path: Path = RAW_RESULT_PATH
 ) -> dict[str, Any]:
+    raise RuntimeError(
+        "R1-C 已封存；行为版本升级后只允许读取既有诊断，不得动态重建"
+    )
     lifecycle = validate_result_lifecycle(
         run_id=ACTIVE_RUN_ID,
         expected_state="i2_preflight_complete",
@@ -353,10 +1003,8 @@ async def build_r1c_replay_payload(
     historical_after = validate_historical_results()
     if historical_before != historical_after:
         raise RuntimeError("R1-C 回放期间 13 份历史证据发生变化")
-    if sha256_file(source_path) != SEALED_RAW_SHA256:
-        raise RuntimeError("R1-C 回放期间封存 raw 发生变化")
-    if sha256_file(I2_PREFLIGHT_PATH) != I2_PREFLIGHT_SHA256:
-        raise RuntimeError("R1-C 回放期间 I2-C preflight 发生变化")
+    source_raw_identity = validate_sealed_raw_identity(source_path)
+    source_preflight_identity = _preflight_identity(_load_source_preflight())
     quantity_gate_crossed_count = sum(
         item["quantity_gate_crossed"] for item in records
     )
@@ -369,9 +1017,9 @@ async def build_r1c_replay_payload(
         "mode": "zero_call_targeted_structure_replay",
         "generated_at": _utc_now(),
         "source_raw_path": str(source_path),
-        "source_raw_sha256": SEALED_RAW_SHA256,
+        "source_raw_identity": source_raw_identity,
         "source_preflight_path": str(I2_PREFLIGHT_PATH),
-        "source_preflight_sha256": I2_PREFLIGHT_SHA256,
+        "source_preflight_identity": source_preflight_identity,
         "target_case_ids": list(R1C_TARGET_CASE_IDS),
         "supporting_plan_case_ids": [
             f"P{index:02d}" for index in sorted(plan_cache)
@@ -409,14 +1057,16 @@ async def build_r1c_replay_payload(
         "formal_result_write_count": 0,
         "diagnostic_write_count": 1,
         "raw_response_copied": False,
-        "historical_result_hashes_before": historical_before,
-        "historical_result_hashes_after": historical_after,
+        "historical_results": historical_after,
     }
 
 
 async def build_r2e_replay_payload(
     *, source_path: Path = RAW_RESULT_PATH
 ) -> dict[str, Any]:
+    raise RuntimeError(
+        "R2-E 已封存；行为版本升级后只允许读取既有诊断，不得动态重建"
+    )
     lifecycle = validate_result_lifecycle(
         run_id=ACTIVE_RUN_ID,
         expected_state="i2_preflight_complete",
@@ -432,6 +1082,8 @@ async def build_r2e_replay_payload(
             + list(source_preflight["stability_records"])
         )
     }
+
+
     source_r1c = _load_source_r1c_diagnostic()
     r1c_records = {item["case_id"]: item for item in source_r1c["records"]}
     active_execution_contract = execution_contract()
@@ -529,12 +1181,9 @@ async def build_r2e_replay_payload(
     historical_after = validate_historical_results()
     if historical_before != historical_after:
         raise RuntimeError("R2-E 回放期间 13 份历史证据发生变化")
-    if sha256_file(source_path) != SEALED_RAW_SHA256:
-        raise RuntimeError("R2-E 回放期间封存 raw 发生变化")
-    if sha256_file(I2_PREFLIGHT_PATH) != I2_PREFLIGHT_SHA256:
-        raise RuntimeError("R2-E 回放期间 I2-C preflight 发生变化")
-    if sha256_file(R1C_DIAGNOSTIC_PATH) != R1C_DIAGNOSTIC_SHA256:
-        raise RuntimeError("R2-E 回放期间 R1-C 诊断发生变化")
+    source_raw_identity = validate_sealed_raw_identity(source_path)
+    source_preflight_identity = _preflight_identity(_load_source_preflight())
+    source_r1c_identity = _diagnostic_identity(_load_source_r1c_diagnostic())
 
     removed_count = sum(item["old_duration_gate_removed"] for item in records)
     accepted_count = sum(
@@ -551,11 +1200,11 @@ async def build_r2e_replay_payload(
         "mode": "zero_call_targeted_duration_replay",
         "generated_at": _utc_now(),
         "source_raw_path": str(source_path),
-        "source_raw_sha256": SEALED_RAW_SHA256,
+        "source_raw_identity": source_raw_identity,
         "source_preflight_path": str(I2_PREFLIGHT_PATH),
-        "source_preflight_sha256": I2_PREFLIGHT_SHA256,
+        "source_preflight_identity": source_preflight_identity,
         "source_r1c_diagnostic_path": str(R1C_DIAGNOSTIC_PATH),
-        "source_r1c_diagnostic_sha256": R1C_DIAGNOSTIC_SHA256,
+        "source_r1c_diagnostic_identity": source_r1c_identity,
         "target_case_ids": list(R2E_TARGET_CASE_IDS),
         "model_risk_case_ids": list(R2E_MODEL_RISK_CASE_IDS),
         "supporting_plan_case_ids": [
@@ -593,8 +1242,943 @@ async def build_r2e_replay_payload(
         "formal_result_write_count": 0,
         "diagnostic_write_count": 1,
         "raw_response_copied": False,
-        "historical_result_hashes_before": historical_before,
-        "historical_result_hashes_after": historical_after,
+        "historical_results": historical_after,
+    }
+
+
+async def build_r3d_replay_payload(
+    *, source_path: Path = RAW_RESULT_PATH
+) -> dict[str, Any]:
+    raise RuntimeError(
+        "R3-D 已封存；行为版本升级后只允许读取既有诊断，不得动态重建"
+    )
+    lifecycle = validate_result_lifecycle(
+        run_id=ACTIVE_RUN_ID,
+        expected_state="i2_preflight_complete",
+    )
+    fixture = validate_frozen_fixture()
+    historical_before = validate_historical_results()
+    raw = _load_source_raw(source_path)
+    source_preflight = _load_source_preflight()
+    preflight_records = {
+        item["case_id"]: item
+        for item in (
+            list(source_preflight["report_records"])
+            + list(source_preflight["stability_records"])
+        )
+    }
+    source_r1c = _load_source_r1c_diagnostic()
+    r1c_records = {item["case_id"]: item for item in source_r1c["records"]}
+    source_r2e = _load_source_r2e_diagnostic()
+    r2e_records = {item["case_id"]: item for item in source_r2e["records"]}
+    active_execution_contract = execution_contract()
+    if (
+        active_execution_contract.get("report_service_behavior_version")
+        != "lightweight_report_generation_v3"
+    ):
+        raise RuntimeError("R3-D 活动报告 Service 行为版本不是 v3")
+
+    plan_cache: dict[int, list[Any]] = {}
+    records: list[dict[str, Any]] = []
+    for case_id in R3D_TARGET_CASE_IDS:
+        source, attempt, sample_index = _target_case_context(
+            case_id=case_id,
+            raw=raw,
+        )
+        pair = V5_REPORT_PAIRS[sample_index]
+        plan_index = _plan_case_index(pair)
+        if plan_index not in plan_cache:
+            plan_cache[plan_index] = _parse_supporting_plan(
+                raw=raw,
+                plan_index=plan_index,
+            )
+
+        if case_id == "R10":
+            previous = preflight_records.get(case_id)
+            previous_gate_source = "7R5-I2-C"
+            previous_status = previous.get("current_status") if previous else None
+            previous_error_code = (
+                previous.get("current_error_code") if previous else None
+            )
+            previous_error_message = (
+                previous.get("current_error_message") if previous else None
+            )
+        elif case_id == "R16":
+            previous = r1c_records.get(case_id)
+            previous_gate_source = "7R5-I2-R1-C"
+            previous_status = (
+                previous.get("current_report_status") if previous else None
+            )
+            previous_error_code = (
+                previous.get("current_report_error_code") if previous else None
+            )
+            previous_error_message = (
+                previous.get("current_report_error_message") if previous else None
+            )
+        else:
+            previous = r2e_records.get(case_id)
+            previous_gate_source = "7R5-I2-R2-E"
+            previous_status = (
+                previous.get("current_report_status") if previous else None
+            )
+            previous_error_code = (
+                previous.get("current_report_error_code") if previous else None
+            )
+            previous_error_message = (
+                previous.get("current_report_error_message") if previous else None
+            )
+        if previous is None:
+            raise RuntimeError(f"R3-D 来源诊断缺少目标 case：{case_id}")
+        if (
+            previous_status != "failed"
+            or previous_error_message != OLD_NO_EVIDENCE_GATE_MESSAGE
+        ):
+            raise RuntimeError(
+                f"R3-D 目标 case 旧状态不是冻结无证据关键词拒绝：{case_id}"
+            )
+
+        current = _replay_report_case(
+            case_id=case_id,
+            pair=pair,
+            plan_criteria=plan_cache[plan_index],
+            source=source,
+            attempt=attempt,
+            plan_index=plan_index,
+        )
+        old_gate_removed = (
+            current.get("current_error_message") != OLD_NO_EVIDENCE_GATE_MESSAGE
+        )
+        if not old_gate_removed:
+            classification = "old_no_evidence_gate_still_rejects"
+        elif current["current_status"] == "succeeded":
+            classification = "old_no_evidence_gate_removed_and_report_accepted"
+        else:
+            classification = "old_no_evidence_gate_removed_then_next_gate_rejected"
+        records.append(
+            {
+                "case_id": case_id,
+                "source_status": source["status"],
+                "source_error_code": source.get("error_code"),
+                "previous_gate_source": previous_gate_source,
+                "previous_gate_status": previous_status,
+                "previous_gate_error_code": previous_error_code,
+                "previous_gate_error_message": previous_error_message,
+                "raw_response_sha256": _response_sha256(attempt["raw_response"]),
+                "raw_response_length": len(attempt["raw_response"]),
+                "current_report_status": current["current_status"],
+                "current_report_error_code": current.get("current_error_code"),
+                "current_report_error_message": current.get(
+                    "current_error_message"
+                ),
+                "current_overall_score": current.get("overall_score"),
+                "old_no_evidence_gate_removed": old_gate_removed,
+                "future_human_quality_review_required": True,
+                "automatic_classification": classification,
+            }
+        )
+
+    historical_after = validate_historical_results()
+    if historical_before != historical_after:
+        raise RuntimeError("R3-D 回放期间 13 份历史证据发生变化")
+    source_raw_identity = validate_sealed_raw_identity(source_path)
+    source_preflight_identity = _preflight_identity(_load_source_preflight())
+    source_r1c_identity = _diagnostic_identity(_load_source_r1c_diagnostic())
+    source_r2e_identity = _diagnostic_identity(_load_source_r2e_diagnostic())
+    removed_count = sum(
+        item["old_no_evidence_gate_removed"] for item in records
+    )
+    accepted_count = sum(
+        item["current_report_status"] == "succeeded" for item in records
+    )
+    return {
+        "stage": ACTIVE_RUN_ID,
+        "batch": "7R5-I2-R3-D",
+        "mode": "zero_call_targeted_no_evidence_replay",
+        "generated_at": _utc_now(),
+        "source_raw_path": str(source_path),
+        "source_raw_identity": source_raw_identity,
+        "source_preflight_path": str(I2_PREFLIGHT_PATH),
+        "source_preflight_identity": source_preflight_identity,
+        "source_r1c_diagnostic_path": str(R1C_DIAGNOSTIC_PATH),
+        "source_r1c_diagnostic_identity": source_r1c_identity,
+        "source_r2e_diagnostic_path": str(R2E_DIAGNOSTIC_PATH),
+        "source_r2e_diagnostic_identity": source_r2e_identity,
+        "target_case_ids": list(R3D_TARGET_CASE_IDS),
+        "supporting_plan_case_ids": [
+            f"P{index:02d}" for index in sorted(plan_cache)
+        ],
+        "fixture": fixture,
+        "execution_contract": active_execution_contract,
+        "lifecycle": lifecycle,
+        "replay_limitations": {
+            "service_acceptance_proves_content_quality": False,
+            "responses_received_new_model_review": False,
+            "future_human_quality_review_required": True,
+        },
+        "records": records,
+        "summary": {
+            "target_case_count": len(records),
+            "old_no_evidence_gate_removed_count": removed_count,
+            "old_no_evidence_gate_still_rejected_count": len(records)
+            - removed_count,
+            "full_report_accepted_count": accepted_count,
+            "next_service_gate_rejected_count": len(records) - accepted_count,
+            "future_human_quality_review_case_count": len(records),
+        },
+        "pricing_gate_allowed": False,
+        "quality_conclusion_allowed": False,
+        "human_or_service_adjudication_required": True,
+        "real_model_call_count": 0,
+        "api_attempt_count": 0,
+        "api_key_read": False,
+        "adapter_instantiated": False,
+        "postgresql_write_count": 0,
+        "formal_result_write_count": 0,
+        "diagnostic_write_count": 1,
+        "raw_response_copied": False,
+        "historical_results": historical_after,
+    }
+
+
+async def build_r4c_replay_payload(
+    *, source_path: Path = RAW_RESULT_PATH
+) -> dict[str, Any]:
+    raise RuntimeError(
+        "R4-C 已封存；行为版本升级后只允许读取既有诊断，不得动态重建"
+    )
+    lifecycle = validate_result_lifecycle(
+        run_id=ACTIVE_RUN_ID,
+        expected_state="i2_preflight_complete",
+    )
+    fixture = validate_frozen_fixture()
+    historical_before = validate_historical_results()
+    raw = _load_source_raw(source_path)
+    source_preflight = _load_source_preflight()
+    source_r2e = load_r2e_diagnostic()
+    source_r3d = load_r3d_diagnostic()
+    r2e_records = {item["case_id"]: item for item in source_r2e["records"]}
+    r3d_records = {item["case_id"]: item for item in source_r3d["records"]}
+    active_execution_contract = execution_contract()
+    if (
+        active_execution_contract.get("report_service_behavior_version")
+        != "lightweight_report_generation_v4"
+    ):
+        raise RuntimeError("R4-C 活动报告 Service 行为版本不是 v4")
+
+    plan_cache: dict[int, list[Any]] = {}
+    records: list[dict[str, Any]] = []
+    for case_id in R4C_TARGET_CASE_IDS:
+        source, attempt, sample_index = _target_case_context(
+            case_id=case_id,
+            raw=raw,
+        )
+        pair = V5_REPORT_PAIRS[sample_index]
+        plan_index = _plan_case_index(pair)
+        if plan_index not in plan_cache:
+            plan_cache[plan_index] = _parse_supporting_plan(
+                raw=raw,
+                plan_index=plan_index,
+            )
+
+        if case_id == "R07":
+            previous = r3d_records.get(case_id)
+            previous_gate_source = "7R5-I2-R3-D"
+        else:
+            previous = r2e_records.get(case_id)
+            previous_gate_source = "7R5-I2-R2-E"
+        if previous is None:
+            raise RuntimeError(f"R4-C 来源诊断缺少目标 case：{case_id}")
+        previous_status = previous.get("current_report_status")
+        previous_error_code = previous.get("current_report_error_code")
+        previous_error_message = previous.get("current_report_error_message")
+        if (
+            previous_status != "failed"
+            or previous_error_message != OLD_SENSITIVE_GATE_MESSAGE
+        ):
+            raise RuntimeError(
+                f"R4-C 目标 case 旧状态不是冻结敏感门禁拒绝：{case_id}"
+            )
+
+        current = _replay_report_case(
+            case_id=case_id,
+            pair=pair,
+            plan_criteria=plan_cache[plan_index],
+            source=source,
+            attempt=attempt,
+            plan_index=plan_index,
+        )
+        old_gate_removed = (
+            current.get("current_error_message") != OLD_SENSITIVE_GATE_MESSAGE
+        )
+        if not old_gate_removed:
+            classification = "old_sensitive_gate_still_rejects"
+        elif current["current_status"] == "succeeded":
+            classification = "old_sensitive_gate_removed_and_report_accepted"
+        else:
+            classification = "old_sensitive_gate_removed_then_next_gate_rejected"
+        records.append(
+            {
+                "case_id": case_id,
+                "source_status": source["status"],
+                "source_error_code": source.get("error_code"),
+                "previous_gate_source": previous_gate_source,
+                "previous_gate_status": previous_status,
+                "previous_gate_error_code": previous_error_code,
+                "previous_gate_error_message": previous_error_message,
+                "raw_response_sha256": _response_sha256(attempt["raw_response"]),
+                "raw_response_length": len(attempt["raw_response"]),
+                "current_report_status": current["current_status"],
+                "current_report_error_code": current.get("current_error_code"),
+                "current_report_error_message": current.get(
+                    "current_error_message"
+                ),
+                "current_overall_score": current.get("overall_score"),
+                "old_sensitive_gate_removed": old_gate_removed,
+                "future_human_quality_review_required": True,
+                "automatic_classification": classification,
+            }
+        )
+
+    historical_after = validate_historical_results()
+    if historical_before != historical_after:
+        raise RuntimeError("R4-C 回放期间历史证据身份发生变化")
+    source_raw_identity = validate_sealed_raw_identity(source_path)
+    removed_count = sum(item["old_sensitive_gate_removed"] for item in records)
+    accepted_count = sum(
+        item["current_report_status"] == "succeeded" for item in records
+    )
+    return {
+        "stage": ACTIVE_RUN_ID,
+        "batch": "7R5-I2-R4-C",
+        "mode": "zero_call_targeted_sensitive_replay",
+        "generated_at": _utc_now(),
+        "source_raw_path": str(source_path),
+        "source_raw_identity": source_raw_identity,
+        "source_preflight_path": str(I2_PREFLIGHT_PATH),
+        "source_preflight_identity": _preflight_identity(source_preflight),
+        "source_r2e_diagnostic_path": str(R2E_DIAGNOSTIC_PATH),
+        "source_r2e_diagnostic_identity": _diagnostic_identity(source_r2e),
+        "source_r3d_diagnostic_path": str(R3D_DIAGNOSTIC_PATH),
+        "source_r3d_diagnostic_identity": _diagnostic_identity(source_r3d),
+        "target_case_ids": list(R4C_TARGET_CASE_IDS),
+        "supporting_plan_case_ids": [
+            f"P{index:02d}" for index in sorted(plan_cache)
+        ],
+        "fixture": fixture,
+        "execution_contract": active_execution_contract,
+        "lifecycle": lifecycle,
+        "replay_limitations": {
+            "service_acceptance_proves_content_quality": False,
+            "responses_received_new_model_review": False,
+            "protected_attribute_semantics_evaluated": False,
+            "future_human_quality_review_required": True,
+        },
+        "records": records,
+        "summary": {
+            "target_case_count": len(records),
+            "old_sensitive_gate_removed_count": removed_count,
+            "old_sensitive_gate_still_rejected_count": len(records)
+            - removed_count,
+            "full_report_accepted_count": accepted_count,
+            "next_service_gate_rejected_count": len(records) - accepted_count,
+            "future_human_quality_review_case_count": len(records),
+        },
+        "pricing_gate_allowed": False,
+        "quality_conclusion_allowed": False,
+        "human_or_service_adjudication_required": True,
+        "real_model_call_count": 0,
+        "api_attempt_count": 0,
+        "api_key_read": False,
+        "adapter_instantiated": False,
+        "postgresql_write_count": 0,
+        "formal_result_write_count": 0,
+        "diagnostic_write_count": 1,
+        "raw_response_copied": False,
+        "historical_results": historical_after,
+    }
+
+
+def _validate_post_raw_readonly_lifecycle() -> dict[str, Any]:
+    lifecycle = validate_result_lifecycle(run_id=ACTIVE_RUN_ID)
+    if lifecycle["state"] not in {
+        "i2_raw_complete",
+        "i2_human_complete",
+        "i2_final_complete",
+    }:
+        raise RuntimeError(
+            "I2 post-raw 只读复核需要 raw、human 或 final 已封存"
+        )
+    return lifecycle
+
+
+async def build_r5d_replay_payload(
+    *, source_path: Path = RAW_RESULT_PATH
+) -> dict[str, Any]:
+    lifecycle = _validate_post_raw_readonly_lifecycle()
+    fixture = validate_frozen_fixture()
+    historical_before = validate_historical_results()
+    raw = _load_source_raw(source_path)
+    source_preflight = _load_source_preflight()
+    source_r1c = load_r1c_diagnostic()
+    source_r2e = load_r2e_diagnostic()
+    source_r3d = load_r3d_diagnostic()
+    source_records = {
+        "7R5-I2-C": {
+            item["case_id"]: item
+            for item in (
+                list(source_preflight["report_records"])
+                + list(source_preflight["stability_records"])
+            )
+        },
+        "7R5-I2-R1-C": {
+            item["case_id"]: item for item in source_r1c["records"]
+        },
+        "7R5-I2-R2-E": {
+            item["case_id"]: item for item in source_r2e["records"]
+        },
+        "7R5-I2-R3-D": {
+            item["case_id"]: item for item in source_r3d["records"]
+        },
+    }
+    active_execution_contract = execution_contract()
+    if (
+        active_execution_contract.get("report_service_behavior_version")
+        != "lightweight_report_generation_v5"
+    ):
+        raise RuntimeError("R5-D 活动报告 Service 行为版本不是 v5")
+
+    plan_cache: dict[int, list[Any]] = {}
+    records: list[dict[str, Any]] = []
+    for case_id in R5D_TARGET_CASE_IDS:
+        previous_gate_source, previous_gate_error_message = (
+            R5D_PREVIOUS_GATE_SOURCES[case_id]
+        )
+        previous = source_records[previous_gate_source].get(case_id)
+        if previous is None:
+            raise RuntimeError(f"R5-D 来源诊断缺少目标 case：{case_id}")
+        previous_status = previous.get(
+            "current_report_status",
+            previous.get("current_status"),
+        )
+        previous_error_code = previous.get(
+            "current_report_error_code",
+            previous.get("current_error_code"),
+        )
+        actual_previous_error = previous.get(
+            "current_report_error_message",
+            previous.get("current_error_message"),
+        )
+        if (
+            previous_status != "failed"
+            or actual_previous_error != previous_gate_error_message
+        ):
+            raise RuntimeError(
+                f"R5-D 目标 case 最近门禁与冻结来源不一致：{case_id}"
+            )
+
+        source, attempt, sample_index = _target_case_context(
+            case_id=case_id,
+            raw=raw,
+        )
+        pair = V5_REPORT_PAIRS[sample_index]
+        plan_index = _plan_case_index(pair)
+        if plan_index not in plan_cache:
+            plan_cache[plan_index] = _parse_supporting_plan(
+                raw=raw,
+                plan_index=plan_index,
+            )
+        current = _replay_report_case(
+            case_id=case_id,
+            pair=pair,
+            plan_criteria=plan_cache[plan_index],
+            source=source,
+            attempt=attempt,
+            plan_index=plan_index,
+        )
+        previous_service_gate_removed = (
+            current.get("current_error_message") != previous_gate_error_message
+        )
+        if not previous_service_gate_removed:
+            classification = "previous_service_gate_still_rejects"
+        elif current["current_status"] == "succeeded":
+            classification = "previous_service_gate_removed_and_report_accepted"
+        else:
+            classification = "previous_service_gate_removed_then_next_gate_rejected"
+        known_model_content_risk = {
+            "R06": "评价点年限与报告年限结论仍需人工核对",
+            "R15": "报告内部年限结论仍需人工核对",
+            "R16": "能力迁移推断仍需人工核对",
+        }.get(case_id)
+        records.append(
+            {
+                "case_id": case_id,
+                "source_status": source["status"],
+                "source_error_code": source.get("error_code"),
+                "previous_gate_source": previous_gate_source,
+                "previous_gate_status": previous_status,
+                "previous_gate_error_code": previous_error_code,
+                "previous_gate_error_message": actual_previous_error,
+                "raw_response_sha256": _response_sha256(attempt["raw_response"]),
+                "raw_response_length": len(attempt["raw_response"]),
+                "current_report_status": current["current_status"],
+                "current_report_error_code": current.get("current_error_code"),
+                "current_report_error_message": current.get(
+                    "current_error_message"
+                ),
+                "current_overall_score": current.get("overall_score"),
+                "previous_service_gate_removed": previous_service_gate_removed,
+                "known_model_content_risk": known_model_content_risk,
+                "future_human_quality_review_required": True,
+                "automatic_classification": classification,
+            }
+        )
+
+    historical_after = validate_historical_results()
+    if historical_before != historical_after:
+        raise RuntimeError("R5-D 回放期间历史证据身份发生变化")
+    removed_count = sum(
+        item["previous_service_gate_removed"] for item in records
+    )
+    accepted_count = sum(
+        item["current_report_status"] == "succeeded" for item in records
+    )
+    return {
+        "stage": ACTIVE_RUN_ID,
+        "batch": "7R5-I2-R5-D",
+        "mode": "zero_call_remaining_service_v5_replay",
+        "generated_at": _utc_now(),
+        "source_raw_path": str(source_path),
+        "source_raw_identity": validate_sealed_raw_identity(source_path),
+        "source_preflight_path": str(I2_PREFLIGHT_PATH),
+        "source_preflight_identity": _preflight_identity(source_preflight),
+        "source_r1c_diagnostic_path": str(R1C_DIAGNOSTIC_PATH),
+        "source_r1c_diagnostic_identity": _diagnostic_identity(source_r1c),
+        "source_r2e_diagnostic_path": str(R2E_DIAGNOSTIC_PATH),
+        "source_r2e_diagnostic_identity": _diagnostic_identity(source_r2e),
+        "source_r3d_diagnostic_path": str(R3D_DIAGNOSTIC_PATH),
+        "source_r3d_diagnostic_identity": _diagnostic_identity(source_r3d),
+        "target_case_ids": list(R5D_TARGET_CASE_IDS),
+        "known_model_risk_case_ids": list(R5D_KNOWN_MODEL_RISK_CASE_IDS),
+        "supporting_plan_case_ids": [
+            f"P{index:02d}" for index in sorted(plan_cache)
+        ],
+        "fixture": fixture,
+        "execution_contract": active_execution_contract,
+        "lifecycle": lifecycle,
+        "replay_limitations": {
+            "service_acceptance_proves_content_quality": False,
+            "responses_received_new_model_review": False,
+            "known_model_content_risks_resolved": False,
+            "future_human_quality_review_required": True,
+        },
+        "records": records,
+        "summary": {
+            "target_case_count": len(records),
+            "previous_service_gate_removed_count": removed_count,
+            "previous_service_gate_still_rejected_count": len(records)
+            - removed_count,
+            "full_report_accepted_count": accepted_count,
+            "next_service_gate_rejected_count": len(records) - accepted_count,
+            "future_human_quality_review_case_count": len(records),
+        },
+        "pricing_gate_allowed": False,
+        "quality_conclusion_allowed": False,
+        "human_or_service_adjudication_required": True,
+        "real_model_call_count": 0,
+        "api_attempt_count": 0,
+        "api_key_read": False,
+        "adapter_instantiated": False,
+        "postgresql_write_count": 0,
+        "formal_result_write_count": 0,
+        "diagnostic_write_count": 1,
+        "raw_response_copied": False,
+        "historical_results": historical_after,
+    }
+
+
+async def build_r6d_replay_payload(
+    *, source_path: Path = RAW_RESULT_PATH
+) -> dict[str, Any]:
+    lifecycle = _validate_post_raw_readonly_lifecycle()
+    fixture = validate_frozen_fixture()
+    historical_before = validate_historical_results()
+    raw = _load_source_raw(source_path)
+    source_preflight = _load_source_preflight()
+    source_r1c = load_r1c_diagnostic()
+    source_r2e = load_r2e_diagnostic()
+    source_r3d = load_r3d_diagnostic()
+    source_r4c = load_r4c_diagnostic()
+    source_r5d = load_r5d_diagnostic()
+    source_records = {
+        "7R5-I2-C": {
+            item["case_id"]: item
+            for item in (
+                list(source_preflight["report_records"])
+                + list(source_preflight["stability_records"])
+            )
+        },
+        "7R5-I2-R1-C": {
+            item["case_id"]: item for item in source_r1c["records"]
+        },
+        "7R5-I2-R2-E": {
+            item["case_id"]: item for item in source_r2e["records"]
+        },
+        "7R5-I2-R3-D": {
+            item["case_id"]: item for item in source_r3d["records"]
+        },
+        "7R5-I2-R4-C": {
+            item["case_id"]: item for item in source_r4c["records"]
+        },
+        "7R5-I2-R5-D": {
+            item["case_id"]: item for item in source_r5d["records"]
+        },
+    }
+    active_execution_contract = execution_contract()
+    if (
+        active_execution_contract.get("report_service_behavior_version")
+        != "lightweight_report_generation_v6"
+    ):
+        raise RuntimeError("R6-D 活动报告 Service 行为版本不是 v6")
+
+    plan_cache: dict[int, list[Any]] = {}
+    records: list[dict[str, Any]] = []
+    for case_id in R6D_TARGET_CASE_IDS:
+        previous_source, expected_status, expected_error = R6D_PREVIOUS_SOURCES[
+            case_id
+        ]
+        previous = source_records[previous_source].get(case_id)
+        if previous is None:
+            raise RuntimeError(f"R6-D 最近合法来源缺少目标 case：{case_id}")
+        previous_status = previous.get(
+            "current_report_status",
+            previous.get("current_status"),
+        )
+        previous_error_code = previous.get(
+            "current_report_error_code",
+            previous.get("current_error_code"),
+        )
+        previous_error_message = previous.get(
+            "current_report_error_message",
+            previous.get("current_error_message"),
+        )
+        if (
+            previous_status != expected_status
+            or previous_error_message != expected_error
+        ):
+            raise RuntimeError(
+                f"R6-D 目标 case 最近合法来源状态不一致：{case_id}"
+            )
+
+        source, attempt, sample_index = _target_case_context(
+            case_id=case_id,
+            raw=raw,
+        )
+        pair = V5_REPORT_PAIRS[sample_index]
+        plan_index = _plan_case_index(pair)
+        if plan_index not in plan_cache:
+            plan_cache[plan_index] = _parse_supporting_plan(
+                raw=raw,
+                plan_index=plan_index,
+            )
+        current = _replay_report_case(
+            case_id=case_id,
+            pair=pair,
+            plan_criteria=plan_cache[plan_index],
+            source=source,
+            attempt=attempt,
+            plan_index=plan_index,
+        )
+        previous_free_text_source_gate = (
+            case_id in {"R16", "S00-3"}
+            and previous_status == "failed"
+            and previous_error_message
+            == "AI 初筛理由包含 Resume 无法支持的数值事实"
+        )
+        old_free_text_source_gate_removed = (
+            previous_free_text_source_gate
+            and current.get("current_error_message") != previous_error_message
+        )
+        if current["current_status"] == "succeeded":
+            classification = "accepted_by_service_v6"
+        elif previous_free_text_source_gate and not old_free_text_source_gate_removed:
+            classification = "old_free_text_source_gate_still_rejects"
+        else:
+            classification = "next_structural_or_safety_gate_rejected"
+        records.append(
+            {
+                "case_id": case_id,
+                "source_status": source["status"],
+                "source_error_code": source.get("error_code"),
+                "previous_source": previous_source,
+                "previous_status": previous_status,
+                "previous_error_code": previous_error_code,
+                "previous_error_message": previous_error_message,
+                "previous_free_text_source_gate": previous_free_text_source_gate,
+                "raw_response_sha256": _response_sha256(attempt["raw_response"]),
+                "raw_response_length": len(attempt["raw_response"]),
+                "current_report_status": current["current_status"],
+                "current_report_error_code": current.get("current_error_code"),
+                "current_report_error_message": current.get(
+                    "current_error_message"
+                ),
+                "current_overall_score": current.get("overall_score"),
+                "old_free_text_source_gate_removed": (
+                    old_free_text_source_gate_removed
+                    if previous_free_text_source_gate
+                    else None
+                ),
+                "known_model_content_risk": R6D_KNOWN_MODEL_RISKS.get(case_id),
+                "future_human_quality_review_required": True,
+                "automatic_classification": classification,
+            }
+        )
+
+    historical_after = validate_historical_results()
+    if historical_before != historical_after:
+        raise RuntimeError("R6-D 回放期间历史证据身份发生变化")
+    old_gate_records = [
+        item for item in records if item["previous_free_text_source_gate"]
+    ]
+    old_gate_removed_count = sum(
+        item["old_free_text_source_gate_removed"] for item in old_gate_records
+    )
+    accepted_count = sum(
+        item["current_report_status"] == "succeeded" for item in records
+    )
+    return {
+        "stage": ACTIVE_RUN_ID,
+        "batch": "7R5-I2-R6-D",
+        "mode": "zero_call_service_v6_full_replay",
+        "generated_at": _utc_now(),
+        "source_raw_path": str(source_path),
+        "source_raw_identity": validate_sealed_raw_identity(source_path),
+        "source_preflight_path": str(I2_PREFLIGHT_PATH),
+        "source_preflight_identity": _preflight_identity(source_preflight),
+        "source_r1c_diagnostic_path": str(R1C_DIAGNOSTIC_PATH),
+        "source_r1c_diagnostic_identity": _diagnostic_identity(source_r1c),
+        "source_r2e_diagnostic_path": str(R2E_DIAGNOSTIC_PATH),
+        "source_r2e_diagnostic_identity": _diagnostic_identity(source_r2e),
+        "source_r3d_diagnostic_path": str(R3D_DIAGNOSTIC_PATH),
+        "source_r3d_diagnostic_identity": _diagnostic_identity(source_r3d),
+        "source_r4c_diagnostic_path": str(R4C_DIAGNOSTIC_PATH),
+        "source_r4c_diagnostic_identity": _diagnostic_identity(source_r4c),
+        "source_r5d_diagnostic_path": str(R5D_DIAGNOSTIC_PATH),
+        "source_r5d_diagnostic_identity": _diagnostic_identity(source_r5d),
+        "target_case_ids": list(R6D_TARGET_CASE_IDS),
+        "missing_report_case_ids": list(R6D_MISSING_REPORT_CASE_IDS),
+        "missing_stability_case_ids": list(R6D_MISSING_STABILITY_CASE_IDS),
+        "known_model_risk_case_ids": list(R6D_KNOWN_MODEL_RISKS),
+        "supporting_plan_case_ids": [
+            f"P{index:02d}" for index in sorted(plan_cache)
+        ],
+        "fixture": fixture,
+        "execution_contract": active_execution_contract,
+        "lifecycle": lifecycle,
+        "replay_limitations": {
+            "service_acceptance_proves_content_quality": False,
+            "responses_received_new_model_review": False,
+            "known_model_content_risks_resolved": False,
+            "missing_responses_were_reconstructed": False,
+            "future_human_quality_review_required": True,
+        },
+        "records": records,
+        "summary": {
+            "target_case_count": len(records),
+            "report_response_count": sum(
+                item["case_id"].startswith("R") for item in records
+            ),
+            "stability_response_count": sum(
+                item["case_id"].startswith("S") for item in records
+            ),
+            "missing_report_response_count": len(R6D_MISSING_REPORT_CASE_IDS),
+            "missing_stability_response_count": len(
+                R6D_MISSING_STABILITY_CASE_IDS
+            ),
+            "previously_accepted_count": sum(
+                item["previous_status"] == "succeeded" for item in records
+            ),
+            "previously_rejected_count": sum(
+                item["previous_status"] == "failed" for item in records
+            ),
+            "old_free_text_source_gate_target_count": len(old_gate_records),
+            "old_free_text_source_gate_removed_count": old_gate_removed_count,
+            "old_free_text_source_gate_still_rejected_count": (
+                len(old_gate_records) - old_gate_removed_count
+            ),
+            "full_report_accepted_count": accepted_count,
+            "next_service_gate_rejected_count": len(records) - accepted_count,
+            "future_human_quality_review_case_count": len(records),
+        },
+        "pricing_gate_allowed": False,
+        "quality_conclusion_allowed": False,
+        "human_quality_review_required": True,
+        "real_model_call_count": 0,
+        "api_attempt_count": 0,
+        "api_key_read": False,
+        "adapter_instantiated": False,
+        "postgresql_write_count": 0,
+        "formal_result_write_count": 0,
+        "diagnostic_write_count": 1,
+        "raw_response_copied": False,
+        "historical_results": historical_after,
+    }
+
+
+async def build_r7d_replay_payload(
+    *, source_path: Path = I2_RAW_RESULT_PATH
+) -> dict[str, Any]:
+    lifecycle = _validate_post_raw_readonly_lifecycle()
+    fixture = validate_frozen_fixture()
+    historical_before = validate_historical_results()
+    raw = _load_i2_raw(source_path)
+    active_execution_contract = execution_contract()
+    if (
+        active_execution_contract.get("report_prompt_version")
+        != "screening_evaluation_lightweight_v4"
+        or active_execution_contract.get("report_service_behavior_version")
+        != "lightweight_report_generation_v7"
+    ):
+        raise RuntimeError("R7-D 活动报告 Prompt/Service 行为版本不是 v4/v7")
+
+    plan_cache: dict[int, list[Any]] = {}
+    records: list[dict[str, Any]] = []
+    for case_id in R7D_TARGET_CASE_IDS:
+        source, attempt, sample_index = _target_case_context(
+            case_id=case_id,
+            raw=raw,
+        )
+        if (
+            source.get("status") != "failed"
+            or source.get("error_code")
+            != "SCREENING_EVALUATION_INVALID_MODEL_OUTPUT"
+            or source.get("error_message") != R7D_OLD_KEYWORD_GATE_MESSAGE
+        ):
+            raise RuntimeError(f"R7-D 目标 case 原始错误身份不匹配：{case_id}")
+
+        pair = V5_REPORT_PAIRS[sample_index]
+        plan_index = _plan_case_index(pair)
+        if plan_index not in plan_cache:
+            plan_cache[plan_index] = _parse_supporting_plan(
+                raw=raw,
+                plan_index=plan_index,
+            )
+        current = _replay_report_case(
+            case_id=case_id,
+            pair=pair,
+            plan_criteria=plan_cache[plan_index],
+            source=source,
+            attempt=attempt,
+            plan_index=plan_index,
+        )
+        old_keyword_gate_removed = (
+            current.get("current_error_message") != R7D_OLD_KEYWORD_GATE_MESSAGE
+        )
+        missing_calculation_note = (
+            current.get("current_error_message")
+            == R7D_NEXT_DETERMINISTIC_GATE_MESSAGE
+        )
+        if current["current_status"] == "succeeded":
+            classification = "accepted_by_service_v7_requires_human_review"
+        elif not old_keyword_gate_removed:
+            classification = "old_keyword_gate_still_rejects"
+        elif missing_calculation_note:
+            classification = "next_deterministic_calculation_note_gate_rejected"
+        else:
+            classification = "next_structural_or_safety_gate_rejected"
+        records.append(
+            {
+                "case_id": case_id,
+                "source_status": source["status"],
+                "source_error_code": source.get("error_code"),
+                "source_error_message": source.get("error_message"),
+                "raw_response_sha256": _response_sha256(
+                    attempt["raw_response"]
+                ),
+                "raw_response_length": len(attempt["raw_response"]),
+                "current_report_status": current["current_status"],
+                "current_report_error_code": current.get(
+                    "current_error_code"
+                ),
+                "current_report_error_message": current.get(
+                    "current_error_message"
+                ),
+                "current_overall_score": current.get("overall_score"),
+                "old_keyword_gate_removed": old_keyword_gate_removed,
+                "missing_calculation_note_after_keyword_gate": (
+                    missing_calculation_note
+                ),
+                "future_human_quality_review_required": True,
+                "automatic_classification": classification,
+            }
+        )
+
+    historical_after = validate_historical_results()
+    if historical_before != historical_after:
+        raise RuntimeError("R7-D 回放期间历史证据身份发生变化")
+    old_gate_removed_count = sum(
+        item["old_keyword_gate_removed"] for item in records
+    )
+    accepted_count = sum(
+        item["current_report_status"] == "succeeded" for item in records
+    )
+    missing_note_count = sum(
+        item["missing_calculation_note_after_keyword_gate"] for item in records
+    )
+    return {
+        "stage": ACTIVE_RUN_ID,
+        "batch": "7R5-I2-R7-D",
+        "mode": "zero_call_time_key_service_v7_replay",
+        "generated_at": _utc_now(),
+        "source_raw_path": str(source_path),
+        "source_raw_identity": _i2_raw_identity(raw),
+        "target_case_ids": list(R7D_TARGET_CASE_IDS),
+        "supporting_plan_case_ids": [
+            f"P{index:02d}" for index in sorted(plan_cache)
+        ],
+        "fixture": fixture,
+        "source_execution_contract": raw["execution_contract"],
+        "execution_contract": active_execution_contract,
+        "lifecycle": lifecycle,
+        "replay_limitations": {
+            "service_acceptance_proves_content_quality": False,
+            "responses_received_new_model_review": False,
+            "prompt_v4_was_applied_to_old_responses": False,
+            "time_key_content_was_corrected": False,
+            "future_human_quality_review_required": True,
+        },
+        "records": records,
+        "summary": {
+            "target_case_count": len(records),
+            "report_response_count": sum(
+                item["case_id"].startswith("R") for item in records
+            ),
+            "stability_response_count": sum(
+                item["case_id"].startswith("S") for item in records
+            ),
+            "old_keyword_gate_target_count": len(records),
+            "old_keyword_gate_removed_count": old_gate_removed_count,
+            "old_keyword_gate_still_rejected_count": (
+                len(records) - old_gate_removed_count
+            ),
+            "full_report_accepted_count": accepted_count,
+            "next_deterministic_gate_rejected_count": (
+                len(records) - accepted_count
+            ),
+            "missing_calculation_note_count": missing_note_count,
+            "future_human_quality_review_case_count": len(records),
+        },
+        "pricing_gate_allowed": False,
+        "quality_conclusion_allowed": False,
+        "human_quality_review_required": True,
+        "real_model_call_count": 0,
+        "api_attempt_count": 0,
+        "api_key_read": False,
+        "adapter_instantiated": False,
+        "postgresql_write_count": 0,
+        "formal_result_write_count": 0,
+        "diagnostic_write_count": 1,
+        "raw_response_copied": False,
+        "historical_results": historical_after,
     }
 
 
@@ -634,6 +2218,101 @@ def write_r2e_diagnostic(
             handle.write("\n")
     except FileExistsError:
         raise RuntimeError("R2-E 诊断已经存在，拒绝覆盖") from None
+
+
+def write_r3d_diagnostic(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    diagnostic_dir: Path = R1C_DIAGNOSTIC_DIR,
+) -> None:
+    resolved = path.resolve()
+    resolved_dir = diagnostic_dir.resolve()
+    if resolved.parent != resolved_dir or resolved.suffix.lower() != ".json":
+        raise RuntimeError("R3-D 诊断只能写入隔离诊断目录中的 JSON")
+    diagnostic_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        with path.open("x", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+    except FileExistsError:
+        raise RuntimeError("R3-D 诊断已经存在，拒绝覆盖") from None
+
+
+def write_r4c_diagnostic(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    diagnostic_dir: Path = R1C_DIAGNOSTIC_DIR,
+) -> None:
+    resolved = path.resolve()
+    resolved_dir = diagnostic_dir.resolve()
+    if resolved.parent != resolved_dir or resolved.suffix.lower() != ".json":
+        raise RuntimeError("R4-C 诊断只能写入隔离诊断目录中的 JSON")
+    diagnostic_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        with path.open("x", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+    except FileExistsError:
+        raise RuntimeError("R4-C 诊断已经存在，拒绝覆盖") from None
+
+
+def write_r5d_diagnostic(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    diagnostic_dir: Path = R1C_DIAGNOSTIC_DIR,
+) -> None:
+    resolved = path.resolve()
+    resolved_dir = diagnostic_dir.resolve()
+    if resolved.parent != resolved_dir or resolved.suffix.lower() != ".json":
+        raise RuntimeError("R5-D 诊断只能写入隔离诊断目录中的 JSON")
+    diagnostic_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        with path.open("x", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+    except FileExistsError:
+        raise RuntimeError("R5-D 诊断已经存在，拒绝覆盖") from None
+
+
+def write_r6d_diagnostic(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    diagnostic_dir: Path = R1C_DIAGNOSTIC_DIR,
+) -> None:
+    resolved = path.resolve()
+    resolved_dir = diagnostic_dir.resolve()
+    if resolved.parent != resolved_dir or resolved.suffix.lower() != ".json":
+        raise RuntimeError("R6-D 诊断只能写入隔离诊断目录中的 JSON")
+    diagnostic_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        with path.open("x", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+    except FileExistsError:
+        raise RuntimeError("R6-D 诊断已经存在，拒绝覆盖") from None
+
+
+def write_r7d_diagnostic(
+    path: Path,
+    payload: dict[str, Any],
+    *,
+    diagnostic_dir: Path = R1C_DIAGNOSTIC_DIR,
+) -> None:
+    resolved = path.resolve()
+    resolved_dir = diagnostic_dir.resolve()
+    if resolved.parent != resolved_dir or resolved.suffix.lower() != ".json":
+        raise RuntimeError("R7-D 诊断只能写入隔离诊断目录中的 JSON")
+    diagnostic_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        with path.open("x", encoding="utf-8", newline="\n") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+    except FileExistsError:
+        raise RuntimeError("R7-D 诊断已经存在，拒绝覆盖") from None
 
 
 def _replay_plans(
@@ -855,8 +2534,13 @@ async def build_preflight_payload(
     if lifecycle_before["state"] not in {
         "i2_not_started",
         "i2_preflight_complete",
+        "i2_raw_complete",
+        "i2_human_complete",
+        "i2_final_complete",
     }:
-        raise RuntimeError("I2-C 只允许在 preflight 之前或完成状态下只读复核")
+        raise RuntimeError(
+            "I2-C 只允许在未开始或 preflight、raw、human、final 已封存状态下只读复核"
+        )
     fixture = validate_frozen_fixture()
     historical_before = validate_historical_results()
     raw = _load_source_raw(source_path)
@@ -885,14 +2569,13 @@ async def build_preflight_payload(
     historical_after = validate_historical_results()
     if historical_before != historical_after:
         raise RuntimeError("I2-C 回放期间 13 份历史证据发生变化")
-    if sha256_file(source_path) != SEALED_RAW_SHA256:
-        raise RuntimeError("I2-C 回放期间封存 raw 发生变化")
+    source_raw_identity = validate_sealed_raw_identity(source_path)
     return {
         "stage": ACTIVE_RUN_ID,
         "mode": "zero_call_full_category_preflight",
         "generated_at": _utc_now(),
         "source_raw_path": str(source_path),
-        "source_raw_sha256": SEALED_RAW_SHA256,
+        "source_raw_identity": source_raw_identity,
         "source_raw_attempt_count": len(raw["attempt_audit"]),
         "fixture": fixture,
         "execution_contract": execution_contract(),
@@ -921,8 +2604,7 @@ async def build_preflight_payload(
         "postgresql_write_count": 0,
         "formal_result_write_count": 1,
         "quality_conclusion_allowed": False,
-        "historical_result_hashes_before": historical_before,
-        "historical_result_hashes_after": historical_after,
+        "historical_results": historical_after,
     }
 
 
@@ -954,8 +2636,7 @@ async def main() -> None:
 
 
 async def r1c_main() -> None:
-    payload = await build_r1c_replay_payload()
-    write_r1c_diagnostic(R1C_DIAGNOSTIC_PATH, payload)
+    payload = load_r1c_diagnostic()
     print(
         json.dumps(
             {
@@ -971,8 +2652,7 @@ async def r1c_main() -> None:
 
 
 async def r2e_main() -> None:
-    payload = await build_r2e_replay_payload()
-    write_r2e_diagnostic(R2E_DIAGNOSTIC_PATH, payload)
+    payload = load_r2e_diagnostic()
     print(
         json.dumps(
             {
@@ -987,8 +2667,161 @@ async def r2e_main() -> None:
     )
 
 
+async def r3d_main() -> None:
+    payload = load_r3d_diagnostic()
+    print(
+        json.dumps(
+            {
+                "path": str(R3D_DIAGNOSTIC_PATH),
+                "summary": payload["summary"],
+                "pricing_gate_allowed": payload["pricing_gate_allowed"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        flush=True,
+    )
+
+
+async def r4c_main() -> None:
+    payload = load_r4c_diagnostic()
+    print(
+        json.dumps(
+            {
+                "path": str(R4C_DIAGNOSTIC_PATH),
+                "summary": payload["summary"],
+                "records": [
+                    {
+                        "case_id": record["case_id"],
+                        "current_report_status": record["current_report_status"],
+                        "current_report_error_message": record[
+                            "current_report_error_message"
+                        ],
+                    }
+                    for record in payload["records"]
+                ],
+                "pricing_gate_allowed": payload["pricing_gate_allowed"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        flush=True,
+    )
+
+
+async def r5d_main() -> None:
+    payload = await build_r5d_replay_payload()
+    write_r5d_diagnostic(R5D_DIAGNOSTIC_PATH, payload)
+    print(
+        json.dumps(
+            {
+                "path": str(R5D_DIAGNOSTIC_PATH),
+                "summary": payload["summary"],
+                "records": [
+                    {
+                        "case_id": record["case_id"],
+                        "previous_gate_source": record["previous_gate_source"],
+                        "current_report_status": record["current_report_status"],
+                        "current_report_error_message": record[
+                            "current_report_error_message"
+                        ],
+                        "known_model_content_risk": record[
+                            "known_model_content_risk"
+                        ],
+                    }
+                    for record in payload["records"]
+                ],
+                "pricing_gate_allowed": payload["pricing_gate_allowed"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        flush=True,
+    )
+
+
+async def r6d_main() -> None:
+    payload = await build_r6d_replay_payload()
+    write_r6d_diagnostic(R6D_DIAGNOSTIC_PATH, payload)
+    print(
+        json.dumps(
+            {
+                "path": str(R6D_DIAGNOSTIC_PATH),
+                "summary": payload["summary"],
+                "missing_report_case_ids": payload["missing_report_case_ids"],
+                "missing_stability_case_ids": payload[
+                    "missing_stability_case_ids"
+                ],
+                "records": [
+                    {
+                        "case_id": record["case_id"],
+                        "previous_source": record["previous_source"],
+                        "current_report_status": record["current_report_status"],
+                        "current_report_error_message": record[
+                            "current_report_error_message"
+                        ],
+                        "known_model_content_risk": record[
+                            "known_model_content_risk"
+                        ],
+                    }
+                    for record in payload["records"]
+                ],
+                "pricing_gate_allowed": payload["pricing_gate_allowed"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        flush=True,
+    )
+
+
+async def r7d_main() -> None:
+    payload = await build_r7d_replay_payload()
+    write_r7d_diagnostic(R7D_DIAGNOSTIC_PATH, payload)
+    print(
+        json.dumps(
+            {
+                "path": str(R7D_DIAGNOSTIC_PATH),
+                "summary": payload["summary"],
+                "records": [
+                    {
+                        "case_id": record["case_id"],
+                        "source_error_message": record[
+                            "source_error_message"
+                        ],
+                        "current_report_status": record[
+                            "current_report_status"
+                        ],
+                        "current_report_error_message": record[
+                            "current_report_error_message"
+                        ],
+                        "old_keyword_gate_removed": record[
+                            "old_keyword_gate_removed"
+                        ],
+                    }
+                    for record in payload["records"]
+                ],
+                "pricing_gate_allowed": payload["pricing_gate_allowed"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        flush=True,
+    )
+
+
 if __name__ == "__main__":
-    if "--r2e" in sys.argv[1:]:
+    if "--r7d" in sys.argv[1:]:
+        asyncio.run(r7d_main())
+    elif "--r6d" in sys.argv[1:]:
+        asyncio.run(r6d_main())
+    elif "--r5d" in sys.argv[1:]:
+        asyncio.run(r5d_main())
+    elif "--r4c" in sys.argv[1:]:
+        asyncio.run(r4c_main())
+    elif "--r3d" in sys.argv[1:]:
+        asyncio.run(r3d_main())
+    elif "--r2e" in sys.argv[1:]:
         asyncio.run(r2e_main())
     elif "--r1c" in sys.argv[1:]:
         asyncio.run(r1c_main())

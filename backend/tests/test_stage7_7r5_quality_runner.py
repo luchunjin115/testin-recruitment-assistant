@@ -25,7 +25,6 @@ from app.adapters.screening_evaluation import (  # noqa: E402
 )
 
 
-LEGACY_RAW_SHA256 = "de093654e76ffba4812dd1feb2e093e060dcf325f04a6a8aeec93a0c47ff31ac"
 I2_PREFLIGHT_PATH = (
     PROJECT_ROOT
     / "docs"
@@ -93,11 +92,25 @@ def test_execution_contract_freezes_model_prompt_schema_and_parameters() -> None
         "response_format": "json_object",
         "sdk_automatic_retries": 0,
         "plan_prompt_version": "job_evaluation_plan_lightweight_v2",
+        "report_prompt_version": "screening_evaluation_lightweight_v4",
+        "plan_schema_version": "5.0",
+        "report_schema_version": "5.0",
+        "plan_service_behavior_version": "lightweight_plan_generation_v3",
+        "report_service_behavior_version": "lightweight_report_generation_v7",
+        "normal_business_calls_per_sample": 1,
+    }
+    assert contract.i2_raw_execution_contract() == {
+        "model": "deepseek-v4-flash",
+        "temperature": 0.1,
+        "thinking": "disabled",
+        "response_format": "json_object",
+        "sdk_automatic_retries": 0,
+        "plan_prompt_version": "job_evaluation_plan_lightweight_v2",
         "report_prompt_version": "screening_evaluation_lightweight_v3",
         "plan_schema_version": "5.0",
         "report_schema_version": "5.0",
         "plan_service_behavior_version": "lightweight_plan_generation_v3",
-        "report_service_behavior_version": "lightweight_report_generation_v3",
+        "report_service_behavior_version": "lightweight_report_generation_v6",
         "normal_business_calls_per_sample": 1,
     }
 
@@ -128,8 +141,22 @@ def test_human_audit_contract_freezes_all_semantic_denominators() -> None:
     }
 
 
-def test_historical_quality_evidence_hashes_are_unchanged() -> None:
-    assert contract.validate_historical_results() == contract.HISTORICAL_RESULT_HASHES
+def test_historical_quality_evidence_accepts_crlf_but_rejects_invalid_json(
+    tmp_path: Path,
+) -> None:
+    for filename in contract.HISTORICAL_RESULT_FILENAMES:
+        source = contract.STAGE7_RESULTS_DIR / filename
+        text = source.read_text(encoding="utf-8").replace("\r\n", "\n")
+        (tmp_path / filename).write_bytes(text.replace("\n", "\r\n").encode("utf-8"))
+    with patch.object(contract, "STAGE7_RESULTS_DIR", tmp_path):
+        observed = contract.validate_historical_results()
+        assert observed["required_file_count"] == 13
+        assert observed["all_present_and_readable"] is True
+        (tmp_path / "2026-08-20-stage7-quality-acceptance-results.json").write_text(
+            "{broken", encoding="utf-8"
+        )
+        with pytest.raises(RuntimeError, match="JSON"):
+            contract.validate_historical_results()
 
 
 def test_i2_lifecycle_contract_freezes_run_identity_paths_and_states() -> None:
@@ -137,7 +164,14 @@ def test_i2_lifecycle_contract_freezes_run_identity_paths_and_states() -> None:
     assert lifecycle == {
         "sealed_run_id": "7R5-I",
         "active_run_id": "7R5-I2",
-        "sealed_raw_sha256": LEGACY_RAW_SHA256,
+        "sealed_raw_identity": {
+            "stage": "7R5-I",
+            "mode": "real_raw",
+            "plan_case_count": 10,
+            "report_case_count": 20,
+            "stability_case_count": 15,
+            "attempt_count": 29,
+        },
         "active_paths": {
             "preflight": str(I2_PREFLIGHT_PATH),
             "raw": str(I2_RAW_PATH),
@@ -157,14 +191,20 @@ def test_i2_lifecycle_contract_freezes_run_identity_paths_and_states() -> None:
     }
 
 
-def test_i2_preflight_complete_accepts_sealed_raw_and_helper_directory() -> None:
+def test_i2_final_complete_accepts_sealed_raw_and_helper_directory() -> None:
     observed = contract.validate_result_lifecycle(
-        run_id="7R5-I2", expected_state="i2_preflight_complete"
+        run_id="7R5-I2", expected_state="i2_final_complete"
     )
-    assert observed["state"] == "i2_preflight_complete"
-    assert observed["sealed_raw_sha256"] == LEGACY_RAW_SHA256
-    assert observed["active_existing"] == [str(I2_PREFLIGHT_PATH)]
-    assert observed["historical_result_hashes"] == contract.HISTORICAL_RESULT_HASHES
+    assert observed["state"] == "i2_final_complete"
+    assert observed["sealed_raw_identity"]["stage"] == "7R5-I"
+    assert observed["sealed_raw_identity"]["attempt_count"] == 29
+    assert observed["active_existing"] == [
+        str(I2_PREFLIGHT_PATH),
+        str(I2_RAW_PATH),
+        str(I2_HUMAN_AUDIT_PATH),
+        str(I2_FINAL_PATH),
+    ]
+    assert observed["historical_results"]["required_file_count"] == 13
     assert observed["helper_can_satisfy_human_audit"] is False
 
 
@@ -184,13 +224,24 @@ def test_i2_write_guard_blocks_cross_run_overwrite_without_writing() -> None:
             target=contract.RAW_RESULT_PATH,
             expected_state="i2_not_started",
         )
-    allowed = contract.assert_result_write_allowed(
-        run_id="7R5-I2",
-        target=I2_RAW_PATH,
-        expected_state="i2_preflight_complete",
-    )
-    assert allowed["target"] == str(I2_RAW_PATH)
-    assert allowed["write_count"] == 0
+    with pytest.raises(RuntimeError, match="状态不允许写入"):
+        contract.assert_result_write_allowed(
+            run_id="7R5-I2",
+            target=I2_RAW_PATH,
+            expected_state="i2_final_complete",
+        )
+    with pytest.raises(RuntimeError, match="状态不允许写入"):
+        contract.assert_result_write_allowed(
+            run_id="7R5-I2",
+            target=I2_HUMAN_AUDIT_PATH,
+            expected_state="i2_final_complete",
+        )
+    with pytest.raises(RuntimeError, match="状态不允许写入"):
+        contract.assert_result_write_allowed(
+            run_id="7R5-I2",
+            target=I2_FINAL_PATH,
+            expected_state="i2_final_complete",
+        )
 
 
 def test_sealed_i_run_cannot_reenter_or_receive_late_results(
@@ -392,10 +443,11 @@ def test_cost_guard_keeps_unknown_failed_attempt_reserve_in_cumulative_spend() -
 
 def _valid_raw_result() -> dict:
     return {
-        "stage": "7R5-I",
+        "stage": "7R5-I2",
         "mode": "real_raw",
+        "generated_at": "2026-08-29T00:00:00+00:00",
         "fixture": {"hashes": {"fixture": contract.FROZEN_FIXTURE_SHA256}},
-        "execution_contract": contract.execution_contract(),
+        "execution_contract": contract.i2_raw_execution_contract(),
         "call_budget": contract.call_budget(),
         "attempt_audit_summary": {"api_attempt_count": 2},
         "attempt_audit": [
@@ -415,8 +467,6 @@ def _valid_raw_result() -> dict:
         "plan_records": [{} for _ in range(10)],
         "report_records": [{} for _ in range(20)],
         "stability_records": [{} for _ in range(15)],
-        "historical_result_hashes_before": contract.HISTORICAL_RESULT_HASHES,
-        "historical_result_hashes_after": contract.HISTORICAL_RESULT_HASHES,
         "quality_gate_passed": None,
         "quality_conclusion_allowed": False,
     }
@@ -484,7 +534,11 @@ def test_finalize_combines_deterministic_and_frozen_human_gates(
     human_path.write_text(
         json.dumps(
             {
-                "raw_result_sha256": contract.sha256_file(raw_path),
+                "raw_result_identity": {
+                    "stage": raw["stage"],
+                    "mode": raw["mode"],
+                    "generated_at": raw["generated_at"],
+                },
                 "fixture_sha256": contract.FROZEN_FIXTURE_SHA256,
                 "method": "human_review_against_frozen_labels",
                 "auditor": "fixture-human-reviewer",
@@ -496,17 +550,129 @@ def test_finalize_combines_deterministic_and_frozen_human_gates(
     )
     written: dict = {}
 
-    def capture(path: Path, payload: dict) -> None:
+    def capture(path: Path, payload: dict, **kwargs: object) -> None:
         written["path"] = path
         written["payload"] = payload
+        written["kwargs"] = kwargs
 
     with (
-        patch.object(runner, "RAW_RESULT_PATH", raw_path),
-        patch.object(runner, "HUMAN_AUDIT_PATH", human_path),
-        patch.object(runner, "FINAL_RESULT_PATH", final_path),
+        patch.object(runner, "I2_RAW_RESULT_PATH", raw_path),
+        patch.object(runner, "I2_HUMAN_AUDIT_PATH", human_path),
+        patch.object(runner, "I2_FINAL_RESULT_PATH", final_path),
+        patch.object(runner, "validate_result_lifecycle") as validate_lifecycle,
         patch.object(runner, "write_new_json", side_effect=capture),
     ):
         result = runner.finalize_payload()
+    validate_lifecycle.assert_called_once_with(
+        run_id="7R5-I2", expected_state="i2_human_complete"
+    )
+    assert result["stage"] == "7R5-I2"
     assert result["quality_gate_passed"] is True
     assert all(result["gates"].values())
-    assert written == {"path": final_path, "payload": result}
+    assert result["failed_gates"] == []
+    assert result["gate_summary"] == {
+        "total": 19,
+        "passed": 19,
+        "failed": 0,
+    }
+    assert result["raw_result_identity"] == {
+        "stage": raw["stage"],
+        "mode": raw["mode"],
+        "generated_at": raw["generated_at"],
+    }
+    assert "raw_result_sha256" not in result
+    assert "human_audit_sha256" not in result
+    assert written == {
+        "path": final_path,
+        "payload": result,
+        "kwargs": {
+            "run_id": "7R5-I2",
+            "expected_state": "i2_human_complete",
+        },
+    }
+
+
+def test_finalize_records_all_i2_failed_gates_without_changing_thresholds(
+    tmp_path: Path,
+) -> None:
+    raw = _valid_raw_result()
+    raw["summaries"] = {
+        "plans": {"structure_legal_count": 10, "traceable_plan_count": 10},
+        "reports": {
+            "legal_report_count": 17,
+            "nonzero_assessment_count": 99,
+            "nonzero_with_evidence_count": 99,
+            "all_required_sections_count": 8,
+        },
+        "stability": {
+            "direction_stable_group_count": 2,
+            "max_difference_le_10_group_count": 2,
+            "extreme_direction_flip_count": 0,
+        },
+    }
+    raw["estimated_spend_usd"] = 0.09143638
+    raw["monetary_cap_usd"] = 2.0
+    raw_path = tmp_path / "raw.json"
+    human_path = tmp_path / "human.json"
+    final_path = tmp_path / "final.json"
+    raw_path.write_text(json.dumps(raw), encoding="utf-8")
+    metrics = {
+        "plan_required_covered_count": 55,
+        "plan_forbidden_addition_count": 0,
+        "plan_sensitive_criterion_count": 0,
+        "plan_non_evaluation_misclassified_count": 0,
+        "report_fabricated_fact_count": 0,
+        "report_severe_fact_error_count": 5,
+        "report_sensitive_scoring_count": 0,
+        "report_automatic_decision_count": 0,
+        "report_direction_consistent_count": 19,
+        "required_direction_consistent_count": 105,
+        "stability_severe_fact_error_count": 5,
+        "stability_sensitive_scoring_count": 0,
+    }
+    human_path.write_text(
+        json.dumps(
+            {
+                "raw_result_identity": {
+                    "stage": raw["stage"],
+                    "mode": raw["mode"],
+                    "generated_at": raw["generated_at"],
+                },
+                "fixture_sha256": contract.FROZEN_FIXTURE_SHA256,
+                "method": "human_review_against_frozen_labels",
+                "auditor": "fixture-human-reviewer",
+                "audited_at": datetime.now(timezone.utc).isoformat(),
+                "metrics": metrics,
+            }
+        ),
+        encoding="utf-8",
+    )
+    with (
+        patch.object(runner, "I2_RAW_RESULT_PATH", raw_path),
+        patch.object(runner, "I2_HUMAN_AUDIT_PATH", human_path),
+        patch.object(runner, "I2_FINAL_RESULT_PATH", final_path),
+        patch.object(runner, "validate_result_lifecycle"),
+        patch.object(runner, "write_new_json"),
+    ):
+        result = runner.finalize_payload()
+    assert result["quality_gate_passed"] is False
+    assert result["failed_gates"] == [
+        "report_20_of_20_legal",
+        "report_severe_fact_error_zero",
+        "report_sections_20_of_20",
+        "stability_direction_at_least_4_of_5",
+        "stability_spread_at_least_4_of_5",
+        "stability_severe_and_sensitive_zero",
+    ]
+    assert result["gate_summary"] == {
+        "total": 19,
+        "passed": 13,
+        "failed": 6,
+    }
+    assert result["automatic_summaries"] == raw["summaries"]
+    assert result["human_metrics"] == metrics
+    assert result["cost_summary"] == {
+        "monetary_cap_usd": 2.0,
+        "estimated_spend_usd": 0.09143638,
+        "api_attempt_count": 2,
+    }

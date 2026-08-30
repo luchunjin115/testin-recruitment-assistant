@@ -28,7 +28,7 @@ from stage7_7r4_quality_contract import (  # noqa: E402
     REPORT_FORMAL_MARKDOWN_PATH,
     REPORT_FORMAL_RESULT_PATH,
     REPORT_TARGETED_RESULT_PATH,
-    historical_result_hashes,
+    validate_historical_results,
     model_and_cost_inputs,
     report_label_denominators,
     serialized,
@@ -46,7 +46,7 @@ def _utc_now() -> str:
 
 
 def dry_run_payload() -> dict[str, Any]:
-    historical_before = historical_result_hashes()
+    historical_before = validate_historical_results()
     denominators = report_label_denominators(SCREENING_CASES)
     fixture_sha = hashlib.sha256(
         serialized(SCREENING_CASES).encode("utf-8")
@@ -58,7 +58,7 @@ def dry_run_payload() -> dict[str, Any]:
     if SCREENING_EVALUATION_SCHEMA_VERSION != "2.0":
         raise RuntimeError("报告输出 Schema 版本发生未确认变化")
     paths = validate_result_path_isolation()
-    historical_after = historical_result_hashes()
+    historical_after = validate_historical_results()
     if historical_before != historical_after:
         raise RuntimeError("报告 dry-run 期间历史结果发生变化")
     return {
@@ -91,8 +91,8 @@ def dry_run_payload() -> dict[str, Any]:
             "formal_markdown": str(REPORT_FORMAL_MARKDOWN_PATH),
         },
         "result_path_contract": paths,
-        "historical_result_hashes_before": historical_before,
-        "historical_result_hashes_after": historical_after,
+        "historical_results_before": historical_before,
+        "historical_results_after": historical_after,
         "real_model_call_count": 0,
         "adapter_instantiated": False,
         "api_key_read_as_prerequisite": False,

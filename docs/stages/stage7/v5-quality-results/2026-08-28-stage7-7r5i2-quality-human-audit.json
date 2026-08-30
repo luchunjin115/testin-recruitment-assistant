@@ -1,0 +1,156 @@
+{
+  "stage": "7R5-I2",
+  "mode": "human_audit",
+  "raw_result_identity": {
+    "stage": "7R5-I2",
+    "mode": "real_raw",
+    "generated_at": "2026-08-29T10:31:53.835112+00:00"
+  },
+  "raw_result_sha256": "6583fe1b5b8219b49989166fcfbfd1c676d7b482b513b87ea3669dac6b6a0d27",
+  "fixture_sha256": "2ecc2da188f09883c1b6acaa40d0ca25f2306f2894e7f060a3a26aefb2fa9643",
+  "method": "human_review_against_frozen_labels",
+  "auditor": "项目负责人（Codex辅助整理证据）",
+  "audited_at": "2026-08-30T18:33:42.663256+08:00",
+  "authorization": {
+    "confirmed_by": "项目负责人",
+    "confirmed_on": "2026-08-30",
+    "scope": "确认7R5-I2问题总账，授权完成107个required标签和15次稳定性人工计数，并写入唯一正式human audit",
+    "codex_role": "辅助整理冻结标签、raw响应和确定性校验形成的证据，不替代项目负责人的授权"
+  },
+  "metrics": {
+    "plan_required_covered_count": 55,
+    "plan_forbidden_addition_count": 0,
+    "plan_sensitive_criterion_count": 0,
+    "plan_non_evaluation_misclassified_count": 0,
+    "report_fabricated_fact_count": 0,
+    "report_severe_fact_error_count": 5,
+    "report_sensitive_scoring_count": 0,
+    "report_automatic_decision_count": 0,
+    "report_direction_consistent_count": 19,
+    "required_direction_consistent_count": 105,
+    "stability_severe_fact_error_count": 5,
+    "stability_sensitive_scoring_count": 0
+  },
+  "plan_review": {
+    "case_denominator": 10,
+    "required_label_denominator": 55,
+    "required_covered_count": 55,
+    "forbidden_addition_denominator": 22,
+    "confirmed_forbidden_addition_count": 0,
+    "non_evaluation_denominator": 26,
+    "confirmed_non_evaluation_misclassified_count": 0,
+    "sensitive_criterion_count": 0,
+    "notes": [
+      "自动结果中的3个非评价事项粗略命中和11个禁止新增粗略命中，逐项核对后均为中文单字重合扫描误报。",
+      "P07条件性要求被标成无条件required是评价清单语义缺陷，但不是凭空新增要求，因此单列问题，不计入forbidden addition。"
+    ]
+  },
+  "report_review": {
+    "case_denominator": 20,
+    "fabricated_fact_cases": [],
+    "severe_fact_error_cases": [
+      {
+        "case_id": "R00",
+        "reason": "简历明确写有计算机科学与技术本科且两段Java岗位合计超过60个月，模型仍称学历专业和Java年限无法确认，影响核心required判断。"
+      },
+      {
+        "case_id": "R06",
+        "reason": "2017.07起连续市场相关经历已经超过5年，模型仍称市场推广或品牌管理年限无法确认。"
+      },
+      {
+        "case_id": "R15",
+        "reason": "模型写出73个月后又判断未达到60个月，形成直接算术矛盾。"
+      },
+      {
+        "case_id": "R17",
+        "reason": "两段在线教育和知识付费平台运营经历足以支持至少3年互联网运营，模型却把该required评为0分。"
+      },
+      {
+        "case_id": "R19",
+        "reason": "模型写出37个月后又判断未达到24个月，形成直接算术矛盾。"
+      }
+    ],
+    "sensitive_scoring_cases": [],
+    "automatic_decision_cases": [],
+    "direction_consistent_count": 19,
+    "direction_inconsistent_cases": [
+      {
+        "case_id": "R07",
+        "frozen_direction": "partial_match",
+        "model_score": 72,
+        "reason": "72分进入high区间，与冻结partial方向不一致；同时存在条件性要求被无条件required化的计划语义缺陷。"
+      }
+    ],
+    "notes": [
+      "R12把分散的技能标题和词项重组成不可连续定位的quote，属于证据引用不合法，不重复计为编造具体事实。",
+      "R03、R10、R18存在微弱优势遗漏；R01、R04、R05、R08空风险以及R14、R16空优势属于合理空值。"
+    ]
+  },
+  "required_direction_review": {
+    "denominator": 107,
+    "consistent_count": 105,
+    "case_counts": [
+      {"case_id": "R00", "reviewed": 7, "consistent": 6},
+      {"case_id": "R01", "reviewed": 5, "consistent": 5},
+      {"case_id": "R02", "reviewed": 5, "consistent": 5},
+      {"case_id": "R03", "reviewed": 5, "consistent": 5},
+      {"case_id": "R04", "reviewed": 3, "consistent": 3},
+      {"case_id": "R05", "reviewed": 3, "consistent": 3},
+      {"case_id": "R06", "reviewed": 5, "consistent": 5},
+      {"case_id": "R07", "reviewed": 5, "consistent": 5},
+      {"case_id": "R08", "reviewed": 6, "consistent": 6},
+      {"case_id": "R09", "reviewed": 9, "consistent": 9},
+      {"case_id": "R10", "reviewed": 7, "consistent": 7},
+      {"case_id": "R11", "reviewed": 4, "consistent": 4},
+      {"case_id": "R12", "reviewed": 5, "consistent": 5},
+      {"case_id": "R13", "reviewed": 4, "consistent": 4},
+      {"case_id": "R14", "reviewed": 8, "consistent": 8},
+      {"case_id": "R15", "reviewed": 9, "consistent": 9},
+      {"case_id": "R16", "reviewed": 6, "consistent": 6},
+      {"case_id": "R17", "reviewed": 4, "consistent": 3},
+      {"case_id": "R18", "reviewed": 3, "consistent": 3},
+      {"case_id": "R19", "reviewed": 4, "consistent": 4}
+    ],
+    "inconsistent_items": [
+      {
+        "case_id": "R00",
+        "frozen_label": "至少 5 年 Java 后端开发经验",
+        "expected": "evidence_present",
+        "observed": "模型计算约95个月且两段岗位均为Java开发，却仍称无法确认达到5年。"
+      },
+      {
+        "case_id": "R17",
+        "frozen_label": "至少 3 年互联网运营经验",
+        "expected": "evidence_present",
+        "observed": "模型列出两段运营经历共96个月，却仍评0分并称无法确认达到36个月。"
+      }
+    ],
+    "frozen_label_caveat": "R15和R19的冻结年限标签已随2026-08参考日期漂移；本指标按不可改写的I2冻结标签计数，因此二者方向一致不代表冻结标签事实正确，缺陷已另行登记。"
+  },
+  "stability_review": {
+    "denominator": 15,
+    "severe_fact_error_count": 5,
+    "sensitive_scoring_count": 0,
+    "runs": [
+      {"case_id": "S00-1", "severe_fact_error": true, "sensitive_scoring": false, "reason": "明确计算机本科被判断为专业不明确，影响核心required。"},
+      {"case_id": "S00-2", "severe_fact_error": true, "sensitive_scoring": false, "reason": "明确本科被判断为学历层次不明确，影响核心required。"},
+      {"case_id": "S00-3", "severe_fact_error": false, "sensitive_scoring": false, "reason": "存在时间fact key字段误用，但未发现足以改变核心结论的事实错误。"},
+      {"case_id": "S01-1", "severe_fact_error": false, "sensitive_scoring": false, "reason": "未发现严重事实错误或敏感评分。"},
+      {"case_id": "S01-2", "severe_fact_error": false, "sensitive_scoring": false, "reason": "未发现严重事实错误或敏感评分。"},
+      {"case_id": "S01-3", "severe_fact_error": false, "sensitive_scoring": false, "reason": "未发现严重事实错误或敏感评分。"},
+      {"case_id": "S02-1", "severe_fact_error": true, "sensitive_scoring": false, "reason": "计算得到49个月并明确达到24个月，却在评价和总结中称年限未达到。"},
+      {"case_id": "S02-2", "severe_fact_error": true, "sensitive_scoring": false, "reason": "计算得到49个月后仍称未达到至少24个月相关经验，影响核心required。"},
+      {"case_id": "S02-3", "severe_fact_error": true, "sensitive_scoring": false, "reason": "计算得到49个月后仍称年限不足，影响核心required。"},
+      {"case_id": "S03-1", "severe_fact_error": false, "sensitive_scoring": false, "reason": "未发现严重事实错误或敏感评分。"},
+      {"case_id": "S03-2", "severe_fact_error": false, "sensitive_scoring": false, "reason": "非零分缺evidence属于结构错误，不重复计为严重事实错误。"},
+      {"case_id": "S03-3", "severe_fact_error": false, "sensitive_scoring": false, "reason": "未发现严重事实错误或敏感评分。"},
+      {"case_id": "S04-1", "severe_fact_error": false, "sensitive_scoring": false, "reason": "未发现严重事实错误或敏感评分。"},
+      {"case_id": "S04-2", "severe_fact_error": false, "sensitive_scoring": false, "reason": "存在时间fact key字段误用，但未发现足以改变核心结论的事实错误。"},
+      {"case_id": "S04-3", "severe_fact_error": false, "sensitive_scoring": false, "reason": "存在时间fact key字段误用，但未发现足以改变核心结论的事实错误。"}
+    ]
+  },
+  "evidence_ledger": "7r5i2-human-review-helper/2026-08-30-stage7-7r5i2-issue-ledger.md",
+  "quality_conclusion_allowed": false,
+  "finalize_performed": false,
+  "next_authorized_action": "none; CLOSE-03B requires separate user confirmation"
+}

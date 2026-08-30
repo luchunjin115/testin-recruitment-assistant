@@ -1,0 +1,31 @@
+{
+  "stage": "7R5-I2",
+  "purpose": "independent_real_quality_revalidation_pricing_snapshot",
+  "authorizes_real_model_calls": false,
+  "confirmed_cap_usd": 2.0,
+  "cap_confirmed_at": "2026-08-29T18:17:12.976+08:00",
+  "checked_at": "2026-08-29T17:48:22.010+08:00",
+  "expires_at": "2026-08-30T17:48:22.010+08:00",
+  "source_url": "https://api-docs.deepseek.com/quick_start/pricing/",
+  "model": "deepseek-v4-flash",
+  "model_version_shown_by_provider": "DeepSeek-V4-Flash-0731",
+  "selected_tier": "off_peak",
+  "timezone": "Asia/Shanghai",
+  "schedule": "Monday-Friday UTC 01:00-04:00 and 06:00-10:00 are peak; all other hours are off_peak",
+  "usd_per_million_tokens": {
+    "cache_hit_input": 0.007,
+    "cache_miss_input": 0.22,
+    "output": 0.66
+  },
+  "peak_usd_per_million_tokens": {
+    "cache_hit_input": 0.014,
+    "cache_miss_input": 0.44,
+    "output": 1.32
+  },
+  "notes": [
+    "The query time was Saturday 2026-08-29 17:48:22 Asia/Shanghai, which is outside the provider's weekday peak schedule.",
+    "This snapshot is valid for at most 24 hours and must be replaced with a new independent snapshot after expiry.",
+    "The user confirmed a USD 2 hard cap after this price snapshot was created.",
+    "This file contains no API key and does not authorize any real model call; separate 7R5-I2-E authorization is still required."
+  ]
+}

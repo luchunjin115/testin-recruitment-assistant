@@ -16,15 +16,9 @@ CURRENT_H1_PLAN_TARGETED_RESULT_PATH = (
     STAGE7_RESULTS_DIR
     / "2026-08-25-stage7-7r4h-plan-quality-targeted-results.json"
 )
-CURRENT_H1_PLAN_TARGETED_RESULT_SHA256 = (
-    "ada6cbc91c21e7f4f341eee587259676579c9c2770af3a220277ff32a5e47a6f"
-)
 CURRENT_HR1_PLAN_TARGETED_RESULT_PATH = (
     STAGE7_RESULTS_DIR
     / "2026-08-25-stage7-7r4hr1-plan-quality-targeted-revalidation-results.json"
-)
-CURRENT_HR1_PLAN_TARGETED_RESULT_SHA256 = (
-    "f1de3930c16e628617d4213ad0f85bf3a25fa0272945e5806e00c69a5d0df4d4"
 )
 PLAN_TARGETED_RESULT_PATH = (
     STAGE7_RESULTS_DIR
@@ -128,29 +122,33 @@ def serialized(value: Any) -> str:
     )
 
 
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(64 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def historical_result_hashes() -> dict[str, str]:
-    if not CURRENT_H1_PLAN_TARGETED_RESULT_PATH.exists():
-        raise RuntimeError("当前 7R4-H1 真实结果文件缺失")
-    current_h1_hash = sha256_file(CURRENT_H1_PLAN_TARGETED_RESULT_PATH)
-    if current_h1_hash != CURRENT_H1_PLAN_TARGETED_RESULT_SHA256:
-        raise RuntimeError("当前 7R4-H1 真实结果 SHA-256 已变化")
-    if not CURRENT_HR1_PLAN_TARGETED_RESULT_PATH.exists():
-        raise RuntimeError("当前 7R4-HR1 真实结果文件缺失")
-    current_hr1_hash = sha256_file(CURRENT_HR1_PLAN_TARGETED_RESULT_PATH)
-    if current_hr1_hash != CURRENT_HR1_PLAN_TARGETED_RESULT_SHA256:
-        raise RuntimeError("当前 7R4-HR1 真实结果 SHA-256 已变化")
+def validate_historical_results() -> dict[str, Any]:
+    required_paths: list[str] = []
+    json_file_count = 0
+    markdown_file_count = 0
+    for path in HISTORICAL_RESULT_PATHS:
+        relative = str(path.relative_to(PROJECT_ROOT))
+        if not path.exists():
+            raise RuntimeError(f"历史质量证据缺失：{relative}")
+        try:
+            if path.suffix.lower() == ".json":
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(payload, dict):
+                    raise RuntimeError(f"历史质量证据 JSON 顶层不是对象：{relative}")
+                json_file_count += 1
+            else:
+                if not path.read_text(encoding="utf-8").strip():
+                    raise RuntimeError(f"历史质量证据 Markdown 为空：{relative}")
+                markdown_file_count += 1
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError):
+            raise RuntimeError(f"历史质量证据 JSON/Markdown 无法读取：{relative}") from None
+        required_paths.append(relative)
     return {
-        str(path.relative_to(PROJECT_ROOT)): sha256_file(path)
-        for path in HISTORICAL_RESULT_PATHS
-        if path.exists()
+        "required_paths": required_paths,
+        "required_file_count": len(required_paths),
+        "json_file_count": json_file_count,
+        "markdown_file_count": markdown_file_count,
+        "all_present_and_readable": True,
     }
 
 

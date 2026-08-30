@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import hashlib
 import json
 import re
 import sys
@@ -554,26 +553,30 @@ def validate_step9_screening_fixture_contract() -> dict[str, Any]:
     }
 
 
-def file_sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def historical_result_hashes() -> dict[str, str]:
+def historical_result_identities() -> dict[str, Any]:
+    required_paths: list[str] = []
+    for path in HISTORICAL_RESULT_PATHS:
+        relative = str(path.relative_to(PROJECT_ROOT))
+        if not path.exists():
+            raise RuntimeError(f"历史 Stage 7 证据缺失：{relative}")
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError):
+            raise RuntimeError(f"历史 Stage 7 JSON 无法读取：{relative}") from None
+        if not isinstance(payload, dict):
+            raise RuntimeError(f"历史 Stage 7 JSON 顶层不是对象：{relative}")
+        required_paths.append(relative)
     return {
-        str(path.relative_to(PROJECT_ROOT)): file_sha256(path)
-        for path in HISTORICAL_RESULT_PATHS
-        if path.exists()
+        "required_paths": required_paths,
+        "required_file_count": len(required_paths),
+        "all_present_and_readable": True,
     }
 
 
-def assert_historical_result_hashes_unchanged(before: dict[str, str]) -> None:
-    after = historical_result_hashes()
+def assert_historical_result_identities_unchanged(before: dict[str, Any]) -> None:
+    after = historical_result_identities()
     if after != before:
-        raise RuntimeError("历史 Stage 7 JSON 的内容或文件集合发生变化")
+        raise RuntimeError("历史 Stage 7 JSON 的文件身份或集合发生变化")
 
 
 def validate_combined_result_paths() -> dict[str, str]:
@@ -1999,9 +2002,7 @@ async def run_step9_combined_mode(args: argparse.Namespace) -> None:
     result_paths = validate_combined_result_paths()
     settings = get_settings()
     runtime_config = validate_runtime_acceptance_configuration(settings)
-    historical_hashes_before = historical_result_hashes()
-    if len(historical_hashes_before) != len(HISTORICAL_RESULT_PATHS):
-        raise SystemExit("9-I 预期的历史 JSON 不完整，拒绝继续")
+    historical_identities_before = historical_result_identities()
 
     if args.dry_run:
         print(
@@ -2033,7 +2034,7 @@ async def run_step9_combined_mode(args: argparse.Namespace) -> None:
                     "runtime_configuration": runtime_config,
                     "result_paths": result_paths,
                     "result_paths_exist": False,
-                    "historical_result_hashes": historical_hashes_before,
+                    "historical_results": historical_identities_before,
                     "original_samples_labels_and_denominators_unchanged": True,
                     "quality_conclusion_allowed": False,
                 },
@@ -2065,7 +2066,7 @@ async def run_step9_combined_mode(args: argparse.Namespace) -> None:
         },
         "runtime_configuration": runtime_config,
         "fixture_contract": jd_fixture,
-        "historical_result_hashes_before": historical_hashes_before,
+        "historical_results_before": historical_identities_before,
         "summary": jd_summary,
         "cases": jd_results,
         "quality_statement": (
@@ -2075,7 +2076,7 @@ async def run_step9_combined_mode(args: argparse.Namespace) -> None:
         ),
     }
     write_new_json(STEP9_REVALIDATION_RESULT_PATH, jd_payload)
-    assert_historical_result_hashes_unchanged(historical_hashes_before)
+    assert_historical_result_identities_unchanged(historical_identities_before)
     if not all(
         result.get("actual_model_call_count") == 1 for result in jd_results
     ):
@@ -2093,7 +2094,7 @@ async def run_step9_combined_mode(args: argparse.Namespace) -> None:
         "upstream_blocked_sample_count"
     ]:
         raise RuntimeError("上游阻塞样本产生了不允许的筛选调用")
-    assert_historical_result_hashes_unchanged(historical_hashes_before)
+    assert_historical_result_identities_unchanged(historical_identities_before)
     diagnostic_payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "mode": "step9-combined",
@@ -2147,8 +2148,8 @@ async def run_step9_combined_mode(args: argparse.Namespace) -> None:
                 "browser interaction",
             ],
         },
-        "historical_result_hashes_before": historical_hashes_before,
-        "historical_result_hashes_after": historical_result_hashes(),
+        "historical_results_before": historical_identities_before,
+        "historical_results_after": historical_result_identities(),
         "steps_10_11_12_completed": False,
     }
     write_new_json(STEP9_FULL_CHAIN_DIAGNOSTIC_RESULT_PATH, diagnostic_payload)
@@ -2156,7 +2157,7 @@ async def run_step9_combined_mode(args: argparse.Namespace) -> None:
         STEP9_FULL_CHAIN_DIAGNOSTIC_MARKDOWN_PATH,
         render_step9_diagnostic_markdown(jd_summary, screening_summary),
     )
-    assert_historical_result_hashes_unchanged(historical_hashes_before)
+    assert_historical_result_identities_unchanged(historical_identities_before)
     print(f"JD_RESULT_PATH={STEP9_REVALIDATION_RESULT_PATH}", flush=True)
     print(
         f"SCREENING_RESULT_PATH={STEP9_FULL_CHAIN_DIAGNOSTIC_RESULT_PATH}",

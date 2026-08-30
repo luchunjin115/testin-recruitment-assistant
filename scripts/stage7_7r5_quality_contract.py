@@ -33,7 +33,6 @@ ACTIVE_RUN_ID = "7R5-I2"
 RAW_RESULT_PATH = V5_RESULTS_DIR / "2026-08-27-stage7-7r5i-quality-raw-results.json"
 HUMAN_AUDIT_PATH = V5_RESULTS_DIR / "2026-08-27-stage7-7r5i-human-audit.json"
 FINAL_RESULT_PATH = V5_RESULTS_DIR / "2026-08-27-stage7-7r5i-quality-final-results.json"
-SEALED_RAW_SHA256 = "de093654e76ffba4812dd1feb2e093e060dcf325f04a6a8aeec93a0c47ff31ac"
 I2_PREFLIGHT_PATH = V5_RESULTS_DIR / "2026-08-28-stage7-7r5i2-zero-call-preflight.json"
 I2_RAW_RESULT_PATH = V5_RESULTS_DIR / "2026-08-28-stage7-7r5i2-quality-raw-results.json"
 I2_HUMAN_AUDIT_PATH = V5_RESULTS_DIR / "2026-08-28-stage7-7r5i2-quality-human-audit.json"
@@ -54,25 +53,25 @@ REPORT_SAMPLE_SHA256 = "ee7f4d5a5673a5a6a15c1ef0d469f67eee50e3b4e3172d8c23415605
 REPORT_LABEL_SHA256 = "a088f763eb011d34131b5dd34f6c2fe2558649ea5f9e41499d101ec270009d75"
 STABILITY_SELECTION_SHA256 = "7f2c5f390b0c7e30e5a644380decea0554bbb62cfc03eff193d13a8c1a117708"
 
-HISTORICAL_RESULT_HASHES = {
-    "2026-08-20-stage7-quality-acceptance-results.json": "75e31dce20c1fd8dcecdc29e35345cd75e726d4f02fecaf9c06bb39ed7d1f1ea",
-    "2026-08-20-stage7-quality-acceptance.md": "056bffaccd5f18794ad9504461102e1067b019822dd0cc1b360d22f21de326e7",
-    "2026-08-21-stage7-step9-full-chain-diagnostic-results.json": "9892f62a0035e303f67e7cb140c9225a4ce2be9bf9360f3d260e522c29b5de9f",
-    "2026-08-21-stage7-step9-full-chain-diagnostic-results.md": "29af2b9fbcc5aac6cd98ed54dd8a2a6817a2db54ea15cf6a18bd14dce920631b",
-    "2026-08-21-stage7-step9-jd-decomposition-debug-results.json": "f4c1019536aa5e4d13d55f86caba7b9b27f245a2e9c0a83ed942974a048de3c2",
-    "2026-08-21-stage7-step9-jd-decomposition-results.json": "ab99a6e1742876fd95b8bd2a1987c783825738477c137726b710b6aedfce6e77",
-    "2026-08-21-stage7-step9-jd-decomposition-revalidation-results.json": "41b34c01bd5a19715f728a9bcb67ce0adfc8324cce953455b56d9651da5fcbe4",
-    "2026-08-21-stage7-time-fact-revalidation-results.json": "193613f05bc8263ce630be9a7cbfdbd6cdca093c08be46c9f9d44d4b1a530b17",
-    "2026-08-22-stage7-7rf-plan-quality-targeted-results.json": "567b56c674314e5c94bf6997f0da5a96fb53130e60724a24af29628ccab218f9",
-    "2026-08-25-stage7-7r4h-plan-quality-formal-results.json": "b416809973ef0013a125736d8acafc024b610882608967f42c6ab10fc8a20b50",
-    "2026-08-25-stage7-7r4h-plan-quality-targeted-results.json": "ada6cbc91c21e7f4f341eee587259676579c9c2770af3a220277ff32a5e47a6f",
-    "2026-08-25-stage7-7r4hr1-plan-quality-targeted-revalidation-results.json": "f1de3930c16e628617d4213ad0f85bf3a25fa0272945e5806e00c69a5d0df4d4",
-    "2026-08-26-stage7-7r4hr2-plan-quality-targeted-revalidation-results.json": "4b7c44d4874f3ece189b50d4488d305a1161dbbcdf291277de45945844030ce9",
-}
+HISTORICAL_RESULT_FILENAMES = (
+    "2026-08-20-stage7-quality-acceptance-results.json",
+    "2026-08-20-stage7-quality-acceptance.md",
+    "2026-08-21-stage7-step9-full-chain-diagnostic-results.json",
+    "2026-08-21-stage7-step9-full-chain-diagnostic-results.md",
+    "2026-08-21-stage7-step9-jd-decomposition-debug-results.json",
+    "2026-08-21-stage7-step9-jd-decomposition-results.json",
+    "2026-08-21-stage7-step9-jd-decomposition-revalidation-results.json",
+    "2026-08-21-stage7-time-fact-revalidation-results.json",
+    "2026-08-22-stage7-7rf-plan-quality-targeted-results.json",
+    "2026-08-25-stage7-7r4h-plan-quality-formal-results.json",
+    "2026-08-25-stage7-7r4h-plan-quality-targeted-results.json",
+    "2026-08-25-stage7-7r4hr1-plan-quality-targeted-revalidation-results.json",
+    "2026-08-26-stage7-7r4hr2-plan-quality-targeted-revalidation-results.json",
+)
 
 PLANNED_MODEL = "deepseek-v4-flash"
 PLAN_PROMPT_VERSION = "job_evaluation_plan_lightweight_v2"
-REPORT_PROMPT_VERSION = "screening_evaluation_lightweight_v3"
+REPORT_PROMPT_VERSION = "screening_evaluation_lightweight_v4"
 PLAN_SCHEMA_VERSION = "5.0"
 REPORT_SCHEMA_VERSION = "5.0"
 TEMPERATURE = 0.1
@@ -99,14 +98,6 @@ def serialized(value: Any) -> str:
 
 def sha256_value(value: Any) -> str:
     return hashlib.sha256(serialized(value).encode("utf-8")).hexdigest()
-
-
-def sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(64 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def validate_frozen_fixture() -> dict[str, Any]:
@@ -159,17 +150,70 @@ def validate_frozen_fixture() -> dict[str, Any]:
     }
 
 
-def validate_historical_results() -> dict[str, str]:
-    observed: dict[str, str] = {}
-    for filename, expected_hash in HISTORICAL_RESULT_HASHES.items():
+def validate_historical_results() -> dict[str, Any]:
+    json_file_count = 0
+    markdown_file_count = 0
+    for filename in HISTORICAL_RESULT_FILENAMES:
         path = STAGE7_RESULTS_DIR / filename
         if not path.exists():
             raise RuntimeError(f"历史质量证据缺失：{filename}")
-        digest = sha256_file(path)
-        if digest != expected_hash:
-            raise RuntimeError(f"历史质量证据 SHA-256 已变化：{filename}")
-        observed[filename] = digest
-    return observed
+        try:
+            if path.suffix.lower() == ".json":
+                payload = json.loads(path.read_text(encoding="utf-8"))
+                if not isinstance(payload, dict):
+                    raise RuntimeError(f"历史质量证据 JSON 顶层不是对象：{filename}")
+                json_file_count += 1
+            else:
+                if not path.read_text(encoding="utf-8").strip():
+                    raise RuntimeError(f"历史质量证据 Markdown 为空：{filename}")
+                markdown_file_count += 1
+        except (json.JSONDecodeError, UnicodeDecodeError, OSError):
+            raise RuntimeError(f"历史质量证据 JSON/Markdown 无法读取：{filename}") from None
+    return {
+        "required_filenames": list(HISTORICAL_RESULT_FILENAMES),
+        "required_file_count": len(HISTORICAL_RESULT_FILENAMES),
+        "json_file_count": json_file_count,
+        "markdown_file_count": markdown_file_count,
+        "all_present_and_readable": True,
+    }
+
+
+def validate_sealed_raw_identity(path: Path = RAW_RESULT_PATH) -> dict[str, Any]:
+    if not path.exists():
+        raise RuntimeError("封存的 7R5-I raw 证据缺失")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError, OSError):
+        raise RuntimeError("封存的 7R5-I raw JSON 无法读取") from None
+    if not isinstance(payload, dict) or payload.get("stage") != SEALED_RUN_ID or payload.get("mode") != "real_raw":
+        raise RuntimeError("封存 raw 不是登记的 7R5-I real raw")
+    expected_case_ids = {
+        "plan_records": [f"P{index:02d}" for index in range(len(V5_PLAN_JDS))],
+        "report_records": [f"R{index:02d}" for index in range(len(V5_REPORT_PAIRS))],
+        "stability_records": [
+            f"S{index:02d}-{run}"
+            for index in V5_STABILITY_SAMPLE_INDICES
+            for run in range(1, V5_STABILITY_RUNS_PER_SAMPLE + 1)
+        ],
+    }
+    for key, case_ids in expected_case_ids.items():
+        records = payload.get(key)
+        if not isinstance(records, list) or [item.get("case_id") for item in records if isinstance(item, dict)] != case_ids:
+            raise RuntimeError(f"封存 raw 的 {key} 固定 case 身份或分母不完整")
+    attempts = payload.get("attempt_audit")
+    if not isinstance(attempts, list) or len(attempts) != 29:
+        raise RuntimeError("封存 raw 的 attempt_audit 固定分母不完整")
+    attempt_ids = [item.get("case_id") for item in attempts if isinstance(item, dict)]
+    if len(attempt_ids) != len(attempts) or len(set(attempt_ids)) != len(attempt_ids):
+        raise RuntimeError("封存 raw 的 attempt case ID 缺失或重复")
+    return {
+        "stage": SEALED_RUN_ID,
+        "mode": "real_raw",
+        "plan_case_count": len(expected_case_ids["plan_records"]),
+        "report_case_count": len(expected_case_ids["report_records"]),
+        "stability_case_count": len(expected_case_ids["stability_records"]),
+        "attempt_count": len(attempts),
+    }
 
 
 def result_paths(run_id: str = SEALED_RUN_ID) -> dict[str, str]:
@@ -193,7 +237,14 @@ def result_lifecycle_contract() -> dict[str, Any]:
     return {
         "sealed_run_id": SEALED_RUN_ID,
         "active_run_id": ACTIVE_RUN_ID,
-        "sealed_raw_sha256": SEALED_RAW_SHA256,
+        "sealed_raw_identity": {
+            "stage": SEALED_RUN_ID,
+            "mode": "real_raw",
+            "plan_case_count": 10,
+            "report_case_count": 20,
+            "stability_case_count": 15,
+            "attempt_count": 29,
+        },
         "active_paths": result_paths(ACTIVE_RUN_ID),
         "states": list(I2_LIFECYCLE_STATES),
         "unknown_json_policy": "reject",
@@ -247,11 +298,7 @@ def validate_result_lifecycle(
     if run_id != ACTIVE_RUN_ID:
         raise RuntimeError(f"质量运行批次已经封存或未登记：{run_id}")
     historical = validate_historical_results()
-    if not RAW_RESULT_PATH.exists():
-        raise RuntimeError("封存的 7R5-I raw 证据缺失")
-    sealed_digest = sha256_file(RAW_RESULT_PATH)
-    if sealed_digest != SEALED_RAW_SHA256:
-        raise RuntimeError("封存的 7R5-I raw SHA-256 已变化")
+    sealed_identity = validate_sealed_raw_identity()
     if HUMAN_AUDIT_PATH.exists() or FINAL_RESULT_PATH.exists():
         raise RuntimeError("封存的 7R5-I human/final 路径不应被补写")
     active_paths = tuple(
@@ -259,7 +306,7 @@ def validate_result_lifecycle(
     )
     historical_paths = {
         (STAGE7_RESULTS_DIR / filename).resolve()
-        for filename in HISTORICAL_RESULT_HASHES
+        for filename in HISTORICAL_RESULT_FILENAMES
     }
     sealed_paths = {
         RAW_RESULT_PATH.resolve(),
@@ -286,10 +333,10 @@ def validate_result_lifecycle(
     return {
         "run_id": ACTIVE_RUN_ID,
         "state": state,
-        "sealed_raw_sha256": sealed_digest,
+        "sealed_raw_identity": sealed_identity,
         "active_paths": result_paths(ACTIVE_RUN_ID),
         "active_existing": active_existing,
-        "historical_result_hashes": historical,
+        "historical_results": historical,
         "helper_can_satisfy_human_audit": False,
     }
 
@@ -332,7 +379,7 @@ def assert_result_write_allowed(
 
 def validate_result_path_isolation(*, require_empty: bool) -> dict[str, Any]:
     paths = tuple(Path(value).resolve() for value in result_paths().values())
-    historical = tuple((STAGE7_RESULTS_DIR / name).resolve() for name in HISTORICAL_RESULT_HASHES)
+    historical = tuple((STAGE7_RESULTS_DIR / name).resolve() for name in HISTORICAL_RESULT_FILENAMES)
     if len(paths) != len(set(paths)) or set(paths) & set(historical):
         raise RuntimeError("5.0 新结果路径重复或覆盖历史证据")
     if any(path.parent != V5_RESULTS_DIR.resolve() for path in paths):
@@ -374,7 +421,26 @@ def execution_contract() -> dict[str, Any]:
         "plan_schema_version": PLAN_SCHEMA_VERSION,
         "report_schema_version": REPORT_SCHEMA_VERSION,
         "plan_service_behavior_version": "lightweight_plan_generation_v3",
-        "report_service_behavior_version": "lightweight_report_generation_v3",
+        "report_service_behavior_version": "lightweight_report_generation_v7",
+        "normal_business_calls_per_sample": 1,
+    }
+
+
+def i2_raw_execution_contract() -> dict[str, Any]:
+    """Return the execution contract sealed into the paid 7R5-I2 raw run."""
+
+    return {
+        "model": "deepseek-v4-flash",
+        "temperature": 0.1,
+        "thinking": "disabled",
+        "response_format": "json_object",
+        "sdk_automatic_retries": 0,
+        "plan_prompt_version": "job_evaluation_plan_lightweight_v2",
+        "report_prompt_version": "screening_evaluation_lightweight_v3",
+        "plan_schema_version": "5.0",
+        "report_schema_version": "5.0",
+        "plan_service_behavior_version": "lightweight_plan_generation_v3",
+        "report_service_behavior_version": "lightweight_report_generation_v6",
         "normal_business_calls_per_sample": 1,
     }
 

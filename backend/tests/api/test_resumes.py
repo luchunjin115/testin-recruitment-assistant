@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, Mock, patch
 
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from sqlalchemy import inspect as sqlalchemy_inspect
 
 from app.api.resumes import router
 from app.core.database import get_db
@@ -48,6 +49,7 @@ from app.services.resume_structure_service import (
     ResumeStructureUnexpectedError,
     resume_structure_service,
 )
+from app.services.screening_service import screening_service
 from app.services.resume_file_cleanup import (
     ResumeCleanupStorageError,
     ResumeCleanupValidationError,
@@ -322,6 +324,36 @@ class ResumeApiTest(TestCase):
         passed = extract_mock.await_args.kwargs
         self.assertIs(passed["db"], self.db)
         self.assertEqual(passed["resume_id"], 9)
+
+    def test_extract_text_returns_snapshot_when_screening_coordination_expires_resume(self) -> None:
+        parsed = make_resume(9, "candidate.txt", job_id=None, parse_status="parsed")
+        parsed.file_type = "text/plain"
+        parsed.raw_text = "完整 TXT 简历"
+        parsed.parsed_at = TEST_TIME
+        extract_mock = AsyncMock(return_value=parsed)
+
+        async def expire_resume_after_coordination(db, resume_id: int) -> None:
+            self.assertIs(db, self.db)
+            self.assertEqual(resume_id, 9)
+            sqlalchemy_inspect(parsed)._expire_attributes(
+                parsed.__dict__,
+                set(parsed.__mapper__.column_attrs.keys()),
+            )
+
+        coordination_mock = AsyncMock(side_effect=expire_resume_after_coordination)
+
+        with (
+            patch.object(resume_service, "extract_text", extract_mock),
+            patch.object(screening_service, "after_resume_ready", coordination_mock),
+            TestClient(self.app, raise_server_exceptions=False) as client,
+        ):
+            response = client.post("/resumes/9/extract-text")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["id"], 9)
+        self.assertEqual(response.json()["parse_status"], "parsed")
+        self.assertEqual(response.json()["raw_text"], "完整 TXT 简历")
+        coordination_mock.assert_awaited_once_with(self.db, 9)
 
     def test_extract_text_returns_404_when_resume_does_not_exist(self) -> None:
         with patch.object(resume_service, "extract_text", AsyncMock(return_value=None)):

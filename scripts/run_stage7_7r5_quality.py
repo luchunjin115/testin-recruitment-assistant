@@ -60,22 +60,20 @@ from app.services.screening_evaluation_service import (  # noqa: E402
 from stage7_7r5_quality_contract import (  # noqa: E402
     ACTIVE_RUN_ID,
     BASELINE_BUSINESS_CALLS,
-    FINAL_RESULT_PATH,
     FROZEN_FIXTURE_SHA256,
-    HUMAN_AUDIT_PATH,
-    HISTORICAL_RESULT_HASHES,
+    I2_FINAL_RESULT_PATH,
+    I2_HUMAN_AUDIT_PATH,
     I2_RAW_RESULT_PATH,
     MAXIMUM_API_ATTEMPTS,
     PLAN_MAX_OUTPUT_TOKENS,
     PLANNED_MODEL,
-    RAW_RESULT_PATH,
     REPORT_MAX_OUTPUT_TOKENS,
     call_budget,
     estimate_attempt_cost_usd,
     execution_contract,
     human_audit_contract,
+    i2_raw_execution_contract,
     result_paths,
-    sha256_file,
     validate_frozen_fixture,
     validate_historical_results,
     validate_pricing_snapshot,
@@ -445,8 +443,8 @@ async def fake_payload(
             "reports": summarize_reports(report_records),
             "stability": summarize_reports(stability_records, stability=True),
         },
-        "historical_result_hashes_before": historical_before,
-        "historical_result_hashes_after": historical_after,
+        "historical_results_before": historical_before,
+        "historical_results_after": historical_after,
         "real_model_call_count": 0,
         "api_key_read": False,
         "formal_result_write_count": 0,
@@ -483,8 +481,8 @@ def dry_run_payload(*, run_id: str = ACTIVE_RUN_ID) -> dict[str, Any]:
             "human_adjudication_required_for_semantic_quality": True,
         },
         "human_audit_contract": human_audit_contract(),
-        "historical_result_hashes_before": historical_before,
-        "historical_result_hashes_after": validate_historical_results(),
+        "historical_results_before": historical_before,
+        "historical_results_after": validate_historical_results(),
         "real_model_call_count": 0,
         "adapter_instantiated": False,
         "api_key_read": False,
@@ -492,8 +490,8 @@ def dry_run_payload(*, run_id: str = ACTIVE_RUN_ID) -> dict[str, Any]:
         "writes_result_file": False,
         "quality_conclusion_allowed": False,
     }
-    if payload["historical_result_hashes_before"] != payload["historical_result_hashes_after"]:
-        raise RuntimeError("dry-run 期间历史质量证据发生变化")
+    if payload["historical_results_before"] != payload["historical_results_after"]:
+        raise RuntimeError("dry-run 期间历史质量证据身份发生变化")
     return payload
 
 
@@ -670,8 +668,8 @@ async def real_payload(
         "report_records": report_records,
         "stability_records": stability_records,
         "summaries": {"plans": summarize_plans(plan_records), "reports": summarize_reports(report_records), "stability": summarize_reports(stability_records, stability=True)},
-        "historical_result_hashes_before": historical_before,
-        "historical_result_hashes_after": historical_after,
+        "historical_results_before": historical_before,
+        "historical_results_after": historical_after,
         "requires_frozen_human_audit": True,
         "quality_gate_passed": None,
         "quality_conclusion_allowed": False,
@@ -686,10 +684,10 @@ async def real_payload(
 
 
 def _validate_raw_result_for_finalize(raw: dict[str, Any]) -> None:
-    if raw.get("stage") != "7R5-I" or raw.get("mode") != "real_raw":
-        raise RuntimeError("raw result 不是冻结的 7R5-I 原始结果")
-    if raw.get("execution_contract") != execution_contract():
-        raise RuntimeError("raw result 的模型、Prompt、Schema 或参数合同已漂移")
+    if raw.get("stage") != ACTIVE_RUN_ID or raw.get("mode") != "real_raw":
+        raise RuntimeError("raw result 不是冻结的 7R5-I2 原始结果")
+    if raw.get("execution_contract") != i2_raw_execution_contract():
+        raise RuntimeError("raw result 与 7R5-I2 当时冻结的执行合同不一致")
     if raw.get("call_budget") != call_budget():
         raise RuntimeError("raw result 的调用预算合同已漂移")
     fixture = raw.get("fixture")
@@ -713,24 +711,29 @@ def _validate_raw_result_for_finalize(raw: dict[str, Any]) -> None:
             raise RuntimeError("成功 attempt 缺少原始响应审计")
     if any(numbers not in ([1], [1, 2]) for numbers in per_case.values()):
         raise RuntimeError("单次业务调用的 attempt 编号或重试上限非法")
-    if raw.get("historical_result_hashes_before") != HISTORICAL_RESULT_HASHES or raw.get(
-        "historical_result_hashes_after"
-    ) != HISTORICAL_RESULT_HASHES:
-        raise RuntimeError("raw result 未证明历史质量证据保持不变")
     if raw.get("quality_gate_passed") is not None or raw.get("quality_conclusion_allowed") is not False:
         raise RuntimeError("raw result 无权在人工审计前给出质量结论")
 
 
-def finalize_payload() -> dict[str, Any]:
-    if not RAW_RESULT_PATH.exists() or not HUMAN_AUDIT_PATH.exists():
+def finalize_payload(*, run_id: str = ACTIVE_RUN_ID) -> dict[str, Any]:
+    validate_result_lifecycle(
+        run_id=run_id,
+        expected_state="i2_human_complete",
+    )
+    if not I2_RAW_RESULT_PATH.exists() or not I2_HUMAN_AUDIT_PATH.exists():
         raise RuntimeError("最终汇总需要不可覆盖的真实 raw result 与人工审计文件")
-    if FINAL_RESULT_PATH.exists():
+    if I2_FINAL_RESULT_PATH.exists():
         raise RuntimeError("最终质量结果已经存在，拒绝覆盖")
-    raw = json.loads(RAW_RESULT_PATH.read_text(encoding="utf-8"))
-    audit = json.loads(HUMAN_AUDIT_PATH.read_text(encoding="utf-8"))
+    raw = json.loads(I2_RAW_RESULT_PATH.read_text(encoding="utf-8"))
+    audit = json.loads(I2_HUMAN_AUDIT_PATH.read_text(encoding="utf-8"))
     _validate_raw_result_for_finalize(raw)
-    if audit.get("raw_result_sha256") != sha256_file(RAW_RESULT_PATH):
-        raise RuntimeError("人工审计没有绑定当前不可变 raw result")
+    raw_identity = {
+        "stage": raw.get("stage"),
+        "mode": raw.get("mode"),
+        "generated_at": raw.get("generated_at"),
+    }
+    if audit.get("raw_result_identity") != raw_identity:
+        raise RuntimeError("人工审计没有绑定当前 raw result 身份")
     if audit.get("fixture_sha256") != FROZEN_FIXTURE_SHA256:
         raise RuntimeError("人工审计没有绑定冻结样本/标签")
     metrics = audit.get("metrics")
@@ -780,19 +783,44 @@ def finalize_payload() -> dict[str, Any]:
         "stability_extreme_flip_zero": automatic["stability"]["extreme_direction_flip_count"] == 0,
         "stability_severe_and_sensitive_zero": metrics.get("stability_severe_fact_error_count") == 0 and metrics.get("stability_sensitive_scoring_count") == 0,
     }
+    passed_gates = [key for key, passed in gates.items() if passed]
+    failed_gates = [key for key, passed in gates.items() if not passed]
     payload = {
-        "stage": "7R5-I",
+        "stage": ACTIVE_RUN_ID,
         "mode": "finalized_human_and_deterministic_gate",
         "generated_at": _utc_now(),
-        "raw_result_path": str(RAW_RESULT_PATH),
-        "raw_result_sha256": sha256_file(RAW_RESULT_PATH),
-        "human_audit_path": str(HUMAN_AUDIT_PATH),
-        "human_audit_sha256": sha256_file(HUMAN_AUDIT_PATH),
+        "raw_result_path": str(I2_RAW_RESULT_PATH),
+        "raw_result_identity": raw_identity,
+        "human_audit_path": str(I2_HUMAN_AUDIT_PATH),
+        "human_audit_identity": {
+            "method": audit["method"],
+            "auditor": audit["auditor"],
+            "audited_at": audit["audited_at"],
+        },
+        "automatic_summaries": automatic,
+        "human_metrics": metrics,
+        "cost_summary": {
+            "monetary_cap_usd": raw.get("monetary_cap_usd"),
+            "estimated_spend_usd": raw.get("estimated_spend_usd"),
+            "api_attempt_count": raw["attempt_audit_summary"]["api_attempt_count"],
+        },
         "gates": gates,
+        "passed_gates": passed_gates,
+        "failed_gates": failed_gates,
+        "gate_summary": {
+            "total": len(gates),
+            "passed": len(passed_gates),
+            "failed": len(failed_gates),
+        },
         "quality_gate_passed": all(gates.values()),
         "quality_conclusion_allowed": True,
     }
-    write_new_json(FINAL_RESULT_PATH, payload)
+    write_new_json(
+        I2_FINAL_RESULT_PATH,
+        payload,
+        run_id=run_id,
+        expected_state="i2_human_complete",
+    )
     return payload
 
 
@@ -816,7 +844,7 @@ async def main(argv: list[str] | None = None) -> None:
     elif args.mode == "fake-failure":
         payload = await fake_payload(failure=True, run_id=args.run_id)
     elif args.mode == "finalize":
-        payload = finalize_payload()
+        payload = finalize_payload(run_id=args.run_id)
     else:
         if args.pricing_snapshot is None:
             raise RuntimeError("真实运行必须提供 24 小时内的官方价格快照")

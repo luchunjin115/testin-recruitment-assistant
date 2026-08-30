@@ -142,7 +142,7 @@ class SettingsTest(TestCase):
         self.assertEqual(settings.SCREENING_EVALUATION_SCHEMA_VERSION, "2.0")
         self.assertEqual(
             settings.SCREENING_EVALUATION_V5_PROMPT_VERSION,
-            "screening_evaluation_lightweight_v3",
+            "screening_evaluation_lightweight_v4",
         )
         self.assertEqual(settings.SCREENING_EVALUATION_V5_SCHEMA_VERSION, "5.0")
         self.assertEqual(settings.SCREENING_EVALUATION_TIMEZONE, "Asia/Shanghai")

@@ -63,7 +63,7 @@ from stage7_7r4_quality_contract import (  # noqa: E402
     TARGETED_MAXIMUM_BUSINESS_CALLS,
     TARGETED_CASE_IDS,
     estimate_attempt_cost_usd,
-    historical_result_hashes,
+    validate_historical_results,
     load_and_validate_targeted_gate,
     model_and_cost_inputs,
     model_execution_contract,
@@ -162,10 +162,10 @@ def _fixture_and_versions() -> dict[str, Any]:
 
 
 def dry_run_payload() -> dict[str, Any]:
-    historical_before = historical_result_hashes()
+    historical_before = validate_historical_results()
     fixture = _fixture_and_versions()
     path_contract = validate_result_path_isolation()
-    historical_after = historical_result_hashes()
+    historical_after = validate_historical_results()
     if historical_before != historical_after:
         raise RuntimeError("dry-run 期间历史结果发生变化")
     return {
@@ -183,8 +183,8 @@ def dry_run_payload() -> dict[str, Any]:
             "missing_failed_or_mismatched_result_blocks_before_adapter": True,
             "legacy_3_0_targeted_gate_is_never_accepted": True,
         },
-        "historical_result_hashes_before": historical_before,
-        "historical_result_hashes_after": historical_after,
+        "historical_results_before": historical_before,
+        "historical_results_after": historical_after,
         "real_model_call_count": 0,
         "adapter_instantiated": False,
         "api_key_read_as_prerequisite": False,
@@ -1015,11 +1015,11 @@ async def _run_real(
         output_path = PLAN_TARGETED_RESULT_PATH
     if output_path.exists():
         raise RuntimeError("质量结果文件已存在，拒绝付费调用后覆盖")
-    historical_before = historical_result_hashes()
+    historical_before = validate_historical_results()
     expected_historical = {
         str(path.relative_to(PROJECT_ROOT)) for path in HISTORICAL_RESULT_PATHS
     }
-    if set(historical_before) != expected_historical:
+    if set(historical_before["required_paths"]) != expected_historical:
         raise RuntimeError("历史质量结果不完整，拒绝开始真实调用")
     if pricing_snapshot is None:
         raise RuntimeError("真实运行缺少本轮官方峰谷价格快照")
@@ -1092,12 +1092,12 @@ async def _run_real(
         "targeted_gate_passed": gate_passed if mode == "targeted" else None,
         "formal_gate_passed": gate_passed if mode == "formal" else None,
         "quality_conclusion_allowed": gate_passed,
-        "historical_result_hashes_before": historical_before,
+        "historical_results_before": historical_before,
         "cases": results,
     }
     write_new_json(output_path, payload)
-    if historical_result_hashes() != historical_before:
-        raise RuntimeError("真实运行覆盖了历史质量结果")
+    if validate_historical_results() != historical_before:
+        raise RuntimeError("真实运行期间历史质量结果身份发生变化")
     return payload
 
 
