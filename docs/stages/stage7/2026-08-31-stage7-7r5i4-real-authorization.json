@@ -1,0 +1,16 @@
+{
+  "stage": "7R5-I4",
+  "purpose": "single_close_06r2_c_real_raw_authorization",
+  "confirmed_at": "2026-08-31T20:18:22+08:00",
+  "user_directive": "明确授权 7R5-I4 硬上限 USD 2.00，并开始 CLOSE-06R2-C。",
+  "pricing_snapshot_path": "D:\\testin-recruitment-assistant\\docs\\stages\\stage7\\2026-08-31-stage7-7r5i4-pricing-snapshot.json",
+  "pricing_snapshot_sha256": "c417c02ef35606e04ac6e5e20f9080ab8cf6c41c1c2a30197892be4189fa86fd",
+  "model": "deepseek-v4-flash",
+  "selected_tier": "off_peak",
+  "monetary_cap_usd": 2.0,
+  "baseline_business_calls": 45,
+  "maximum_api_attempts": 90,
+  "content_error_retry_count": 0,
+  "authorizes_single_real_raw": true,
+  "authorizes_human_or_final": false
+}

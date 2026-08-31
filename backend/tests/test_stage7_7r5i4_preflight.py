@@ -37,21 +37,21 @@ def test_i4_paths_are_registered_and_isolated_from_i2_and_i3_r1() -> None:
     assert contract.I4_REVIEW_PATH.name.endswith("7r5i4-fixture-review.md")
 
 
-def test_i4_preflight_is_the_only_existing_i4_formal_result() -> None:
+def test_i4_preflight_and_raw_are_the_only_existing_i4_formal_results() -> None:
     paths = {
         key: Path(value)
         for key, value in contract.result_paths(contract.I4_RUN_ID).items()
     }
 
     assert paths["preflight"].exists()
-    assert not paths["raw"].exists()
+    assert paths["raw"].exists()
     assert not paths["human_audit"].exists()
     assert not paths["final"].exists()
     assert contract.I4_REVIEW_PATH.exists()
     assert contract.validate_result_lifecycle(
         run_id=contract.I4_RUN_ID,
-        expected_state="i4_preflight_complete",
-    )["state"] == "i4_preflight_complete"
+        expected_state="i4_raw_complete",
+    )["state"] == "i4_raw_complete"
 
 
 def test_i4_zero_call_payload_binds_v3_current_versions_and_frozen_fixture(

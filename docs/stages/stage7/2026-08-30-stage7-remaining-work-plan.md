@@ -1,7 +1,7 @@
 # 阶段 7 剩余工作与收尾计划
 
 > 日期：2026-08-30
-> 状态：既有 CLOSE-02—06C 已完成，I2 final 仍失败，I3-R1 唯一 raw 已封存且不再继续 human/final。用户于 2026-08-31 确认 AI 初筛退出工作年限判断并接受方向/分差稳定性风险；`7R5-CLOSE-04R2`、`CLOSE-05G—05I` 和 `CLOSE-06R2-A` 已完成，当前停止等待用户审核 I4 复核单并单独确认 `CLOSE-06R2-B`
+> 状态：既有 CLOSE-02—06C 与 CLOSE-06R2-A—C 已完成，I2 final 仍失败，I3-R1/I4 raw 保持封存。CLOSE-07 未完成；用户已完成人工界面验收，但最新判定 AI 初筛仍有问题、阶段 7 不能通过。当前重新进入问题梳理与整改设计，CLOSE-08 禁止开始
 > 职责：只维护阶段 7 从当前状态到“完成评审”的唯一剩余顺序；已完成业务合同和历史证据仍以 5.0 主设计为准
 
 ## 1. 为什么单独建立这份计划
@@ -484,17 +484,69 @@ I4 使用全新身份、路径、样本和 v3 标签，不能续跑或 finalize 
 
 精确红灯为 `6 failed`，分别证明 I4 路径、生命周期、专用 preflight、正式材料和 write-once 保护原本不存在。最小实现后 I4/CLOSE-05G 专项 `20 passed`，I2/I3/I4 联合质量专项 `122 passed`，阶段 7/v5 扩大回归 `540 passed + 3 subtests passed`，后端全量 `1427 passed + 425 subtests passed + 2 warnings`、0 failures；两条 warning 仍为既有 PyPDF2 弃用和 asyncpg 测试清理提示。`py_compile`、外部入口静态扫描和 `git diff --check` 通过。I2/I3-R1 生命周期仍为 `i2_final_complete` / `i3_raw_complete`，实施前后六份关键历史文件 SHA-256 一致；I3-R1 human/final 不存在。模型调用、API attempt、token、费用、价格查询、Key 读取和 PostgreSQL 写入均为 0。本批只能证明 I4 考卷身份、离线标签、执行版本和零调用前置条件已冻结，不能证明价格、金额授权、真实模型质量或 final 通过。当前立即停止，唯一下一步是用户审核 I4 复核单后另行确认 `CLOSE-06R2-B`；不得自动查价或进入 C—E。
 
+实施结果（2026-08-31，CLOSE-06R2-B）：本批只从 DeepSeek 官方价格页查询并新建 I4 独立、只写一次快照 `2026-08-31-stage7-7r5i4-pricing-snapshot.json`，没有沿用或重算 I3-R1 价格。官方仍支持计划模型 `deepseek-v4-flash`，页面显示版本 `DeepSeek-V4-Flash-0731`。查询时间为 `2026-08-31T19:50:18.531201+08:00`，对应 off-peak；off-peak cache hit / cache miss / output 为 USD 0.007 / 0.22 / 0.66 每百万 token，peak 为 USD 0.014 / 0.44 / 1.32。快照绑定质量合同 v3、I4 preflight SHA-256 `C4FC353B...E513`、fixture review SHA-256 `F8669734...7147` 和当前生产计划 v4/v5/5.0、报告 v7/v9/5.0。
+
+调用预算固定为计划 10、报告 20、稳定性 15，共 45 次基础业务调用；每次最多 1 次基础设施重试，内容错误 0 重试，最大 90 API attempts。计划/报告每 attempt 最大输出分别为 8,000/12,000；以序列化 Prompt UTF-8 字节数作为输入 token 上界并把全部输入按 cache miss 计价后，基础/极端总 token 上限为 1,174,745 / 2,349,490。off-peak 基础/极端费用为 USD 0.47844390 / 0.95688780；为覆盖实际执行落入 peak 的风险，授权下限按 peak 极端 USD 1.91377560 向上取整为 USD 1.92，建议硬上限 USD 2.00。快照 SHA-256 为 `C417C02E...86FD`，24 小时有效，`real_run_allowed=false`。
+
+精确红灯为 `1 error`，唯一原因是 I4 专用价格门禁模块尚不存在；实现后 I4 价格专项 `8 passed + 1 warning`。I2/I3/I4 联合专项 `117 passed + 1 failed + 1 warning`，阶段 7 扩大回归 `310 passed + 3 subtests passed + 2 failed + 1 warning`，后端全量 `1433 passed + 425 subtests passed + 2 failed + 2 warnings`。失败均是旧 I3 preflight 在 Windows `core.autocrlf=true` 下由 LF 展开为 CRLF 造成的既有字节哈希/绑定差异；归一化 LF 后哈希恢复冻结值，且 Git 无旧文件差异，因此本批没有越权重写旧证据或旧 I3 测试。新脚本/测试 `py_compile`、外部入口/密钥加载静态扫描和 `git diff --check` 通过。I2 三份、I3-R1 preflight/raw、I4 preflight/review 的实施前后大小与 SHA-256 一致；I3-R1 human/final 与 I4 raw/human/final 不存在。Key 读取、真实 Adapter、模型调用、API attempt、实际 token/费用、PostgreSQL 写入和 I4 raw/human/final 写入均为 0。本批能证明当前官方价格、保守预算和金额授权门禁已冻结，不能证明未来价格不变、真实模型质量、真实费用或 I4 final 通过。
+
+#### CLOSE-06R2-C：I4 唯一真实 raw（已完成）
+
+用户已明确授权 `7R5-I4` 使用 USD 2.00 不可突破硬上限并要求开始 C。本批唯一目标是按 I4 独立身份执行计划 10、报告 20、稳定性 15 共 45 次业务调用，最多 90 API attempts，并只写一次 raw；无论完整、部分失败或费用/运行门禁停止，只要已有真实 attempt 就封存 raw 后停止，不补跑、不创建 human/final、不进入 D。
+
+允许文件为新的 I4 real runner、I4 real 专项测试、必要的 I4 生命周期/write-once 合同分支、独立 write-once authorization、唯一 I4 raw 和三份权威状态文档。链路只到 Prompt → Schema → Service → Model，不经过前端/API/业务 Model/PostgreSQL。生产 Prompt/Service/Schema/Adapter/API/Model/migration/React、I4 fixture/preflight/review/价格快照、I2、旧 I3/I3-R1 证据均禁止修改。
+
+固定顺序为：C-1 冻结证据并建立身份/金额/价格/45-90/重试/write-once/Key 顺序红灯；C-2 做最小 runner 和 45 次零调用 Fake 生产 Service 接线；C-3 跑 I4-C 专项、联合专项、扩大回归、后端全量及静态/哈希/差异检查后，才写入绑定用户原文、USD 2.00、I4、模型、off-peak 和快照 SHA 的 authorization；C-4 再查官方模型/两档价格/时段不变后才读取配置并检查 Key 非空，然后实例化真实 Adapter，按计划 → 报告 → 稳定性执行，每次最多 1 次基础设施重试，内容错误 0 重试，每 attempt 前检查费用；C-5 封存 raw、验证不可覆盖和 `i4_raw_complete`，复跑回归、更新状态并停止等待 D。
+
+I4-C 新增专项必须零失败，扩大和全量不得出现本批新增失败。当前 Windows `core.autocrlf=true` 造成的两个旧 I3 preflight CRLF 哈希/绑定失败只允许保持已登记基线；归一化 LF 必须仍等于冻结哈希，Git 必须无旧证据差异，禁止为绿灯改写旧文件或旧 I3 测试。报告和稳定性必须使用调用前冻结的 `confirmed_plan_snapshot`，模型输入不含投递时间、时区或经历时间事实；raw 不保存 Key、请求头、堆栈或思维链，`quality_gate_passed=null`、`quality_conclusion_allowed=false`、PostgreSQL 写入 0。第一个 attempt 前失败不创建 raw并返回对应前置层；第一个 attempt 后任何失败均封存部分 raw且不得补跑。详细合同见主设计 32Z.10。
+
+实施结果（2026-08-31）：用户确认后 I4 付费前专项 34 passed，官方模型、价格和 off-peak 档位不变，随后读取配置并执行唯一 real。45 个业务 case 共形成 48 次 API attempts、3 次基础设施重试；43 次 attempt 成功、5 次失败，均为 `SCREENING_EVALUATION_SERVICE_UNAVAILABLE`。计划合法且可追溯 10/10；报告合法 19/20、39/39 个非零评价有 evidence；稳定性合法 13/15，方向稳定 4/5、分差不超过 10 为 4/5、极端翻转 0。成功 attempt 使用 154,218 input tokens、31,710 output tokens；含失败预留的保守费用 USD 0.106405444，未触发 USD 2.00 上限。
+
+raw 为 474,029 bytes、SHA-256 `E4D1E01182EECD29423CCC7E89B20A45968EF52730FF27FC09F77580D19C6C33`，生命周期 `i4_raw_complete`，`quality_gate_passed=null`、`quality_conclusion_allowed=false`；human/final 不存在，PostgreSQL 写入 0。封存专项 `35 passed + 1 warning`，`py_compile` 与 `git diff --check` 通过。用户最新明确要求跳过前面的测试直接调用，因此本批没有再执行扩大回归和后端全量；该缺口如实保留，不能表述为全量回归通过。C 至此停止，不补跑；唯一下一步是等待用户另行确认 D。
+
+#### CLOSE-06R2-D/E 取消与 CLOSE-07 前置修订
+
+用户已明确接受 I4 当前真实结果并取消人工审计与 final。I4 保持 `i4_raw_complete`，human/final 永久不存在，raw 的空质量结论字段不改；19/20 报告、13/15 稳定性合法输出和 R06 结构失败必须进入最终验收说明。CLOSE-07 的前置条件改为“当前 I4 raw 已封存且用户明确接受”，不再要求 I4 final。
+
 ## 12. 7R5-CLOSE-07：7R5-J 真实全链收尾
 
-依赖：修订后的 I4 final 全部硬门槛通过，用户另行确认。I3-R1 raw 不能满足本依赖。
+依赖：I4 raw 已封存且用户明确接受，D/E 已取消，用户另行确认开始 CLOSE-07。I3-R1 raw 不能满足本依赖。
 
 唯一目标：用真实 PostgreSQL、真实 `/api/v2` 和真实浏览器证明 5.0 可操作、可恢复、可审计。
 
-允许范围与链路：覆盖“前端 → API → Schema → Service → Model → PostgreSQL”全链；只允许修复验收发现且不改变已确认合同的最小缺陷。若核心合同、数据或完成标准需要变化，返回 CLOSE-04/专项设计并重新确认。
+允许范围与链路：覆盖“前端 → API → Schema → Service → Model → PostgreSQL”全链；Model 层只引用 I4 真实 raw，不新增调用。允许新增独立 CLOSE-07 runner/专项/结果/浏览器证据和更新权威状态；只允许修复验收发现且不改变已确认合同的最小缺陷。若核心合同、数据或完成标准需要变化，返回专项设计并重新确认。
 
-固定验证：5.0 计划生成/编辑/确认/过期/历史，Application/Resume 隔离，单人/最多 5 人批量，幂等/并发/失败/迟到/current 历史，HR 决策/反转/StageHistory，migration 往返/current=head/check，数据库前后计数，桌面/平板/手机、键盘/焦点/危险确认、控制台/网络和敏感信息检查。
+固定顺序：J-1 冻结 Git/版本/证据/数据库基线；J-2 执行 CLOSE-07 专项、阶段 7 扩大回归、后端全量、前端全量、TypeScript 和生产构建，新增缺陷先建精确红灯再最小修复；J-3 用真实 PostgreSQL 和真实 `/api/v2` 配合 Fake Adapter 验证 5.0 计划/筛选/HR 决策/历史/并发/失败及 migration 往返，隔离夹具且前后计数一致；J-4 用真实 Chromium 验证桌面/平板/手机、键盘/焦点/危险确认、控制台/网络/敏感信息，使用全新证据目录；J-5 复跑并封存不可覆盖 CLOSE-07 结果。详细范围见主设计第 33 节。
 
-完成标志：第 21 节全部项目通过，自动化和 I3 证据仍有效。完成后停止；唯一下一步是等待确认 CLOSE-08。
+完成标志：第 21 节全部项目通过，自动化与 I4 raw 身份仍有效，数据库无夹具残留，Key/模型/API attempt/token/费用新增为 0。完成后停止；唯一下一步是等待确认 CLOSE-08。
+
+### 12.1 CLOSE-07 执行状态（2026-08-31，未完成）
+
+用户已明确授权一次执行 J-1—J-5。J-1 冻结了分支 `2lcj`、HEAD `a612b704500d6e702d4ad691e579b011b3fb22d1`、I2/I3-R1/I4 证据身份、I4 human/final 缺失、Alembic head 和九张业务表基线。J-2 新增独立 CLOSE-07 验收器并按先红后绿完成：初始 1 个收集错误来自 runner 尚不存在，最小实现后 `5 passed`；前端全量 `24/24` 和生产构建通过，后端扩大回归为 `530 passed + 2 个既有 Windows CRLF 基线失败`，当时后端全量为 `1445 passed + 2 个同源既有失败 + 425 subtests passed`。
+
+J-3 新增一条真实 HTTP `/api/v2` → Schema → Service → Model 映射 → PostgreSQL 的 5.0 生命周期测试；模型位置只使用 Fake Adapter。测试自身先因调用不存在的计划异常处理器形成 1 个装配红灯，修正测试后 `1 passed`；计划、筛选、Application/HR 决策和三份 5.0 migration 合跑 `80 passed + 19 subtests passed`。专用空库 `stage7_close07_acceptance` 完成全量 `upgrade head → downgrade c5d7e9f1a323 → upgrade d6e8f0a2b434 → current/head/check`，九张业务表均为 0 后删除；开发库事务用例自身的紧邻前后计数一致，没有 CLOSE-07 虚构夹具残留。
+
+J-4 未通过。生产构建和本地确定性 fixture server 均正常，但 Codex 应用内浏览器运行时在任何页面脚本执行前持续报 `failed to write kernel assets: 系统找不到指定的路径。 (os error 3)`；重置连接、核对插件文件和临时恢复旧工作目录指向均未解决。未打开页面、未产生浏览器 HTTP 请求或截图，也没有使用旧截图、独立 Playwright 或其他工具冒充本批真实 Chromium 证据。阻塞记录写入 `close07-browser-acceptance-evidence/2026-08-31-stage7-close07-browser-blocked.json`，临时服务器和目录联接均已清理。
+
+J-5 的可执行检查已完成：受影响专项 `6 passed`，前端再次 `24/24`、生产构建 3121 modules，后端全量 `1446 passed + 2 个同源既有 CRLF 失败 + 425 subtests passed`；`py_compile`、外部入口/Key 静态扫描和 `git diff --check` 通过。I2/I3-R1/I4 冻结证据 SHA-256 与 J-1 一致，I4 human/final 仍不存在。测试显式使用空 Key/Fake，CLOSE-07 自身新增模型调用、API attempt、token 和费用均为 0；但执行期间另一个应用/用户会话向开发库写入真实候选人、简历、计划、Application、Run 和 StageHistory，故不能声称整个验收时间窗数据库总计数不变，也不能把外部会话可能发生的模型调用计为 CLOSE-07 的调用。
+
+因此未创建 `2026-08-31-stage7-close07-full-chain-acceptance-results.json`，CLOSE-07 保持未完成，CLOSE-08 不得开始。恢复应用内浏览器后只补做 J-4，并选择没有外部数据库写入的窗口复核最终计数，再完成 J-5 只写一次封存；若页面交互失败返回 React/样式/API 映射层，若数据库再次出现无法归因的并发变化先停止外部写入并重建 J-1 数据库基线。
+
+### 12.2 最新验收结论：AI 初筛整改重新打开（2026-08-31）
+
+用户确认已经完成人工界面验收，但同时明确表示“目前阶段 7 还无法验收通过，AI 初筛还是有问题，我们需要去改进”。人工界面验收作为用户体验事实保留，不冒充 12.1 缺失的 Codex Chromium 机器证据；浏览器运行时问题不再是当前首要阻塞。
+
+此前接受 I4 raw 和取消 D/E 的决定继续作为历史事实，I4 raw、价格、授权、统计和生命周期均不得覆盖或回算；但该接受不再构成阶段 7 可以完成的充分条件。当前没有得到具体 AI 初筛失败案例，因此不能可靠选择 Prompt、Schema、Service、模型能力或展示解释层，也不能直接进入实现或付费复验。
+
+新的唯一顺序为：
+
+1. 用户提供具体问题场景：JD/简历背景、实际 AI 输出、期望结果、业务影响和是否可稳定复现；敏感信息应先脱敏。
+2. 只读复现并建立问题总账，区分结构错误、证据错误、事实/语义问题、分数解释、稳定性、模型可用性和 UI 表达；不得先改代码迎合单例。
+3. 根据问题总账编写新的整改设计和有序批次，明确每批责任层、允许/禁止文件、精确红灯、自动化与人工验收、真实模型预算、证据路径、失败返回层和停止点。
+4. 用户明确确认整改设计后，才允许逐批修改生产链；真实模型复验必须重新查询官方价格并取得独立 USD 授权。
+5. 全部整改和新质量验收满足最新产品标准后，重新执行尚未封存的 CLOSE-07；完成后另行确认 CLOSE-08。
+
+本轮只更新权威状态文档。禁止修改 Prompt、Schema、Service、Adapter、API、Model、migration、React、测试、I2/I3/I4 正式证据或 PostgreSQL；禁止读取 Key、调用模型、产生 API attempt/token/费用或创建新的真实结果。
 
 ## 13. 7R5-CLOSE-08：阶段 7 完成评审
 
@@ -506,15 +558,15 @@ I4 使用全新身份、路径、样本和 v3 标签，不能续跑或 finalize 
 
 ## 14. 当前停止点
 
-当前 CLOSE-00、CLOSE-02、CLOSE-03A/B、CLOSE-04/04R、CLOSE-05A—I、修订后的 CLOSE-06A-R1、CLOSE-06B、CLOSE-06C、文档批次 CLOSE-04R2 和 CLOSE-06R2-A 均已完成。I2 生命周期保持 `i2_final_complete`；I3-R1 生命周期保持 `i3_raw_complete`，human/final 不存在且不再继续；I4 生命周期为 `i4_preflight_complete`，raw/human/final 不存在。离线质量合同 v3、I4 测试标签、零调用 preflight 和复核单已经冻结；当前生产实现是计划 Prompt/Service v4/v5、报告 Prompt/Service v7/v9，计划和报告 Schema 均为 5.0。当前停止等待用户审核 I4 复核单并单独确认 CLOSE-06R2-B：
+当前 CLOSE-06R2-A—C 已完成。I2 生命周期保持 `i2_final_complete`；I3-R1 保持 `i3_raw_complete`，human/final 不存在且不再继续；I4 已封存唯一 raw，生命周期为 `i4_raw_complete`，human/final 按既有决定保持不存在。当前生产实现是计划 Prompt/Service v4/v5、报告 Prompt/Service v7/v9，计划和报告 Schema 均为 5.0。用户已经完成人工界面验收，但最新判定 AI 初筛仍有问题、阶段 7 不能通过；当前停止点改为问题梳理与整改设计：
 
 - 不重复修改或复验已完成的 Resume R1-B；
-- 不再执行 CLOSE-02 测试、真实 API、数据库或模型调用；
+- 不再执行 CLOSE-02、CLOSE-07 封存或模型调用；
 - 不覆盖、重算或重新 finalize I2 raw/human/final；
 - 不重复修改已完成的 Prompt、Service、Schema、数据库或其他生产模块；
 - 不修改旧 I3 或 I3-R1 的已冻结样本、标签和 zero-call preflight；
 - 不覆盖、补跑、续跑或重新生成 I3-R1 raw；不创建其 human/final，不再次读取 Key 或调用模型；
-- 不再修改已完成的生产计划或报告 Prompt/Service/Schema，不创建 I4 正式 raw/human/final；
-- 不重复或覆盖 CLOSE-06R2-A preflight/复核单，不连续进入 CLOSE-06R2-B—E、7R5-J 或阶段 8。
+- 在具体问题和整改设计获得确认前，不修改生产计划或报告 Prompt/Schema/Service，不创建 I4 human/final；
+- 不重复或覆盖 CLOSE-06R2-A preflight/复核单、CLOSE-06R2-B 价格快照或 I4 raw，不自动进入阶段 8。
 
-CLOSE-05G—05I 与 CLOSE-06R2-A 完成只证明离线质量合同、生产计划/报告边界和 I4 零调用前置条件已按新产品决定冻结，不等于真实模型质量或 I4 已经通过。唯一下一步是用户审核 `2026-08-31-stage7-7r5i4-fixture-review.md` 后单独确认 CLOSE-06R2-B；B 只允许查官方价格并请求美元硬上限，不得读取 Key、调用模型或创建 raw/human/final。
+用户此前接受 CLOSE-06R2-C 的唯一 I4 raw 并取消 D/E，但最新验收结论是 AI 初筛仍需改进，阶段 7 不通过。当前唯一下一步是收集具体失败案例并完成只读归因和新的整改设计；不得补跑或覆盖 raw、创建 human/final、读取 Key、调用模型、封存 CLOSE-07 或进入 CLOSE-08。

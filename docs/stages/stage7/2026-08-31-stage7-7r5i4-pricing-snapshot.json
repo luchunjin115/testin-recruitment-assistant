@@ -1,0 +1,115 @@
+{
+  "stage": "7R5-I4",
+  "purpose": "i4_official_pricing_and_usd_authorization_gate",
+  "quality_contract_version": "stage7_v5_quality_contract_v3",
+  "preflight_path": "D:\\testin-recruitment-assistant\\docs\\stages\\stage7\\v5-quality-results\\2026-08-31-stage7-7r5i4-zero-call-preflight.json",
+  "preflight_sha256": "c4fc353b557b9a0ef10473fc30baccac5300268363c63359b01a09874df4e513",
+  "fixture_review_path": "D:\\testin-recruitment-assistant\\docs\\stages\\stage7\\v5-quality-results\\2026-08-31-stage7-7r5i4-fixture-review.md",
+  "fixture_review_sha256": "f86697340a8d12d48581633852a77ea2cbc2ea594e10e399ca29785377ee7147",
+  "checked_at": "2026-08-31T19:50:18.531201+08:00",
+  "expires_at": "2026-09-01T19:50:18.531201+08:00",
+  "timezone": "Asia/Shanghai",
+  "source_url": "https://api-docs.deepseek.com/quick_start/pricing/",
+  "model": "deepseek-v4-flash",
+  "model_version_shown_by_provider": "DeepSeek-V4-Flash-0731",
+  "official_model_supported": true,
+  "selected_tier": "off_peak",
+  "schedule": "Monday-Friday UTC 01:00-04:00 and 06:00-10:00 are peak; all other hours are off_peak",
+  "usd_per_million_tokens": {
+    "cache_hit_input": 0.007,
+    "cache_miss_input": 0.22,
+    "output": 0.66
+  },
+  "off_peak_usd_per_million_tokens": {
+    "cache_hit_input": 0.007,
+    "cache_miss_input": 0.22,
+    "output": 0.66
+  },
+  "peak_usd_per_million_tokens": {
+    "cache_hit_input": 0.014,
+    "cache_miss_input": 0.44,
+    "output": 1.32
+  },
+  "production_execution_contract": {
+    "plan_prompt_version": "job_evaluation_plan_lightweight_v4",
+    "plan_service_behavior_version": "lightweight_plan_generation_v5",
+    "plan_schema_version": "5.0",
+    "report_prompt_version": "screening_evaluation_lightweight_v7",
+    "report_service_behavior_version": "lightweight_report_generation_v9",
+    "report_schema_version": "5.0"
+  },
+  "historical_lifecycles": {
+    "7R5-I2": "i2_final_complete",
+    "7R5-I3-R1": "i3_raw_complete"
+  },
+  "historical_recalculation_allowed": false,
+  "call_budget": {
+    "plan_business_calls": 10,
+    "report_business_calls": 20,
+    "stability_business_calls": 15,
+    "baseline_business_calls": 45,
+    "maximum_infrastructure_retries_per_business_call": 1,
+    "maximum_infrastructure_retries": 45,
+    "maximum_api_attempts": 90,
+    "content_error_retry_count": 0,
+    "plan_max_output_tokens_per_attempt": 8000,
+    "report_max_output_tokens_per_attempt": 12000,
+    "baseline_max_output_tokens": 500000,
+    "retry_ceiling_max_output_tokens": 1000000,
+    "baseline_input_token_upper_bound": 674745,
+    "retry_ceiling_input_token_upper_bound": 1349490,
+    "baseline_total_token_upper_bound": 1174745,
+    "retry_ceiling_total_token_upper_bound": 2349490,
+    "input_token_upper_bound_basis": "serialized_prompt_utf8_bytes",
+    "cache_assumption": "all_input_cache_miss"
+  },
+  "conservative_calculation_method": {
+    "input_upper_bound": "serialized prompt UTF-8 bytes used as a conservative token upper bound",
+    "cache": "all input priced as cache miss",
+    "baseline": "45 business calls with no infrastructure retry",
+    "extreme": "90 API attempts with every business call using its one allowed infrastructure retry",
+    "authorization_floor": "peak retry ceiling rounded up to the next USD cent"
+  },
+  "cost_estimates_usd": {
+    "off_peak_baseline": 0.4784439,
+    "off_peak_retry_ceiling": 0.9568878,
+    "peak_baseline": 0.9568878,
+    "peak_retry_ceiling": 1.9137756
+  },
+  "selected_tier_baseline_estimate_usd": 0.4784439,
+  "selected_tier_extreme_upper_bound_usd": 0.9568878,
+  "authorization_gate": {
+    "monetary_cap_usd": null,
+    "minimum_required_usd": 1.92,
+    "suggested_hard_cap_usd": 2.0,
+    "explicit_usd_amount_required": true,
+    "amount_must_not_be_below_minimum": true,
+    "bind_i4_snapshot_and_model": true,
+    "return_to_close_06r2_b_on_expiry_model_price_or_tier_change": true,
+    "user_monetary_authorization_required": true,
+    "real_run_allowed": false
+  },
+  "official_pricing_lookup_count": 1,
+  "external_effects": {
+    "api_key_read": false,
+    "real_adapter_instantiated": false,
+    "real_model_call_count": 0,
+    "api_attempt_count": 0,
+    "input_token_count": 0,
+    "output_token_count": 0,
+    "total_token_usage": 0,
+    "estimated_spend_usd": 0,
+    "actual_spend_usd": 0,
+    "postgresql_write_count": 0,
+    "i4_raw_write_count": 0,
+    "i4_human_write_count": 0,
+    "i4_final_write_count": 0,
+    "formal_raw_human_final_write_count": 0
+  },
+  "notes": [
+    "This is a new I4 snapshot; no I3 price or authorization was reused.",
+    "The official pricing page states that billing uses total input and output tokens.",
+    "CLOSE-06R2-B does not contain an API key and does not authorize a real model call.",
+    "CLOSE-06R2-C must return to B when the snapshot expires or the official model, price, or execution tier changes."
+  ]
+}

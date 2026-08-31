@@ -8,7 +8,7 @@
 
 - 项目正在建设新版招聘主链，旧 React + FastAPI + SQLite + Mock LLM 演示系统已经退役。
 - 阶段 4“简历上传与原文提取”和阶段 5“AI 结构化草稿”已经完成；阶段 6 五段式 JD 整改的 6R-A—6R-D 已全部完成，自动化、真实 PostgreSQL/API 和 Microsoft Playwright 三档浏览器验收通过。
-- 阶段 7 的 5.0 产品主链已实现，但真实质量和最终收尾尚未通过。I2 final 仍为不可覆盖的失败历史。I3-R1 唯一真实 raw 已完成 45/45 次调用并封存，生命周期为 `i3_raw_complete`，human/final 不存在且因产品合同改变不再继续。用户已确认 AI 初筛退出全部工作年限判断：纯年限不评分，混合要求只保留能力主题，具体年限交给 HR；同时接受当前方向/分差稳定性为非阻塞风险。CLOSE-04R2 已完成文档合同，CLOSE-05G 已完成离线质量合同 v3 和 I4 离线 fixture/标签，CLOSE-05H/05I 已分别让生产计划链和报告链退出工作年限。既有历史质量证据仍按各自 v1/v2 合同解释；当前生产实现为计划 v4/v5/5.0、报告 v7/v9/5.0，正式 I4 证据尚未创建。本机 Alembic 为 current=head=`d6e8f0a2b434`。
+- 阶段 7 的 5.0 产品主链已实现，但产品验收未通过。I2 final 仍为不可覆盖的失败历史，I3-R1 只保留 raw；I4 唯一真实 raw 仍以 `i4_raw_complete` 封存，计划合法 10/10、报告合法 19/20、稳定性合法 13/15，human/final 按既有决定保持不存在。用户此前接受 I4 raw 作为进入 CLOSE-07 的证据，但在实际使用后于 2026-08-31 明确更新结论：界面已经人工验收完成，AI 初筛仍有问题，需要继续改进，因此阶段 7 当前不能验收通过。CLOSE-07 不得封存为通过，CLOSE-08 不得开始；先前浏览器工具阻塞不再是当前首要问题。当前唯一下一步是收集具体 AI 初筛失败案例、实际输出、期望行为与影响范围，完成新的整改设计和实施顺序并再次获得确认；在此之前不修改生产 Prompt/Schema/Service、不补跑 I4、不调用模型。本机 Alembic 为 current=head=`d6e8f0a2b434`。
 - 小步骤 9-I 已完成 20 次 JD 正式复验和 60 次下游真实诊断。18/18 正常 JD 可用、主要要求与结构化覆盖均为 100%，但 JD18 没有形成预期 `too_many_items`，因此 `step9_quality_gate_passed=false`，小步骤 9 仍未通过；下游诊断也仅有 9/20 至少一份合法报告、1/20 三次全部合法。
 - Application、Resume 隔离、HR 内部录入和 HR 决策等公共能力继续保留。
 - 旧 Rubric、五维权重、确定性评分、`unknown`、证据覆盖率和 Python 加权总分已经废弃。
@@ -21,7 +21,7 @@
 当前阶段的权威顺序是：
 
 1. 阶段 7 轻量评价清单 5.0 当前设计：`docs/stages/stage7/2026-08-26-stage7-lightweight-evaluation-ai-screening-v5-redesign.md`，负责产品目标、业务合同、状态、数据、安全、验收标准和完整历史证据
-2. 阶段 7 剩余工作与收尾计划：`docs/stages/stage7/2026-08-30-stage7-remaining-work-plan.md`，只负责从当前状态到阶段完成评审的执行看板、依赖、逐批边界和停止点；CLOSE-02—06C、CLOSE-04R2、CLOSE-05G—05I、CLOSE-06R2-A 已完成，I3-R1 raw 只读保留且不再继续 final，当前停止等待用户审核 I4 复核单并单独确认 CLOSE-06R2-B
+2. 阶段 7 剩余工作与收尾计划：`docs/stages/stage7/2026-08-30-stage7-remaining-work-plan.md`，只负责从当前状态到阶段完成评审的执行看板、依赖、逐批边界和停止点；CLOSE-06R2-A—C 已完成且 CLOSE-07 留有未完成记录，用户最新判定 AI 初筛仍有问题，当前重新进入问题梳理与整改设计
 3. 阶段 7 评价计划 4.0 历史实现与失败证据：`docs/stages/stage7/2026-08-24-stage7-job-evaluation-plan-v4-redesign.md`，保留 RequirementFact、三/四次调用、HR2 `6/6` 和正式 20 份 `15/20` 的不可覆盖记录，不再授权新增实现
 4. 阶段 7 五段式计划 3.0 记录：`docs/stages/stage7/2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md`，只负责已完成实现事实和历史失败证据
 5. 阶段 7 原设计：`docs/stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`，其已实现的 Application、Resume、异步运行、报告、时间事实和 HR 决策底座继续有效
@@ -37,7 +37,7 @@
 
 ## 3. 当前阶段 7 方案摘要
 
-> 当前说明：5.0 产品主链已实现，I2 final 仍失败；I3-R1 已完成唯一真实 raw 并保持 `i3_raw_complete`，不再继续 human/final。用户已确认 AI 初筛退出工作年限判断，并接受方向/分差稳定性为非阻塞风险；CLOSE-04R2 已把新合同和分批顺序写入权威文档，CLOSE-05G 已把 v3 考卷、I4 离线测试标签和判分分支落地，CLOSE-05H/05I 已把生产计划与报告分别升级为 v4/v5/5.0 和 v7/v9/5.0。纯工作年限不生成评价点、不进入模型报告输入或输出，混合要求只保留能力主题。CLOSE-06R2-A 已冻结 I4 独立路径、fixture、零调用 preflight 和复核单，I4 生命周期为 `i4_preflight_complete`，raw/human/final 均不存在。当前停止等待用户审核复核单并单独确认 CLOSE-06R2-B，不读取 Key、不调用模型、不继续后续批次；下文第 4—9 节同时记录可复用能力和历史基线，若与 5.0 当前设计冲突，以当前设计为准。
+> 当前说明：5.0 产品主链已实现，当前生产计划为 v4/v5/5.0、报告为 v7/v9/5.0；I4 raw 及 10/10、19/20、13/15 统计继续作为不可覆盖历史证据。用户已完成人工界面验收，但最新产品结论是 AI 初筛仍有问题，阶段 7 不通过。CLOSE-07 不封存、CLOSE-08 不开始；当前先做问题梳理和整改设计，不补跑 raw、不调用模型。下文第 4—9 节同时记录可复用能力和历史基线，若与最新确认的整改设计冲突，以后续经确认的当前设计为准。
 
 ### 3.1 固定流程
 
@@ -166,7 +166,7 @@ HR 阅读报告并独立作出通过 / 备选 / 淘汰决定
 
 ## 10. 当前工作区状态与风险
 
-- 当前分支是 `2lcj`，当前基线包含提交 `44b7626191d82b11760c7e56588f7799ea7629ba`。工作区已有的 `PROJECT_STATE.md`、当前阶段 7 权威设计、7R5-I 价格快照、raw 和人工审核辅助目录均为用户工作成果，必须完整保护；本次只在两份既有权威文档上追加 Service 整改门禁，没有覆盖 raw、人工记录、前几批代码或历史 4.0 质量结果。
+- 当前分支是 `2lcj`，CLOSE-06R2-B 开始前 HEAD 为 `a612b704500d6e702d4ad691e579b011b3fb22d1`，工作区干净。I2/I3-R1 正式证据、旧价格/授权、I4 fixture/preflight/复核单和全部已有修改均须保护；本批只新增 I4 离线价格门禁、专项测试、独立价格快照并更新三份权威文档，没有覆盖任何旧证据。
 - 项目由旧电脑压缩迁移后，旧 `.venv` 因保存 `C:\Users\GYAI\...Python311` 绝对路径而失效。本轮已用本机 Python 3.11.9 原地重建 `.venv`，安装 `backend/requirements.txt` 和本地测试依赖 pytest 9.1.1；`.venv` 继续由 Git 忽略，不提交、不再跨电脑复制。
 - 本机 PostgreSQL Docker 卷原停在 `b4e8c2d7f913`，且保留 1 个 Job、2 个 Candidate、2 个 Resume 和 1 个 3.0 failed 计划。升级前已生成 `data/backups/pre_a3b5c7d9e101_20260826.dump`；2026-08-29 再次核对大小为 87,224 bytes，SHA-256 仍为 `F8F8AD2EB6C3E6D399562D7DDC2146C262A87A4D9BDBC85FD858325C0D962C4C`。7R5-D 曾新增 revision `b4c6d8e0f212` 并完成真实 `b4 → a3 → b4` 往返；HASH-B 全量回归前发现本机仍停在 `b4c6d8e0f212`，经用户单独明确授权执行 `b4c6d8e0f212 → c5d7e9f1a323 → d6e8f0a2b434`，现为 `current=head=d6e8f0a2b434`，`alembic check` 无待生成操作。
 - 4.0 的 7R4-A—7R4-H2 均停在各自历史停止点；HR2 定向为 `6/6`，正式 H2 为 `15/20` 且失败。7R4-I/J 永久停止，不再通过追加 4.0 样本整改继续推进；所有既有结果只作历史证据。
@@ -179,7 +179,7 @@ HR 阅读报告并独立作出通过 / 备选 / 淘汰决定
 
 ## 11. 当前唯一下一步
 
-2026-08-30 已把阶段 7 的剩余工作从完整历史中拆分为 `docs/stages/stage7/2026-08-30-stage7-remaining-work-plan.md`。当前状态应统一理解为：5.0 产品主链已实现，I2 final 的历史真实判定仍失败；I3-R1 已完成 45/45 次真实调用并只封存 raw，随后因用户调整产品边界而停止，不再创建 human/final。CLOSE-04R2 已完成文档合同修订，生产代码尚未按新合同整改，7R5-J 未开始，因此阶段 7 仍未完成。
+2026-08-30 已把阶段 7 的剩余工作从完整历史中拆分为 `docs/stages/stage7/2026-08-30-stage7-remaining-work-plan.md`。当前状态应统一理解为：5.0 产品主链已实现，I2 final 的历史真实判定仍失败；I3-R1 和 I4 均只保留各自唯一 raw。CLOSE-05G—05I、CLOSE-06R2-A—C 已完成，CLOSE-07 执行过自动化与 PostgreSQL/API 收尾但没有封存正式通过结果。用户已经完成人工界面验收，随后明确判定 AI 初筛仍有问题、阶段 7 不能通过，因此当前重新进入问题梳理与整改设计，CLOSE-08 不得开始。
 
 用户已于 2026-08-30 整体确认收尾计划并逐批授权。`7R5-CLOSE-02` 已完成：专项 `65 passed`、阶段 7 扩大回归 `149 passed`、后端全量 `1321 passed + 425 subtests passed`，9 个旧状态失败全部消失且没有新失败。I2 raw 身份与大小不变，模型调用、费用和 PostgreSQL 写入新增均为 0。
 
@@ -231,7 +231,17 @@ CLOSE-04R 只修改三份权威文档，没有修改或执行质量工具、Serv
 
 CLOSE-06R2-A 已完成：全新 I4 独立路径、生命周期、fixture 指纹、零调用 preflight 和人工复核单已经冻结，生命周期为 `i4_preflight_complete`，raw/human/final 不存在。精确红灯 `6 failed`，实现后专项 `20 passed`、I2/I3/I4 联合质量专项 `122 passed`、阶段 7/v5 扩大回归 `540 passed + 3 subtests passed`、后端全量 `1427 passed + 425 subtests passed + 2 warnings`、0 failures；`py_compile`、静态扫描和 `git diff --check` 通过。I2/I3-R1 六份关键证据的实施前后 SHA-256 一致。模型调用、API attempt、token、费用、价格查询、Key 读取和 PostgreSQL 写入均为 0。
 
-当前唯一下一步是用户审核 `docs/stages/stage7/v5-quality-results/2026-08-31-stage7-7r5i4-fixture-review.md`，然后单独确认开始 CLOSE-06R2-B。该批只允许查询官方价格并请求美元硬上限；不得自动读取 Key、调用真实模型、创建 raw/human/final 或进入 CLOSE-07。
+CLOSE-06R2-B 已完成：只从 DeepSeek 官方 `https://api-docs.deepseek.com/quick_start/pricing/` 查询并建立 `2026-08-31-stage7-7r5i4-pricing-snapshot.json`。官方仍列出 `deepseek-v4-flash` / `DeepSeek-V4-Flash-0731`；查询时为 off-peak，cache hit / cache miss / output 分别为 USD 0.007 / 0.22 / 0.66 每百万 token，peak 对应 USD 0.014 / 0.44 / 1.32。I4 固定 45 次基础业务调用、每次最多 1 次基础设施重试、90 次最大 API attempt、内容错误 0 重试；计划/报告单次最大输出 8,000/12,000，总 token 保守上限为基础 1,174,745、极端 2,349,490。按 cache miss 计算，off-peak 基础/极端分别为 USD 0.47844390 / 0.95688780；为覆盖档位变化，授权下限采用 peak 极端 USD 1.91377560 向上取整后的 USD 1.92，建议硬上限 USD 2.00。快照 SHA-256 为 `C417C02EF35606E04AC6E5E20F9080AB8CF6C41C1C2A30197892BE4189FA86FD`，有效至 `2026-09-01T19:50:18.531201+08:00`，且 `real_run_allowed=false`。
+
+本批精确红灯为 `1 error`，唯一原因是 I4 价格门禁模块尚不存在；最小实现后 I4 价格专项为 `8 passed + 1 warning`。I2/I3/I4 联合专项为 `117 passed + 1 failed + 1 warning`，阶段 7 扩大回归为 `310 passed + 3 subtests passed + 2 failed + 1 warning`，后端全量为 `1433 passed + 425 subtests passed + 2 failed + 2 warnings`。两个失败均来自 Windows `core.autocrlf=true` 把旧 I3 preflight 的 LF 转为 CRLF：归一化 LF 后 SHA-256 正好恢复断言中的 `A458FAB4...`，但工作树字节哈希为 `DB70BECC...`，继而使 I3-R1 raw 的 preflight 绑定校验失败；工作区 Git 无该旧文件差异，本批按只读保护要求没有重写旧证据或改旧 I3 测试。新脚本/测试 `py_compile`、外部入口/密钥加载静态扫描和 `git diff --check` 通过。I2 三份、I3-R1 preflight/raw、I4 preflight/review 的大小与 SHA-256 均与实施前记录一致；I3-R1 human/final 和 I4 raw/human/final 不存在。Key 读取、真实 Adapter、模型调用、API attempt、实际 token/费用、PostgreSQL 写入及 I4 raw/human/final 写入均为 0。
+
+用户已于 2026-08-31 明确回复“明确授权 7R5-I4 硬上限 USD 2.00，并开始 CLOSE-06R2-C”。官方二次只读核对时模型、两档价格和 off-peak 档位未变化，快照仍有效；但当前 I4 文档原来只写了“C 执行唯一 raw”，没有完整列出 C 的文件范围、红灯、非付费预检、失败封存语义和停止点。主设计 32Z.10 与剩余计划现已补齐 C-1—C-5 实施顺序，本轮尚未读取 Key、实例化 Adapter、调用模型或创建 authorization/raw。
+
+CLOSE-06R2-C 已完成并停止。唯一真实运行执行 45 个业务 case、48 次 API attempts、3 次基础设施重试；43 次 attempt 成功、5 次失败，失败码均为 `SCREENING_EVALUATION_SERVICE_UNAVAILABLE`。计划合法 10/10；报告合法 19/20；稳定性合法 13/15，方向稳定和分差不超过 10 均为 4/5，极端翻转 0。成功 attempt 共 154,218 input tokens、31,710 output tokens；含失败 attempt 保守预留的估算费用为 USD 0.106405444，低于 USD 2.00。raw 为 474,029 bytes，SHA-256 `E4D1E01182EECD29423CCC7E89B20A45968EF52730FF27FC09F77580D19C6C33`，生命周期 `i4_raw_complete`；`quality_gate_passed=null`、`quality_conclusion_allowed=false`，PostgreSQL 写入 0，human/final 不存在。I4 封存专项 `35 passed + 1 warning`，`py_compile` 和 `git diff --check` 通过；按用户最新“不要前面的测试、直接调用”指令没有再跑扩大回归或后端全量。
+
+用户此前明确接受 I4 当前真实调用结果并取消 CLOSE-06R2-D/E，该事实继续作为历史决定保留；但在实际界面使用后，用户于 2026-08-31 明确更新验收结论：界面人工验收完成，AI 初筛仍有问题，阶段 7 当前不能通过。该最新结论停止 CLOSE-07 封存并禁止进入 CLOSE-08，也不覆盖或重算 I4 raw。
+
+当前唯一下一步是先由用户提供具体问题场景，至少包括输入/JD/简历背景、实际 AI 输出、期望结果和业务影响；随后只读复现并把问题归因到 Prompt、Schema、Service、模型能力或展示解释层，再编写新的分批整改设计、验证门槛、真实调用预算与停止点并获得用户确认。在上述设计确认前，不修改生产链、不补跑 I4、不读取 Key、不调用模型。
 
 以下内容保留为 5.0 业务合同和历史上下文，不再承担“当前下一步”职责。
 
