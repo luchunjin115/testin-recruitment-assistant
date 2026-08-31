@@ -92,6 +92,10 @@ const WARNING_COPY: Record<JobEvaluationPlanWarningCode, { title: string; descri
     title: '重要程度需要 HR 复核',
     description: 'AI 建议与原文信号存在差异或复杂语气，请对照来源后修改或明确确认。',
   },
+  semantic_support_review_required: {
+    title: '语义支持需要 HR 复核',
+    description: 'AI 评价点可能扩大了所引 JD 原文的含义，请 HR 对照原文后修改或明确确认。',
+  },
 };
 
 const IMPORTANCE_REVIEW_REASON_LABELS: Record<JobEvaluationPlanV5ImportanceReviewReason, string> = {

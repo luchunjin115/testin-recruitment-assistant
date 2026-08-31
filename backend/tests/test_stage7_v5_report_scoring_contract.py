@@ -1,18 +1,16 @@
-"""v5.0 report scoring, evidence, safety, and direction-consistency contracts.
+"""v5.0 report scoring, evidence, safety, and Service-boundary contracts.
 
 Tests are organized into six groups:
 
 A. No weight fields -- static proof that 5.0 schemas carry no weighting logic.
 B. Display label ranges -- the label function already maps scores correctly.
-C. Direction contradiction detection -- 5.0 validators not yet implemented.
-D. 5.0 report structure fields -- structured sections not yet on the schema.
-E. Evidence contract -- 5.0 evidence enforcement not yet implemented.
+C. Semantic direction judgments stay outside the 5.0 Service.
+D. 5.0 report structure fields.
+E. Evidence contract.
 F. Report safety -- schemas already forbid unsafe fields and extra data.
 """
 
 from __future__ import annotations
-
-import inspect
 
 import pytest
 
@@ -130,59 +128,39 @@ class TestDisplayLabelRanges:
 
 
 # ===========================================================================
-# C. Direction contradiction detection (6 tests) -- 7R5-E
+# C. Semantic direction judgments are not Service hard gates -- CLOSE-05D
 # ===========================================================================
 
 
 class TestDirectionContradictionDetection:
-    """v5.0 requires dedicated validation functions that detect and reject
-    direction contradictions between scores and textual assessments.
+    """Free-text score direction and tradeoff quality belong to HR/I3 review."""
 
-    The current v4.0 service already performs some of this validation via
-    _validate_score_reason_direction and _validate_safety_and_consistency,
-    but v5.0 needs these as explicit, standalone, public-facing contract
-    validators that can be invoked and tested independently.
-
-    These tests assert that the specific v5.0 contradiction-check methods
-    do not exist yet, proving the gap that v5.0 must fill.
-    """
-
-    def test_validate_high_score_no_evidence_method_exists(self) -> None:
-        """v5.0 must have a dedicated method to reject score 7-10 when
-        evidence says 'not found'."""
-        assert hasattr(ScreeningEvaluationService, "validate_v5_high_score_no_evidence")
-
-    def test_validate_low_score_full_match_method_exists(self) -> None:
-        """v5.0 must have a dedicated method to reject score 0-3 when
-        reason says 'fully satisfies'."""
-        assert hasattr(ScreeningEvaluationService, "validate_v5_low_score_full_match")
-
-    def test_validate_overall_high_but_mismatch_method_exists(self) -> None:
-        """v5.0 must have a dedicated method to reject overall 70-100 when
-        summary says 'obviously does not match'."""
-        assert hasattr(ScreeningEvaluationService, "validate_v5_overall_high_mismatch")
-
-    def test_validate_overall_low_but_high_match_method_exists(self) -> None:
-        """v5.0 must have a dedicated method to reject overall 0-49 when
-        summary says 'highly matching'."""
-        assert hasattr(ScreeningEvaluationService, "validate_v5_overall_low_high_match")
-
-    def test_validate_required_low_overall_high_tradeoff_method_exists(self) -> None:
-        """v5.0 must have a dedicated method to require an explicit
-        risk/tradeoff explanation when a required item scores 0-3 and
-        overall >= 70."""
-        assert hasattr(ScreeningEvaluationService, "validate_v5_required_low_tradeoff")
+    @pytest.mark.parametrize(
+        "method_name",
+        (
+            "validate_v5_high_score_no_evidence",
+            "validate_v5_low_score_full_match",
+            "validate_v5_overall_high_mismatch",
+            "validate_v5_overall_low_high_match",
+            "validate_v5_required_low_tradeoff",
+        ),
+    )
+    def test_v5_semantic_contradiction_judges_do_not_exist(
+        self,
+        method_name: str,
+    ) -> None:
+        assert not hasattr(ScreeningEvaluationService, method_name)
 
     def test_v5_contradiction_validators_are_registered(self) -> None:
-        """v5.0 must expose a list or registry of all contradiction-check
-        validators on the service class."""
-        v5_methods = [
+        """Only deterministic cross-reference/evidence validators stay public."""
+        v5_methods = {
             name for name in dir(ScreeningEvaluationService)
             if name.startswith("validate_v5_")
-        ]
-        assert len(v5_methods) >= 5, (
-            f"Expected at least 5 v5 contradiction validators, found: {v5_methods}"
-        )
+        }
+        assert v5_methods == {
+            "validate_v5_criterion_cross_reference",
+            "validate_v5_evidence_required",
+        }
 
 
 # ===========================================================================
@@ -231,10 +209,11 @@ class TestV5ReportStructureFieldsMissing:
 class TestEvidenceContract:
     """v5.0 evidence contract rules:
     - Non-zero score MUST have current resume evidence.
-    - Zero score reason must say '当前简历未发现证据', not '候选人不会'.
+    - Zero score must have a non-empty reason and no positive evidence;
+      its wording is not judged by Schema or Service.
     - Cross-reference validation: criterion_id vs plan criteria.
 
-    These tests confirm the v5.0-specific enforcement does not exist yet.
+    These tests confirm the deterministic v5.0 enforcement boundary.
     """
 
     def test_requirement_assessment_rejects_empty_evidence_with_nonzero_score(self) -> None:
@@ -256,10 +235,8 @@ class TestEvidenceContract:
         enforces the non-zero-score-needs-evidence rule."""
         assert hasattr(ScreeningEvaluationService, "validate_v5_evidence_required")
 
-    def test_v5_zero_score_reason_validator_exists(self) -> None:
-        """v5.0 must have a validator ensuring zero-score reasons say
-        '当前简历未发现证据' rather than asserting candidate inability."""
-        assert hasattr(ScreeningEvaluationService, "validate_v5_zero_score_reason")
+    def test_v5_zero_score_semantic_reason_validator_does_not_exist(self) -> None:
+        assert not hasattr(ScreeningEvaluationService, "validate_v5_zero_score_reason")
 
     def test_v5_criterion_cross_reference_validator_exists(self) -> None:
         """v5.0 must validate that each assessment's criterion_id matches

@@ -1,0 +1,14 @@
+{
+  "stage": "7R5-I3-R1",
+  "purpose": "single_close_06c_real_raw_authorization",
+  "confirmed_at": "2026-08-31T12:38:08.3508427+08:00",
+  "user_directive": "确认 USD 2 硬上限，开始 CLOSE-06C",
+  "pricing_snapshot_path": "docs/stages/stage7/2026-08-31-stage7-7r5i3-r1-pricing-snapshot.json",
+  "pricing_snapshot_sha256": "202ab5b524128645864c0628d44fa0c3913797bce0a289ac43ecf90f4daa35dd",
+  "monetary_cap_usd": 2.0,
+  "baseline_business_calls": 45,
+  "maximum_api_attempts": 90,
+  "content_error_retry_count": 0,
+  "authorizes_single_real_raw": true,
+  "authorizes_human_or_final": false
+}

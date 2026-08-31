@@ -174,8 +174,6 @@ class CriterionAssessment(BaseModel):
         if self.score == 0:
             if self.evidence:
                 raise ValueError("5.0 零分不得附带正向简历证据")
-            if "当前简历未发现相关证据" not in self.reason:
-                raise ValueError("5.0 零分必须说明当前简历未发现相关证据")
         return self
 
 
@@ -206,18 +204,15 @@ class AIScreeningEvaluationV5Output(BaseModel):
         max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS
     )
     gaps: list[V5ReportFinding] = Field(
-        min_length=1,
         max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS,
     )
     risks_or_conflicts: list[V5ReportFinding] = Field(
         max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS
     )
     missing_info: list[V5ReportFinding] = Field(
-        min_length=1,
         max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS,
     )
     hr_follow_up_questions: list[InterviewQuestion] = Field(
-        min_length=1,
         max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS,
     )
 
@@ -253,18 +248,15 @@ class ScreeningEvaluationV5ReportPayload(BaseModel):
         max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS
     )
     gaps: list[V5ReportFinding] = Field(
-        min_length=1,
         max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS,
     )
     risks_or_conflicts: list[V5ReportFinding] = Field(
         max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS
     )
     missing_info: list[V5ReportFinding] = Field(
-        min_length=1,
         max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS,
     )
     hr_follow_up_questions: list[InterviewQuestion] = Field(
-        min_length=1,
         max_length=SCREENING_EVALUATION_V5_MAX_AUXILIARY_ITEMS,
     )
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 from copy import deepcopy
 from types import SimpleNamespace
@@ -72,7 +73,7 @@ NORMAL_ROWS = [
     ("job_responsibilities", "负责 Python 后端服务开发与维护。"),
     ("job_responsibilities", "推动代码评审与交付质量改进。"),
     ("candidate_requirements", "必须具备 Python 后端项目经验。"),
-    ("candidate_requirements", "至少 3 年软件开发经验。"),
+    ("candidate_requirements", "必须具备 API 设计与交付经验。"),
     ("preferred_qualifications", "有 Kubernetes 生产实践者优先。"),
 ]
 
@@ -98,7 +99,7 @@ def _normal_payload() -> dict:
             _criterion("Python 后端开发", *NORMAL_ROWS[0], "general"),
             _criterion("代码评审与交付质量", *NORMAL_ROWS[1], "general"),
             _criterion("Python 后端项目经验", *NORMAL_ROWS[2], "required"),
-            _criterion("3 年软件开发经验", *NORMAL_ROWS[3], "required"),
+            _criterion("API 设计与交付经验", *NORMAL_ROWS[3], "required"),
             _criterion("Kubernetes 生产实践", *NORMAL_ROWS[4], "preferred"),
         ]
     }
@@ -153,6 +154,32 @@ def test_v5_importance_warning_schema_requires_stable_id_and_controlled_reason()
     )
     assert warning.criterion_id == "criterion:0001"
 
+    with pytest.raises(ValueError):
+        JobEvaluationPlanV5WarningDetail(
+            code=JobEvaluationPlanV5WarningCode.SEMANTIC_SUPPORT_REVIEW_REQUIRED,
+            message="请 HR 对照原文复核",
+        )
+    semantic_warning = JobEvaluationPlanV5WarningDetail(
+        code=JobEvaluationPlanV5WarningCode.SEMANTIC_SUPPORT_REVIEW_REQUIRED,
+        message="请 HR 对照原文复核",
+        criterion_id="criterion:0001",
+    )
+    assert semantic_warning.model_dump(mode="json") == {
+        "code": "semantic_support_review_required",
+        "message": "请 HR 对照原文复核",
+        "criterion_id": "criterion:0001",
+        "reasons": [],
+    }
+    with pytest.raises(ValueError):
+        JobEvaluationPlanV5WarningDetail(
+            code=JobEvaluationPlanV5WarningCode.SEMANTIC_SUPPORT_REVIEW_REQUIRED,
+            message="请 HR 对照原文复核",
+            criterion_id="criterion:0001",
+            reasons=[
+                JobEvaluationPlanV5ImportanceReviewReason.MIXED_STRENGTH_SIGNALS
+            ],
+        )
+
 
 def test_v5_normal_generation_is_one_call_and_program_owns_versions_and_ids() -> None:
     service = JobEvaluationPlanService()
@@ -170,12 +197,12 @@ def test_v5_normal_generation_is_one_call_and_program_owns_versions_and_ids() ->
     assert content.ai_schema_version == "5.0"
     assert content.prompt_version == JOB_EVALUATION_PLAN_V5_PROMPT_VERSION
     assert JOB_EVALUATION_PLAN_V5_PROMPT_VERSION == (
-        "job_evaluation_plan_lightweight_v2"
+        "job_evaluation_plan_lightweight_v4"
     )
     assert content.breaking_contract_version == (
         JOB_EVALUATION_PLAN_V5_BREAKING_CONTRACT_VERSION
     )
-    assert content.breaking_contract_version == "lightweight_plan_generation_v3"
+    assert content.breaking_contract_version == "lightweight_plan_generation_v5"
     assert content.model_version == "fake-plan-model"
     assert [item.criterion_id for item in content.criteria] == [
         f"criterion:{index:04d}" for index in range(1, 6)
@@ -639,15 +666,6 @@ def test_v5_related_language_variants_are_valid_plan_candidates_without_retry(
     ("row", "criterion"),
     [
         (
-            ("candidate_requirements", "具备软件开发经验。"),
-            _criterion(
-                "至少 5 年软件开发经验",
-                "candidate_requirements",
-                "具备软件开发经验。",
-                "required",
-            ),
-        ),
-        (
             ("candidate_requirements", "具备后端项目经验。"),
             _criterion(
                 "本科及以上学历",
@@ -694,7 +712,6 @@ def test_v5_related_language_variants_are_valid_plan_candidates_without_retry(
         ),
     ],
     ids=[
-        "invented-years",
         "invented-education",
         "invented-degree",
         "invented-certificate",
@@ -702,7 +719,7 @@ def test_v5_related_language_variants_are_valid_plan_candidates_without_retry(
         "invented-exclusive-technology",
     ],
 )
-def test_v5_invented_explicit_hard_requirements_still_fail_without_retry(
+def test_v5_semantic_support_doubts_become_hr_warnings_without_content_retry(
     row: tuple[str, str],
     criterion: dict,
 ) -> None:
@@ -710,17 +727,33 @@ def test_v5_invented_explicit_hard_requirements_still_fail_without_retry(
         [_result({"criteria": [criterion]}), _result(_normal_payload())]
     )
 
-    with pytest.raises(JobEvaluationPlanV5GenerationError) as raised:
-        asyncio.run(
-            JobEvaluationPlanService().build_v5_plan_content(
-                _snapshot([row]),
-                adapter=adapter,
-            )
+    content = asyncio.run(
+        JobEvaluationPlanService().build_v5_plan_content(
+            _snapshot([row]),
+            adapter=adapter,
         )
+    )
 
-    assert raised.value.code == "JOB_EVALUATION_PLAN_V5_UNSUPPORTED_CRITERION"
-    assert raised.value.business_call_count == 1
+    assert content.business_call_count == 1
+    assert len(content.criteria) == 1
+    assert content.criteria[0].name == criterion["name"]
+    assert content.criteria[0].importance.value == criterion["importance"]
+    assert content.criteria[0].sources[0].source_quote == row[1]
+    warning = next(
+        warning
+        for warning in content.warnings
+        if warning.code
+        is JobEvaluationPlanV5WarningCode.SEMANTIC_SUPPORT_REVIEW_REQUIRED
+    )
+    assert warning.criterion_id == content.criteria[0].criterion_id
+    assert warning.reasons == []
     assert len(adapter.v5_calls) == 1
+
+
+def test_v5_validation_path_no_longer_uses_semantic_support_as_hard_failure() -> None:
+    source = inspect.getsource(JobEvaluationPlanService._validate_v5_criterion_candidate)
+    assert "_v5_candidate_is_supported" not in source
+    assert "JOB_EVALUATION_PLAN_V5_UNSUPPORTED_CRITERION" not in source
 
 
 @pytest.mark.parametrize(
@@ -747,16 +780,6 @@ def test_v5_invented_explicit_hard_requirements_still_fail_without_retry(
             "JOB_EVALUATION_PLAN_V5_SENSITIVE_CRITERION",
         ),
         (
-            [("job_responsibilities", "负责项目交付。")],
-            _criterion(
-                "Python 开发能力",
-                "job_responsibilities",
-                "负责项目交付。",
-                "general",
-            ),
-            "JOB_EVALUATION_PLAN_V5_UNSUPPORTED_CRITERION",
-        ),
-        (
             [("job_responsibilities", "自动淘汰不符合要求的候选人。")],
             _criterion(
                 "自动淘汰候选人",
@@ -768,7 +791,7 @@ def test_v5_invented_explicit_hard_requirements_still_fail_without_retry(
         ),
     ],
 )
-def test_v5_pollution_sensitive_and_invented_criteria_fail_without_retry(
+def test_v5_pollution_sensitive_and_recruitment_decision_fail_without_retry(
     rows: list[tuple[str, str]],
     criterion: dict,
     expected_code: str,
@@ -946,13 +969,16 @@ def test_v5_prompt_has_fixed_sections_and_keeps_program_fields_out() -> None:
 
 def test_v5_prompt_few_shots_are_balanced_fictional_business_candidates() -> None:
     examples = JOB_EVALUATION_PLAN_V5_FEW_SHOT_EXAMPLES
-    assert 3 <= len(examples) <= 5
+    assert 3 <= len(examples) <= 8
     assert {example["case"] for example in examples} == {
         "responsibility_explicit_strong",
         "requirement_explicit_weak",
         "no_explicit_strength_signal",
         "negation_turn_and_relaxation",
         "multi_source_mixed_strength",
+        "conditional_trigger_established",
+        "conditional_trigger_unresolved",
+        "work_duration_excluded_mixed_capability_retained",
     }
 
     candidate_fields = {

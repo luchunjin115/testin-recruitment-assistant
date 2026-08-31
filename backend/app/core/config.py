@@ -102,7 +102,7 @@ class Settings(BaseSettings):
         max_length=20,
     )
     JOB_EVALUATION_PLAN_V5_PROMPT_VERSION: str = Field(
-        default="job_evaluation_plan_lightweight_v2",
+        default="job_evaluation_plan_lightweight_v4",
         min_length=1,
         max_length=100,
     )
@@ -144,7 +144,7 @@ class Settings(BaseSettings):
         max_length=20,
     )
     SCREENING_EVALUATION_V5_PROMPT_VERSION: str = Field(
-        default="screening_evaluation_lightweight_v4",
+        default="screening_evaluation_lightweight_v7",
         min_length=1,
         max_length=100,
     )

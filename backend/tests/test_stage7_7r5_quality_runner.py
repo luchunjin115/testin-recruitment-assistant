@@ -91,12 +91,12 @@ def test_execution_contract_freezes_model_prompt_schema_and_parameters() -> None
         "thinking": "disabled",
         "response_format": "json_object",
         "sdk_automatic_retries": 0,
-        "plan_prompt_version": "job_evaluation_plan_lightweight_v2",
-        "report_prompt_version": "screening_evaluation_lightweight_v4",
+        "plan_prompt_version": "job_evaluation_plan_lightweight_v3",
+        "report_prompt_version": "screening_evaluation_lightweight_v6",
         "plan_schema_version": "5.0",
         "report_schema_version": "5.0",
-        "plan_service_behavior_version": "lightweight_plan_generation_v3",
-        "report_service_behavior_version": "lightweight_report_generation_v7",
+        "plan_service_behavior_version": "lightweight_plan_generation_v4",
+        "report_service_behavior_version": "lightweight_report_generation_v8",
         "normal_business_calls_per_sample": 1,
     }
     assert contract.i2_raw_execution_contract() == {

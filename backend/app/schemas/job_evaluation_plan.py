@@ -158,6 +158,7 @@ class JobEvaluationPlanV5WarningCode(str, Enum):
     LIMITED_BASIS = "limited_basis"
     MANY_CRITERIA = "many_criteria"
     IMPORTANCE_REVIEW_REQUIRED = "importance_review_required"
+    SEMANTIC_SUPPORT_REVIEW_REQUIRED = "semantic_support_review_required"
 
 
 class JobEvaluationPlanV5ImportanceReviewReason(str, Enum):
@@ -472,16 +473,26 @@ class JobEvaluationPlanV5WarningDetail(BaseModel):
             self.code
             is JobEvaluationPlanV5WarningCode.IMPORTANCE_REVIEW_REQUIRED
         )
+        is_semantic_support_review = (
+            self.code
+            is JobEvaluationPlanV5WarningCode.SEMANTIC_SUPPORT_REVIEW_REQUIRED
+        )
         if is_importance_review and (
             self.criterion_id is None or not self.reasons
         ):
             raise ValueError(
                 "importance_review_required 必须关联 criterion_id 和受控原因"
             )
-        if not is_importance_review and (
+        if is_semantic_support_review and (
+            self.criterion_id is None or self.reasons
+        ):
+            raise ValueError(
+                "semantic_support_review_required 必须只关联 criterion_id"
+            )
+        if not is_importance_review and not is_semantic_support_review and (
             self.criterion_id is not None or self.reasons
         ):
-            raise ValueError("数量 warning 不能伪造评价点复核原因")
+            raise ValueError("普通 warning 不能伪造评价点复核信息")
         if len(self.reasons) != len(set(self.reasons)):
             raise ValueError("5.0 warning reasons 不能重复")
         return self

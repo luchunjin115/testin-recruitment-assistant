@@ -780,8 +780,16 @@ def test_r6d_is_zero_call_content_safe_and_write_once(tmp_path: Path) -> None:
         )
 
 
-def test_r7d_replays_exact_six_i2_time_key_failures_with_service_v7() -> None:
-    payload = asyncio.run(preflight.build_r7d_replay_payload())
+def test_r7d_dynamic_rebuild_rejects_current_service_v8() -> None:
+    with pytest.raises(
+        RuntimeError,
+        match="R7-D 活动报告 Prompt/Service 行为版本不是 v4/v7",
+    ):
+        asyncio.run(preflight.build_r7d_replay_payload())
+
+
+def test_r7d_sealed_v7_diagnostic_keeps_exact_six_time_key_failures() -> None:
+    payload = preflight.load_r7d_diagnostic()
     assert payload["target_case_ids"] == [
         "R00",
         "S00-1",
@@ -807,10 +815,7 @@ def test_r7d_replays_exact_six_i2_time_key_failures_with_service_v7() -> None:
     assert payload["execution_contract"][
         "report_service_behavior_version"
     ] == "lightweight_report_generation_v7"
-    assert payload["lifecycle"]["state"] in {
-        "i2_human_complete",
-        "i2_final_complete",
-    }
+    assert payload["lifecycle"]["state"] == "i2_raw_complete"
     assert payload["summary"] == {
         "target_case_count": 6,
         "report_response_count": 1,
@@ -826,7 +831,7 @@ def test_r7d_replays_exact_six_i2_time_key_failures_with_service_v7() -> None:
 
 
 def test_r7d_preserves_response_identity_and_records_next_deterministic_gate() -> None:
-    payload = asyncio.run(preflight.build_r7d_replay_payload())
+    payload = preflight.load_r7d_diagnostic()
     assert all(
         record["source_status"] == "failed"
         and record["source_error_message"]

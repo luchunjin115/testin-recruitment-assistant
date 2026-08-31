@@ -1,7 +1,7 @@
 # 阶段 7 剩余工作与收尾计划
 
 > 日期：2026-08-30
-> 状态：用户已于 2026-08-30 整体确认；`7R5-CLOSE-02`、`7R5-CLOSE-03A`、`7R5-CLOSE-03B`、`7R5-CLOSE-04`、`7R5-CLOSE-04R` 已完成，I2 final 正式判定失败且修订后的五批整改顺序已冻结，当前停止并等待单独确认 `7R5-CLOSE-05A`
+> 状态：既有 CLOSE-02—06C 已完成，I2 final 仍失败，I3-R1 唯一 raw 已封存且不再继续 human/final。用户于 2026-08-31 确认 AI 初筛退出工作年限判断并接受方向/分差稳定性风险；`7R5-CLOSE-04R2`、`CLOSE-05G—05I` 和 `CLOSE-06R2-A` 已完成，当前停止等待用户审核 I4 复核单并单独确认 `CLOSE-06R2-B`
 > 职责：只维护阶段 7 从当前状态到“完成评审”的唯一剩余顺序；已完成业务合同和历史证据仍以 5.0 主设计为准
 
 ## 1. 为什么单独建立这份计划
@@ -29,6 +29,7 @@
 | CLOSE-04/CLOSE-04R 综合整改设计 | 已完成 | 6 个失败门槛已归因，并按用户确认修订为验收合同、计划 Service、计划 Prompt、报告 Service、报告 Prompt 五批 | 尚未实施任何整改，不能证明 I3 会通过 |
 | post-raw 自动化 | 已恢复 | 旧状态断言已修复，只读诊断兼容 raw/human/final，正式结果继续 write-once | 不能证明模型输出质量合格 |
 | 简历提取 500 回归 | 已完成 | R1-B 已完成红灯→绿灯、定向/全量和 Resume `#2301` 真实 API 200 复验 | 不能证明所有简历格式、AI 结构化或初筛质量正确 |
+| 工作年限退出 AI 初筛 | 已完成产品决定，尚未实现 | 已明确纯年限退出、混合要求保留能力、稳定性方向/分差只作诊断 | 代码、v3 质量合同和新真实质量尚未验证 |
 | 7R5-J 真实全链收尾 | 未开始 | 已有历史局部浏览器/数据库证据 | 当前 5.0 完整 PostgreSQL/API/浏览器链尚未最终验收 |
 
 阶段 7 不能标记完成，也不能进入阶段 8。I2 raw、既有诊断和历史结果继续只读，不能通过补写、覆盖或降低门槛把失败改成通过。
@@ -48,9 +49,15 @@
     ↓
 7R5-CLOSE-04R 按用户确认修订 Service 边界与整改顺序
     ↓
-7R5-CLOSE-05-* 按综合设计执行有限整改批次
+7R5-CLOSE-05A—F 已完成的有限整改
     ↓
-7R5-CLOSE-06A—E 独立 I3 真实质量复验
+7R5-CLOSE-06A—C I3-R1 已封存 raw；因产品边界变化不再继续 final
+    ↓
+7R5-CLOSE-04R2 工作年限退出 AI 初筛的合同修订
+    ↓
+7R5-CLOSE-05G—I 新合同、计划链、报告链逐批整改
+    ↓
+7R5-CLOSE-06R2-A—E 独立 I4 真实质量复验
     ↓
 7R5-CLOSE-07  7R5-J 真实 PostgreSQL/API/浏览器收尾
     ↓
@@ -228,6 +235,10 @@
 
 完成标志：v2 合同能稳定区分结构错误、重要内容遗漏、诊断提示和标签错误，旧 I2 指纹与内容不变，全部自动化零失败。失败返回质量合同/冻结标签层。完成后立即停止；唯一下一步是等待用户确认 CLOSE-05B。
 
+实施结果（2026-08-31）：CLOSE-05A 已完成并停止。离线合同新增 `stage7_v5_quality_contract_v2`，同时把 I2 明确登记为冻结 v1、禁止回算；中文粗略重合只返回诊断候选，报告五分区字段必须存在且为列表但允许合理为空，正式内容门槛改为调用前 `material_findings[]` 的遗漏数为 0。时间案例固定投递/评价参考时间、计算区间、实际月数和门槛月数，参考时间不等于投递时间或实际月数算错时直接预检失败；报告/稳定性只接受带确认人、确认时间和内容指纹的 HR `confirmed_plan_snapshot`。稳定性 `4/5`、分差 10 的 `4/5`、极端翻转 0、非法输出组失败均未降低；严重事实错误与敏感评分保持一个稳定性组合门槛，两个计数分别展示，final 仍为 19 项。
+
+测试先得到精确 `12 failed` 红灯，再转为质量专项 `39 passed`；阶段 7 扩大回归 `263 passed + 3 subtests passed`，后端全量 `1336 passed + 425 subtests passed + 2 warnings`、0 failures，静态专项 `23 passed`，`py_compile` 与差异检查通过。两条 warning 为既有 PyPDF2 弃用和异步连接取消提示。I2 三份正式文件无 Git 差异、生命周期仍为 `i2_final_complete`；按用户后续指示不再把本机换行符导致的字节 SHA 差异作为阻塞。生产 Prompt/Schema/Service/Adapter/API/Model/migration/React、PostgreSQL 均未修改；I3 正式 raw/human/final 未创建；Key 读取、模型调用、API attempt、输入/输出 token、费用和 PostgreSQL 写入均为 0。该结果能证明下一轮验收尺子已离线固定，不能证明生产 AI 已整改或真实质量会通过。唯一下一步是等待用户另行确认 CLOSE-05B。
+
 ### 10.2 7R5-CLOSE-05B：收缩计划 Service 的语义裁判
 
 依赖：CLOSE-05A 完成，用户另行确认本批。
@@ -249,6 +260,12 @@
 
 完成标志：普通语义不再被程序硬拒绝，疑似扩大可由 HR warning 复核，所有确定性硬门禁全绿，行为版本为 v4。若 warning 需要改变核心持久化形状，停止并返回 CLOSE-04R，不得顺手扩表。完成后停止；唯一下一步是等待用户确认 CLOSE-05C。
 
+实施结果（2026-08-31）：CLOSE-05B 已完成并停止。计划 Service 行为版本升级到 `lightweight_plan_generation_v4`，删除 `_v5_candidate_is_supported` 对整份计划抛出 `JOB_EVALUATION_PLAN_V5_UNSUPPORTED_CRITERION` 的路径；原数字、显式要求、排他表达、英文 token 和中文连续双字启发式只用于生成关联稳定 `criterion_id` 的 `semantic_support_review_required` warning。warning 是合法 `pending_confirmation` 草稿，不触发内容重试，AI 名称、importance 与逐字来源均未改写；HR 可对照来源后编辑或确认。Schema 5.0 只新增受控 warning 枚举与引用规则，既有 JSON 持久化形状和 API 业务流程不变，前端增加对应类型和可操作文案。
+
+真实 `source_field/source_quote` 定位、严格 JSON/Schema、1—30 项、稳定 ID、去重排序、Prompt 污染、敏感属性和招聘决定继续硬失败。精确红灯为后端 `10 failed + 61 passed`、从正确前端目录执行为 `1 failed + 1 passed`；最小实现后计划 Service/质量元数据 `71 passed`、计划 Schema/API/编辑扩大专项 `102 passed`、前端全量 `58 passed`，TypeScript 严格检查和 Vite 生产构建通过（3121 模块）。阶段 7/计划扩大回归 `627 passed + 52 subtests passed`，后端全量 `1336 passed + 425 subtests passed + 2 warnings`、0 failures，静态专项 `23 passed`，`py_compile`、旧硬拒绝符号扫描和 `git diff --check` 通过。两条 warning 仍为既有 PyPDF2 弃用和异步连接取消提示。
+
+本批没有修改计划 Prompt、Adapter、API 业务流程、Model、migration、报告链、核心持久化形状、I2/I3 正式证据或 PostgreSQL；没有读取 Key、调用模型、产生 API attempt/token/费用或 PostgreSQL 写入。它能证明普通语义疑点不再让整份草稿失败且 HR 可看到提醒，不能证明被放行内容正确、计划 Prompt 已能保留条件或真实模型质量改善。唯一下一步是等待用户另行确认 CLOSE-05C。
+
 ### 10.3 7R5-CLOSE-05C：计划 Prompt 保留条件性要求
 
 依赖：CLOSE-05B 完成，用户另行确认本批。
@@ -265,21 +282,35 @@
 
 完成标志：Prompt v3 的条件保留和不升格规则被离线合同固定，Service v4/Schema 5.0 与既有确定性保护全绿。若三档 importance 无法在不扭曲业务含义的情况下满足合同，停止并返回 CLOSE-04R 设计结构化适用性字段；不得强行通过测试。完成后停止；唯一下一步是等待用户确认 CLOSE-05D。
 
+实施结果（2026-08-31）：CLOSE-05C 已完成并停止。计划 Prompt 升级到 `job_evaluation_plan_lightweight_v3`。Prompt 现在先判断“若/当/仅在……时”的触发条件是否已经由完整 JD 明确成立：已经成立时仍保留适用场景，再按条件内部强弱判断 importance；尚未明确成立时不得自行假定，只有满足前提才有意义的子要求通常保留完整条件并作为 `general` 草稿交给 HR，不能升格成对所有候选人无条件生效的 required。无条件要求仍按真实强弱判断，模型不得凭空编造前置条件。
+
+新增两组完全虚构、去标识化 Few-shot，分别覆盖条件已成立和条件未确认；连同原有无条件 required、preferred、普通 general、否定/转折/放宽和多来源示例形成七组通用语义矩阵。精确红灯为 `4 failed + 6 passed`，失败点是旧 Prompt 仍为 v2 且缺少两组条件合同；实现后 Prompt/计划/配置/质量专项 `87 passed + 16 subtests passed`，阶段 7/计划扩大回归 `632 passed + 52 subtests passed`，后端全量 `1341 passed + 425 subtests passed + 2 warnings`、0 failures，静态专项 `23 passed`，`py_compile`、正式冻结样本隔离和 `git diff --check` 通过。
+
+本批只修改计划 Prompt、直接关联的配置/当前质量版本、通用测试和三份状态文档。计划 Service 保持 `lightweight_plan_generation_v4`，Schema 保持 5.0；I2 冻结执行合同中的计划 Prompt 仍为 v2。没有修改报告链、API、Model、migration、React、PostgreSQL 或 I2 正式结果，没有创建 I3 正式文件；Key 读取、真实模型调用、API attempt、token、费用与 PostgreSQL 写入均为 0。该结果能证明离线 Prompt 合同和回归成立，不能证明真实模型每次都遵守条件、真实计划质量已改善或 I3 会通过。唯一下一步是等待用户另行确认 CLOSE-05D。
+
 ### 10.4 7R5-CLOSE-05D：收缩报告 Service 的语义裁判
 
 依赖：CLOSE-05C 完成，用户另行确认本批。
 
 唯一目标与通俗解释：报告只要格式合法、引用确实在简历里、没有越过安全边界，就交给 HR 阅读；Service 不再替 HR 判断“这段引用够不够证明能力、这个分数合不合理”。
 
-允许修改与链路：以 `backend/app/services/screening_evaluation_service.py` 和报告 Service 专项测试为核心，允许直接相关行为版本/运行元数据和三份状态文档。链路位置为 Schema → Service；报告行为版本升级为 `lightweight_report_generation_v8`，Schema 版本保持 5.0。
+允许修改与链路：以 `backend/app/services/screening_evaluation_service.py` 和报告 Service 专项测试为核心，允许直接相关行为版本/运行元数据和三份状态文档。另允许在 `backend/app/schemas/screening_evaluation.py` 的 `CriterionAssessment.validate_score_evidence_shape` 中只删除“0 分 reason 必须逐字包含固定句式”的语义分支，并修改直接对应的 Schema 测试；不得借此改变字段、类型、长度、数量、版本或持久化形状。链路位置为 Schema → Service；报告行为版本升级为 `lightweight_report_generation_v8`，Schema 版本保持 5.0。
 
-禁止：不得修改报告 Prompt、核心报告 Schema/Model/API/React、数据库结构、质量标签、I2/I3 证据或 PostgreSQL；不得调用模型。不得取消严格 JSON/Schema、评价点完整交叉引用、分数范围、非零分至少一条 evidence、quote 在脱敏简历中逐字定位、时间 fact key 有效且参考时间等于 `Application.applied_at`、明确敏感属性、招聘决定和 Prompt 注入硬门禁。
+禁止：除上一段明确允许删除的单个零分固定措辞语义分支外，不得修改报告 Prompt、核心报告 Schema/Model/API/React、数据库结构、质量标签、I2/I3 证据或 PostgreSQL；不得调用模型。不得取消 `reason` 必填与合法非空文本、严格 JSON/Schema、0 分不得附带正向 evidence、评价点完整交叉引用、分数范围、非零分至少一条 evidence、quote 在脱敏简历中逐字定位、时间 fact key 有效且参考时间等于 `Application.applied_at`、明确敏感属性、招聘决定和 Prompt 注入硬门禁。
 
-固定交付与异常语义：required 低分与总体高分的权衡、0 分固定措辞、“未发现”与“不会”的普通语言差别、品牌表达、普通方向词和经历是否岗位相关不再造成整单失败；它们由 Prompt 约束并在质量验收/HR 阅读中判断。报告不新增 warning Schema，HR 直接查看逐项分数、理由和原文引用；Service 放行不等于内容正确。时间 Service 继续按投递时间生成事实，报告 Service 只校验所引用 fact key 的身份、可用性和计算说明存在，不判断自然语言月份结论或岗位相关性。
+固定交付与异常语义：每个分数仍必须提供 `reason`，Schema 只判断它是合法非空文本，不判断必须出现哪句话，也不维护“未发现”的同义词白名单。0 分仍不得附带正向 evidence，非零分仍必须有真实可定位 evidence。required 低分与总体高分的权衡、0 分固定措辞、“未发现”与“不会”的普通语言差别、品牌表达、普通方向词和经历是否岗位相关不再造成整单失败；它们由 Prompt 约束并在质量验收/HR 阅读中判断。报告不新增 warning Schema，HR 直接查看逐项分数、理由和原文引用；Service/Schema 放行不等于内容正确。时间 Service 继续按投递时间生成事实，报告 Service 只校验所引用 fact key 的身份、可用性和计算说明存在，不判断自然语言月份结论或岗位相关性。
 
-验证与费用：先建立普通语义响应被旧规则拒绝的红灯，同时锁定伪造引用、非零分无证据、非法 key、敏感属性、自动决定、注入和结构错误继续失败；最小实现后运行报告 Service/Schema/API 相关专项、阶段 7 扩大回归、后端全量、`py_compile` 和 `git diff --check`。真实调用、费用和 PostgreSQL 写入为 0。
+验证与费用：先建立“0 分有非空 reason 但没有固定口令”以及其他普通语义响应被旧规则拒绝的红灯，同时锁定 reason 缺失/空文本、0 分附带正向证据、伪造引用、非零分无证据、非法 key、敏感属性、自动决定、注入和结构错误继续失败；最小实现后运行报告 Service/Schema/API 相关专项、阶段 7 扩大回归、后端全量、`py_compile` 和 `git diff --check`。真实调用、费用和 PostgreSQL 写入为 0。
 
 完成标志：报告语义判断交回 HR，确定性引用/安全硬保护无降级，行为版本为 v8，I2 文件未改。若发现某项被移除规则其实属于明确安全或可百分百确定的引用真实性检查，停止并返回 CLOSE-04R 重新归类。完成后停止；唯一下一步是等待用户确认 CLOSE-05E。
+
+实施前合同修订（2026-08-31）：只读检查发现解析顺序是先由 `AIScreeningEvaluationV5Output` 完成 Schema 校验，再进入报告 Service；当前 `CriterionAssessment` Schema 与 Service 同时要求 0 分 reason 逐字包含“当前简历未发现相关证据”。因此只删除 Service 重复入口仍会被 Schema 提前拒绝，无法兑现本批已经确认的“0 分固定措辞不再整单失败”。用户确认采用“reason 继续必填，但 Schema/Service 不裁判其自然语言内容”的边界，本节据此增加上述唯一 Schema 例外；Schema 版本和数据形状保持 5.0。该轮只修订三份权威文档，没有修改代码、测试或证据；修订后的 05D 仍须再次获得明确实施确认。
+
+实施结果（2026-08-31）：修订后的 CLOSE-05D 已完成并停止。`CriterionAssessment` 仍要求非空 `reason`，0 分仍禁止正向 evidence，非零分仍要求至少一条 evidence；唯一 Schema 变化是删除 0 分 reason 必须逐字包含固定句式的语义分支，版本、字段和持久化形状保持 5.0。报告 5.0 Service 主路径删除固定零分措辞、“未发现/不会”、品牌表达、普通分数方向和 required 低分/高总体分固定权衡模板的拒绝入口；报告不新增 warning，AI 原分数、理由、分区和真实引用直接交给 HR。行为版本升级为 `lightweight_report_generation_v8`，Prompt 正文和版本保持 `screening_evaluation_lightweight_v4`。
+
+精确红灯为 `10 failed + 111 passed`；最小实现后报告专项 `121 passed`，报告 Schema/Service/Adapter/API/migration 扩大专项 `187 passed + 49 subtests passed`，阶段 7/报告扩大回归 `398 passed + 49 subtests passed`，后端全量 `1348 passed + 425 subtests passed + 2 warnings`、0 failures，静态专项 `23 passed`，`py_compile` 与 `git diff --check` 通过。扩大回归期间同步纠正旧测试：封存 R7-D v7 诊断继续只读验证，当前 v8 明确拒绝跨版本动态重建，不修改或重新生成历史诊断。
+
+严格 JSON/Schema、reason 必填、0 分无正向 evidence、非零分有 evidence、评价点 ID 全量交叉引用、quote 在脱敏 Resume 中逐字定位、时间 fact key 存在/唯一/可用及非空 key 的 calculation_note、明确隐私泄露、招聘决定和 Prompt 注入保护均保持全绿。I2 冻结执行合同仍记录报告 Service v6，正式结果无 Git 差异且生命周期仍为 `i2_final_complete`；没有 I3 正式文件。报告 Prompt 正文、API、Model、migration、React、PostgreSQL 均未修改；Key、真实模型调用、API attempt、token、费用和 PostgreSQL 写入均为 0。本批能证明 Service/Schema 不再按普通语义拒绝整单且确定性保护未降级，不能证明放行内容正确、真实模型质量改善或 I3 会通过。唯一下一步是等待用户另行确认 CLOSE-05E。
 
 ### 10.5 7R5-CLOSE-05E：报告 Prompt 可靠性整改
 
@@ -297,11 +328,37 @@
 
 完成标志：Prompt v5 合同全绿，Service v8/Schema 5.0 确定性硬保护无降级，I2 文件未改。真实语义改善仍只能由 I3 证明。完成后立即停止；唯一下一步是等待用户确认 CLOSE-06A。
 
-五个子批全部完成且自动化为零失败后，才满足 I3 设计入口条件。CLOSE-06A 还必须另行冻结全新未参与 Prompt 调整的 10 份 JD、20 组 JD/Resume、其中 5 组稳定性、逐案 `application_applied_at`、v2 标签、`material_findings[]`、HR 确认计划快照和实际版本，并由用户审核后才能进入 06B 价格门禁；任何真实调用仍需 06C 的独立金额授权。
+实施结果（2026-08-31）：本批先建立 `19 failed + 125 passed + 16 subtests passed` 的精确红灯，覆盖 Prompt v5 版本、投递时间副本、`actual_months`/`threshold_months` 比较、连续 quote、非零分证据、required 低分/高总体分权衡、明显教育/行业/工作经历重查、弱优势防遗漏、时间 key 只作计算引用、自然 0 分措辞、静默自检和含时间事实的虚构 Few-shot。最小实现后报告 Prompt 升级为 `screening_evaluation_lightweight_v5`，报告 Service 保持 `lightweight_report_generation_v8`，Schema 保持 5.0；固定结构仍为 10 节、Few-shot 仍为 4 个，没有复制 R00/R06/R12/R15/R17/R19/S00/S02/S03 正式文本。生产 Schema 当前要求 gaps、missing_info、hr_follow_up_questions 非空，因此 Prompt 只允许 Schema 已支持的 strengths/risks 合理为空，本批未越界修改 Schema。
+
+实现后专项为 `144 passed + 16 subtests passed`，阶段 7 扩大回归 `372 passed + 3 subtests passed`，后端全量 `1360 passed + 425 subtests passed + 2 warnings`、0 failures，静态/Prompt 扫描 `55 passed`；`py_compile`、正式样本隔离扫描和 `git diff --check` 通过。I2 正式目录无 Git 差异，没有 I3 正式文件；API、Schema、Service 业务逻辑、Model、migration、React、PostgreSQL 均未修改，Key、真实模型调用、API attempt、token、费用与 PostgreSQL 写入均为 0。本批能证明 Prompt v5 的离线文字合同、版本接线和现有确定性回归成立，不能证明真实模型必然遵守、语义质量已经改善或 I3 会通过。唯一下一步是等待用户另行确认 CLOSE-06A。
+
+### 10.6 7R5-CLOSE-05F：报告五分区诚实空列表合同对齐
+
+依赖：CLOSE-05E 完成；用户已确认产品方向，但新增实施顺序写入本文后仍须再次确认本批，才能修改代码。
+
+唯一目标与通俗解释：报告的五个栏目必须一直存在，但确实没有真实内容时可以留空，不能为了通过程序检查而强迫模型编造一条差距、缺失信息或追问。
+
+允许修改与链路：以 `backend/app/schemas/screening_evaluation.py` 的 `AIScreeningEvaluationV5Output` 和 `ScreeningEvaluationV5ReportPayload` 为核心，删除 gaps、missing_info、hr_follow_up_questions 的最小长度限制；同步 `backend/app/prompts/screening_evaluation.py` 的分区规则、合法虚构 Few-shot 和版本元数据，以及直接相关的 Schema、Prompt、Service、Adapter/API 序列化、持久化兼容、配置、静态测试和三份状态文档。链路位置为 API → Schema → Service → Model 的报告输出合同；Prompt 目标递增为 `screening_evaluation_lightweight_v6`，Service 保持 `lightweight_report_generation_v8`，Schema 版本保持 5.0。数据库 JSON 形状和字段名不变，不需要 migration。
+
+禁止：不得让五个字段变成可缺失或 null，不得修改字段类型、名称、单项结构、最大 20 条限制、评价点/证据/时间/安全硬保护或 I3 的 19 项门槛；不得恢复 Service 普通语义裁判，不得改 SQLAlchemy Model、migration、React 业务代码、质量标签或 I2 证据，不得创建 I3 正式 raw/human/final，不得读取 Key、调用真实模型或写 PostgreSQL。若现有 React 不能安全展示空列表，只报告并返回文档层扩展范围，不在本批偷改前端。
+
+固定交付与异常语义：strengths、gaps、risks_or_conflicts、missing_info、hr_follow_up_questions 五个字段仍全部必填且必须为列表，每个列表允许 0—20 项；缺字段、null、错误类型、超过上限或单项结构非法仍由 Schema 拒绝。Prompt 必须说明“有真实重要内容就写，没有就返回 []，不得凑数”，并继续要求明显经历重查和弱优势防遗漏。空列表只表示当前材料和本次评价没有形成该类真实内容，不表示候选人事实层面不存在问题；重要内容遗漏继续由调用前冻结的 `material_findings`、I3 人工审计和 HR 处理。
+
+红灯与最小实现：先建立精确红灯，分别证明当前输入 Schema、持久化 Schema 和 Service 解析会拒绝后三类空列表，并锁定字段缺失/null/错误类型/超过上限仍失败、已有确定性保护继续为绿；再只删除六处 `min_length=1`，更新 Prompt 分区说明与必要示例并把 Prompt 版本递增到 v6，不增加新的 Service 语义判断。
+
+验证与费用：运行报告 Schema/Prompt/Service 精确专项、Adapter/API/持久化兼容测试、阶段 7 扩大回归、后端全量、现有前端合同测试、`py_compile`、静态扫描、正式样本隔离、I2 正式目录差异和 `git diff --check`。所有模型行为使用 Fake/Mock；真实调用、API attempt、token、费用和 PostgreSQL 写入均为 0。
+
+完成标志与失败返回层：五类列表全空的结构化报告可以通过输入与持久化 Schema/Service，缺字段和非法类型仍失败，Prompt v6 不再要求凑满后三类，Service v8/Schema 5.0 其他保护无降级，I2 文件未改。若空列表无法进入 Schema，返回 Schema；若 Prompt 仍强迫凑数或遗漏真实内容，返回 Prompt/I3 质量标签；若 API/持久化不能往返，返回 Schema/序列化边界；若前端无法显示，停止并返回文档层另行授权 React。完成后立即停止，唯一下一步是等待用户确认 CLOSE-06A。
+
+实施结果（2026-08-31）：精确红灯为 `10 failed + 45 passed + 107 deselected`，失败只对应输入/持久化 Schema 与 Service 拒绝空列表、Prompt v6 分区规则/合法示例、配置和当前质量版本；缺字段、null、错误类型和第 21 条继续按预期失败。最小实现只删除 `AIScreeningEvaluationV5Output` 与 `ScreeningEvaluationV5ReportPayload` 共六处 `min_length=1`，Prompt 分区规则改为五类均可诚实为空，并把一个既有虚构时间示例的无内容分区改为 `[]`；固定 10 节、4 个 Few-shot 和最多 20 条上限不变。当前报告 Prompt/Service/Schema 为 v6/v8/5.0，没有新增 Service 语义判断，没有 migration。
+
+实现后精确专项 `55 passed + 107 deselected`，报告完整专项 `162 passed + 16 subtests passed`，Adapter/API/持久化扩大专项 `93 passed + 14 subtests passed`，阶段 7 扩大回归 `390 passed + 3 subtests passed`，前端现有 5.0 合同 `2 passed`，后端全量 `1378 passed + 425 subtests passed + 2 warnings`、0 failures，静态/Prompt 扫描 `55 passed`；`py_compile`、正式样本隔离和 `git diff --check` 通过。I2 正式目录无 Git 差异，没有 I3 正式文件；SQLAlchemy Model、migration、React 业务代码和 PostgreSQL 均未改，Key、真实模型调用、API attempt、token、费用与 PostgreSQL 写入均为 0。本批能证明五个字段的结构与 0—20 项边界、现有链路兼容和 Prompt v6 离线合同成立，不能证明空列表语义一定诚实、真实模型质量改善或 I3 会通过。唯一下一步是等待用户另行确认 CLOSE-06A。
+
+CLOSE-05A—E 与新增 CLOSE-05F 全部完成且自动化为零失败后，才满足 I3 设计入口条件。CLOSE-06A 还必须另行冻结全新未参与 Prompt 调整的 10 份 JD、20 组 JD/Resume、其中 5 组稳定性、逐案 `application_applied_at`、v2 标签、`material_findings[]`、HR 确认计划快照和实际版本，并由用户审核后才能进入 06B 价格门禁；任何真实调用仍需 06C 的独立金额授权。
 
 ## 11. 7R5-CLOSE-06A—E：独立 I3 真实质量复验
 
-I3 必须是新 run，不能继续、补跑、覆盖或 finalize I2。目标版本已由 CLOSE-04R 冻结；CLOSE-05 完成后由 CLOSE-06A 核对实际实现版本并冻结全新路径、未参与 Prompt 调整的新鲜样本、投递时间、标签与 HR 确认计划快照，预算再由 CLOSE-06B 单独查询和授权。I3 final 继续使用 19 项门槛。
+I3 必须是新 run，不能继续、补跑、覆盖或 finalize I2。CLOSE-05F 完成后由 CLOSE-06A 核对实际实现版本并冻结全新路径、未参与 Prompt 调整的新鲜样本、投递时间、标签与 HR 确认计划快照，预算再由 CLOSE-06B 单独查询和授权。I3 final 继续使用 19 项门槛。
 
 | 批次 | 唯一目标 | 费用与停止点 |
 | --- | --- | --- |
@@ -313,9 +370,123 @@ I3 必须是新 run，不能继续、补跑、覆盖或 finalize I2。目标版�
 
 五批必须分别确认。任一质量硬门槛失败，返回 CLOSE-04 重新评估总账和产品取舍，不得直接进入 7R5-J。
 
+CLOSE-06A 实施结果（2026-08-31）：新增独立 `7R5-I3` 路径登记、全新 fixture、零调用预检脚本、专项测试和人工复核单。冻结内容为 10 份虚构计划 JD、20 组虚构 JD/Resume、5 个稳定性组、20 个 `application_applied_at == evaluation_reference_at` 时间案例、20 份带确认人/时间/内容指纹的 5.0 计划快照、30 个计划 required 标签和 60 条 `material_findings`；实际版本核对为质量合同 v2、计划 v3/v4/5.0、报告 v6/v8/5.0。I3 preflight 为 write-once，生命周期 `i3_preflight_complete`，raw/human/final 三条冻结路径均不存在。
+
+红灯先表现为新 I3 fixture/预检模块不存在；创建预检文件后的扩大专项又精确暴露“旧 I2 目录扫描器尚未登记 I3 JSON”的 13 个生命周期失败。最小实现只把 I3 preflight 与未来 raw/human/final 路径登记为独立已知路径，陌生 JSON 仍硬拒绝，I2 活动常量、路径、内容和生命周期未改。最终质量专项 `87 passed`，阶段 7 扩大回归 `463 passed + 3 subtests passed`，后端全量 `1384 passed + 425 subtests passed + 2 warnings`；两个 warning 仍为既有 PyPDF2 弃用和异步连接取消提示。`py_compile`、密钥/真实 Adapter 静态扫描、I2 正式文件 Git 差异和 `git diff --check` 通过。真实模型调用、API attempt、输入/输出 token、费用、Key 读取、PostgreSQL 写入和正式结果写入均为 0。
+
+人工复核单明确展示当前方向分布为 `10 high / 0 partial / 10 low`，以及 10 个岗位、20 组映射、时间门槛、重要发现和 5 个稳定性组。该分布尚未被用户接受；用户若认为缺少中间档会降低代表性，必须返回 CLOSE-06A 重新冻结，不能在真实调用后补标签。当前立即停止，唯一下一步是用户审核复核单；接受后也只能另行确认 CLOSE-06B 查询实时价格，不能直接真实调用。
+
+### 11.1 CLOSE-06A-R1：按用户复核修订样本方向分布
+
+2026-08-31，用户明确拒绝 `10 high / 0 partial / 10 low`，确认改为 `8 high / 6 partial / 6 low`，并明确回复“开始修订后的 CLOSE-06A”。本修订仍属于 CLOSE-06A，不进入 CLOSE-06B。
+
+唯一目标与通俗解释：保留原 06A 作为“用户复核后发现覆盖不足”的不可覆盖记录，另建 I3-R1 冻结版本，把真实招聘中最常见、也最容易评分摇摆的部分匹配候选人加入考卷，不能只考明显好和明显差。
+
+固定范围与保护：旧 `7R5-I3` zero-call preflight、旧人工复核单及其中完整 fixture 原样保留，不删除、不覆盖、不改写成通过；新活动身份使用 `7R5-I3-R1` 和全新 R1 preflight/raw/human/final 路径，旧预检登记为 `superseded_by_user_review`，旧预留正式路径永远不得写入。生产 Prompt、Schema、Service、Adapter、API、Model、migration、React、PostgreSQL 和 I2 全部禁止修改。
+
+冻结合同：20 组方向严格为 8 high、6 partial、6 low；partial 必须同时具有真实岗位相关优势和明确 required 缺口，不能只把分数标签改成中间档。5 个稳定性组严格为 2 high、2 partial、1 low。每组继续冻结投递时间、评价参考时间、实际月数、门槛月数、HR 确认计划快照和逐案 `material_findings`；`evaluation_reference_at == application_applied_at`、19 项门槛、稳定性阈值和质量合同 v2 均不变。
+
+红灯、验证和停止点：先让测试精确拒绝旧 `10/0/10`、缺少 R1 独立路径、覆盖旧 preflight、partial 只有标签没有“双面事实”、稳定性不是 `2/2/1` 等情况；再做最小 fixture/生命周期/预检实现。运行 I3/I2 质量专项、阶段 7 扩大回归、后端全量、`py_compile`、密钥/真实 Adapter 静态扫描、I2 和旧 I3 证据差异、正式路径缺失及 `git diff --check`。真实调用、API attempt、token、费用、Key 读取、PostgreSQL 写入和正式结果写入固定为 0。完成后立即停止，由用户审核 R1 复核单；不得自动进入 CLOSE-06B。
+
+实施结果：精确红灯为 `6 failed + 3 passed`，分别锁定旧 `10/0/10`、0 个 partial、旧稳定性 `3 high / 0 partial / 2 low`、旧 run/path、缺少 superseded 证据登记和 payload 未绑定 R1。最小实现把报告重排为 8/6/6；6 个 partial 使用真实核心项目证据，同时按投递时间冻结 24/36 个月 required 缺口；稳定性索引冻结为 R00/R04/R08/R10/R14，即 `2/2/1`。新活动身份为 `7R5-I3-R1`，新 preflight/raw/human/final 均使用 `7r5i3-r1` 路径；旧 preflight 和复核单通过固定身份与字节指纹登记为 `superseded_by_user_review`，原文件未改。
+
+实现后质量专项 `90 passed`，阶段 7 扩大回归 `466 passed + 3 subtests passed`，后端全量 `1387 passed + 425 subtests passed + 2 warnings`；两个 warning 仍为既有 PyPDF2 弃用和异步连接取消提示。`py_compile`、密钥/真实 Adapter 静态扫描、旧 I3 两份证据身份、I2 正式文件 Git 差异、所有 I3 formal 路径缺失和 `git diff --check` 通过。R1 preflight 生命周期为 `i3_preflight_complete`，真实调用、API attempt、token、费用、Key 读取、PostgreSQL 写入和正式结果写入均为 0。本批能证明 R1 题目、标签、时间、快照、版本和本地接线已冻结，不能证明用户已接受逐案业务判断、真实模型质量或 final 会通过。当前停止，唯一下一步是用户审核 R1 复核单；接受后也必须另行确认 CLOSE-06B。
+
+### 11.2 CLOSE-06B：I3-R1 官方价格快照与金额门禁
+
+前置确认与唯一目标：用户已明确接受 I3-R1 冻结样本并单独授权开始 CLOSE-06B。本批只核对活动 preflight 的 `7R5-I3-R1 / i3_preflight_complete` 身份、查询 DeepSeek 官方实时价格、冻结独立 24 小时价格快照，并把 45 次基线业务调用和每次至多一次基础设施重试形成的 90 次最坏 API attempt 换算成美元上界。价格快照和预算估算都不等于真实调用授权。
+
+允许文件与链路位置：只允许修改本剩余计划、`PROJECT_STATE.md`、独立 I3-R1 价格门禁脚本及其测试，并新增 `docs/stages/stage7/2026-08-31-stage7-7r5i3-r1-pricing-snapshot.json`。这些内容位于生产“前端 → API → Schema → Service → Model → PostgreSQL”链路之外，只负责离线验收与费用保护；允许只读导入冻结 fixture、Prompt 构建器和质量合同来计算输入上界，但不得实例化真实 Adapter 或读取运行配置。
+
+固定计价合同：价格来源只能是 DeepSeek 官方价格页；快照固定来源 URL、查询时间、失效时间、模型及供应商展示版本、当前 peak/off-peak 时段、两档单价和官方时段规则。输入 token 上界按 45 份冻结请求序列化后的 UTF-8 字节数保守替代，输出上界继续固定为基线 500,000、含一次基础设施重试 1,000,000；缓存全部按未命中计算。当前费用同时显示当前时段估计和 peak 估计，向用户请求的金额不得低于 peak + 90 attempts 的最坏上界。快照最多 24 小时有效；即使未过 24 小时，06C 执行时若官方价格、模型或时段与快照不一致，也必须返回 06B 重新查询。
+
+红灯、验证与禁止范围：先用精确红灯锁定活动 R1 preflight 身份、45/90 次分母、500,000/1,000,000 输出上限、两档官方单价、当前时段判断、24 小时过期、独占写入、保守费用公式，以及 `real_run_allowed=false`、金额尚未授权和所有外部计数为 0；再做最小价格门禁实现和独立快照。运行 06B 专项、I3/I2 质量专项、阶段 7 扩大回归、后端全量、`py_compile`、密钥/真实 Adapter 静态扫描、I2/旧 I3/R1 preflight 差异、I3 formal 路径缺失和 `git diff --check`。禁止修改生产 Prompt、Schema、Service、Adapter、API、Model、migration、React、冻结 fixture/preflight、I2 或 PostgreSQL；禁止读取 Key、调用模型或创建 I3-R1 raw/human/final。
+
+完成标志、失败返回层与停止点：官方快照可复核、24 小时有效，预算同时覆盖 45 次正常运行和 90 次最坏 attempt，且 Key/Adapter/模型调用/API attempt/token/费用/PostgreSQL/正式结果写入新增均为 0。若 R1 身份或 preflight 不合法，返回 CLOSE-06A-R1；若官方页面、价格、时段或费用公式不确定，留在 CLOSE-06B；若快照过期或执行前价格/时段变化，也返回 CLOSE-06B。完成后立即停止，只向用户展示费用并请求一个明确美元硬上限；不得自动开始 CLOSE-06C。
+
+实施结果（2026-08-31）：DeepSeek 官方价格页在 `2026-08-31T12:27:50.142464+08:00` 显示 `deepseek-v4-flash / DeepSeek-V4-Flash-0731` 的 off-peak 单价为每百万 token `$0.007` 缓存命中输入、`$0.22` 缓存未命中输入、`$0.66` 输出，peak 单价为 `$0.014 / $0.44 / $1.32`；查询时为工作日 UTC 04:27，选择 off-peak。独立 write-once 快照为 `2026-08-31-stage7-7r5i3-r1-pricing-snapshot.json`，有效到 `2026-09-01T12:27:50.142464+08:00`；金额仍为空，`real_run_allowed=false`。
+
+冻结的 45 份请求序列化 UTF-8 字节上界为 759,426，90 attempts 上界为 1,518,852；输出上界分别为 500,000 和 1,000,000。全部输入按缓存未命中保守计算后，off-peak 的 45/90 次费用上界为 `$0.49707372 / $0.99414744`，peak 的 45/90 次上界为 `$0.99414744 / $1.98829488`；金额门禁最低为向上取整到美分的 `$1.99`，建议用户确认整数硬上限 `$2`。
+
+精确红灯为新价格门禁模块缺失导致 1 个 collection error；最小实现后 06B 专项 `5 passed`，I3/I2 质量专项 `95 passed`，阶段 7 相关扩大回归 `805 passed + 92 subtests passed`，后端全量 `1392 passed + 425 subtests passed + 2 warnings`、0 failures。`py_compile`、密钥/真实 Adapter 静态扫描、I3 formal 路径缺失、价格快照二次只读校验和 `git diff --check` 通过；两个 warning 仍为既有 PyPDF2 弃用和异步连接取消提示。生产链、冻结 fixture/preflight、I2、PostgreSQL 均未修改；Key 读取、真实 Adapter、模型调用、API attempt、token、费用和正式结果写入新增均为 0。CLOSE-06B 完成不代表金额或真实调用已经授权；当前立即停止，只等待用户明确确认美元硬上限并单独开始 CLOSE-06C。若确认时快照已过期、官方价格/模型变化或执行时段不再是 off-peak，必须返回 CLOSE-06B 重新查询。
+
+### 11.3 CLOSE-06C：I3-R1 唯一真实 raw
+
+前置授权与唯一目标：用户已明确回复“确认 USD 2 硬上限，开始 CLOSE-06C”。本批只执行 `7R5-I3-R1` 唯一一轮真实质量调用，固定 10 次计划、20 次报告和 15 次稳定性，共 45 次业务调用；每次只允许一次基础设施重试，最多 90 次 API attempt，内容错误不重试。无论完整跑完、部分失败还是费用/运行门禁停止，都必须形成一次不可覆盖 raw 后立即停止，不进入人工审计或 final。
+
+允许文件与链路位置：允许新增独立 I3-R1 真实运行器和专项测试，给质量合同补充 I3 自己的 preflight → raw → human → final 生命周期与 write-once 保护，新增只读绑定本轮用户授权、价格快照和 USD 2 上限的授权记录，并在运行结束后只写登记好的 I3-R1 raw；允许更新本计划和 `PROJECT_STATE.md`。它调用生产 Prompt → Schema → Service → Model，但不经过前端/API，不写业务 Model/PostgreSQL。禁止修改生产 Prompt、Schema、Service、Adapter、API、Model、migration、React、冻结 fixture/preflight、价格快照、I2 或旧 I3 证据。
+
+固定执行合同：计划调用使用 10 份 R1 计划 JD；20 份报告和 15 次稳定性必须使用调用前冻结且 HR 已确认的 `confirmed_plan_snapshot`，不得改用本轮计划生成结果。逐案 `evaluation_reference_at` 必须等于冻结的 `application_applied_at`，经历月份事实按该时间构建。模型、Prompt/Service/Schema 版本、temperature、thinking、JSON 格式和最大输出必须与 R1 preflight 一致。费用守卫必须在每个 attempt 前按保守上界检查 USD 2；真实响应必须保存模型、finish reason、token、费用估算、耗时、稳定错误和原始响应，不保存 Key、请求头、堆栈或思维链。
+
+红灯、非付费预检与真实写入：先建立精确红灯，证明旧 I2 运行入口不能承担 I3 生命周期/路径/fixture/确认计划快照，锁定 USD 2、价格快照身份与当前时段、45/90 分母、内容错误不重试、部分失败也只写一次 raw，以及所有正式写入前置检查必须早于读取 Key。最小实现后先跑 06C 专项、I3/I2 质量专项、阶段 7 扩大回归、后端全量、`py_compile`、静态扫描、I2/旧 I3/R1 preflight/价格快照保护、I3 raw 缺失和 `git diff --check`；全部通过且官方价格/模型/时段仍一致后，才允许读取运行配置、实例化真实 Adapter 并执行唯一 real。
+
+完成标志、失败返回层与停止点：raw 必须为 `7R5-I3-R1 / real_raw`，绑定 R1 preflight/fixture/价格/授权，完整记录实际分母、attempt、token、费用和自动结构结果，`quality_gate_passed=null`、`quality_conclusion_allowed=false`，human/final 仍不存在，PostgreSQL 写入为 0。若 preflight/fixture/确认计划快照不合法，返回 CLOSE-06A-R1；若价格、时段或金额门禁不合法，返回 CLOSE-06B；若运行入口或生命周期保护失败，留在 CLOSE-06C 且不得调用；真实运行一旦开始，任何结果都只封存 raw 并停止，不补跑。完成后唯一下一步是等待用户另行确认 CLOSE-06D 并由用户人工审计，Codex 不代审。
+
+实施结果（2026-08-31）：用户授权记录、独立 I3-R1 运行器、I3 生命周期/write-once 合同和专项测试已建立。初始精确红灯为新运行器模块缺失；最小实现后的 45 次完整 Fake 预检又准确发现 `evaluation_reference_at` 错传字符串而非带时区 datetime 的 1 个接线失败，修复后 10/20/15 全部通过生产 Service 路径。付费前 I3/I2 联合专项 `100 passed`、阶段 7 扩大回归 `811 passed + 92 subtests passed`、后端全量 `1398 passed + 425 subtests passed + 2 warnings`；官方模型、两档价格和当前 off-peak 时段二次核对不变，I3 formal 路径仍空，才读取 Key 并开始唯一 real。
+
+唯一真实运行完整结束并封存 raw：45/45 次业务调用、45 次 API attempt、0 重试、45 成功、0 attempt 失败；输入 182,757 tokens、输出 43,192 tokens，估算费用 `$0.06405111599999999`，未触发 USD 2 上限。计划结构合法且可追溯 `10/10`；报告合法 `20/20`、69/69 个非零评价有 evidence、五分区字段合法 `20/20`、自动方向一致 `17/20`；稳定性合法输出 `15/15`，方向稳定组 `3/5`、分差不超过 10 的组 `3/5`、极端方向翻转 0。后两项低于 final 的 `4/5` 门槛，是必须保留给 06D/06E 的已知风险，不能在 06C 直接改写为 final 结论。
+
+raw 大小 628,370 bytes，生命周期为 `i3_raw_complete`，`quality_gate_passed=null`、`quality_conclusion_allowed=false`；Key 未写入 raw，human/final 不存在，PostgreSQL 写入为 0，I2 正式文件无差异。封存后旧测试如预期出现 10 个“仍要求 raw 不存在”的生命周期失败；只更新测试认识 `i3_raw_complete` 并增加 raw 身份、10/20/15 分母、45/90 调用、金额和停止点校验后，联合专项 `102 passed`、阶段 7 扩大回归 `812 passed + 92 subtests passed`、后端全量 `1399 passed + 425 subtests passed + 2 warnings`。没有补跑或覆盖 raw。CLOSE-06C 至此完成并立即停止；唯一下一步是等待用户另行确认 CLOSE-06D，由用户完成人工审计，Codex 不代审，也不得自动创建 human/final。
+
+### 11.4 CLOSE-04R2：工作年限退出 AI 初筛（已完成文档批次）
+
+用户确认后的大白话规则是：AI 初筛只评价“做过什么、会什么、证据在哪里”，不再算或判断“工作了几年”。纯年限要求不进入评价计划和分数；“3 年以上 Java 经验”这类混合要求只保留 Java 能力主题，忽略 3 年门槛。具体工作年限由 HR 在 AI 初筛之外核对。计划、逐项评分、总分和五个报告分区均不得用年限加分、扣分或下结论。
+
+I3-R1 raw 继续按执行时的 v2 合同只读保留，生命周期仍为 `i3_raw_complete`，不补跑、不覆盖、不回算、不创建 human/final。用户接受其中稳定方向 `3/5`、分差 `3/5` 为已知风险；后续方向和分差继续记录但不再阻塞 final，合法输出 `15/15`、极端翻转 0、敏感评分 0 和非年限严重事实错误 0 仍是硬门槛。
+
+CLOSE-04R2 确认的目标是质量合同 v3、计划 v4/v5/5.0、报告 v7/v9/5.0；后续 CLOSE-05G—05I 已按下方记录依次实现。v3 保持 19 项硬门槛：把原来的稳定方向 `4/5` 和分差 `4/5` 两项替换成“计划纯年限评价点为 0”和“报告年限评分/结论为 0”；两项稳定性数据转为诊断，不删除。旧时间字段和数据库列先保留兼容，但新报告不得消费时间事实，`experience_period_fact_keys=[]`、`calculation_note=null`。
+
+本批只修改 5.0 主设计、本计划和 `PROJECT_STATE.md`，没有进入“前端 → API → Schema → Service → Model → PostgreSQL”生产链，也没有修改测试、质量运行器或证据。模型调用、API attempt、token、费用、Key 读取、PostgreSQL 写入和正式结果写入均为 0。它只能证明产品决定和顺序已经写清，不能证明代码或真实质量已经改变。
+
+### 11.5 修订后的唯一实施顺序
+
+以下批次必须逐批确认，任何一批结束都立即停止：
+
+#### CLOSE-05G：离线质量合同 v3
+
+唯一目标：先改“考卷和判分规则”，不碰生产业务。允许修改离线质量合同、全新 I4 fixture/标签、质量运行器的 I4 分支、专项测试和状态文档；链路位置在生产全链之外。必须先建立红灯，证明旧合同仍把年限和稳定方向/分差当硬门槛，再最小实现 v3：旧 I2/v1 与 I3-R1/v2 永不回算；纯年限不进 required 分母，混合要求保留能力标签；时间计算标签全部退出；稳定方向/分差只诊断；19 项中新增计划和报告两个“年限为零”硬门槛。禁止修改生产 Prompt/Service/Schema/API/Model/migration/React、旧 fixture、I2/I3-R1 证据和 PostgreSQL。完成后跑质量专项、阶段 7 扩大回归、后端全量、`py_compile`、静态扫描和 `git diff --check`，全部外部调用/写入为 0；失败返回质量合同层，成功后停止等待 CLOSE-05H。
+
+实施结果（2026-08-31）：CLOSE-05G 已完成并停止。精确红灯为 `13 failed + 1 passed`：失败只对应 v3/run 路由、I4 fixture、I4 分母/标签校验、I4 19 项判分和零调用审计尚不存在；既有“中文粗略重合只生成复核候选”保护保持通过。最小实现新增 `stage7_v5_quality_contract_v3` 和 `7R5-I4` 离线身份映射，I2 仍固定 v1、I3-R1 仍固定 v2且禁止历史回算；新增 10 份计划、20 组报告、5 组各 3 次稳定性的虚构 I4 离线 fixture。每份计划标签排除一条纯年限 required，并从一条混合要求保留非年限能力，P00 明确保留 Java；报告标签没有 `time_case/evaluation_reference_at/actual_months/threshold_months` 或年限达标结论。
+
+v3 判分继续保持 19 项硬门槛，原稳定方向和分差两项只写入 `blocking=false` 的诊断，原位置替换为 `plan_work_duration_criterion_zero` 和 `report_work_duration_scoring_or_judgment_zero`。稳定性合法输出 15/15 与极端翻转 0 共同保留在原极端翻转硬保护，敏感评分和非年限严重事实错误仍为零容忍；结构、引用、非零分证据、捏造和自动招聘决定等原门槛未降低。实现后 I4 专项 `14 passed`，I2/I3/I4 联合质量专项 `74 passed`，阶段 7 扩大回归 `299 passed + 3 subtests passed`，后端全量 `1413 passed + 425 subtests passed + 2 warnings`、0 failures；两条 warning 仍为既有 PyPDF2 弃用和 asyncpg 测试清理提示。`py_compile`、静态版本/外部入口扫描和 `git diff --check` 通过。
+
+测试进程显式关闭 `.env` 文件加载、把模型 Key 固定为空并使用 mock provider；模型调用、API attempt、token、费用、Key 读取和 PostgreSQL 写入均为 0。I2/I3-R1 后置生命周期分别仍为 `i2_final_complete` / `i3_raw_complete`，九份正式/冻结证据的大小与 UTC 修改时间和实施前一致，后置 SHA-256 已记录，证据目录无 Git 差异；I3-R1 human/final 不存在，I4 正式 preflight/raw/human/final 文件数为 0。本批只能证明离线 v3 考卷、标签、分母和判分规则可用且旧历史未改，不能证明生产计划或报告已经退出年限，也不能证明 I4 真实模型质量。失败应返回质量合同/I4 标签层；当前唯一下一步是等待用户另行确认 CLOSE-05H，不得自动实施。
+
+#### CLOSE-05H：计划链退出工作年限
+
+唯一目标：让新计划只留下可由 AI 评价的能力，不生成纯年限评价点。允许修改计划 Prompt、计划 Service 的确定性边界、相关 Schema 合同测试和状态文档；链路位置为 Schema → Service → Model 输入/输出边界，不改 API、业务 Model、migration、React 或 PostgreSQL。Prompt 升级 v4；Service 升级 v5，但只允许校验明确结构和输出字段，不恢复普通语义裁判。纯年限样本必须没有评价点，混合样本必须保留 Java 等能力主题且去掉年限评分条件，HR 编辑/确认权不变。先建红灯，再跑计划专项、阶段 7 扩大回归、后端全量和静态检查；真实调用和写入为 0。失败返回 Prompt/计划合同层，成功后停止等待 CLOSE-05I。
+
+实施结果（2026-08-31）：CLOSE-05H 已完成并停止。计划 Prompt 升级为 `job_evaluation_plan_lightweight_v4`，新增独立虚构边界示例并明确：纯工作年限不生成评价点；混合要求忽略年数/月数但保留 Go、Java 等能力主题；`name/description/screening_focus` 不得使用年限，逐字可定位的 `source_quote` 可以保留原文年限；具体年限由 HR 在 AI 初筛之外判断。正式 I4 计划要求没有复制进生产 Prompt。
+
+计划 Service 升级为 `lightweight_plan_generation_v5`。新增的确定性边界只检查评价点面向候选人的三个字段，拦截明确中文/英文工作年限、年限达标或持续月份表达；它不扫描 `source_quote`，不静默删除或改写模型内容，不恢复普通语义启发式硬裁判，非工作时长（例如三个月项目交付周期）仍合法。模型内容错误一次调用后直接失败且不重试；HR 编辑、新增、删除、合并和确认权不变，但不能把年限重新放回 AI 评价点。Schema、API、业务 Model、migration、React 和 PostgreSQL 均未修改，Schema 继续为 5.0。
+
+精确红灯为 `13 failed + 61 passed + 16 subtests passed`，失败只对应 Prompt/Service/配置仍是旧版本、缺少年限规则/示例及确定性拦截。最小实现后计划专项 `73 passed + 16 subtests passed`，I2/I3/I4 质量专项 `95 passed`，阶段 7 扩大回归 `502 passed + 3 subtests passed`，后端全量 `1424 passed + 425 subtests passed + 2 warnings`，0 failures；两条 warning 仍为既有 PyPDF2 弃用和 asyncpg 测试清理提示。扩大回归一度发现旧 I3 授权顺序测试会用当前 Prompt 重算冻结价格预算；只修正该测试的历史价格隔离后恢复通过，没有修改旧运行器、价格快照或正式证据。`py_compile`、实际版本核对、外部入口静态扫描和 `git diff --check` 通过。
+
+测试从无 `.env` 的 `backend` 目录启动，全部模型行为使用 Fake/Mock；真实模型调用、API attempt、token、费用、Key 读取和 PostgreSQL 写入均为 0。I2/I3-R1 后置生命周期仍为 `i2_final_complete` / `i3_raw_complete`，正式证据路径无 Git 差异；I3-R1 human/final 不存在，I4 正式 preflight/raw/human/final 文件数为 0。本批能证明生产计划的离线 Prompt/确定性 Service 边界和现有回归已退出工作年限，不能证明真实模型每次遵守、报告链已经退出年限或 I4 真实质量通过。失败应返回计划 Prompt/Service 输出边界；当前唯一下一步是等待用户单独确认 CLOSE-05I，不得自动实施。
+
+#### CLOSE-05I：报告链退出工作年限
+
+唯一目标：报告不再收到或使用工作年限事实。允许修改报告 Prompt、报告 Service 的结构校验、调用输入组装、相关 Schema 合同测试和状态文档；链路位置为 Schema → Service → Model 输入/输出边界，不改变 Schema 5.0 的持久化形状，不改 API、业务 Model、migration、React 或 PostgreSQL。Prompt 升级 v7，Service 升级 v9；新调用不向模型提供时间事实，输出必须为 `experience_period_fact_keys=[]`、`calculation_note=null`。Service 只校验这两个结构结果，不用关键词判断整段自然语言；年限是否偷偷影响评分由 Prompt、v3 冻结标签和人工审计兜底。先建红灯，再跑报告专项、阶段 7 扩大回归、后端全量和静态检查；真实调用和写入为 0。失败返回报告 Prompt/输入合同层，成功后停止等待 CLOSE-06R2-A。
+
+实施结果（2026-08-31）：CLOSE-05I 已完成并停止。报告 Prompt 升级为 `screening_evaluation_lightweight_v7`，明确 AI 不计算、不比较、不判断工作年限，不因年限加分或扣分；总体分、逐项评分、优势、差距、风险、缺失信息、跟进问题和总结均不得使用年限。混合要求仍评价 Java 等非年限能力。模型输入只保留完整 JD、确认计划和脱敏 Resume，不再包含投递时间、时区或经历时间事实。
+
+报告 Service 升级为 `lightweight_report_generation_v9`：旧时间输入参数只保留调用兼容，不再解析并以空值进入共享 Adapter；Prompt builder 不输出时间边界；解析结果要求每项 `experience_period_fact_keys=[]`、`calculation_note=null`。Service 不扫描自然语言中的年/月关键词，隐藏语义使用留给 v3 质量标签和未来人工审计。Schema 和持久化形状保持 5.0，运行/报告时间列继续用于旧数据兼容和审计；API、业务 Model、migration、React 和 PostgreSQL 均未修改。
+
+精确红灯为 `11 failed + 11 passed + 16 subtests passed`。实现后新增合同 `22 passed + 16 subtests passed`、既有报告专项 `138 passed`、I2/I3/I4 质量专项 `95 passed`、阶段 7 扩大回归 `499 passed + 3 subtests passed`。后端全量首轮的 2 个失败均为编排层旧测试仍要求时间进入模型或允许非空时间输出，按新合同修正后全量 `1421 passed + 425 subtests passed + 2 warnings`、0 failures；两条 warning 仍为既有 PyPDF2 弃用和 asyncpg 测试清理提示。`py_compile`、版本/模型输入/外部入口静态扫描通过。
+
+测试使用 Fake/Mock 和 `_env_file=None`，没有读取 `.env` 或 Key；真实模型调用、API attempt、token、费用和 PostgreSQL 写入均为 0。I2/I3-R1 生命周期仍为 `i2_final_complete` / `i3_raw_complete`，证据目录无 Git 差异；I3-R1 human/final 不存在，I4 正式文件数为 0。本批能证明离线报告链输入和结构输出合同已退出工作年限，不能证明真实模型一定不会偷偷在自然语言中使用年限，也不能证明 I4 真实质量或阶段 7 完成。失败应返回报告 Prompt/模型输入/结构输出边界。当前立即停止，唯一下一步是等待用户单独确认 CLOSE-06R2-A，不得自动创建 I4 正式证据或调用模型。
+
+#### CLOSE-06R2-A—E：独立 I4 真实质量复验
+
+I4 使用全新身份、路径、样本和 v3 标签，不能续跑或 finalize I3-R1。A 只冻结并零调用预检；B 只查官方价格并请求美元上限；C 获得单独金额授权后只执行唯一 raw；D 只保存用户人工审计；E 只合并 final。五批分别确认。I4 必须验证纯年限退出、混合能力保留、报告年限评分/结论为零、结构/证据/敏感/捏造/自动决定/极端翻转硬门槛，以及方向/分差诊断值。任一硬门槛失败返回 CLOSE-04R2/对应生产层，不能进入 CLOSE-07；全部通过后仍须停止并等待用户确认 CLOSE-07。
+
+实施结果（2026-08-31，CLOSE-06R2-A）：全新 `7R5-I4` 已登记独立 preflight/raw/human/final 路径和 `i4_not_started` 至 `i4_final_complete` 生命周期；本批只写入 `2026-08-31-stage7-7r5i4-zero-call-preflight.json` 与 `2026-08-31-stage7-7r5i4-fixture-review.md`，生命周期为 `i4_preflight_complete`，raw/human/final 均不存在。preflight 冻结 v3 合同、当前计划 v4/v5/5.0、报告 v7/v9/5.0、I4 fixture 指纹、10/20/5×3 分母、8/6/6 报告方向和 2/2/1 稳定性抽样；明确简历任职日期可以保留为原始经历定位信息，但不得计算、判断或评分工作年限。纯年限要求排除数为 10，混合要求非年限能力保留数为 10。
+
+精确红灯为 `6 failed`，分别证明 I4 路径、生命周期、专用 preflight、正式材料和 write-once 保护原本不存在。最小实现后 I4/CLOSE-05G 专项 `20 passed`，I2/I3/I4 联合质量专项 `122 passed`，阶段 7/v5 扩大回归 `540 passed + 3 subtests passed`，后端全量 `1427 passed + 425 subtests passed + 2 warnings`、0 failures；两条 warning 仍为既有 PyPDF2 弃用和 asyncpg 测试清理提示。`py_compile`、外部入口静态扫描和 `git diff --check` 通过。I2/I3-R1 生命周期仍为 `i2_final_complete` / `i3_raw_complete`，实施前后六份关键历史文件 SHA-256 一致；I3-R1 human/final 不存在。模型调用、API attempt、token、费用、价格查询、Key 读取和 PostgreSQL 写入均为 0。本批只能证明 I4 考卷身份、离线标签、执行版本和零调用前置条件已冻结，不能证明价格、金额授权、真实模型质量或 final 通过。当前立即停止，唯一下一步是用户审核 I4 复核单后另行确认 `CLOSE-06R2-B`；不得自动查价或进入 C—E。
+
 ## 12. 7R5-CLOSE-07：7R5-J 真实全链收尾
 
-依赖：I3 final 全部门槛通过，用户另行确认。
+依赖：修订后的 I4 final 全部硬门槛通过，用户另行确认。I3-R1 raw 不能满足本依赖。
 
 唯一目标：用真实 PostgreSQL、真实 `/api/v2` 和真实浏览器证明 5.0 可操作、可恢复、可审计。
 
@@ -335,12 +506,15 @@ I3 必须是新 run，不能继续、补跑、覆盖或 finalize I2。目标版�
 
 ## 14. 当前停止点
 
-当前 CLOSE-00、CLOSE-02、CLOSE-03A、CLOSE-03B、CLOSE-04 和 CLOSE-04R 均已完成。I2 生命周期保持 `i2_final_complete`；修订后的综合整改已写成 05A—05E，但尚未实施。当前停止在 CLOSE-05A 单独授权门禁：
+当前 CLOSE-00、CLOSE-02、CLOSE-03A/B、CLOSE-04/04R、CLOSE-05A—I、修订后的 CLOSE-06A-R1、CLOSE-06B、CLOSE-06C、文档批次 CLOSE-04R2 和 CLOSE-06R2-A 均已完成。I2 生命周期保持 `i2_final_complete`；I3-R1 生命周期保持 `i3_raw_complete`，human/final 不存在且不再继续；I4 生命周期为 `i4_preflight_complete`，raw/human/final 不存在。离线质量合同 v3、I4 测试标签、零调用 preflight 和复核单已经冻结；当前生产实现是计划 Prompt/Service v4/v5、报告 Prompt/Service v7/v9，计划和报告 Schema 均为 5.0。当前停止等待用户审核 I4 复核单并单独确认 CLOSE-06R2-B：
 
 - 不重复修改或复验已完成的 Resume R1-B；
 - 不再执行 CLOSE-02 测试、真实 API、数据库或模型调用；
 - 不覆盖、重算或重新 finalize I2 raw/human/final；
-- 不提前修改 Prompt、Schema、Service 或质量工具；
-- 不连续进入 CLOSE-05B—05E、I3、7R5-J 或阶段 8。
+- 不重复修改已完成的 Prompt、Service、Schema、数据库或其他生产模块；
+- 不修改旧 I3 或 I3-R1 的已冻结样本、标签和 zero-call preflight；
+- 不覆盖、补跑、续跑或重新生成 I3-R1 raw；不创建其 human/final，不再次读取 Key 或调用模型；
+- 不再修改已完成的生产计划或报告 Prompt/Service/Schema，不创建 I4 正式 raw/human/final；
+- 不重复或覆盖 CLOSE-06R2-A preflight/复核单，不连续进入 CLOSE-06R2-B—E、7R5-J 或阶段 8。
 
-CLOSE-05A 只有在用户另行明确确认后才能先修 I3 验收尺子与标签合同；当前文档设计完成不等于实现授权。
+CLOSE-05G—05I 与 CLOSE-06R2-A 完成只证明离线质量合同、生产计划/报告边界和 I4 零调用前置条件已按新产品决定冻结，不等于真实模型质量或 I4 已经通过。唯一下一步是用户审核 `2026-08-31-stage7-7r5i4-fixture-review.md` 后单独确认 CLOSE-06R2-B；B 只允许查官方价格并请求美元硬上限，不得读取 Key、调用模型或创建 raw/human/final。

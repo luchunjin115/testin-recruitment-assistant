@@ -108,11 +108,11 @@ class SettingsTest(TestCase):
         self.assertEqual(settings.JOB_EVALUATION_PLAN_SCHEMA_VERSION, "3.0")
         self.assertEqual(
             settings.JOB_EVALUATION_PLAN_V5_PROMPT_VERSION,
-            "job_evaluation_plan_lightweight_v2",
+            "job_evaluation_plan_lightweight_v4",
         )
         self.assertEqual(
             _env_example_values()["JOB_EVALUATION_PLAN_V5_PROMPT_VERSION"],
-            "job_evaluation_plan_lightweight_v2",
+            "job_evaluation_plan_lightweight_v4",
         )
         self.assertEqual(settings.JOB_EVALUATION_PLAN_V5_AI_SCHEMA_VERSION, "5.0")
         self.assertEqual(settings.JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION, "5.0")
@@ -142,7 +142,7 @@ class SettingsTest(TestCase):
         self.assertEqual(settings.SCREENING_EVALUATION_SCHEMA_VERSION, "2.0")
         self.assertEqual(
             settings.SCREENING_EVALUATION_V5_PROMPT_VERSION,
-            "screening_evaluation_lightweight_v4",
+            "screening_evaluation_lightweight_v7",
         )
         self.assertEqual(settings.SCREENING_EVALUATION_V5_SCHEMA_VERSION, "5.0")
         self.assertEqual(settings.SCREENING_EVALUATION_TIMEZONE, "Asia/Shanghai")

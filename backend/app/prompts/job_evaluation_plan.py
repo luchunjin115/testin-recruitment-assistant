@@ -24,7 +24,7 @@ JOB_REQUIREMENT_LOCAL_REPAIR_PROMPT_VERSION = "job_requirement_local_repair_v2"
 JOB_EVALUATION_CRITERION_GROUPING_PROMPT_VERSION = (
     "job_evaluation_criterion_grouping_v2"
 )
-JOB_EVALUATION_PLAN_V5_PROMPT_VERSION = "job_evaluation_plan_lightweight_v2"
+JOB_EVALUATION_PLAN_V5_PROMPT_VERSION = "job_evaluation_plan_lightweight_v4"
 
 
 class JobEvaluationPlanMessage(TypedDict):
@@ -306,6 +306,111 @@ JOB_EVALUATION_PLAN_V5_FEW_SHOT_EXAMPLES: tuple[dict[str, Any], ...] = (
         },
     },
     {
+        "case": "work_duration_excluded_mixed_capability_retained",
+        "input": {
+            "job_context": {"title": "基础设施自动化工程师"},
+            "evaluation_fields": {
+                "job_responsibilities": "负责平台基础设施自动化。",
+                "candidate_requirements": (
+                    "6 年以上工作经验；2 年以上 Go 经验。"
+                ),
+                "preferred_qualifications": None,
+            },
+        },
+        "output": {
+            "criteria": [
+                {
+                    "name": "Go 工程实践",
+                    "importance": "required",
+                    "description": "判断是否具有 Go 工程实践。",
+                    "screening_focus": "寻找 Go 项目职责、实现和交付结果证据。",
+                    "sources": [
+                        {
+                            "source_field": "candidate_requirements",
+                            "source_quote": "2 年以上 Go 经验",
+                        }
+                    ],
+                }
+            ]
+        },
+    },
+    {
+        "case": "conditional_trigger_established",
+        "input": {
+            "job_context": {"title": "库房盘点协调员"},
+            "evaluation_fields": {
+                "job_responsibilities": "本岗位固定承担夜间库房盘点。",
+                "candidate_requirements": (
+                    "当承担夜间库房盘点时，必须熟练使用射频盘点终端。"
+                ),
+                "preferred_qualifications": None,
+            },
+        },
+        "output": {
+            "criteria": [
+                {
+                    "name": "夜间库房盘点时的射频终端操作",
+                    "importance": "required",
+                    "description": (
+                        "本岗位固定承担夜间库房盘点，判断是否能在该场景"
+                        "熟练使用射频盘点终端。"
+                    ),
+                    "screening_focus": (
+                        "寻找夜间库房盘点时使用射频盘点终端的职责和实践证据。"
+                    ),
+                    "sources": [
+                        {
+                            "source_field": "job_responsibilities",
+                            "source_quote": "本岗位固定承担夜间库房盘点",
+                        },
+                        {
+                            "source_field": "candidate_requirements",
+                            "source_quote": (
+                                "当承担夜间库房盘点时，必须熟练使用射频盘点终端"
+                            ),
+                        },
+                    ],
+                }
+            ]
+        },
+    },
+    {
+        "case": "conditional_trigger_unresolved",
+        "input": {
+            "job_context": {"title": "展陈物料助理"},
+            "evaluation_fields": {
+                "job_responsibilities": "负责展陈物料登记。",
+                "candidate_requirements": (
+                    "仅在参与海外展陈布置时，须能阅读英文安装图纸。"
+                ),
+                "preferred_qualifications": None,
+            },
+        },
+        "output": {
+            "criteria": [
+                {
+                    "name": "海外展陈布置时的英文安装图纸阅读",
+                    "importance": "general",
+                    "description": (
+                        "仅在参与海外展陈布置时，判断是否能阅读英文安装图纸，"
+                        "并交给 HR 确认该条件是否适用于本岗位。"
+                    ),
+                    "screening_focus": (
+                        "仅在参与海外展陈布置时，寻找阅读英文安装图纸的实践证据。"
+                    ),
+                    "sources": [
+                        {
+                            "source_field": "candidate_requirements",
+                            "source_quote": (
+                                "仅在参与海外展陈布置时，须能阅读英文安装图纸"
+                            ),
+                        }
+                    ],
+                }
+            ]
+        },
+    },
+    {
         "case": "negation_turn_and_relaxation",
         "input": {
             "job_context": {"title": "材料测试协调员"},
@@ -389,7 +494,9 @@ _V5_PROMPT_SECTIONS = (
     ),
     (
         "评价点生成规则",
-        """每项只表达一个可由简历证据判断的主要主题，允许在语义相同时引用多处真实 JD 原文。公司宣传、团队氛围、薪酬福利、办公环境、招聘流程、投递方式、联系人和截止时间不是评价内容。不得凭常识增加 JD 没写的学历、年限、证书、行业、技能、门槛或强制语气；不得为达到建议数量而制造或重复评价点。""",
+        """每项只表达一个可由简历证据判断的主要主题，允许在语义相同时引用多处真实 JD 原文。公司宣传、团队氛围、薪酬福利、办公环境、招聘流程、投递方式、联系人和截止时间不是评价内容。不得凭常识增加 JD 没写的学历、年限、证书、行业、技能、门槛或强制语气；不得为达到建议数量而制造或重复评价点。
+
+AI 初筛彻底退出工作年限判断：不计算工作年限，不判断工作年限是否达到 JD 要求，也不因工作年限增加、降低或改变任何评价点。纯工作年限要求不得生成评价点；遇到“N 年以上某项技术经验”一类混合要求时，忽略其中的工作年限，但保留非年限能力、实践主题及其真实证据。name、description、screening_focus 不得写入年数、月数、年限达标或未达标判断；source_quote 可以保留逐字原文中的年限，因为它只负责可追溯引用，不代表 AI 使用年限评分。具体工作年限交给 HR 在 AI 初筛之外判断。""",
     ),
     (
         "importance 判断规则",
@@ -398,9 +505,14 @@ _V5_PROMPT_SECTIONS = (
 - 原文明确定义为优先、加分、更佳、非必须、有则更好或同等弱约束时使用 preferred。
 - 普通职责、普通能力描述或完整原文没有明确强弱信号时使用 general。
 
-必须理解否定、转折、非必须、可放宽、条件例外和多来源强弱混合的完整语义，不能截取单个关键词下结论。五段式字段位置只提供上下文和一致性信号：岗位职责通常倾向 general、任职要求通常倾向 required、加分项通常倾向 preferred，但字段位置不得机械覆盖原文语义。importance 只是交给 HR 审核的业务建议，不是权重或招聘结论。
+必须理解否定、转折、非必须、可放宽、条件例外和多来源强弱混合的完整语义，不能截取单个关键词下结论。遇到“若、当、仅在……时”等条件性要求，先识别触发条件是否已经由完整 JD 明确成立：
+- 只有完整 JD 已明确说明本岗位必然触发该条件时，才按条件内部的强弱语气判断 importance；即使条件成立，name、description、screening_focus 和来源仍须保留适用场景，不得把条件删除后改写成更宽的要求。
+- 完整 JD 未明确触发时，不得自行假定触发条件成立。只有在前置条件成立才有意义的子要求，通常使用 general，并在 name、description 或 screening_focus 中保留完整条件，作为草稿交给 HR 复核；不得把它表述成对所有候选人无条件生效的 required。
+- 不得删除、弱化或改写触发条件，也不得为无条件要求编造前置条件。JD 没有条件时，仍按原文真实强弱判断 required、preferred 或 general。
 
-下面是 5 个虚构、去标识化的边界 Few-shot。只学习其原文语义、来源和合法输出边界，不得补充示例外知识；示例不代表正式质量验收样本：
+五段式字段位置只提供上下文和一致性信号：岗位职责通常倾向 general、任职要求通常倾向 required、加分项通常倾向 preferred，但字段位置不得机械覆盖原文语义。importance 只是交给 HR 审核的业务建议，不是权重或招聘结论。
+
+下面是 8 个虚构、去标识化的边界 Few-shot。只学习其原文语义、来源和合法输出边界，不得补充示例外知识；示例不代表正式质量验收样本：
 {_V5_FEW_SHOT_TEXT}""",
     ),
     (
@@ -418,7 +530,7 @@ _V5_PROMPT_SECTIONS = (
     ),
     (
         "输出前静默自检",
-        """提交最终 JSON 前，只在内部静默核对：每个来源能否逐字定位；是否擅自新增要求；importance 是否结合全部来源、否定、转折和可放宽语义；是否涉及敏感信息；是否包含自动通过、淘汰或录用决定；是否超过 30 项；是否输出了任何额外字段。不得输出、保存或复述分析步骤、思维链、草稿或自检过程；完成核对后只返回最终 JSON。""",
+        """提交最终 JSON 前，只在内部静默核对：每个来源能否逐字定位；是否擅自新增要求；纯工作年限要求是否已排除，混合要求是否只保留非年限能力，且 name、description、screening_focus 是否完全没有使用工作年限；importance 是否结合全部来源、否定、转折和可放宽语义；条件性要求是否保留完整触发条件、未被升格成无条件 required，且无条件要求是否没有被编造前置条件；是否涉及敏感信息；是否包含自动通过、淘汰或录用决定；是否超过 30 项；是否输出了任何额外字段。不得输出、保存或复述分析步骤、思维链、草稿或自检过程；完成核对后只返回最终 JSON。""",
     ),
 )
 

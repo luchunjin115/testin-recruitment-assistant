@@ -64,6 +64,8 @@ from stage7_7r5_quality_contract import (  # noqa: E402
     I2_FINAL_RESULT_PATH,
     I2_HUMAN_AUDIT_PATH,
     I2_RAW_RESULT_PATH,
+    I3_QUALITY_CONTRACT_VERSION,
+    I4_QUALITY_CONTRACT_VERSION,
     MAXIMUM_API_ATTEMPTS,
     PLAN_MAX_OUTPUT_TOKENS,
     PLANNED_MODEL,
@@ -72,10 +74,13 @@ from stage7_7r5_quality_contract import (  # noqa: E402
     estimate_attempt_cost_usd,
     execution_contract,
     human_audit_contract,
+    i3_quality_contract,
+    i4_quality_contract,
     i2_raw_execution_contract,
     result_paths,
     validate_frozen_fixture,
     validate_historical_results,
+    validate_i4_fixture,
     validate_pricing_snapshot,
     validate_result_lifecycle,
     write_new_json,
@@ -250,6 +255,32 @@ def _rough_label_match(label: str, text: str) -> bool:
     return label in text or overlap >= 0.55
 
 
+def rough_plan_label_diagnostics(
+    *, rendered_criteria: str, labels: dict[str, Any]
+) -> dict[str, Any]:
+    """Return rough-overlap candidates without making a semantic decision."""
+
+    return {
+        "required_candidates": [
+            label
+            for label in labels.get("key_required_items", [])
+            if _rough_label_match(label, rendered_criteria)
+        ],
+        "non_evaluation_candidates": [
+            label
+            for label in labels.get("non_evaluation_content", [])
+            if _rough_label_match(label, rendered_criteria)
+        ],
+        "forbidden_addition_candidates": [
+            label
+            for label in labels.get("forbidden_additions", [])
+            if _rough_label_match(label, rendered_criteria)
+        ],
+        "formal_semantic_failure_count": 0,
+        "diagnostic_only": True,
+    }
+
+
 def summarize_plans(records: list[dict[str, Any]]) -> dict[str, Any]:
     required_total = required_covered = 0
     non_eval_total = non_eval_misclassified = 0
@@ -318,6 +349,300 @@ def summarize_reports(records: list[dict[str, Any]], *, stability: bool = False)
         )
         result["extreme_direction_flip_count"] = sum(group["extreme_direction_flip"] for group in groups)
     return result
+
+
+def build_i3_gate_result(
+    *,
+    automatic: dict[str, Any],
+    metrics: dict[str, Any],
+    denominators: dict[str, int],
+) -> dict[str, Any]:
+    """Build I3's 19 offline gates without writing or finalizing any result."""
+
+    plans = automatic["plans"]
+    reports = automatic["reports"]
+    stability = automatic["stability"]
+    plan_required_denominator = denominators["plan_required"]
+    report_direction_denominator = denominators["report_direction"]
+    required_direction_denominator = denominators["required_direction"]
+    gates = {
+        "plan_10_of_10_legal": plans["structure_legal_count"] == 10,
+        "plan_required_coverage_100_percent": metrics.get(
+            "plan_required_covered_count"
+        )
+        == plan_required_denominator,
+        "plan_forbidden_additions_zero": metrics.get(
+            "plan_forbidden_addition_count"
+        )
+        == 0,
+        "plan_sensitive_zero": metrics.get("plan_sensitive_criterion_count") == 0,
+        "plan_non_evaluation_zero": metrics.get(
+            "plan_non_evaluation_misclassified_count"
+        )
+        == 0,
+        "plan_traceability_100_percent": plans["traceable_plan_count"] == 10,
+        "report_20_of_20_legal": reports["legal_report_count"] == 20
+        and reports["required_section_fields_legal_count"] == 20,
+        "report_nonzero_evidence_100_percent": reports[
+            "nonzero_assessment_count"
+        ]
+        == reports["nonzero_with_evidence_count"],
+        "report_fabrication_zero": metrics.get("report_fabricated_fact_count")
+        == 0,
+        "report_severe_fact_error_zero": metrics.get(
+            "report_severe_fact_error_count"
+        )
+        == 0,
+        "report_sensitive_scoring_zero": metrics.get(
+            "report_sensitive_scoring_count"
+        )
+        == 0,
+        "report_automatic_decision_zero": metrics.get(
+            "report_automatic_decision_count"
+        )
+        == 0,
+        "report_direction_at_least_80_percent": metrics.get(
+            "report_direction_consistent_count", -1
+        )
+        * 100
+        >= report_direction_denominator * 80,
+        "required_direction_at_least_90_percent": metrics.get(
+            "required_direction_consistent_count", -1
+        )
+        * 100
+        >= required_direction_denominator * 90,
+        "report_material_findings_omission_zero": metrics.get(
+            "report_material_finding_omission_count"
+        )
+        == 0,
+        "stability_direction_at_least_4_of_5": stability[
+            "direction_stable_group_count"
+        ]
+        >= 4,
+        "stability_spread_at_least_4_of_5": stability[
+            "max_difference_le_10_group_count"
+        ]
+        >= 4,
+        "stability_extreme_flip_zero": stability["extreme_direction_flip_count"]
+        == 0,
+        "stability_severe_and_sensitive_zero": metrics.get(
+            "stability_severe_fact_error_count"
+        )
+        == 0
+        and metrics.get("stability_sensitive_scoring_count") == 0,
+    }
+    if len(gates) != 19:
+        raise RuntimeError("I3 final 必须保持 19 项门槛")
+    passed = [name for name, value in gates.items() if value]
+    failed = [name for name, value in gates.items() if not value]
+    return {
+        "quality_contract_version": I3_QUALITY_CONTRACT_VERSION,
+        "gates": gates,
+        "passed_gates": passed,
+        "failed_gates": failed,
+        "gate_summary": {
+            "total": len(gates),
+            "passed": len(passed),
+            "failed": len(failed),
+        },
+        "report_zero_tolerance_counts": {
+            "severe_fact_error_count": metrics.get(
+                "report_severe_fact_error_count"
+            ),
+            "sensitive_scoring_count": metrics.get(
+                "report_sensitive_scoring_count"
+            ),
+        },
+        "stability_zero_tolerance_counts": {
+            "severe_fact_error_count": metrics.get(
+                "stability_severe_fact_error_count"
+            ),
+            "sensitive_scoring_count": metrics.get(
+                "stability_sensitive_scoring_count"
+            ),
+        },
+        "quality_gate_passed": all(gates.values()),
+    }
+
+
+def i3_zero_call_contract_payload() -> dict[str, Any]:
+    """Expose CLOSE-05A's offline contract without creating an I3 result."""
+
+    return {
+        "mode": "i3_quality_contract_v2_zero_call",
+        "quality_contract": i3_quality_contract(),
+        "formal_i3_result_created": False,
+        "real_model_call_count": 0,
+        "api_attempt_count": 0,
+        "input_token_count": 0,
+        "output_token_count": 0,
+        "estimated_spend_usd": 0,
+        "api_key_read": False,
+        "postgresql_write_count": 0,
+    }
+
+
+def build_i4_gate_result(
+    *,
+    automatic: dict[str, Any],
+    metrics: dict[str, Any],
+    denominators: dict[str, int],
+) -> dict[str, Any]:
+    """Build v3's 19 offline gates without touching historical or formal files."""
+
+    fixture = validate_i4_fixture()
+    expected_denominators = {
+        "plan_required": fixture["plan_required_label_denominator"],
+        "report_direction": fixture["report_case_count"],
+        "required_direction": fixture["report_required_direction_denominator"],
+    }
+    if denominators != expected_denominators:
+        raise RuntimeError("I4 v3 判分分母与离线 fixture 标签不一致")
+    plans = automatic["plans"]
+    reports = automatic["reports"]
+    stability = automatic["stability"]
+    gates = {
+        "plan_10_of_10_legal": plans["structure_legal_count"] == 10,
+        "plan_required_coverage_100_percent": metrics.get(
+            "plan_required_covered_count"
+        )
+        == denominators["plan_required"],
+        "plan_forbidden_additions_zero": metrics.get(
+            "plan_forbidden_addition_count"
+        )
+        == 0,
+        "plan_sensitive_zero": metrics.get("plan_sensitive_criterion_count") == 0,
+        "plan_non_evaluation_zero": metrics.get(
+            "plan_non_evaluation_misclassified_count"
+        )
+        == 0,
+        "plan_traceability_100_percent": plans["traceable_plan_count"] == 10,
+        "report_20_of_20_legal": reports["legal_report_count"] == 20
+        and reports["required_section_fields_legal_count"] == 20,
+        "report_nonzero_evidence_100_percent": reports[
+            "nonzero_assessment_count"
+        ]
+        == reports["nonzero_with_evidence_count"],
+        "report_fabrication_zero": metrics.get("report_fabricated_fact_count")
+        == 0,
+        "report_severe_fact_error_zero": metrics.get(
+            "report_severe_fact_error_count"
+        )
+        == 0,
+        "report_sensitive_scoring_zero": metrics.get(
+            "report_sensitive_scoring_count"
+        )
+        == 0,
+        "report_automatic_decision_zero": metrics.get(
+            "report_automatic_decision_count"
+        )
+        == 0,
+        "report_direction_at_least_80_percent": metrics.get(
+            "report_direction_consistent_count", -1
+        )
+        * 100
+        >= denominators["report_direction"] * 80,
+        "required_direction_at_least_90_percent": metrics.get(
+            "required_direction_consistent_count", -1
+        )
+        * 100
+        >= denominators["required_direction"] * 90,
+        "report_material_findings_omission_zero": metrics.get(
+            "report_material_finding_omission_count"
+        )
+        == 0,
+        "plan_work_duration_criterion_zero": metrics.get(
+            "plan_work_duration_criterion_count"
+        )
+        == 0,
+        "report_work_duration_scoring_or_judgment_zero": metrics.get(
+            "report_work_duration_scoring_or_judgment_count"
+        )
+        == 0,
+        # The legacy gate name remains stable, while v3 explicitly requires all
+        # 15 outputs to be legal before an extreme-flip count can pass.
+        "stability_extreme_flip_zero": stability["legal_report_count"] == 15
+        and stability["extreme_direction_flip_count"] == 0,
+        "stability_severe_and_sensitive_zero": metrics.get(
+            "stability_severe_fact_error_count"
+        )
+        == 0
+        and metrics.get("stability_sensitive_scoring_count") == 0,
+    }
+    if len(gates) != 19:
+        raise RuntimeError("I4 v3 final 必须保持 19 项硬门槛")
+    passed = [name for name, value in gates.items() if value]
+    failed = [name for name, value in gates.items() if not value]
+    return {
+        "quality_contract_version": I4_QUALITY_CONTRACT_VERSION,
+        "gates": gates,
+        "passed_gates": passed,
+        "failed_gates": failed,
+        "gate_summary": {
+            "total": len(gates),
+            "passed": len(passed),
+            "failed": len(failed),
+        },
+        "stability_diagnostics": {
+            "direction_stable_group_count": stability[
+                "direction_stable_group_count"
+            ],
+            "max_difference_le_10_group_count": stability[
+                "max_difference_le_10_group_count"
+            ],
+            "direction_target_reference": 4,
+            "spread_target_reference": 4,
+            "blocking": False,
+        },
+        "stability_hard_protections": {
+            "legal_report_count": stability["legal_report_count"],
+            "legal_report_required_count": 15,
+            "extreme_direction_flip_count": stability[
+                "extreme_direction_flip_count"
+            ],
+            "severe_fact_error_count": metrics.get(
+                "stability_severe_fact_error_count"
+            ),
+            "sensitive_scoring_count": metrics.get(
+                "stability_sensitive_scoring_count"
+            ),
+            "severe_fact_error_scope": "non_work_duration_facts_only",
+        },
+        "report_zero_tolerance_counts": {
+            "fabricated_fact_count": metrics.get("report_fabricated_fact_count"),
+            "severe_fact_error_count": metrics.get(
+                "report_severe_fact_error_count"
+            ),
+            "severe_fact_error_scope": "non_work_duration_facts_only",
+            "sensitive_scoring_count": metrics.get(
+                "report_sensitive_scoring_count"
+            ),
+            "automatic_decision_count": metrics.get(
+                "report_automatic_decision_count"
+            ),
+        },
+        "historical_runs_recalculated": False,
+        "quality_gate_passed": all(gates.values()),
+    }
+
+
+def i4_zero_call_contract_payload() -> dict[str, Any]:
+    """Expose CLOSE-05G's offline contract without creating formal I4 evidence."""
+
+    return {
+        "mode": "i4_quality_contract_v3_zero_call",
+        "quality_contract": i4_quality_contract(),
+        "fixture_summary": validate_i4_fixture(),
+        "formal_i4_result_created": False,
+        "historical_runs_recalculated": False,
+        "real_model_call_count": 0,
+        "api_attempt_count": 0,
+        "input_token_count": 0,
+        "output_token_count": 0,
+        "estimated_spend_usd": 0,
+        "api_key_read": False,
+        "postgresql_write_count": 0,
+    }
 
 
 async def _run_plan(case: dict[str, Any], index: int, adapter: Any) -> tuple[dict[str, Any], GeneratedPlanContentV5 | None]:

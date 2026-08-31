@@ -27,7 +27,6 @@ from app.schemas.job_evaluation_plan import (
     JobEvaluationPlanInputSnapshot,
     RequirementFact,
     RequirementFactCategory,
-    V5CriterionItem,
 )
 from app.schemas.screening_evaluation import (
     AIScreeningEvaluationV5Output,
@@ -318,7 +317,7 @@ class ScreeningEvaluationService:
         resume_text: str,
         evaluation_reference_at: datetime,
         evaluation_timezone: str,
-        experience_period_facts: ExperiencePeriodFactsSnapshot | dict[str, Any],
+        experience_period_facts: ExperiencePeriodFactsSnapshot | dict[str, Any] | None = None,
         adapter: ScreeningEvaluationAdapter | None = None,
         settings: Settings | None = None,
     ) -> ScreeningEvaluationV5Result:
@@ -332,19 +331,6 @@ class ScreeningEvaluationService:
             resume_text,
         )
         try:
-            period_facts = ExperiencePeriodFactsSnapshot.model_validate(
-                experience_period_facts
-            )
-        except (ValidationError, TypeError, ValueError):
-            raise ScreeningEvaluationInputError("经历时间事实输入无效") from None
-        expected_reference = evaluation_reference_at.isoformat()
-        if (
-            period_facts.evaluation_reference_at != expected_reference
-            or period_facts.evaluation_timezone != evaluation_timezone
-        ):
-            raise ScreeningEvaluationInputError("经历时间事实与评价基准不一致")
-
-        try:
             resolved_adapter = adapter or DeepSeekScreeningEvaluationAdapter(
                 settings=resolved_settings
             )
@@ -352,9 +338,9 @@ class ScreeningEvaluationService:
                 job_snapshot=snapshot.model_dump(mode="json"),
                 evaluation_plan=plan.model_dump(mode="json"),
                 sanitized_resume=sanitized_resume,
-                evaluation_reference_at=expected_reference,
-                evaluation_timezone=evaluation_timezone,
-                experience_period_facts=period_facts.model_dump(mode="json"),
+                evaluation_reference_at="",
+                evaluation_timezone="",
+                experience_period_facts={},
             )
         except ScreeningEvaluationAdapterError:
             raise
@@ -367,7 +353,6 @@ class ScreeningEvaluationService:
             adapter_result.content,
             evaluation_plan=plan,
             sanitized_resume=sanitized_resume,
-            experience_period_facts=period_facts,
         )
         return ScreeningEvaluationV5Result(
             report=report,
@@ -388,7 +373,7 @@ class ScreeningEvaluationService:
         *,
         evaluation_plan: ScreeningEvaluationPlanInputV5 | dict[str, Any],
         sanitized_resume: str,
-        experience_period_facts: ExperiencePeriodFactsSnapshot,
+        experience_period_facts: ExperiencePeriodFactsSnapshot | None = None,
     ) -> ScreeningEvaluationV5ReportPayload:
         try:
             payload = json.loads(content, object_pairs_hook=self._unique_json_object)
@@ -402,23 +387,12 @@ class ScreeningEvaluationService:
         self.validate_v5_criterion_cross_reference(output, plan)
         criteria_by_id = {item.criterion_id: item for item in plan.criteria}
         for assessment in output.criterion_assessments:
-            criterion = criteria_by_id[assessment.criterion_id]
             self.validate_v5_evidence_required(assessment)
-            self.validate_v5_zero_score_reason(assessment)
             self._validate_evidence(assessment.evidence, sanitized_resume)
-            if self._ASSERTED_INABILITY.search(assessment.reason):
-                raise ScreeningEvaluationInvalidOutputError(
-                    "5.0 AI 初筛不得把未发现证据写成候选人不会"
-                )
-            self._validate_v5_experience_fact_claims(
-                assessment,
-                criterion,
-                experience_period_facts,
-            )
+            self._validate_v5_compatibility_time_fields(assessment)
 
         self._validate_v5_findings(output, plan, sanitized_resume)
         self._validate_v5_safety(output)
-        self.validate_v5_required_low_tradeoff(output, plan)
 
         display_label = self.display_label_for_score(output.overall_score)
         enriched = [
@@ -505,80 +479,6 @@ class ScreeningEvaluationService:
                 "5.0 非零分必须至少包含一条当前 Resume 证据"
             )
 
-    @staticmethod
-    def validate_v5_zero_score_reason(assessment: CriterionAssessment) -> None:
-        if assessment.score == 0 and "当前简历未发现相关证据" not in assessment.reason:
-            raise ScreeningEvaluationInvalidOutputError(
-                "5.0 零分必须说明当前简历未发现相关证据"
-            )
-
-    @classmethod
-    def validate_v5_high_score_no_evidence(cls, assessment: CriterionAssessment) -> None:
-        if assessment.score >= 7 and any(
-            term in assessment.reason for term in cls._MISSING_TERMS
-        ):
-            raise ScreeningEvaluationInvalidOutputError(
-                "5.0 单项高分与未发现证据说明方向明显矛盾"
-            )
-
-    @staticmethod
-    def validate_v5_low_score_full_match(assessment: CriterionAssessment) -> None:
-        if assessment.score <= 3 and any(
-            term in assessment.reason for term in ("完全满足", "高度匹配", "非常充分")
-        ):
-            raise ScreeningEvaluationInvalidOutputError(
-                "5.0 单项低分与完全满足说明方向明显矛盾"
-            )
-
-    @classmethod
-    def validate_v5_overall_high_mismatch(
-        cls,
-        report: AIScreeningEvaluationV5Output,
-    ) -> None:
-        if report.overall_score >= 70 and any(
-            term in report.overall_summary for term in cls._STRONG_MISMATCH_TERMS
-        ):
-            raise ScreeningEvaluationInvalidOutputError(
-                "5.0 高总体分与明显不匹配综合说明方向矛盾"
-            )
-
-    @classmethod
-    def validate_v5_overall_low_high_match(
-        cls,
-        report: AIScreeningEvaluationV5Output,
-    ) -> None:
-        if report.overall_score <= 49 and any(
-            term in report.overall_summary for term in cls._STRONG_MATCH_TERMS
-        ):
-            raise ScreeningEvaluationInvalidOutputError(
-                "5.0 低总体分与高度匹配综合说明方向矛盾"
-            )
-
-    @staticmethod
-    def validate_v5_required_low_tradeoff(
-        report: AIScreeningEvaluationV5Output,
-        plan: ScreeningEvaluationPlanInputV5,
-    ) -> None:
-        importance = {item.criterion_id: item.importance for item in plan.criteria}
-        low_required = {
-            item.criterion_id
-            for item in report.criterion_assessments
-            if importance[item.criterion_id] is EvaluationItemPriority.REQUIRED
-            and item.score <= 3
-        }
-        if not low_required or report.overall_score < 70:
-            return
-        risk_ids = {
-            criterion_id
-            for finding in report.risks_or_conflicts
-            for criterion_id in finding.criterion_ids
-        }
-        has_supported_strength = any(finding.evidence for finding in report.strengths)
-        if not low_required.issubset(risk_ids) or not has_supported_strength:
-            raise ScreeningEvaluationInvalidOutputError(
-                "5.0 required 严重缺口与高总体分并存时必须完整说明风险和有证据优势"
-            )
-
     def _validate_v5_findings(
         self,
         report: AIScreeningEvaluationV5Output,
@@ -654,34 +554,16 @@ class ScreeningEvaluationService:
             raise ScreeningEvaluationInvalidOutputError(
                 "5.0 AI 初筛不得使用 unknown 语义"
             )
-        if self._BRAND_ONLY_PATTERN.search(combined):
-            raise ScreeningEvaluationInvalidOutputError(
-                "5.0 AI 初筛不得只按学校或公司品牌认定能力"
-            )
-        if self._ASSERTED_INABILITY.search(combined):
-            raise ScreeningEvaluationInvalidOutputError(
-                "5.0 AI 初筛不得把未发现证据写成候选人不会"
-            )
-
-    def _validate_v5_experience_fact_claims(
-        self,
+    @staticmethod
+    def _validate_v5_compatibility_time_fields(
         assessment: CriterionAssessment,
-        criterion: V5CriterionItem,
-        snapshot: ExperiencePeriodFactsSnapshot,
     ) -> None:
-        keys = list(assessment.experience_period_fact_keys)
-        if len(keys) != len(set(keys)):
-            raise ScreeningEvaluationInvalidOutputError("经历时间事实 key 不能重复")
-        fact_by_key = {fact.key: fact for fact in snapshot.facts}
-        if any(key not in fact_by_key for key in keys):
-            raise ScreeningEvaluationInvalidOutputError("AI 引用了不存在的经历时间事实")
-        if any(not fact_by_key[key].usable_for_reference for key in keys):
+        if (
+            assessment.experience_period_fact_keys
+            or assessment.calculation_note is not None
+        ):
             raise ScreeningEvaluationInvalidOutputError(
-                "AI 引用了投递后或日期冲突的经历时间事实"
-            )
-        if keys and assessment.calculation_note is None:
-            raise ScreeningEvaluationInvalidOutputError(
-                "引用经历时间事实时必须提供 calculation_note"
+                "5.0 AI 初筛经历时间兼容字段必须为空"
             )
 
     def parse_and_validate_output(

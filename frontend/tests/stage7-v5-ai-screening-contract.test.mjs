@@ -27,7 +27,8 @@ test('7R5-G 静态合同覆盖 5.0 编辑、报告、历史、五人批量和安
   ]) assert.ok(serviceSource.includes(token), `Service 缺少 ${token}`);
   for (const token of [
     '编辑清单', '新增评价点', '删除', '合并选中', '保存草稿', '创建新编辑版本',
-    'HR 补充', 'AI 来源 · JD', 'importance_review_required', '只读版本历史',
+    'HR 补充', 'AI 来源 · JD', 'importance_review_required',
+    'semantic_support_review_required', '语义支持需要 HR 复核', '只读版本历史',
   ]) assert.ok(planSource.includes(token), `计划页面缺少 ${token}`);
   for (const token of ['成功报告历史', '历史只读报告', 'listApplicationScreeningReports']) {
     assert.ok(drawerSource.includes(token), `报告抽屉缺少 ${token}`);
@@ -74,10 +75,16 @@ const plan = {
   items: null, structured_coverage: null, source_review_summary: null, requirement_facts: null,
   evaluation_criteria: null, coverage_review_summary: null, generation_audit: null,
   v5_criteria: [criterion], edit_version: 2, confirmed_at: null,
-  warnings: [{
-    code: 'importance_review_required', message: '请复核重要程度', criterion_id: 'criterion:0001',
-    reasons: ['explicit_strong_signal_mismatch'],
-  }],
+  warnings: [
+    {
+      code: 'importance_review_required', message: '请复核重要程度', criterion_id: 'criterion:0001',
+      reasons: ['explicit_strong_signal_mismatch'],
+    },
+    {
+      code: 'semantic_support_review_required', message: '请对照原文复核语义', criterion_id: 'criterion:0001',
+      reasons: [],
+    },
+  ],
   prompt_version: 'job_evaluation_plan_lightweight_v2', model_version: 'fake-plan', schema_version: '5.0',
   input_fingerprint: 'b'.repeat(64), input_snapshot: snapshot, contract_outdated: false,
   error_code: null, error_message: null, created_at: '2026-08-27T01:00:00Z',
@@ -143,6 +150,9 @@ test('7R5-G Service 映射严格 5.0 合同并发送确认字段', async () => {
     assert.equal(mapped.v5Criteria[0].screeningFocus, '寻找可定位项目与职责');
     assert.equal(mapped.warnings[0].criterionId, 'criterion:0001');
     assert.deepEqual(mapped.warnings[0].reasons, ['explicit_strong_signal_mismatch']);
+    assert.equal(mapped.warnings[1].code, 'semantic_support_review_required');
+    assert.equal(mapped.warnings[1].criterionId, 'criterion:0001');
+    assert.deepEqual(mapped.warnings[1].reasons, []);
     assert.equal(mapped.inputSnapshot.schemaVersion, '5.0');
 
     await service.confirmJobEvaluationPlan(7, 2);

@@ -38,7 +38,8 @@ export type JobEvaluationPlanWarningCode =
   | 'ambiguous_requirement'
   | 'non_evaluation_content'
   | 'many_criteria'
-  | 'importance_review_required';
+  | 'importance_review_required'
+  | 'semantic_support_review_required';
 
 export type JobEvaluationPlanV5ImportanceReviewReason =
   | 'explicit_strong_signal_mismatch'

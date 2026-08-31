@@ -702,7 +702,6 @@ class ScreeningService:
                         resume_text=context.sanitized_resume,
                         evaluation_reference_at=context.evaluation_reference_at,
                         evaluation_timezone=context.evaluation_timezone,
-                        experience_period_facts=context.experience_period_facts,
                         adapter=resolved_adapter,
                         settings=resolved,
                     )

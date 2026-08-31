@@ -104,7 +104,7 @@ from app.schemas.job_evaluation_plan import (
 LEGACY_JOB_EVALUATION_PLAN_PROMPT_VERSION = "job_evaluation_plan_v4"
 JOB_EVALUATION_PLAN_V5_AI_SCHEMA_VERSION = "5.0"
 JOB_EVALUATION_PLAN_V5_BREAKING_CONTRACT_VERSION = (
-    "lightweight_plan_generation_v3"
+    "lightweight_plan_generation_v5"
 )
 JOB_EVALUATION_PLAN_V5_FINGERPRINT_RULE_VERSION = "job_evaluation_input_v5"
 
@@ -464,6 +464,34 @@ class JobEvaluationPlanService:
         r"不接受(?:其他|其它)|不得(?:使用|采用)|排除(?:其他|其它)|"
         r"\bexclusive(?:ly)?\b|\bonly\b|\bmust\s+use\b)",
         re.IGNORECASE,
+    )
+    _V5_WORK_DURATION_CRITERION_PATTERNS = (
+        re.compile(
+            r"(?:\d+(?:\.\d+)?|[零〇一二三四五六七八九十百两]+)\s*"
+            r"(?:年|个?月)\s*(?:以上|及以上|起|以内|以下)?"
+            r"[^。；，,\n]{0,24}(?:经验|经历)",
+            re.IGNORECASE,
+        ),
+        re.compile(
+            r"(?:经验|经历)[^。；，,\n]{0,20}"
+            r"(?:\d+(?:\.\d+)?|[零〇一二三四五六七八九十百两]+)\s*"
+            r"(?:年|个?月)",
+            re.IGNORECASE,
+        ),
+        re.compile(
+            r"(?:工作|从业|任职|职业)[^。；，,\n]{0,16}"
+            r"(?:\d+(?:\.\d+)?|[零〇一二三四五六七八九十百两]+)\s*"
+            r"(?:年|个?月)",
+            re.IGNORECASE,
+        ),
+        re.compile(r"(?:工作|从业|任职|职业|经验)年限", re.IGNORECASE),
+        re.compile(
+            r"(?:at\s+least\s+)?\d+(?:\.\d+)?\s*\+?\s*"
+            r"(?:years?|months?)(?:\s+of)?[^.\n]{0,32}\bexperience\b|"
+            r"\bexperience\b[^.\n]{0,24}\d+(?:\.\d+)?\s*\+?\s*"
+            r"(?:years?|months?)",
+            re.IGNORECASE,
+        ),
     )
     _V5_GENERIC_ASCII_TOKENS = {
         "ai",
@@ -1475,6 +1503,11 @@ class JobEvaluationPlanService:
                 "5.0 草稿缺少冻结 JD 评价字段",
                 code="JOB_EVALUATION_PLAN_V5_INPUT_REQUIRED",
             )
+        self._reject_v5_work_duration_criterion(
+            criterion.name,
+            criterion.description,
+            criterion.screening_focus,
+        )
         if criterion.origin == "ai_from_jd":
             self._validate_v5_criterion_candidate(
                 {
@@ -1947,6 +1980,20 @@ class JobEvaluationPlanService:
         for criterion in criteria:
             if criterion.origin == "hr_added":
                 continue
+            if self._v5_semantic_support_review_required(
+                criterion,
+                [source.source_quote for source in criterion.sources],
+            ):
+                warnings.append(
+                    JobEvaluationPlanV5WarningDetail(
+                        code=JobEvaluationPlanV5WarningCode.SEMANTIC_SUPPORT_REVIEW_REQUIRED,
+                        message=(
+                            "评价点可能超出所引 JD 原文的直接语义，请 HR "
+                            "对照来源复核后修改或确认"
+                        ),
+                        criterion_id=criterion.criterion_id,
+                    )
+                )
             reasons = self._v5_importance_review_reasons(criterion)
             if reasons:
                 warnings.append(
@@ -2004,6 +2051,11 @@ class JobEvaluationPlanService:
                     code="JOB_EVALUATION_PLAN_V5_SOURCE_NOT_FOUND",
                 )
             source_texts.append(source.source_quote)
+        self._reject_v5_work_duration_criterion(
+            criterion.name,
+            criterion.description,
+            criterion.screening_focus,
+        )
         combined_output = "\n".join(
             (
                 criterion.name,
@@ -2027,12 +2079,19 @@ class JobEvaluationPlanService:
                 "评价点包含模型无权作出的招聘决定",
                 code="JOB_EVALUATION_PLAN_V5_RECRUITMENT_DECISION",
             )
-        if not self._v5_candidate_is_supported(criterion, source_texts):
-            raise JobEvaluationPlanContentError(
-                "评价点包含 JD 来源不能支持的新增要求",
-                code="JOB_EVALUATION_PLAN_V5_UNSUPPORTED_CRITERION",
-            )
         return criterion
+
+    @classmethod
+    def _reject_v5_work_duration_criterion(cls, *values: str) -> None:
+        candidate_facing_text = "\n".join(values)
+        if any(
+            pattern.search(candidate_facing_text)
+            for pattern in cls._V5_WORK_DURATION_CRITERION_PATTERNS
+        ):
+            raise JobEvaluationPlanContentError(
+                "轻量评价点不能计算、比较或判断工作年限",
+                code="JOB_EVALUATION_PLAN_V5_WORK_DURATION_CRITERION",
+            )
 
     def _v5_importance_review_reasons(
         self,
@@ -2130,7 +2189,7 @@ class JobEvaluationPlanService:
             return signals.strong
         return False
 
-    def _v5_candidate_is_supported(
+    def _v5_semantic_support_review_required(
         self,
         criterion: V5CriterionItem,
         source_texts: list[str],
@@ -2144,16 +2203,16 @@ class JobEvaluationPlanService:
             candidate_text
         ):
             if self._v5_support_normalize(number_requirement) not in source:
-                return False
+                return True
         candidate_lower = candidate_text.casefold()
         for marker in self._V5_EXPLICIT_REQUIREMENT_MARKERS:
             normalized_marker = self._v5_support_normalize(marker)
             if marker in candidate_lower and normalized_marker not in source:
-                return False
+                return True
         if self._V5_EXCLUSIVE_REQUIREMENT_RE.search(
             candidate_text
         ) and not self._V5_EXCLUSIVE_REQUIREMENT_RE.search(source_text):
-            return False
+            return True
 
         name = criterion.name
         source_theme = source_text
@@ -2163,21 +2222,22 @@ class JobEvaluationPlanService:
         normalized_name = self._v5_support_normalize(name)
         normalized_source_theme = self._v5_support_normalize(source_theme)
         if not normalized_name:
-            return False
+            return True
 
         name_ascii = self._v5_support_ascii_tokens(name)
         source_ascii = self._v5_support_ascii_tokens(source_theme)
         if name_ascii & source_ascii:
-            return True
+            return False
 
         name_han = "".join(re.findall(r"[\u4e00-\u9fff]", normalized_name))
         source_han = "".join(
             re.findall(r"[\u4e00-\u9fff]", normalized_source_theme)
         )
-        return len(name_han) >= 2 and any(
+        has_chinese_overlap = len(name_han) >= 2 and any(
             name_han[index : index + 2] in source_han
             for index in range(len(name_han) - 1)
         )
+        return not has_chinese_overlap
 
     @classmethod
     def _v5_support_ascii_tokens(cls, value: str) -> set[str]:
