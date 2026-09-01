@@ -30,7 +30,7 @@ def _settings() -> Settings:
         SCREENING_EVALUATION_ENABLED=True,
         SCREENING_EVALUATION_MODEL="fake-v5-model",
         SCREENING_EVALUATION_V5_PROMPT_VERSION=(
-            "screening_evaluation_lightweight_v7"
+            "screening_evaluation_lightweight_v10"
         ),
         SCREENING_EVALUATION_V5_SCHEMA_VERSION="5.0",
         SCREENING_EVALUATION_TIMEZONE="Asia/Shanghai",
@@ -72,8 +72,8 @@ def test_close_05i_evaluate_ignores_legacy_duration_facts_and_neutralizes_adapte
         )
     )
 
-    assert result.behavior_version == "lightweight_report_generation_v9"
-    assert result.metadata.prompt_version == "screening_evaluation_lightweight_v7"
+    assert result.behavior_version == "lightweight_report_generation_v11"
+    assert result.metadata.prompt_version == "screening_evaluation_lightweight_v10"
     assert len(adapter.calls) == 1
     assert adapter.calls[0]["experience_period_facts"] == {}
     assert adapter.calls[0]["evaluation_reference_at"] == ""

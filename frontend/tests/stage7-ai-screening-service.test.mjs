@@ -183,6 +183,7 @@ try {
   assert.equal(state.report.evaluationReferenceAt, '2026-08-19T16:00:00Z');
   assert.equal(state.report.evaluationTimezone, 'Asia/Shanghai');
   assert.equal(state.report.experiencePeriodFactsRuleVersion, 'experience_period_facts_v1');
+  assert.equal(state.report.requirementAssessments[0].evidence[0].text, evidence.quote);
   assert.equal(state.report.bonusHighlights[0].evidence[0].section, '项目经历');
   assert.deepEqual(state.report.outdatedReasons, ['resume_changed']);
   assert.equal(state.latestRun.status, 'queued');

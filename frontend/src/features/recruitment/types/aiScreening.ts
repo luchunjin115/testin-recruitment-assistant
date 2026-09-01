@@ -298,7 +298,7 @@ export type ScreeningWaitingReason =
   | 'plan_contract_outdated';
 
 export type ScreeningEvidence = {
-  quote: string;
+  text: string;
   section: string | null;
 };
 

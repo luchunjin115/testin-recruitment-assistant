@@ -27,12 +27,12 @@ def _messages() -> list[dict[str, str]]:
     )
 
 
-def test_close_05i_prompt_and_service_versions_are_v7_and_v9() -> None:
+def test_current_prompt_and_service_versions_are_v9_and_v10() -> None:
     assert SCREENING_EVALUATION_V5_PROMPT_VERSION == (
-        "screening_evaluation_lightweight_v7"
+        "screening_evaluation_lightweight_v10"
     )
     assert SCREENING_EVALUATION_V5_BEHAVIOR_VERSION == (
-        "lightweight_report_generation_v9"
+        "lightweight_report_generation_v11"
     )
 
 
@@ -84,8 +84,8 @@ def test_close_05i_prompt_forbids_work_duration_across_every_report_section() ->
 
 
 def test_close_05i_all_few_shots_keep_compatibility_time_fields_empty() -> None:
-    examples = re.findall(r"^最终 JSON：(\{.*\})$", _V5_SYSTEM_PROMPT, flags=re.MULTILINE)
-    assert len(examples) == 4
+    examples = re.findall(r"^完整示例 JSON：(\{.*\})$", _V5_SYSTEM_PROMPT, flags=re.MULTILINE)
+    assert len(examples) == 1
 
     for serialized in examples:
         payload = json.loads(serialized)

@@ -127,7 +127,12 @@ def _utc_now() -> str:
 
 
 def _offline_settings() -> Settings:
-    return Settings(_env_file=None, DEEPSEEK_API_KEY="")
+    return Settings(
+        _env_file=None,
+        DEEPSEEK_API_KEY="",
+        JOB_EVALUATION_PLAN_MODEL=PLANNED_MODEL,
+        SCREENING_EVALUATION_MODEL=PLANNED_MODEL,
+    )
 
 
 def _job(case: dict[str, Any], index: int) -> SimpleNamespace:

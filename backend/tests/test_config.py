@@ -39,18 +39,19 @@ def _planned_quality_model() -> str:
 
 
 class SettingsTest(TestCase):
-    def test_model_calling_defaults_examples_and_quality_contract_stay_aligned(self) -> None:
+    def test_stage7_pro_defaults_do_not_rewrite_historical_flash_contract(self) -> None:
         settings = Settings(_env_file=None)
         example = _env_example_values()
-        expected = "deepseek-v4-flash"
+        historical_model = "deepseek-v4-flash"
+        stage7_model = "deepseek-v4-pro"
 
-        self.assertEqual(settings.DEEPSEEK_MODEL, expected)
-        self.assertEqual(settings.JOB_EVALUATION_PLAN_MODEL, expected)
-        self.assertEqual(settings.SCREENING_EVALUATION_MODEL, expected)
-        self.assertEqual(example["DEEPSEEK_MODEL"], expected)
-        self.assertEqual(example["JOB_EVALUATION_PLAN_MODEL"], expected)
-        self.assertEqual(example["SCREENING_EVALUATION_MODEL"], expected)
-        self.assertEqual(_planned_quality_model(), expected)
+        self.assertEqual(settings.DEEPSEEK_MODEL, historical_model)
+        self.assertEqual(settings.JOB_EVALUATION_PLAN_MODEL, stage7_model)
+        self.assertEqual(settings.SCREENING_EVALUATION_MODEL, stage7_model)
+        self.assertEqual(example["DEEPSEEK_MODEL"], historical_model)
+        self.assertEqual(example["JOB_EVALUATION_PLAN_MODEL"], stage7_model)
+        self.assertEqual(example["SCREENING_EVALUATION_MODEL"], stage7_model)
+        self.assertEqual(_planned_quality_model(), historical_model)
 
     def test_resume_cleanup_defaults_are_safe_and_bounded(self) -> None:
         settings = Settings(_env_file=None)
@@ -96,7 +97,7 @@ class SettingsTest(TestCase):
         settings = Settings(_env_file=None)
 
         self.assertTrue(settings.JOB_EVALUATION_PLAN_ENABLED)
-        self.assertEqual(settings.JOB_EVALUATION_PLAN_MODEL, "deepseek-v4-flash")
+        self.assertEqual(settings.JOB_EVALUATION_PLAN_MODEL, "deepseek-v4-pro")
         self.assertEqual(settings.JOB_EVALUATION_PLAN_TIMEOUT_SECONDS, 90)
         self.assertEqual(settings.JOB_EVALUATION_PLAN_MAX_INPUT_CHARS, 100_000)
         self.assertEqual(settings.JOB_EVALUATION_PLAN_MAX_OUTPUT_TOKENS, 8_000)
@@ -131,7 +132,7 @@ class SettingsTest(TestCase):
         settings = Settings(_env_file=None)
 
         self.assertTrue(settings.SCREENING_EVALUATION_ENABLED)
-        self.assertEqual(settings.SCREENING_EVALUATION_MODEL, "deepseek-v4-flash")
+        self.assertEqual(settings.SCREENING_EVALUATION_MODEL, "deepseek-v4-pro")
         self.assertEqual(settings.SCREENING_EVALUATION_TIMEOUT_SECONDS, 90)
         self.assertEqual(settings.SCREENING_EVALUATION_MAX_INPUT_CHARS, 150_000)
         self.assertEqual(settings.SCREENING_EVALUATION_MAX_OUTPUT_TOKENS, 12_000)
@@ -142,7 +143,11 @@ class SettingsTest(TestCase):
         self.assertEqual(settings.SCREENING_EVALUATION_SCHEMA_VERSION, "2.0")
         self.assertEqual(
             settings.SCREENING_EVALUATION_V5_PROMPT_VERSION,
-            "screening_evaluation_lightweight_v7",
+            "screening_evaluation_lightweight_v10",
+        )
+        self.assertEqual(
+            settings.SCREENING_EVALUATION_V5_REPAIR_PROMPT_VERSION,
+            "screening_evaluation_repair_v2",
         )
         self.assertEqual(settings.SCREENING_EVALUATION_V5_SCHEMA_VERSION, "5.0")
         self.assertEqual(settings.SCREENING_EVALUATION_TIMEZONE, "Asia/Shanghai")

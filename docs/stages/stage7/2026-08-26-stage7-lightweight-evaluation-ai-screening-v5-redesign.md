@@ -1,10 +1,11 @@
 # 阶段 7：轻量评价清单驱动的 AI 初筛 5.0 重设计
 
 > 日期：2026-08-26  
-> 状态：5.0 产品主链与 R1-A/B 简历提取回归已完成；I2 final 仍是不可覆盖的失败历史，I3-R1 与 I4 raw 均保持封存。当前生产计划为 v4/v5/5.0、报告为 v7/v9/5.0；I4 统计仍为计划合法 10/10、报告合法 19/20、稳定性合法 13/15。用户已完成人工界面验收，但在实际使用后明确判定 AI 初筛仍有问题，阶段 7 当前不能验收通过；CLOSE-07 不封存，CLOSE-08 不开始。Alembic current=head=`d6e8f0a2b434`。
+> 状态：阶段 7 已于 2026-09-01 由项目负责人在明确接受 R12 隐私语境误报和 LLM 评分偏保守两项已知限制后完成产品验收。当前生产计划为 v4/v5/5.0，报告为主 Prompt v10 / Repair Prompt v2 / Service behavior v11 / Schema 5.0；ScreeningRun attempt 上限为 3，Alembic current=head=`e7f9a1b3c545`。I2、I3-R1、I4 和最终 v10/v2 raw 均保持原始身份与结论，不因阶段关闭回算。
 > 当前权威性：本文件替代 4.0 作为阶段 7 新增实现的唯一业务合同。4.0、3.0 和更早资料只保留历史实现与质量证据，不得继续指导新开发。  
 > 一句话目标：不再追求把 JD 拆成大量“原子事实”，而是让 AI 基于完整 JD 生成一份 HR 可编辑、可追溯的轻量评价清单，再用同一把尺子独立评价每份简历。
-> 当前剩余顺序：为避免继续在本文件的完整历史中追踪下一步，2026-08-30 起由 `2026-08-30-stage7-remaining-work-plan.md` 单独维护阶段 7 看板和唯一剩余主线；本文件继续负责业务合同、完成标准和历史证据。当前先收集并定义 AI 初筛具体问题，再形成新的整改批次、验证门槛和费用边界；该设计获得用户确认前不得修改生产链或调用模型。
+> 当前入口：阶段 7 收尾决定见本文第 42 节和 `2026-09-01-stage7-final-v10-v2-acceptance-review.md`；`2026-08-30-stage7-remaining-work-plan.md` 保留完整收尾过程。下一步只允许进入阶段 8 的需求确认与独立设计门禁，不自动授权阶段 8 业务实现。
+> 当前阶段 7 模型：自 2026-09-01 起，评价清单生成与初筛报告生成统一使用官方 API 模型 `deepseek-v4-pro`；简历结构化和其他通用 DeepSeek 配置继续使用 `deepseek-v4-flash`。本次模型切换不改变 Prompt、Schema、Service、评分边界或 HR 决策权，历史 I2/I3/I4 证据仍按各自冻结的 Flash 模型解释。
 
 ## 1. 为什么重新设计
 
@@ -2395,3 +2396,377 @@ CLOSE-07 未达到本节完成标志，正式 `close07_passed=true` 结果文件
 I2-D/E 已完成：USD 2 上限下 45/45 次调用成功，费用 `$0.09143638`；计划 `10/10`、报告 `17/20`、稳定性 `9/15`，稳定性达标组 `2/5`。I2 raw 禁止覆盖；CLOSE-02 已修复 9 个 post-raw 生命周期旧失败，CLOSE-03A/B 已完成正式 human audit 与 final，19 项门槛通过 13 项、失败 6 项，生命周期为 `i2_final_complete`。CLOSE-05A—I、修订后的 CLOSE-06A-R1、CLOSE-06B/C、CLOSE-04R2 和 CLOSE-06R2-A—C 已完成。当前生产版本为计划 v4/v5/5.0、报告 v7/v9/5.0，既有质量证据仍按 v1/v2 解释；离线 v3 合同已经建立。I3-R1 已封存唯一 raw，生命周期为 `i3_raw_complete`；I4 也已封存唯一 raw，生命周期为 `i4_raw_complete`。用户已完成人工界面验收，但最新判定 AI 初筛仍有问题，阶段 7 不通过；唯一下一步是收集具体案例并重新设计整改批次。
 
 跨电脑交接说明（2026-08-31 更新）：拉取后必须先读取 `CLAUDE.md`、`PROJECT_STATE.md`、`docs/DOCUMENT_INDEX.md`、本文和收尾计划，确认分支 `2lcj`、工作区状态、证据文件身份、I2 生命周期 `i2_final_complete`、I3-R1 生命周期 `i3_raw_complete` 和 I4 生命周期 `i4_raw_complete`。I2、旧 I3、I3-R1 与 I4 的 preflight/fixture/review/pricing/authorization/raw/final 历史均按各自生命周期只读保护；I3-R1 human/final 与 I4 human/final 保持不存在。生产计划为 v4/v5/5.0，生产报告为 v7/v9/5.0。阶段 7 当前未通过，CLOSE-07 未封存，CLOSE-08 不得开始；唯一下一步是收集 AI 初筛具体问题并形成经用户确认的新整改设计。不得提交 `.env` 或 API Key，也不得在新价格与金额授权前调用模型。
+
+## 36. 2026-09-01 DeepSeek V4 Pro 模型切换与有限真实 smoke
+
+用户已经明确要求把模型改为 DeepSeek V4 Pro 后真实测试。本批只有一个目标：验证“评价清单生成”和“初筛报告生成”两条既有阶段 7 链路能否在不修改业务合同的前提下改用官方 API 名 `deepseek-v4-pro`。实施顺序固定为：先确认官方模型名、当前价格和调用兼容性；再只修改阶段 7 两个模型配置默认值、示例和配置测试，同时把 I3/I4 历史 runner 显式锁定回其冻结的 `deepseek-v4-flash`；然后运行 Prompt/Schema/Service/Adapter/历史隔离回归；最后执行 1 次计划加同一报告 3 次的有限真实 smoke，记录模型、attempt、token、费用和结构结果后停止。
+
+本批允许修改 `backend/app/core/config.py`、`.env.example`、配置测试、I3/I4 runner 的历史模型隔离及其测试、本文、`PROJECT_STATE.md` 和独立 smoke 结果。链路位置是“前端 → API → Schema → Service → **Model 配置与真实调用** → PostgreSQL”；前端、API、Schema、Prompt、Service 业务规则、业务 Model、migration 和 PostgreSQL 均禁止修改，I2/I3/I4 既有结果禁止覆盖。真实测试使用冻结虚构 fixture，不写 PostgreSQL，费用硬上限 USD 2；任何内容错误都由现有 Service 返回，不能新增样本特例或降低硬校验。
+
+完成标志是两个阶段 7配置均为 `deepseek-v4-pro`，通用与简历结构化配置仍为 Flash，历史 runner 仍固定 Flash，相关回归没有本批新增失败，且有限真实调用至少各有一次计划和报告通过当前 Service。失败返回配置、Adapter、Service 或外部模型层；完成后立即停止，不能用 1+3 小样宣称整体质量或阶段 7 验收通过。
+
+实施结果：4 次业务调用对应 4 次 API attempt，均一次成功，服务端返回模型均为 `deepseek-v4-pro`。计划生成 6 个评价点且全部可追溯；同一报告三次均为 72 分、`high_match`，分差 0，所有非零评分均有证据且必需报告分区合法。总输入 14,354 tokens、总输出 3,182 tokens；报告响应未提供缓存拆分，因此费用按高峰 cache-miss 保守估算为 USD 0.031548，未触发 USD 2 上限。结果独立记录在 `2026-09-01-stage7-v4-pro-smoke-results.json`，不属于 I4 补跑或 formal acceptance。回归共 189 项通过；另有 2 项 I4 封存哈希失败来自远端当前提交中 raw 所记录 preflight SHA 与当前 preflight 字节 SHA 不一致，本批未改写历史证据。
+
+## 37. 2026-09-01 DeepSeek V4 Pro 五岗位、二十简历正式测试顺序
+
+用户已审核并确认 `2026-09-01-stage7-pro-realistic-test-data-review.md` 中的 5 份拟真脱敏 JD、每岗 4 份共 20 份简历和测试方向，并要求开始测试。本轮不是 I4 补跑，不覆盖 I2/I3/I4 或 Pro smoke；使用独立数据、路径、标签、调用记录和结果。正式目标是观察 Pro 在跨技术、质量、数据、产品和供应链岗位上的计划质量、报告合法性、事实与证据质量、方向一致性和稳定性。
+
+固定调用总量为 40 次业务调用：5 次评价计划生成；计划经用户逐岗审核确认后，20 份简历各生成 1 次报告；从 R01、R05、R09、R13、R17 五份高匹配样本中各重复报告 3 次形成 15 次稳定性调用。稳定性 15 次不复用对应 20 次报告作为三次分母，避免把不同批次混算。基础设施失败每个业务调用最多额外重试 1 次，内容错误不重试；全部尝试受 USD 2 自动硬上限保护，并记录实际模型、attempt、token、耗时、错误和保守费用。
+
+### 37.1 P1：数据冻结与零调用预检
+
+唯一目标：把已经确认的人类评审稿转换为程序可读取、可重复校验的 5 JD、20 Resume 和调用前标签，先证明考卷本身结构完整，不直接花钱考试。
+
+允许修改：本节、数据评审稿、独立 fixture 解析/标签文件、独立零调用专项测试和 P1 预检记录。链路位置是正式产品链之外的质量数据与测试层。禁止修改 Prompt、Schema、Service、Adapter、API、业务 Model、migration、React、PostgreSQL、I2/I3/I4 证据和 Pro smoke；禁止读取 Key、实例化真实 Adapter或调用模型。
+
+固定交付：5 个不同岗位、每岗 4 份简历、R01—R20 唯一映射；每份报告标签在调用前固定 high/partial/low 方向、合理分数区间、关键证据、主要缺口或必须识别的冲突；工作年限和候选人备注不计入 AI 评分；所有人名、联系方式和敏感个人属性为空。使用规范化结构指纹防止换行差异误报，不恢复历史字节级 SHA 门禁。
+
+验证：专项测试必须证明 5/20 分母、ID 唯一、四类难度、每岗一份冲突样本、建议分数合法、证据引文可在对应简历逐字定位、隐私扫描为 0、JD 五段式字段非空且 public notes 单独存在；`py_compile`、JSON/结构解析和 `git diff --check` 通过。完成后停止；唯一下一步是 P2。
+
+P1 实施结果（2026-09-01）：评审稿正文已冻结，程序解析得到 JD-01—JD-05 和 R01—R20，四份简历/岗位；方向分母为 high 5、partial 10、low 5，冲突样本固定为 R04/R08/R12/R16/R20，稳定性样本固定为 R01/R05/R09/R13/R17。调用前标签包含合法分数区间、关键证据、主要缺口和冲突；所有关键证据均能在对应脱敏简历中逐字定位。规范化结构指纹为 `91939d52d65b78efa0b9c135c79127d8debd0e19a0a6522fe0de54b7cbccbe18`。
+
+P1 专项 `8 passed + 1 个既有 PyPDF2 弃用 warning`；同时真实经过当前生产计划输入快照与 Prompt 消息构造、报告简历脱敏入口，5 份 JD 均未把 public notes 带入模型消息，20 份简历脱敏后仍保留全部冻结证据，输入长度均在配置上限内。`py_compile`、预检 JSON 解析和 `git diff --check` 通过。记录为 `2026-09-01-stage7-pro-realistic-p1-zero-call-preflight.json`。Key 读取、真实 Adapter、模型调用、API attempt、token、费用、PostgreSQL 写入均为 0。P1 到此完成并停止；唯一下一步是等待用户确认 P2 的 5 次 Pro 计划生成。
+
+### 37.2 P2：五份评价计划真实生成与 HR 确认
+
+依赖 P1 通过且用户另行确认开始 P2。使用当前生产 Prompt/Schema/Service 和 `deepseek-v4-pro` 对 5 份 JD 各调用一次，独立记录 raw 审计和费用，不写 PostgreSQL。程序只判断结构、来源、安全和现有硬门禁；另生成逐岗可读计划复核卡，由用户检查 required、遗漏、擅增、粒度和来源后决定修改或确认。未取得五份确认计划快照前禁止开始报告调用。
+
+P2 实施结果（2026-09-01）：付费前确认官方模型仍为 `deepseek-v4-pro`（官方显示版本 `DeepSeek-V4-Pro-0813`），执行时为周二 UTC 02:14，按 peak 的 cache hit/cache miss/output USD 0.044/1.32/3.96 每百万 token 计费。配置、Key 非空和计划链回归 `76 passed + 34 subtests passed` 后才实例化真实 Adapter。
+
+5 份计划全部一次成功，5 次业务调用对应 5 次 API attempt、0 重试、0 失败，服务商实际返回模型均为 `deepseek-v4-pro`。JD-01—JD-05 分别生成 14/12/12/12/12 项，共 62 项且全部来源可追溯；纯工作年限和 public notes 均未进入评价点。warning 分别为 5/1/0/1/0：JD-01 包含 1 个 `many_criteria` 和 4 个 importance 复核，JD-02 有 1 个 importance 复核，JD-04 的 1 个复核由“优先级判断”中的“优先”触发，属于需要 HR 判断的词语边界，不是整单失败。
+
+成功 attempts 共 21,324 input tokens（12,288 cache hit、9,036 cache miss）和 7,878 output tokens，按 peak 保守估算 USD 0.043665072，未触发 USD 2 上限。原始审计只写一次保存为 `2026-09-01-stage7-pro-realistic-p2-plan-raw-results.json`，人工复核卡为 `2026-09-01-stage7-pro-realistic-p2-plan-review.md`；PostgreSQL 写入为 0，Key 未保存。P1/P2 结果专项 `12 passed`。当前 `quality_gate_passed=null`、`report_calls_allowed=false`，P2 到此完成并停止；只有用户逐岗确认或修改五份计划后才能形成 confirmed snapshots 并进入 P3。
+
+用户随后明确回复“全部按当前计划确认”。五份计划保持 P2 原样，没有合并、重写或重新调用模型；全部 warning 视为已由用户知情确认。独立确认文件 `2026-09-01-stage7-pro-realistic-p2-confirmed-plans.json` 绑定 P2 raw 结构指纹、原 fixture 指纹、用户原文、确认时间、每份完整 5.0 criteria 和独立 snapshot SHA-256。五份 snapshot SHA 分别为 `dd9c3cea...baeb`、`d497bb0d...ec39`、`3dacafa0...12f1`、`ad6581ab...5268`、`bd90fe26...0aa1`。本确认步骤新增模型调用、attempt、token、费用和 PostgreSQL 写入均为 0；`p3_input_ready=true`，但 `p3_report_calls_authorized=false`，当前仍停止等待用户单独确认 P3。
+
+### 37.3 P3：二十份报告与十五次稳定性真实测试
+
+依赖 P2 的五份计划均由用户确认并冻结，且用户另行确认开始 P3。每份简历只使用对应 JD 和已确认计划；先运行 R01—R20 各一次，再对 R01/R05/R09/R13/R17 各独立运行 3 次。总计 35 次业务调用，独立记录合法性、证据、方向、分数、事实冲突、稳定性、attempt、token 和费用；不得为了补齐分母对内容失败偷偷重跑，不写 PostgreSQL，不覆盖任何旧结果。
+
+P3 实施结果（2026-09-01）：用户明确回复“确认开始 P3”后，固定的 35 次业务调用全部按顺序执行，对应 35 次 API attempt、0 基础设施失败、0 技术重试；服务商均正常返回 `deepseek-v4-pro`。基础报告通过当前 Service 17/20，R04/R09/R14 因非零分缺证据、零分附证据或引用无法在脱敏简历逐字定位而被拒绝，内容失败均未补跑。17 份合法报告中，程序粗方向与冻结标签一致 14/17，分数进入冻结区间 10/17；该统计只供 P4 定位，不是人工质量结论。
+
+15 次额外稳定性调用合法 11/15：R01、R05、R13 均为 88/88/88，方向稳定且分差 0；R09 三次均因不可定位引用被拒绝；R17 为一次不可定位引用失败、两次合法 88。按三次必须全部合法的冻结口径，方向稳定和分差不超过 10 均为 3/5 组。成功 attempts 共 203,000 input tokens、82,408 output tokens；因缓存拆分不可得，按 peak 全部 cache miss 保守估算 USD 0.59429568，未触发 USD 2 上限。raw 大小 1,051,275 bytes、SHA-256 `94f68aa48bec09204359222deab35c6a03ea543a4108eb93375efe0b39574679`，PostgreSQL 写入 0，`quality_gate_passed=null`、`quality_conclusion_allowed=false`。独立摘要为 `2026-09-01-stage7-pro-realistic-p3-report-summary.md`；当前停止并等待用户另行确认 P4。
+
+### 37.4 P4：人工质量审核与结论
+
+依赖 P3 raw 封存且用户另行确认开始 P4。程序先汇总结构与确定性门禁，用户再对照调用前标签审核事实、证据充分性、主要发现、方向和分数区间。最终结论必须区分“Service 合法”“人工质量通过”和“阶段 7 整体通过”；本次 5/20 小样即使全部通过，也只能证明冻结拟真样本下的 Pro 表现，不能替代真实招聘决定或自动封存 CLOSE-07/CLOSE-08。
+
+P4 路线变更（2026-09-01）：用户在审核材料准备后立即明确表示不进行逐份人工审核，只要求列出 P3 失败输出、解释原因并按具体原因整改。尚未填写任何人工结论，P4 human/final 均未创建；临时审核卡、空白模板、生成脚本和材料测试已全部撤销，新增模型调用、费用和 PostgreSQL 写入仍为 0。原 37.4 不再是当前下一步，也不得把取消人工审核解释为质量通过。
+
+当前转入独立失败整改设计门禁。已冻结的 7 个失败业务调用分为两类：R04/R14 为 score 与 evidence 形状矛盾；R09 基础报告、R09 三次稳定性和 R17 第一次稳定性共 5 个输出为模型截短连续原句时把原逗号或分号改成句号，导致 quote 无法逐字定位。下一步只能先把最小 Prompt/Service 整改、离线回放、真实失败样本复验、调用次数与费用边界写清楚并获得用户确认；确认前不修改生产 Prompt/Schema/Service，不调用模型，不覆盖 P3 raw。
+
+## 38. P3 七个失败输出的定向整改顺序（已被第 39 节替代）
+
+本节原计划通过句尾标点规范化继续维持 `quote in sanitized_resume`。用户明确指出该方案只能处理具体标点，下次 LLM 改写一个字仍会失败，并最终确认把简历证据内容判断交给 LLM，Schema/Service 不再检查 evidence 与 Resume 的字符或语义关系。因此本节 P5-A—D 从未获得开始授权，不得实施；当前唯一依据改为第 39 节。
+
+### 38.1 冻结诊断与不变边界
+
+本轮只处理 P3 已经实际发生的 7 个 Service 失败，不借机调整评分区间、评价清单、敏感信息边界、招聘决定边界或 PostgreSQL 数据合同。失败身份固定如下：
+
+| 失败调用 | 确定性原因 | 责任判断 |
+| --- | --- | --- |
+| P3-R04 | 7 个 criterion 给出 1—2 分但 `evidence=[]` | 模型违反“非零分必须有证据”；Schema/Service 拒绝正确 |
+| P3-R14 | criterion:0005 非零分无证据；criterion:0012 为 0 分却附带一条模型生成的“没有……”句 | 模型违反 score/evidence 形状；Schema/Service 拒绝正确 |
+| P3-R09 | 4 条引用截短 Resume 原句后把原逗号或分号换成句号 | 内容语义未改变，但已不再逐字相等；现有 Service 按合同拒绝 |
+| P3-S-R09-1 | 2 条相同类型的句尾标点替换 | 同上 |
+| P3-S-R09-2 | 4 条相同类型的句尾标点替换 | 同上 |
+| P3-S-R09-3 | 2 条相同类型的句尾标点替换 | 同上 |
+| P3-S-R17-1 | 4 条相同类型的句尾标点替换 | 同上 |
+
+不得删除“非零分必须有证据”“0 分不得附正向证据”或“持久化证据必须来自 Resume 连续原文”三个门禁。程序只能把可证明为同一连续原文的安全边界问题规范化，不能接受内部删词、换词、拼接、改数字、调换顺序或真正的语义改写。
+
+### 38.2 P5-A：失败回放合同
+
+依赖：用户确认本节完整 P5-A—D 顺序，并单独确认开始 P5-A。
+
+唯一目标：先用 P3 已封存 raw 建立 7 个失败的只读回放测试，精确证明当前缺少“安全句尾边界规范化”，同时证明 R04/R14 的 score/evidence 矛盾仍必须被拒绝。
+
+通俗解释：先把这 7 个错误做成不会丢失的考试题，再改规则，防止修错问题。
+
+允许修改：独立失败 fixture、Service/Prompt 合同测试、本节和 `PROJECT_STATE.md`。链路位置为测试层，覆盖 Prompt → Schema → Service 的当前行为。禁止修改生产 Prompt、Schema、Service、Adapter、API、Model、migration、React、PostgreSQL、P3 raw 和历史 I2/I3/I4；禁止读取 Key 或调用模型。
+
+交付与验证：7 个业务调用身份和 raw SHA 必须固定；5 个引用类失败应因句尾标点边界保持红灯，2 个形状类失败应继续被现有 Schema/Service 拒绝；另加入内部换词、数字变化、跨句拼接等反例。专项测试、`py_compile`、P3 封存测试和 `git diff --check` 通过。完成标志是红灯只指向缺失的新能力；结束后停止，唯一下一步为等待用户单独确认 P5-B。
+
+### 38.3 P5-B：安全引用边界与 evidence-first Prompt
+
+依赖：P5-A 完成且用户单独确认开始。
+
+唯一目标：在不降低证据真实性的前提下，修复“模型从 Resume 连续原句中截取前半句，却把原逗号/分号改成句号”这一窄边界，并降低未来 score/evidence 形状矛盾。
+
+允许修改：`backend/app/prompts/screening_evaluation.py`、对应 Prompt 版本配置、`backend/app/services/screening_evaluation_service.py` 及定向测试；只位于 Prompt → Service，不修改 Schema、Adapter/API、业务 Model、migration、React 或 PostgreSQL。
+
+固定规则：
+
+1. 完全逐字可定位的 quote 原样保留。
+2. quote 无法定位时，只允许尝试移除模型自己添加的一个句尾标点；移除后的主体必须达到最小安全长度，并能作为连续原文在脱敏 Resume 中直接定位，最终保存移除标点后的真实原文片段。
+3. 内部字符、数字、词语、顺序或空缺发生变化时仍整份拒绝；不得用相似度、分词、同义词或模型判断替代逐字证据。
+4. 同一规则覆盖 criterion assessments 与四个 finding 分区中的 evidence，避免同类字段行为不一致。
+5. Prompt 升级一个版本，要求先复制 evidence 原文，再决定 score；若没有可逐字复制的证据必须给 0，0 分必须 `evidence=[]`；新增“截断在逗号/分号前时不得擅自补句号”的合法/非法对照。
+6. R04/R14 这类非零分无证据不能由程序猜测、补证据或擅自改分；Prompt 改善后仍由 Schema/Service 兜底拒绝。
+
+验证：P5-A 的 5 个引用类 raw 只读回放应通过新的窄规范化并保存真实可定位片段；R04/R14 和全部内部改写反例继续失败；现有 Prompt/Schema/Service/Adapter 回归、`py_compile` 和 `git diff --check` 通过。真实调用、费用和数据库写入均为 0。完成后停止，唯一下一步为等待用户单独确认 P5-C。
+
+### 38.4 P5-C：完整离线回归与复验门禁
+
+依赖：P5-B 完成且用户单独确认开始。
+
+唯一目标：证明整改没有把严格证据校验变成模糊匹配，并冻结只复验 7 个失败业务调用的输入、结果路径和统计口径。
+
+允许修改：质量运行器、零调用预检、失败复验 fixture/测试和验收记录。禁止继续修改生产 Prompt/Schema/Service，禁止读取 Key、实例化真实 Adapter、调用模型、写 PostgreSQL或创建正式复验 raw。
+
+验证必须同时包含：已知 5 个句尾边界回放、R04/R14 形状拒绝、内部换词/数字/拼接攻击、20 份 P3 成功与失败只读回放、报告 Service/Prompt/Adapter 回归。复验计划固定为 P3-R04、P3-R09、P3-R14、P3-S-R09-1/2/3、P3-S-R17-1 共 7 次业务调用；内容错误不重试，基础设施错误每次最多额外 1 attempt，API attempt 上限 14；P3 raw 不覆盖。完成后查询官方实时价格，向用户展示预计费用并单独取得金额上限授权，然后停止。
+
+### 38.5 P5-D：七个失败样本的独立真实复验
+
+依赖：P5-C 全部通过、官方价格仍有效、独立新结果路径为空，且用户单独确认开始 P5-D 和美元金额上限。
+
+唯一目标：只判断上述两类整改在原失败输入上是否真实改善，不扩大到 20 份全量，不把新结果写回 P3。
+
+调用顺序固定为 P3-R04、P3-R09、P3-R14、P3-S-R09-1/2/3、P3-S-R17-1；每次记录模型、attempt、token、费用、原始响应、Service 结果和具体失败层。内容失败不补跑；基础设施错误最多额外 1 attempt；达到金额上限立即封存部分 raw 并停止。PostgreSQL 写入 0，I2/I3/I4/P3 均只读。
+
+完成标志：独立 raw 成功封存并给出 7 个结果的前后对照，不要求为了“好看”达到 7/7，也不自动宣布阶段 7 通过。若引用类仍失败，返回 Prompt/Service 边界；若 R04/R14 仍出现形状错误，保留 Service 拒绝并另行决定是否值得设计一次受控内容修复调用，不能在本批临时增加重试。完成后停止。
+
+## 39. LLM 判断依据合同重构与七例复验
+
+### 39.1 用户确认后的业务合同
+
+用户确认：简历内容如何支持评价点属于 LLM 语义判断，不再由 Schema/Service 使用逐字、相似度、关键词、同义词、编辑距离或其他规则判断。当前 `evidence[].quote` 字段为了兼容既有 5.0 JSONB、API 和历史报告暂不改名，但从本合同起它只是“LLM 判断依据文本”，允许对当前脱敏 Resume 进行概括或改写，不再宣称是候选人原话；前端统一显示“AI 判断依据”，不使用引号或“简历原文证据”文案。历史报告仍按各自 prompt/behavior version 解释，不回写。
+
+固定边界如下：
+
+1. LLM 负责判断 Resume 与 confirmed criterion 的相关性、score、reason、evidence 文本、总体分和五类报告发现。
+2. score 为 1—10 时 evidence 必须至少有一条，保证 AI 不能只给正分而不提供判断依据；score 为 0 时 evidence 可以为空，也可以包含 AI 对“当前材料未体现”的判断依据。0 分附 evidence 不再失败。reason 对所有分数仍必须非空。
+3. Schema 只检查 JSON 类型、字段、长度、0—10/0—100 数值范围和禁止未知字段，不判断 evidence 是否充分、真实、与分数一致或来自 Resume 原文。
+4. Service 不再调用 `_validate_evidence`，不再要求 strengths 必须附 evidence，也不再执行 score/evidence 形状复核；仍检查 confirmed criterion ID 恰好一次、报告分区只引用合法 criterion、无 evidence 的 finding 必须关联 criterion，以及兼容时间字段和安全边界。
+5. JD 是否被遵循继续由“confirmed plan 的 criterion 来源可在 JD 定位”以及“报告不得遗漏、重复或新增 criterion_id”保证；本次变化不删除 JD 来源门禁。
+6. 姓名、联系方式和敏感属性继续在模型输入前脱敏；输出中的隐私、敏感评分、Prompt 注入和自动招聘决定继续由 Service 拒绝。取消 evidence 定位不等于取消安全校验。
+7. 后端对外 JSON 仍保留 `{quote, section}` 以兼容旧数据；`quote` 是历史字段名，`section` 也是 LLM 自报标签，二者均不再被当成可验证原文。前端领域对象可映射为 `text`，避免新代码继续传播“quote=原文”的误解。
+8. PostgreSQL 继续使用现有 JSONB 列和 `schema_version=5.0`，不做 migration；新旧语义通过 prompt version、service behavior version 和已有审计元数据区分。
+
+这项选择的已知代价是：如果 LLM 编造、误解或选择不相关的简历依据，程序不再能够识别；真实测试只能观察模型表现，不能把 Service 合法等同于证据真实或评分正确。
+
+### 39.2 P5R-A：新 evidence 合同红灯
+
+依赖：第 39.1 节业务合同已获用户确认，且用户单独确认开始 P5R-A。
+
+唯一目标：先用失败测试固定“evidence 是 LLM 判断依据、后端不做内容判断”的新合同，证明当前实现具体阻塞在哪里，不先修改生产代码。
+
+通俗解释：先把新规则写成自动考试，确认旧代码确实因为逐字和分数/证据绑定而不符合新决定。
+
+允许修改：独立 Schema/Service/Prompt/API 展示合同测试、P3 七例只读回放测试、本节和 `PROJECT_STATE.md`。链路位置是测试层，覆盖未来的 Prompt → Schema → Service → API → React。禁止修改生产 Prompt、Schema、Service、Adapter、API、Model、migration、React、PostgreSQL、P3 raw 或历史证据；禁止读取 Key 或调用模型。
+
+交付与验证：测试必须固定 1—10 分无 evidence 继续非法、0 分 evidence 为空合法、0 分附 LLM 判断依据也合法、改写/概括 evidence 合法、criterion/JD 来源与安全门禁仍失败、API 结构保持 `{quote, section}`、前端目标文案为“AI 判断依据”。红灯必须因当前旧合同缺失而失败，不能因 fixture 或测试语法错误失败；`py_compile`、P3 封存 hash 和 `git diff --check` 通过。完成后停止，唯一下一步为等待用户单独确认 P5R-B。
+
+### 39.3 P5R-B：后端 Prompt、Schema 与 Service
+
+依赖：P5R-A 完成且用户单独确认开始。
+
+唯一目标：实现第 39.1 节后端合同，让 evidence 内容完全归 LLM，同时保留格式、评价点身份、JD 来源和安全硬门禁。
+
+允许修改：`backend/app/prompts/screening_evaluation.py`、Prompt/behavior 配置、`backend/app/schemas/screening_evaluation.py`、`backend/app/services/screening_evaluation_service.py` 及对应测试。禁止修改 Adapter 调用协议、API 路由、业务 Model、migration、React、PostgreSQL 和历史结果。
+
+固定实现：Prompt 删除“逐字 quote”，明确 `quote` 是兼容字段名、内容为可概括的 AI 判断依据，不得故意编造；1—10 分必须至少一条 evidence，0 分 evidence 可空也可非空。Schema 保留非零分必须有 evidence，只删除“0 分不得附 evidence”；Service 的 5.0 路径删除 assessment/finding 的 `_validate_evidence` 调用、冗余非零证据要求和 strengths 必须有 evidence 要求，非零证据完整性只由 Schema 负责；reason 非空、criterion 完整性、finding criterion 关联、时间兼容、安全检查继续保留。安全扫描仍覆盖 evidence 文本，避免模型借判断依据输出隐私或招聘决定。
+
+验证：P5R-A 后端红灯转绿；P3 35 个 raw 输出在新 evidence 合同下只读回放应有 33/35 通过当前 Service，5 个原逐字定位失败被释放，R04/R14 仍因正分无 evidence 被 Schema 正确拒绝；任何其他合法性或安全错误必须照常失败。相关 Prompt/Schema/Service/Adapter/API 回归、`py_compile` 和 `git diff --check` 通过。真实调用、费用和数据库写入均为 0。完成后停止，唯一下一步为等待用户单独确认 P5R-C。
+
+实施结果（2026-09-01）：用户明确授权连续实施 P5R-A—E、无需逐批再次确认。P5R-A 新合同测试先得到预期 `10 failed, 4 passed`，失败准确落在零分附依据、改写依据、旧 quote-only 回放和前端旧文案；原有非零分缺依据、未知 criterion 和自动招聘决定负例继续通过。P5R-B 随后把报告 Prompt/Service behavior 升级为 `screening_evaluation_lightweight_v8` / `lightweight_report_generation_v10`：Schema 只保留非零分必须有 AI 判断依据，Service 5.0 路径不再比较 assessment/finding evidence 与 Resume，也不再要求 strengths 单独附 evidence；旧 1—4 路径的 `_validate_evidence` 仍保留。后端定向回归为 `181 passed, 1 deselected`，其中 P3 原 5 个 quote-only 失败已通过只读回放，R04/R14 仍因非零分无依据被拒绝。真实调用、费用和 PostgreSQL 写入均为 0；下一批直接进入 P5R-C。
+
+### 39.4 P5R-C：前端“AI 判断依据”展示
+
+依赖：P5R-B 完成且用户单独确认开始。
+
+唯一目标：让页面诚实表达 evidence 是模型生成的判断依据，而不是已经过后端验证的候选人原话。
+
+允许修改：`frontend/src/features/recruitment/ScreeningReportView.tsx`、前端 screening 类型/映射、样式与定向测试。后端 API 字段仍是 `{quote, section}`，前端映射后可使用 `text`；不修改后端、数据库或其他招聘页面。
+
+固定展示：所有“查看简历证据”改为“查看 AI 判断依据”；不再给 evidence 文本自动添加中文引号或使用暗示原文的 blockquote；只有 0 分允许空 evidence，此时显示“0 分表示当前材料未体现，AI 未单独列出判断依据”；可展示 `section`，但明确它是 AI 标注而非后端验证。历史 5.0 报告仍可读取和展示。
+
+验证：组件/映射测试、前端 Node 测试、TypeScript strict 和 production build 通过；无需模型、PostgreSQL 写入或浏览器外部服务。完成后停止，唯一下一步为等待用户单独确认 P5R-D。
+
+实施结果（2026-09-01）：前端 API response 继续接收 `{quote, section}`，领域对象在映射处改为 `{text, section}`；报告页所有 evidence 展示统一改为“查看 AI 判断依据”，文本使用普通信息卡而非 blockquote/中文引号，`section` 显示为“AI 标注”，零分空依据显示合同固定说明。阶段 7 V5/Service/Presentation/UI 四组 Node 测试、TypeScript strict 与 production build 均通过，P5R-A 全合同测试达到 `14 passed`。没有模型调用或 PostgreSQL 写入；下一批直接进入 P5R-D。
+
+### 39.5 P5R-D：全链离线回放与真实复验门禁
+
+依赖：P5R-C 完成且用户单独确认开始。
+
+唯一目标：在零真实调用下证明新合同贯穿 Prompt、Schema、Service、API 和 React，同时冻结只复验 P3 原 7 个失败调用的预算与路径。
+
+允许修改：质量运行器、P3 只读回放、Fake PostgreSQL/API、前端验收夹具、零调用预检和验收记录。禁止继续修改生产业务规则、读取 Key、实例化真实 Adapter、调用模型、写正式复验 raw 或覆盖历史结果。
+
+验证至少包括：P3 35 个 raw 新 Service 回放、隐私/自动决定/未知 criterion/JD 来源负例、API 旧 5.0 JSONB 兼容、前端新文案和显示、相关后端/前端回归、`py_compile`、TypeScript/build、`git diff --check`。复验输入固定为 P3-R04、P3-R09、P3-R14、P3-S-R09-1/2/3、P3-S-R17-1 共 7 次；内容错误不重试，基础设施错误每次最多额外 1 attempt，API attempt 上限 14，PostgreSQL 写入 0。完成后查询官方实时价格，展示金额边界并停止等待 P5R-E 授权。
+
+实施结果（2026-09-01）：35 个 P3 raw 在新 Service 下只读回放为 33 合法、2 拒绝；5 个 quote-only 失败全部释放，R04/R14 仍因非零分无依据被 Schema 拒绝。七例复验 runner 已冻结调用顺序、14 attempt 上限、独立空结果路径和 PostgreSQL 零写入。P5R 专项 21 项、后端定向 181 项、前端全部 20 个 test script、TypeScript/build、`py_compile` 与 `git diff --check` 通过。全量后端还暴露 1 个跨月日期硬编码失败和既有 I4/CLOSE-07 封存 hash 失败，它们不在 P5R 链路且没有被改写。2026-09-01 查询 DeepSeek 官方价格：Pro 峰值 cache miss input/output 分别为 USD 1.32/3.96 每百万 token，七次按峰值和最大输出计算的保守上界为 USD 0.56730696，建议费用上限 USD 0.60。P5R-D 的真实调用、Key 读取、费用和数据库写入均为 0；用户虽已授权连续 A—E，但尚未给出设计强制要求的明确美元上限，因此 P5R-E 暂不得调用。
+
+### 39.6 P5R-E：原七个失败调用的独立真实复验
+
+依赖：P5R-D 全部通过、官方价格仍有效、独立结果路径为空，且用户单独确认开始 P5R-E 和美元金额上限。
+
+唯一目标：确认新 Prompt 在原失败输入上能生成可用的 LLM 判断依据，并记录新 Service 是否接受；不补跑完整 P3，不覆盖 P3 raw，不写 PostgreSQL。
+
+调用顺序固定为 P3-R04、P3-R09、P3-R14、P3-S-R09-1/2/3、P3-S-R17-1。逐 attempt 记录模型、token、费用、原始响应和 Service 结果；内容失败不补跑，基础设施错误最多额外 1 attempt。结果只报告 7 个调用在新合同下的结构、安全和模型输出，不把 `Service legal` 宣称为证据真实、人工质量通过或阶段 7 整体通过。完成后立即停止。
+
+实施结果（2026-09-01）：用户明确授权费用硬上限 USD 0.60 后，7 个固定业务调用均各执行 1 次，共 7 API attempts、0 基础设施重试、40,662 input tokens、17,553 output tokens，按实际 off-peak 价格估算 USD 0.06159186，PostgreSQL 写入 0。Service 合法 6/7：R09 及其三次稳定性复测均为 88，R14 为 42，R17 复测为 88；R04 仍以 `SCREENING_EVALUATION_INVALID_MODEL_OUTPUT` 被拒绝。六份合法报告的所有非零评价点均有 AI 判断依据，版本均为 v8/v10 和 `deepseek-v4-pro`。
+
+封存检查发现 runner 的结果 payload 漏写 `attempt_audit`，因此供应商原始响应未落盘，无法从封存结果继续定位 R04 的具体 Schema 字段错误；原结果 SHA-256 `4eb8ddd4...e966b7` 保持不改写。runner 已补上未来的 `attempt_audit` 写入，但依据“内容失败不重试”和固定七次调用边界，本批不补跑。独立 summary 将状态记为 `completed_with_raw_audit_gap`，P5R-E 不能宣称满足“完整 raw 审计”完成标志，也不据此宣布阶段 7 通过。
+
+## 40. P5R-F：R04 单例原始响应诊断复测
+
+### 40.1 P5R-F1：零调用设计与费用门禁
+
+用户在了解 P5R-E 的审计缺口后明确要求重新测试 R04，并在再次失败时查看具体原因。本批是新的独立诊断，不属于 P5R-E 内容重试，也不改写 P5R-E 或 P3 结果。
+
+唯一目标：只对冻结的 R04 输入调用当前 `deepseek-v4-pro` 一次，并确保模型原始响应在进入 Schema/Service 解析前先写入独立 attempt journal；如果报告失败，只用已保存原始响应离线定位具体 Schema 或 Service 规则，不再调用模型。
+
+固定顺序：
+
+1. 校验 P3 raw、confirmed plan、R04 fixture、当前 v8/v10/5.0 配置和独立结果路径；读取 Key、实例化 Adapter、模型调用和 PostgreSQL 写入均为 0。
+2. 查询 DeepSeek 官方实时价格。R04 当前消息体 UTF-8 上界为 26,530 bytes；按 peak cache-miss input USD 1.32/百万 token、最大 12,000 output tokens 和 output USD 3.96/百万 token计算，单次保守上界为 USD 0.0825396，建议独立费用硬上限 USD 0.10。
+3. 用户明确确认 P5R-F 与美元金额后，只执行 R04 一个业务调用；内容错误不重试，基础设施错误最多额外 1 attempt，因此 API attempt 上限 2。每次供应商成功返回后必须先以独立文件方式保存 raw response、model、finish reason、token 和费用，再交给 Schema/Service。
+4. 若 Service 合法，记录报告结构和分数后停止；若 Service 拒绝，使用已保存 JSON 分别执行 JSON 解析、`AIScreeningEvaluationV5Output` Schema、criterion cross-reference、finding、时间兼容和安全检查，记录第一个失败层及具体字段路径后停止。
+
+允许修改：独立 P5R-F runner、定向测试、独立 attempt/result/summary 路径、本文和 `PROJECT_STATE.md`。链路位置是“冻结输入 → Model → 原始响应 journal → Schema → Service”；禁止修改生产 Prompt、Schema、Service、Adapter/API、业务 Model、migration、React、PostgreSQL，以及 P3/P5R-E 既有结果。
+
+完成标志：独立结果记录 1 个 R04 业务调用、最多 2 attempts、实际 token/费用、原始响应身份和最终 Service 结果；若失败，必须给出可复现的具体字段/规则原因。真实调用前必须同时满足用户对本批和明确美元上限的授权。完成后停止，不在本批根据失败原因修改 Prompt 或 Service。
+
+P5R-F1 零调用结果：官方价格已于 2026-09-01 再次核对，独立结果路径不存在，单次 peak 保守上界 USD 0.0825396，建议金额 USD 0.10。当前真实调用、Key 读取、token、费用和 PostgreSQL 写入均为 0；等待用户确认金额后进入 P5R-F2。
+
+P5R-F2/F3 实施结果：用户明确授权 USD 0.10 后，R04 只执行 1 次 API attempt、0 基础设施重试，估算费用 USD 0.00869088，PostgreSQL 写入 0。供应商原始响应先保存到独立 attempt 文件并通过 SHA-256 绑定，再进入解析；Service 再次拒绝，离线诊断准确落在 Schema 的 `criterion_assessments`。
+
+失败原因共有 6 项：`criterion:0004` 得 2 分，`criterion:0005`、`criterion:0009`、`criterion:0012`、`criterion:0013`、`criterion:0014` 各得 1 分，但六项均为 `evidence=[]`。这些 reason 都表达“未提及/未体现”，模型应按 v8 Prompt 输出 0 分，却给了低正分，因此违反“1—10 分必须至少有一条 AI 判断依据”。这不是 evidence 改写定位问题，也不是 JD/criterion、安全或时间字段问题；Schema 正确拒绝，当前批次不修改或放松规则。attempt SHA-256 为 `5ebbe912...c6bde`，结果 SHA-256 为 `448a5ea7...99ba`；完成后停止。
+
+## 41. P5R-G：evidence-first 预防与一次统一 LLM 输出修复
+
+### 41.1 已确认业务方案
+
+用户已经确认：R04 的系统性问题不通过删除 Schema、程序自动改分或程序补证据解决，而采用三层机制：首次 Prompt 尽量预防；Schema 与 Service 继续作为最终合同校验；首次模型输出只要出现能够被程序准确描述的 LLM 输出合同错误，就把本轮已经发现的可修复问题统一交给独立 Repair Prompt 自我修复一次。该机制不再只服务于“非零分但 evidence 为空”这一种已知错误，也不能扩张成对输入、基础设施、数据库或高风险安全错误的盲目重试。
+
+固定边界：
+
+1. 程序只识别确定性的输出合同错误，不判断简历语义。可修复白名单包括：非空响应中的 JSON 语法/序列化错误；Schema 的缺失字段、未知字段、字段类型、枚举、范围、固定值和 score/evidence 形状错误；以及 Service 对 criterion 完整性、重复/未知引用、finding 引用、时间兼容固定字段和其他确定性报告合同的校验错误。一次校验应尽可能聚合当前层能够发现的全部白名单错误；JSON 尚不可解析时无法继续发现下游错误，不承诺猜测尚未暴露的问题。
+2. 不可修复错误直接失败且不得调用 Repair Prompt：岗位/计划/简历版本或冻结输入不合法、JD 来源丢失、简历不存在或为空、认证/限流/网络/超时/供应商错误、并发或运行状态错误、数据库错误，以及敏感信息、Prompt 注入、自动招聘决定等高风险安全错误。当前系统已经不验证 evidence 是否与 Resume 语义一致，因此也不存在把这种语义判断错误交给 repair 的入口。
+3. Repair Prompt 接收同一份完整脱敏 Resume、confirmed criteria、首次模型原始输出，以及经过脱敏和白名单映射的结构化错误列表；不得接收堆栈、数据库错误或其他内部实现细节。错误列表至少包含稳定错误码、字段路径和期望合同，不能只给模型一段模糊异常文字。
+4. Repair LLM 返回一份完整的修正版报告，而不是只返回 R04 assessment replacements。这样同一次修复可以处理 JSON、顶层字段、assessment、finding 和交叉引用等不同位置的多个输出错误。Prompt 要求已合法内容尽量保持不变，但程序不以相似度或语义比较判断“是否改多了”；最终是否可接受只由完整 Schema 与 Service 硬校验决定。
+5. 对非零分空 evidence，LLM 仍必须自行二选一：如果完整 Resume 没有相关依据，输出 `score=0` 并解释当前材料未体现；如果存在弱或强相关材料，才可输出 1—10 分并提供至少一条 AI 判断依据。程序不把低分自动改为 0，也不生成、搜索或补写 evidence。
+6. 修正版报告必须从头重新通过 JSON 解析、完整 Schema、criterion、finding、时间兼容和安全检查；仍失败就最终失败，不进行第二次内容修复。第二次校验即使暴露出首次因 JSON/Schema 阻断而未能发现的新问题，也不能再次调用 repair。
+7. 初次生成与内容修复属于两个业务模型调用。基础设施重试最多仍为 1 次；最坏顺序为“首次基础设施失败、首次生成重试成功、内容修复调用一次”，因此单个 ScreeningRun 的 API attempt 硬上限从 2 调整为 3。修复调用自身发生基础设施错误时不再额外重试，避免超过 3。
+8. 首次 raw、结构化错误列表和 repair raw 必须进入调用审计；成功报告继续只保存最终合法结果。ScreeningRun 必须记录真实总 attempt 数和成功响应合计的 input/output tokens，失败也必须尽可能记录已经发生的 attempt 数；不能把内容修复伪装成免费本地处理。
+9. 初次报告 Prompt、独立 Repair Prompt 和 Service behavior 分别升级版本；现有 5.0 最终报告 JSON、API response 和 PostgreSQL 报告 JSONB 形状不变。`ScreeningRun.attempt_count` 数据库 check constraint 需要由 0—2 扩到 0—3，因此必须有独立 Alembic migration；不修改评价报告业务字段。
+10. 自动修复只提升结构合法率，不证明 AI 判断依据事实正确，不把 Service 合法等同于质量通过或招聘决定。
+11. 用户进一步确认 v9 首次报告 Prompt 必须同步精简，而不是在 v8 后继续追加规则。v8 当前为 6,633 字符、11,753 UTF-8 bytes、71 行，其中四个完整 Few-shot 共 3,047 字符，约占 46%；R04 完整请求约 26,530 bytes，系统 Prompt 接近一半。v9 目标是在不删除业务硬规则的前提下减少约 35%—40% 字符，把关键 score/evidence 决策提高到最醒目位置。
+12. v9 主 Prompt 只保留：任务和 HR 决策边界、不可信输入、criterion 完整性、score/evidence 决策表、总体分与 required 权衡、工作年限统一禁令、报告分区、安全边界、JSON 骨架和短自检。重复出现的工作年限、证据、安全与报告说明必须合并，不得在多个章节反复展开。
+13. 四个完整 Few-shot 改为一个完整合法 JSON、一个 R04 风格“未体现却给低正分且无 evidence”的非法/合法微型对照，以及一个 required 低分与较高总体分的必要局部示例。Few-shot 总字符目标不超过 1,200；不能用删除关键反例来机械追求长度。
+14. 内容修复规则不得塞回首次报告 Prompt。独立 Repair Prompt 只在白名单触发条件成立时发送，因此正常报告调用不承担修复说明的注意力成本。
+
+### 41.2 P5R-GA：修复边界红灯测试
+
+依赖：第 41.1 节方案获用户确认，且用户确认开始本实施顺序。
+
+唯一目标：先用失败测试锁定“所有可准确描述的 LLM 输出合同错误统一修一次、不可修复错误不调用、最终仍由原校验裁决”的合同。
+
+通俗解释：先把“哪些问题能返给模型返工、哪些问题必须直接失败”写成自动测试，避免修复机制以后变成无边界重试。
+
+允许修改：独立 Prompt/Schema/Service/Adapter/ScreeningRun/migration/API 合同测试、R04 frozen raw 回放测试、本文和 `PROJECT_STATE.md`。链路位置是测试层，覆盖 Model → Schema → Service → Model repair → Schema → ScreeningRun → PostgreSQL。禁止修改生产 Prompt、Schema、Service、Adapter、Model、migration、API、React、数据库和历史结果；真实调用、Key 读取和费用为 0。
+
+测试至少固定：JSON 语法错误、多个 Schema 错误、criterion/finding 等确定性 Service 输出错误以及多种白名单混合错误均只触发一次 repair；输入前置错误、基础设施错误、数据库错误和安全错误不 repair；传给模型的是脱敏结构化错误而不是内部异常；修复返回完整报告并从头复验；R04 可选择 0 分空依据或正分有依据；第二次仍非法时失败；调用数/token/raw 审计最多 3；旧 5.0 API 最终报告形状不变。红灯必须因能力尚未实现而失败，完成后停止。
+
+实施结果（2026-09-01）：P5R-GA 已完成并停在红灯。新增一个独立 Repair 合同测试文件和一个零网络 Fake fixture，不修改生产 Prompt、Schema、Service、Adapter、API、ScreeningRun Model、migration、React 或 PostgreSQL。定向红灯为 `20 failed + 14 passed`：20 个失败分别落在非法 JSON、多 Schema 错误聚合、criterion/finding/时间兼容与混合白名单错误的一次 repair，脱敏结构化错误、完整报告返回、修后从 JSON 开始全量复验、R04 归零/补依据两条分支、禁止程序自动改分补依据、raw/token/调用审计，以及 ScreeningRun/API/Model/migration 的 0—3 attempts 合同尚未实现；14 个通过项锁住岗位/计划/JD 来源/空简历输入、认证/限流/超时/供应商、并发运行状态、数据库或内部异常和敏感信息/Prompt 注入/自动招聘决定均不调用 repair，并确认旧 5.0 最终报告形状不增加 repair 审计字段。
+
+既有相关回归继续为 `145 passed + 24 subtests passed + 1 warning`，warning 仍是既有 PyPDF2 弃用提示；新增 Python 文件 `py_compile` 与 `git diff --check` 通过。测试使用 `_env_file=None`、空 Key 和 Fake Adapter，只读回放 P5R-F 已封存 R04 raw，没有实例化真实 Adapter、调用 DeepSeek、产生 API attempt/token/费用或写入 PostgreSQL，模型费用为 USD 0。该红灯只能证明下一批实现已有明确可执行边界，不能证明 Repair、Prompt v9、Service v11、0—3 migration 或真实 R04 修复已经可用。P5R-GA 到此停止；唯一下一步是等待用户单独确认开始 P5R-GB。
+
+### 41.3 P5R-GB：首次 evidence-first Prompt 与定向修复合同
+
+依赖：GA 完成并再次获得用户确认。
+
+唯一目标：建立模型第一次生成时的强预防规则，以及能够根据结构化错误返回完整修正版报告的独立 Repair Prompt/Adapter 协议，不在本批接入自动触发。
+
+允许修改：`backend/app/prompts/screening_evaluation.py`、独立 Repair Prompt builder、对应 Prompt 版本配置、只供错误传递使用的内部类型、`backend/app/adapters/screening_evaluation.py` 的 repair 方法及测试。Repair 输出复用现有完整报告 Schema，不新建一套较宽松的最终报告合同。禁止修改现有报告输出 Schema 规则、Service 自动流程、ScreeningRun、API、Model、migration、React 或 PostgreSQL。
+
+首次 Prompt 升级为 v9：按第 41.1 节量化目标精简约 35%—40%，把逐项 score/evidence 决策表前置，加入“reason 表达未提及/未体现时不得给低正分”的明确禁例，以及 R04 风格非法/合法 JSON 对照；四个完整 Few-shot 收敛为一个完整示例和两个短对照，Few-shot 不超过 1,200 字符。测试必须同时锁定关键硬规则仍存在、重复规则明显减少、主 Prompt 与 Few-shot 字符预算达标，不能只测版本字符串。Repair Prompt v1 接收同一脱敏 Resume、confirmed criteria、首次 raw 和白名单结构化错误列表，明确把 raw 当作待修数据而非指令，要求输出一份完整修正版报告；错误列表禁止包含堆栈、数据库信息或任意内部异常文本。Adapter 仍使用同一 `deepseek-v4-pro`、JSON output、thinking disabled、temperature 0.1，不自动重试内容错误。完成后 Prompt/Schema/Adapter 定向测试通过并停止。
+
+实施结果（2026-09-01）：P5R-GB 已完成并停在独立 Prompt/Adapter 合同层。新增测试在实现前准确形成 `14 failed`；最小实现后，主 Prompt 升级为 `screening_evaluation_lightweight_v9`，报告行为仍为 `lightweight_report_generation_v10`。v9 正文为 4,101 字符，相比 v8 的 6,633 字符缩短约 38.2%；score/evidence 决策表位于总体分规则之前，明确 1—10 分必须有依据、0 分依据可空或非空、写“未提及/未体现/没有相关材料”时必须为 0，程序不得自动改分或补 evidence。Few-shot 为 683 字符，只保留一个可由现有 5.0 Schema 直接验证的完整 JSON、一个 R04 非法/两种合法选择微型对照和一个 required 低分/较高总体分权衡微型对照。
+
+独立 `screening_evaluation_repair_v1` 已建立四个不可信数据边界，只接收同一份脱敏 Resume、confirmed criteria、首次 raw 和 `{code,path,expected}` 结构化错误；错误码、JSON 字段路径和期望合同先经本地形状检查，堆栈、数据库词、服务器/Python/Windows 路径被拒绝，内部异常原文不会进入模型消息。Repair Prompt 要求返回完整修正版 5.0 报告，禁止局部 replacement、程序合并、自动改分补依据或输出 `display_label`。DeepSeek Adapter 新增独立 `repair_v5`，复用同一受控单次请求通道：`deepseek-v4-pro`、JSON object、thinking disabled、temperature 0.1；Fake Adapter 将 repair 调用与首次生成调用分开记录。本批没有把该方法接入 Service，因此不会自动触发，也没有改变最终 Schema、API 报告、ScreeningRun、Model、migration、React 或 PostgreSQL。
+
+最终 GB 与相关回归合并为 `164 passed + 22 subtests passed + 1 warning`，warning 仍是既有 PyPDF2 弃用提示；GA 合同仍为预期的 `20 failed + 14 passed`，精确说明 Service 一次修复、双 raw/token 审计和 0—3 attempts 尚未进入本批。相关 Python `py_compile`、已跟踪及新增测试文件的 `git diff --check` 通过。测试只使用 Fake/Mock、注入 Mock client 的 Adapter、`_env_file=None` 和测试字符串，没有读取 Key、创建真实网络 client、调用 DeepSeek、产生正式 API attempt/token/费用或写 PostgreSQL，模型费用为 USD 0。这些结果能证明 v9/Repair Prompt/Adapter 的离线输入输出边界与请求参数已建立，不能证明 Service 会触发 repair、修正版已经从 JSON 起全量复验、ScreeningRun 会审计两次 raw/token、attempt 上限已变为 3，或真实模型能修好 R04。P5R-GB 到此停止；唯一下一步是等待用户单独确认开始 P5R-GC。
+
+### 41.4 P5R-GC：Service 一次受控内容修复
+
+依赖：GB 完成并再次获得用户确认。
+
+唯一目标：在纯报告 Service 中接入一次修复，但不接数据库运行生命周期。
+
+允许修改：`backend/app/services/screening_evaluation_service.py`、必要的纯结果/调用审计数据结构及测试。禁止修改 ScreeningRun、API、业务 Model、migration、React 和 PostgreSQL。
+
+Service 先保存首次 raw，并把解析、Schema 和确定性 Service 输出校验产生的问题映射为稳定错误码；只要已发现错误全部位于白名单且没有高风险安全错误，就把当前可发现的问题统一交给 repair 一次。Repair 返回完整候选报告，Service 不自动合并、改分或补依据，而是从 JSON 解析开始重新执行全部严格验证；repair 非法、第二次仍非法或 Adapter 错误均最终失败。Service behavior 升级为 v11，结果审计返回首次调用、结构化错误、repair 调用、合计 token、content_repair_count 0/1 和 adapter_attempt_count。完成后 R04、非法 JSON、多 Schema 错误、criterion/finding 错误的 Fake 修复路径与全部不可修复反例通过并停止。
+
+实施结果（2026-09-01）：P5R-GC 已完成。Service behavior 升级为 `lightweight_report_generation_v11`；非法 JSON、Pydantic Schema 错误、criterion 完整性、finding 引用、时间兼容字段和其他确定性输出错误映射为只含稳定 `code/path/expected` 的白名单错误。Schema 同层错误尽可能聚合；Schema 合法后，criterion/finding/时间错误也会同层聚合。敏感个人信息、Prompt 注入和招聘决定先执行高风险阻断，绝不进入 repair。Service 最多调用一次 `repair_v5`，完整修正版从 JSON 解析开始重新经过 Schema、criterion、finding、时间与安全检查；第二次失败直接返回最终错误。成功与失败异常审计都可携带首次 raw、错误列表、repair raw、两次 token 和真实调用数，最终 5.0 report payload 不包含这些内部字段。GC 完成时 GA 合同由 `20 failed + 14 passed` 转为只剩 GD 的 `4 failed + 30 passed`，纯 Service 范围全部转绿。
+
+### 41.5 P5R-GD：ScreeningRun、API 与 PostgreSQL attempt 审计
+
+依赖：GC 完成并再次获得用户确认。
+
+唯一目标：把纯 Service 的第二次业务调用安全接入正式异步 ScreeningRun，使数据库记录的 attempt/token 与真实调用一致。
+
+允许修改：`backend/app/services/screening_service.py`、ScreeningRun Schema/Model、API 映射、独立 Alembic migration 及相关测试；前端只有在现有类型不能读取 attempt_count=3 时才允许最小类型修正，不改变页面流程。禁止修改报告 JSONB 形状、招聘决定、其他阶段表和历史结果。
+
+数据库 migration 只把 `ck_screening_runs_attempt_count_range` 从 0—2 调整为 0—3。ScreeningService 记录初次生成、基础设施重试和内容 repair 的真实总 attempts；成功时保存两次成功调用的合计 tokens，失败时保留安全错误语义、旧成功报告和幂等边界。验证 Fake PostgreSQL、API、migration upgrade/downgrade、并发/输入过期/数据库提交失败回归。完成后停止。
+
+实施结果（2026-09-01）：P5R-GD 已完成。`ScreeningRunRead`、ORM check constraint 和 `_mark_failed` 上限统一为 0—3；ScreeningService 把首次基础设施失败、初次报告成功和一次 repair 计为真实 3 attempts，repair 基础设施错误不再启动第二轮基础设施重试。成功运行保存两次成功响应的合计 token；repair 后失败和数据库提交失败也尽可能保存已发生的 token 与真实 attempt 数。新增 migration `e7f9a1b3c545` 只替换 `ck_screening_runs_attempt_count_range`，downgrade 前拒绝存在 attempt_count > 2 的数据。开发 PostgreSQL 已完成 `d6e8f0a2b434 → e7f9a1b3c545 → d6e8f0a2b434 → e7f9a1b3c545` 往返，最终 `current=head=e7f9a1b3c545`，`alembic check` 返回 `No new upgrade operations detected`。GA 合同最终 `34 passed`，PostgreSQL ScreeningRun 回归 `37 passed`。
+
+### 41.6 P5R-GE：零调用全链预检
+
+依赖：GD 完成并再次获得用户确认。
+
+唯一目标：零费用证明 Prompt → Adapter → Schema → Service repair → ScreeningRun → API → PostgreSQL 全链一致，并冻结真实复验预算。
+
+至少验证：R04 原 raw 精确触发一次 repair；repair 选择归零与补依据两条合法分支；非法 JSON、多个 Schema 错误、criterion/finding 错误和多种白名单混合错误各只 repair 一次；输入/基础设施/数据库/安全错误不 repair；第二次非法不再 repair；attempt 1/2/3、token 与 raw 审计、API 兼容、migration、相关后端/前端回归、`py_compile`、build 和 `git diff --check`。真实 Adapter 不实例化、Key 不读取、模型调用和费用为 0。完成后查询官方价格，给出初次生成加最多一次 repair 的 peak 上界并停止。
+
+实施结果（2026-09-01）：P5R-GE 已完成并停在 GF 金额门禁。Prompt/Repair/Adapter/Schema/Service/API/migration 定向为 `288 passed + 36 subtests passed`，真实 PostgreSQL ScreeningRun 回归 `37 passed`；四个阶段 7 AI 前端脚本、TypeScript 和 Vite production build 全部通过。后端全量为 `1537 passed + 425 subtests passed + 8 failed + 2 warnings`；8 个失败均为本批开始前已有的冻结身份/日期基线：1 个上传路径固定旧月份，4 个 I4 pricing/raw 绑定已漂移，3 个 CLOSE-07 继续因同一 I4 raw 哈希漂移拒绝。没有删除断言、改历史 raw/hash 或把这些失败冒充本批回归。
+
+零调用证据写入 `2026-09-01-stage7-p5r-ge-zero-call-preflight.json`。GF 四个独立 result/attempt 路径均为空；GE 没有读取 Key、创建真实网络 client、调用 DeepSeek、产生 token/费用或写 PostgreSQL 业务数据，实际费用 USD 0。2026-09-01 查询 DeepSeek 官方价格页，`deepseek-v4-pro` peak 为 cache hit input USD 0.044、cache miss input USD 1.32、output USD 3.96/百万 token；off-peak 分别为 USD 0.022/0.66/1.98。按 R04 v9 主请求、Repair 静态输入、首次 raw 最多 12,000 tokens 和两次各最多 12,000 output tokens保守估算，GF peak 上界为 USD 0.15598968，建议明确硬上限 USD 0.20。用户本轮虽确认完成 C—F，但尚未给出第 41.7 节要求的明确美元金额；因此 `gf_authorized=false`，唯一下一步是等待用户单独明确“授权 P5R-GF，费用硬上限 USD 0.20”，不得读取 Key 或调用模型。
+
+### 41.7 P5R-GF：R04 独立真实验证
+
+依赖：GE 全部通过、独立结果路径为空、官方价格仍有效，且用户另行确认明确美元费用上限。
+
+唯一目标：使用 R04 冻结输入验证生产 v9/v11 是否能在首次输出非法时完成最多一次 LLM 自修复；不扩大到其他样本，不写 PostgreSQL，不覆盖 P3/P5R-E/P5R-F。
+
+固定最多 2 个业务模型调用；基础设施层总 API attempt 上限按生产合同为 3。每次原始响应先封存再解析，记录 repair 是否触发、模型选择归零还是补依据、最终 Service 结果、token 和费用。无论成功或失败都立即停止；不能以单例结果宣布阶段 7 通过，也不能在本批继续修改规则。
+
+实施结果（2026-09-01）：用户明确授权“P5R-GF，费用硬上限 USD 0.20”后，只对冻结 R04 执行一次独立真实验证，并已按失败停止。GF runner 在读取 Key 和实例化真实 Adapter 前再次校验 GE 证据、冻结输入身份、v9/v11/Repair v1/Schema 5.0、独立空路径和 USD 0.15598968 两业务调用 peak 上界；每次供应商 raw 均以独占文件先封存，再交给 Service 解析，没有连接或写入 PostgreSQL，也没有覆盖 P3/P5R-E/P5R-F。
+
+首次 v9 raw 是合法 JSON，旧 R04 的 6 个“非零分但 evidence 为空”项全部由模型选择归零且保留空 evidence，其余所有正分项均提供 evidence，说明 v9 在本例中消除了原问题；但模型把 12 个 `hr_follow_up_questions` 元素输出为 finding 对象而不是字符串，Schema 聚合为 12 个脱敏 `SCHEMA_TYPE_INVALID` 错误并触发唯一一次 Repair。Repair 返回包含全部 8 个顶层报告字段的完整 JSON，但 raw 与首次 raw 完全相同，因此同一类型错误仍存在；修正版重新从 JSON 开始经过 Schema/Service 全量校验后被拒绝，程序没有自动改分、补 evidence、做第二次 Repair或产生最终 5.0 报告。
+
+本次共 2 个业务模型调用、2 个 API attempts、0 次基础设施重试、1 次内容 Repair，使用 11,160 input tokens 和 6,524 output tokens；按官方 peak cache-miss input/output 单价保守估算 USD 0.04056624，低于 USD 0.20 硬上限。attempt 01/02 与 result 已封存，attempt 03 保持不存在；GF runner 与 Repair/Service/Adapter 回归为 `132 passed + 6 subtests passed + 1 warning`，warning 为既有 PyPDF2 弃用提示。该单例能证明真实触发、双 raw/token/费用审计、一次 Repair 上限、全量复验和失败停止边界按合同运行，也能证明 v9 在 R04 中采用了合法归零分支；不能证明 Repair 在真实模型上的纠错成功率、其他样本质量、最终 API 报告兼容性的新实例或阶段 7 验收通过。P5R-GF 到此停止，不补跑、不修改生产规则，等待用户另行决定后续整改。
+
+GF 后续主 Prompt 定向修正（2026-09-01）：用户确认不完整回退 v8，而以 v9 为基础恢复被压缩掉的唯一类型合同。主 Prompt 升级为 `screening_evaluation_lightweight_v10`，Service behavior 仍为 v11、Schema 仍为 5.0、最终报告形状不变。v10 保留 v9 的 evidence-first 决策表和 R04 归零/补依据分支；第 7 节明确 `strengths/gaps/risks_or_conflicts/missing_info` 是 finding 对象列表，而 `hr_follow_up_questions` 只能是非空问题字符串列表，禁止写成 `{summary,criterion_ids,evidence}` 对象；严格 JSON 骨架和唯一完整 Few-shot 都恢复了非空问题字符串。v10 正文 4,266 字符，仍比 v8 的 6,633 字符短约 35.69%，但后续不再把压缩比例置于唯一类型、严格骨架、非空示例、评分和安全合同之上。定向回归为 `204 passed + 22 subtests passed + 1 warning`；没有读取 Key、调用模型、产生费用或写 PostgreSQL，也没有改写 GF raw/result。
+
+Repair v1 的真实失败不是材料总量不足：它已经收到同一脱敏 Resume、confirmed criteria、首次完整 raw 和 12 条 `{code,path,expected}` 错误。问题是信息比例和可执行精度不足：首次 raw 很长，12 条 `SCHEMA_TYPE_INVALID` 的 expected 只写“字段类型必须与 5.0 报告合同一致”，没有直接说明目标必须是字符串；Repair Prompt 也只说五个分区都是列表和 finding 引用规则，没有携带紧凑完整输出形状或非空问题字符串示例，同时要求尽量保留原响应中合法内容。在这种条件下，模型虽发生了独立第二次调用，却把原 raw 逐字返回。
+
+Repair v2 定向修正（2026-09-01）：用户确认 Repair 必须同时包含固定提示词和本次具体问题反馈。独立 Repair Prompt 升级为 `screening_evaluation_repair_v2`：固定说明书明确完整紧凑 5.0 输出形状、criterion assessment/finding/HR 问题的不同元素类型、score/evidence 选择、完整报告返回和安全边界，并声明错误清单是必须逐条完成的修改任务，修错优先于原样保留。Service 仍只把确定性白名单输出错误交给 Repair，但每条统一扩展为 `{code,path,actual_type,expected,correction}`；`actual_type` 只传 `object/string/array/integer` 等安全 JSON 类型，不传实际字段值、Pydantic 文本或内部异常。普通类型错误也会明确目标 JSON 类型；对本次 GF 的每个问题对象，反馈精确为当前 `object`、期望“非空问题字符串”、修正为“改成完整问题字符串并删除 `summary/criterion_ids/evidence` 对象外壳”。
+
+Repair v2 没有改变可修复白名单、不可修复边界、一次 Repair 上限、程序不自动改分/补 evidence、修正版全量复验或第二次非法直接失败规则；最终 5.0 report/API/PostgreSQL JSONB 形状也不变。红灯阶段准确得到 6 个目标失败，最小实现后 Prompt/Repair/Service/ScreeningRun/Adapter 定向回归为 `243 passed + 22 subtests passed + 1 warning`，warning 仍为既有 PyPDF2 弃用提示；`py_compile` 和 `git diff --check` 通过。本批没有读取 Key、调用 DeepSeek、产生 token/费用或写 PostgreSQL，也没有覆盖或补跑 GF。测试证明 v2 的固定说明和具体安全反馈已进入真实请求构造与一次 Repair 流程，不能证明真实模型一定会修好；后续真实验证必须使用新路径和新费用授权。
+
+v10/v2 R04 新路径真实验证（2026-09-01）：用户随后明确要求再次使用真实简历测试。运行器只读复用同一份拟真脱敏冻结 R04，并新建 `2026-09-01-stage7-p5r-g-v10-v2-r04-*` 独占证据路径；旧 GF result/attempt 哈希保持不变。调用前零费用预检锁定 `deepseek-v4-pro`、主 Prompt v10、Repair Prompt v2、Service behavior v11、Schema 5.0、最多 2 个业务调用/3 个 API attempts、PostgreSQL 写入 0，并按 2026-09-01 官方 peak 价确认当前 R04 主调用加冻结 Repair 挑战预留约 USD 0.16314012，低于沿用的 USD 0.20 硬上限；运行时继续逐次执行累计费用守门。
+
+真实运行共 2 个业务调用、2 个 API attempts、0 基础设施重试。首次 v10 新报告直接通过 JSON/Schema/Service 全量校验，没有触发生产 Repair：总分 32，14 个 assessment 中 9 个正分项均有 evidence、5 个 0 分项 evidence 为空，12 个 `hr_follow_up_questions` 均为非空字符串。为避免“只验证主 Prompt、仍未验证 Repair v2”，运行器按预检方案把旧 GF attempt 01 raw 及当前 Service 生成的 12 条 `{code,path,actual_type,expected,correction}` 错误交给独立 Repair v2；修正版把 12 个 finding 对象全部改为 12 条字符串，除 `hr_follow_up_questions` 外的报告内容逐项保持相同，总分仍为 38，随后从 JSON 解析开始重新通过完整 Schema 与 Service 校验。程序没有自动改分、补 evidence 或做第二次 Repair。
+
+两次成功响应合计 11,714 input tokens、6,189 output tokens，按官方 peak cache-miss input/output 价保守估算 USD 0.03997092，低于 USD 0.20；attempt 01/02、零调用 preflight 和最终 result 均已独占封存，attempt 03 保持不存在，证据中没有 Key 或内部异常，PostgreSQL 业务写入为 0。该结果能证明 v10 在 R04 上避免了旧类型错误，也能证明 v2 对这个已知真实 raw 的具体反馈、完整返回和全量复验成功；单个 R04 不能证明其他 JSON/Schema/Service 错误都能由真实模型修好，不能证明评分语义正确、Repair 普遍成功率或阶段 7 整体验收通过。到此停止，不自动扩大真实样本。
+
+阶段 7 v10/v2 最终验收 raw 批（2026-09-01）：用户确认从整改切换到最终验收准备后，独立 runner 只读复用 P2 confirmed plans 和 5 JD/20 Resume 冻结 fixture，新建 `2026-09-01-stage7-final-v10-v2-*` 零调用、逐 attempt JSONL journal 和 raw result 路径，不覆盖 P3、P5R 或 I2/I3/I4。固定执行 R01—R20 各一次，再对 R01/R05/R09/R13/R17 各执行三次额外稳定性调用；主 Prompt v10、Repair Prompt v2、Service behavior v11、Schema 5.0，每个业务 case 最多一次 Repair/3 个 API attempts，累计 USD 2 peak 硬上限，PostgreSQL 写入 0。每次供应商 raw 均 fsync 到独占 journal 后才返回 Service 校验。
+
+真实 35 个业务调用全部获得供应商响应，对应 35 个 API attempts、0 基础设施失败、0 重试、0 Repair；首次输出没有出现白名单 JSON/Schema/Service 合同错误。基础报告 Service 合法 19/20：R12 唯一失败，原因是模型在解释转化率分母变化时复述业务词“提交手机号用户”，当前 `_EXPLICIT_PRIVACY_OUTPUT_LABEL` 的 `手机号码?` 会匹配“手机号”本身，即使报告没有实际号码，因此按高风险边界直接拒绝且不 Repair。该失败安全地阻断了输出，但属于确定性隐私语境误报候选；隐私边界属于高影响合同，验收批不得擅自放宽。
+
+19 份合法报告的粗方向符合冻结标签 14 份、分数进入冻结区间 7 份。R04/R08/R16/R18/R20 五份冻结 partial 全部被判为 low；R02/R06/R07/R11/R14/R15/R19 方向虽相同但分数也低于区间，显示当前结果可能系统性偏保守，也可能说明调用前人工区间过宽，必须由项目负责人对照事实和依据判断，Codex 不能代审。稳定性 15/15 合法，R01/R05/R09/R13/R17 五组均为 88/88/88、方向稳定且分差 0；这明显优于旧 P3 的 11/15 和 3/5 完整稳定组，但 15 次高样本全部固定 88 也需要人工确认是否为可接受稳定性或过强分档锚定。
+
+成功响应合计 173,530 input tokens、75,223 output tokens，按官方 peak 全部 cache miss 保守估算 USD 0.52694268，低于 USD 2；PostgreSQL 写入 0，Key/堆栈/内部异常未写入证据。当前链路专项 `202 passed + 6 subtests passed`，后端全量 `1557 passed + 425 subtests passed + 8` 个既有月份/I4 哈希失败，前端 20 个合同脚本与 production build 通过，Alembic `current=head=e7f9a1b3c545` 且 `check` 无差异。详细人工审核入口为 `2026-09-01-stage7-final-v10-v2-acceptance-review.md`。当前 `quality_gate_passed=null`、`quality_conclusion_allowed=false`；在用户确认 R12 隐私业务语境和偏低评分 case 之前，阶段 7 不能验收通过，也不得自行修改隐私合同或扩大真实调用。
+
+## 42. 阶段 7 产品验收关闭与阶段 8 入口
+
+2026-09-01，项目负责人在了解最终 v10/v2 原始数据后明确决定：R12 不含真实号码却命中隐私标签的情况作为特殊安全侧误报保留，本轮不放宽隐私规则；partial 和其他样本评分偏低的问题作为 LLM 评分偏严格的已知限制保留，待整个平台主链完成后再专项优化。项目负责人据此确认阶段 7 收尾并进入阶段 8。
+
+这项决定调整的是阶段完成取舍，不改写历史证据：最终 raw 继续是基础报告 Service 合法 `19/20`、合法报告方向 `14/19`、分数入冻结区间 `7/19`、稳定性 `15/15` 且五组均为 `88/88/88`；`quality_gate_passed=null` 和 `quality_conclusion_allowed=false` 保持不变。R12 仍会被当前安全规则拒绝，评分偏保守与 88 分锚定仍未解决。不得把产品验收通过表述为机器质量门槛全绿、隐私误报已修复或评分已达到人工一致。
+
+阶段 7 的当前交付基线固定为：计划 Prompt/Service/Schema `job_evaluation_plan_lightweight_v4` / `lightweight_plan_generation_v5` / `5.0`；报告主 Prompt/Repair Prompt/Service/Schema `screening_evaluation_lightweight_v10` / `screening_evaluation_repair_v2` / `lightweight_report_generation_v11` / `5.0`；每个正式 ScreeningRun 最多 3 个真实 API attempts；最终 5.0 报告、API response 和 PostgreSQL JSONB 形状保持兼容；AI 只提供辅助判断，HR 保留独立决策权。
+
+结合当前自动化、真实 PostgreSQL/API、人工界面验收、migration 往返和最终真实质量证据，阶段 7 按上述已知限制完成产品验收。该结论能证明现有范围可以作为阶段 8 的下游依赖，不能证明对所有岗位/简历的评分语义都正确、Repair 对所有错误均能成功或候选人可脱离 HR 人审自动决定。阶段 8 仍必须先完成业务目标、流程、范围、数据/状态/API/失败语义、自动化与人工验收方案、独立设计文档和用户确认；本节不授权直接修改阶段 8 生产代码。

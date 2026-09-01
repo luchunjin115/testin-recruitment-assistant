@@ -23,8 +23,6 @@ from app.prompts.job_evaluation_plan import (  # noqa: E402
     build_job_evaluation_plan_v5_messages,
 )
 from app.prompts.screening_evaluation import (  # noqa: E402
-    SCREENING_EVALUATION_V5_BEHAVIOR_VERSION,
-    SCREENING_EVALUATION_V5_PROMPT_VERSION,
     build_screening_evaluation_v5_messages,
 )
 from app.schemas.job_evaluation_plan import (  # noqa: E402
@@ -97,6 +95,8 @@ ZERO_EXTERNAL_EFFECTS = {
     "i4_final_write_count": 0,
     "formal_raw_human_final_write_count": 0,
 }
+I4_REPORT_PROMPT_VERSION = "screening_evaluation_lightweight_v7"
+I4_REPORT_BEHAVIOR_VERSION = "lightweight_report_generation_v9"
 
 
 def sha256_file(path: Path) -> str:
@@ -110,10 +110,8 @@ def _actual_execution_contract() -> dict[str, str]:
             JOB_EVALUATION_PLAN_V5_BREAKING_CONTRACT_VERSION
         ),
         "plan_schema_version": JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION,
-        "report_prompt_version": SCREENING_EVALUATION_V5_PROMPT_VERSION,
-        "report_service_behavior_version": (
-            SCREENING_EVALUATION_V5_BEHAVIOR_VERSION
-        ),
+        "report_prompt_version": I4_REPORT_PROMPT_VERSION,
+        "report_service_behavior_version": I4_REPORT_BEHAVIOR_VERSION,
         "report_schema_version": SCREENING_EVALUATION_V5_SCHEMA_VERSION,
     }
 

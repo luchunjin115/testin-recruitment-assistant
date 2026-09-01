@@ -28,6 +28,13 @@ PRICING_PATH = (
 )
 
 
+def test_offline_settings_keep_historical_i4_model_frozen() -> None:
+    settings = real_runner._offline_settings()
+
+    assert settings.JOB_EVALUATION_PLAN_MODEL == contract.PLANNED_MODEL
+    assert settings.SCREENING_EVALUATION_MODEL == contract.PLANNED_MODEL
+
+
 def _authorization() -> dict:
     return {
         "stage": "7R5-I4",

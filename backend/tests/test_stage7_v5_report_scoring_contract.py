@@ -157,10 +157,7 @@ class TestDirectionContradictionDetection:
             name for name in dir(ScreeningEvaluationService)
             if name.startswith("validate_v5_")
         }
-        assert v5_methods == {
-            "validate_v5_criterion_cross_reference",
-            "validate_v5_evidence_required",
-        }
+        assert v5_methods == {"validate_v5_criterion_cross_reference"}
 
 
 # ===========================================================================
@@ -208,9 +205,9 @@ class TestV5ReportStructureFieldsMissing:
 
 class TestEvidenceContract:
     """v5.0 evidence contract rules:
-    - Non-zero score MUST have current resume evidence.
-    - Zero score must have a non-empty reason and no positive evidence;
-      its wording is not judged by Schema or Service.
+    - Non-zero score MUST have at least one AI-generated basis.
+    - Zero score may have an empty or non-empty evidence list.
+    - Every score must have a non-empty reason.
     - Cross-reference validation: criterion_id vs plan criteria.
 
     These tests confirm the deterministic v5.0 enforcement boundary.
@@ -230,10 +227,9 @@ class TestEvidenceContract:
                 evidence=[],
             )
 
-    def test_v5_evidence_validator_exists(self) -> None:
-        """v5.0 must have a dedicated evidence validation function that
-        enforces the non-zero-score-needs-evidence rule."""
-        assert hasattr(ScreeningEvaluationService, "validate_v5_evidence_required")
+    def test_v5_evidence_content_validator_does_not_exist(self) -> None:
+        """The Schema owns presence; Service must not judge evidence content."""
+        assert not hasattr(ScreeningEvaluationService, "validate_v5_evidence_required")
 
     def test_v5_zero_score_semantic_reason_validator_does_not_exist(self) -> None:
         assert not hasattr(ScreeningEvaluationService, "validate_v5_zero_score_reason")

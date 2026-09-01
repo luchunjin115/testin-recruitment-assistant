@@ -170,10 +170,7 @@ class CriterionAssessment(BaseModel):
     @model_validator(mode="after")
     def validate_score_evidence_shape(self) -> CriterionAssessment:
         if self.score > 0 and not self.evidence:
-            raise ValueError("5.0 非零分必须至少包含一条简历证据")
-        if self.score == 0:
-            if self.evidence:
-                raise ValueError("5.0 零分不得附带正向简历证据")
+            raise ValueError("5.0 非零分必须至少包含一条 AI 判断依据")
         return self
 
 

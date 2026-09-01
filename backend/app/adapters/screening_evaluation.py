@@ -19,8 +19,10 @@ from app.core.llm import get_screening_evaluation_llm_client
 from app.prompts.screening_evaluation import (
     SCREENING_EVALUATION_PROMPT_VERSION,
     SCREENING_EVALUATION_V5_PROMPT_VERSION,
+    SCREENING_EVALUATION_V5_REPAIR_PROMPT_VERSION,
     build_screening_evaluation_messages,
     build_screening_evaluation_v5_messages,
+    build_screening_evaluation_v5_repair_messages,
 )
 from app.schemas.screening_evaluation import (
     SCREENING_EVALUATION_SCHEMA_VERSION,
@@ -117,6 +119,13 @@ class DeepSeekScreeningEvaluationAdapter:
                 "5.0 AI 初筛 Prompt 版本与代码不一致"
             )
         if (
+            self.settings.SCREENING_EVALUATION_V5_REPAIR_PROMPT_VERSION
+            != SCREENING_EVALUATION_V5_REPAIR_PROMPT_VERSION
+        ):
+            raise ScreeningEvaluationConfigurationError(
+                "5.0 AI 初筛 Repair Prompt 版本与代码不一致"
+            )
+        if (
             self.settings.SCREENING_EVALUATION_V5_SCHEMA_VERSION
             != SCREENING_EVALUATION_V5_SCHEMA_VERSION
         ):
@@ -205,6 +214,57 @@ class DeepSeekScreeningEvaluationAdapter:
                 experience_period_facts=experience_period_facts,
             )
         )
+
+    async def repair_v5(
+        self,
+        *,
+        sanitized_resume: str,
+        confirmed_criteria: list[dict[str, Any]],
+        original_response: str,
+        validation_errors: list[dict[str, str]],
+    ) -> ScreeningEvaluationAdapterResult:
+        if (
+            not isinstance(sanitized_resume, str)
+            or not isinstance(confirmed_criteria, list)
+            or not isinstance(original_response, str)
+            or not isinstance(validation_errors, list)
+        ):
+            raise ScreeningEvaluationInputError(
+                "5.0 AI 初筛 Repair 输入不符合安全合同"
+            )
+        payload = {
+            "resume": sanitized_resume,
+            "confirmed_criteria": confirmed_criteria,
+            "original_response": original_response,
+            "validation_errors": validation_errors,
+        }
+        try:
+            serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True)
+        except (TypeError, ValueError):
+            raise ScreeningEvaluationInputError(
+                "5.0 AI 初筛 Repair 输入不符合安全合同"
+            ) from None
+        if (
+            not sanitized_resume.strip()
+            or not confirmed_criteria
+            or not original_response.strip()
+            or len(serialized) > self.settings.SCREENING_EVALUATION_MAX_INPUT_CHARS
+        ):
+            raise ScreeningEvaluationInputError(
+                "5.0 AI 初筛 Repair 输入为空或超过安全长度上限"
+            )
+        try:
+            messages = build_screening_evaluation_v5_repair_messages(
+                sanitized_resume=sanitized_resume,
+                confirmed_criteria=confirmed_criteria,
+                original_response=original_response,
+                validation_errors=validation_errors,
+            )
+        except (TypeError, ValueError):
+            raise ScreeningEvaluationInputError(
+                "5.0 AI 初筛 Repair 输入不符合安全合同"
+            ) from None
+        return await self._evaluate_with_messages(messages=messages)
 
     async def _evaluate_with_messages(
         self,
@@ -316,6 +376,7 @@ class FakeScreeningEvaluationAdapter:
     ) -> None:
         self._outcomes = list(outcomes)
         self.calls: list[dict[str, Any]] = []
+        self.repair_calls: list[dict[str, Any]] = []
 
     async def evaluate(
         self,
@@ -362,3 +423,26 @@ class FakeScreeningEvaluationAdapter:
             evaluation_timezone=evaluation_timezone,
             experience_period_facts=experience_period_facts,
         )
+
+    async def repair_v5(
+        self,
+        *,
+        sanitized_resume: str,
+        confirmed_criteria: list[dict[str, Any]],
+        original_response: str,
+        validation_errors: list[dict[str, str]],
+    ) -> ScreeningEvaluationAdapterResult:
+        self.repair_calls.append(
+            {
+                "sanitized_resume": sanitized_resume,
+                "confirmed_criteria": confirmed_criteria,
+                "original_response": original_response,
+                "validation_errors": validation_errors,
+            }
+        )
+        if not self._outcomes:
+            raise AssertionError("Fake Adapter 没有可返回的预设 Repair 结果")
+        outcome = self._outcomes.pop(0)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return outcome

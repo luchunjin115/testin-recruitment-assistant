@@ -1,0 +1,86 @@
+{
+  "stage": "stage7-p5r-evidence-contract",
+  "batch": "P5R-E",
+  "status": "completed_with_raw_audit_gap",
+  "source_result_path": "docs/stages/stage7/2026-09-01-stage7-p5r-evidence-real-retest-raw-results.json",
+  "source_result_sha256": "4eb8ddd46656e590895a4502bd8b9c205ffd94b9576b7b5b6042c6ec04e966b7",
+  "authorization": {
+    "monetary_cap_usd": 0.6,
+    "authorized_business_call_count": 7
+  },
+  "execution": {
+    "business_call_count": 7,
+    "api_attempt_count": 7,
+    "infrastructure_retry_count": 0,
+    "successful_provider_attempt_count": 7,
+    "service_legal_count": 6,
+    "service_rejected_count": 1,
+    "input_tokens": 40662,
+    "output_tokens": 17553,
+    "estimated_spend_usd": 0.06159186,
+    "postgresql_write_count": 0
+  },
+  "results": [
+    {
+      "source_call_id": "P3-R04",
+      "status": "service_rejected",
+      "error_code": "SCREENING_EVALUATION_INVALID_MODEL_OUTPUT",
+      "error_message": "5.0 AI 初筛结果未通过严格结构校验",
+      "score": null
+    },
+    {
+      "source_call_id": "P3-R09",
+      "status": "service_legal",
+      "score": 88
+    },
+    {
+      "source_call_id": "P3-R14",
+      "status": "service_legal",
+      "score": 42
+    },
+    {
+      "source_call_id": "P3-S-R09-1",
+      "status": "service_legal",
+      "score": 88
+    },
+    {
+      "source_call_id": "P3-S-R09-2",
+      "status": "service_legal",
+      "score": 88
+    },
+    {
+      "source_call_id": "P3-S-R09-3",
+      "status": "service_legal",
+      "score": 88
+    },
+    {
+      "source_call_id": "P3-S-R17-1",
+      "status": "service_legal",
+      "score": 88
+    }
+  ],
+  "successful_report_shape": {
+    "all_nonzero_assessments_have_ai_basis": true,
+    "all_prompt_versions_are_v8": true,
+    "all_behavior_versions_are_v10": true,
+    "all_model_versions_are_deepseek_v4_pro": true
+  },
+  "audit_gap": {
+    "field_missing_from_source_result": "attempt_audit",
+    "impact": "供应商原始响应没有随结果文件落盘，因此无法从封存文件进一步定位 R04 的具体 Schema 字段错误，也不能完成原计划的逐 attempt 原始响应审计。",
+    "cause": "P5R-E runner 汇总 payload 时遗漏 attempts 列表。",
+    "runner_fixed_after_execution": true,
+    "source_result_modified": false,
+    "calls_replayed_to_repair_gap": false,
+    "reason_not_replayed": "内容失败不重试且七次固定调用已经完成；不得为了补审计材料扩大已授权调用范围。"
+  },
+  "conclusion": {
+    "evidence_contract_improved_service_legality": true,
+    "old_quote_only_failures_now_legal_count": 5,
+    "r14_positive_score_without_evidence_issue_repaired_by_new_prompt": true,
+    "r04_still_requires_future_prompt_or_shape_diagnosis": true,
+    "stage7_quality_passed": null,
+    "service_legal_does_not_prove_ai_basis_factually_correct": true
+  },
+  "next_step": "停止。不得补跑本批；如需继续处理 R04，必须基于新的独立诊断设计和新的调用授权。"
+}

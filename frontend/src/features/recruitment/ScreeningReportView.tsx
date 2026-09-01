@@ -66,15 +66,15 @@ const formatEvaluationReference = (report: ScreeningReport) => {
 
 const EvidenceList: React.FC<{ evidence: ScreeningEvidence[] }> = ({ evidence }) => {
   if (evidence.length === 0) {
-    return <p className="recruitment-screening-no-evidence">0 分项目允许没有证据，因为当前简历未体现相关内容。</p>;
+    return <p className="recruitment-screening-no-evidence">0 分表示当前材料未体现，AI 未单独列出判断依据。</p>;
   }
   return (
     <div className="recruitment-screening-evidence-list">
       {evidence.map((item, index) => (
-        <blockquote key={`${item.section || 'resume'}-${index}-${item.quote}`}>
-          {item.section && <span>{item.section}</span>}
-          <p>“{item.quote}”</p>
-        </blockquote>
+        <div className="recruitment-screening-evidence-item" key={`${item.section || 'resume'}-${index}-${item.text}`}>
+          {item.section && <span>AI 标注 · {item.section}</span>}
+          <p>{item.text}</p>
+        </div>
       ))}
     </div>
   );
@@ -142,8 +142,8 @@ const RequirementAssessmentCard: React.FC<{
         items={[{
           key: 'evidence',
           label: assessment.evidence.length > 0
-            ? `查看简历证据（${assessment.evidence.length}）`
-            : '证据说明',
+            ? `查看 AI 判断依据（${assessment.evidence.length}）`
+            : 'AI 判断依据说明',
           children: <EvidenceList evidence={assessment.evidence} />,
         }]}
       />
@@ -196,7 +196,7 @@ const V5AssessmentCard: React.FC<{
           ghost
           items={[{
             key: 'evidence',
-            label: assessment.evidence.length > 0 ? `查看简历证据（${assessment.evidence.length}）` : '证据说明',
+            label: assessment.evidence.length > 0 ? `查看 AI 判断依据（${assessment.evidence.length}）` : 'AI 判断依据说明',
             children: <EvidenceList evidence={assessment.evidence} />,
           }]}
         />
@@ -214,7 +214,7 @@ const FindingList: React.FC<{ findings: V5ReportFinding[]; empty: string }> = ({
           <p>{finding.summary}</p>
           {finding.criterionIds.length > 0 && <div>{finding.criterionIds.map(id => <Tag key={id}>{id}</Tag>)}</div>}
           {finding.evidence.length > 0 && (
-            <Collapse ghost items={[{ key: 'evidence', label: `查看简历证据（${finding.evidence.length}）`, children: <EvidenceList evidence={finding.evidence} /> }]} />
+            <Collapse ghost items={[{ key: 'evidence', label: `查看 AI 判断依据（${finding.evidence.length}）`, children: <EvidenceList evidence={finding.evidence} /> }]} />
           )}
         </article>
       ))}
@@ -265,7 +265,7 @@ const ScreeningReportView: React.FC<Props> = ({ report, plan }) => {
           <div className="recruitment-report-section-mark"><FileSearchOutlined /></div>
           <div className="recruitment-report-section-body">
             <span>评价点逐项结论</span><h3>{v5.criterionAssessments.length} 个已确认评价点</h3>
-            <p className="recruitment-report-section-intro">每项 0—10 分；非零分必须有当前简历证据，0 分只表示当前简历未发现相关证据。</p>
+            <p className="recruitment-report-section-intro">每项 0—10 分；非零分必须有 AI 判断依据，0 分可以不单独列出判断依据。</p>
             <div className="recruitment-requirement-list">
               {v5.criterionAssessments.map((item, index) => <V5AssessmentCard item={item} index={index} key={item.criterion.criterionId} />)}
             </div>
@@ -273,7 +273,7 @@ const ScreeningReportView: React.FC<Props> = ({ report, plan }) => {
         </section>
 
         <div className="recruitment-v5-report-grid">
-          <section className="recruitment-report-section is-strength"><div className="recruitment-report-section-mark is-highlight"><BulbOutlined /></div><div className="recruitment-report-section-body"><span>主要优势</span><h3>有简历证据支持的匹配点</h3><FindingList findings={v5.strengths} empty="当前报告没有单列主要优势" /></div></section>
+          <section className="recruitment-report-section is-strength"><div className="recruitment-report-section-mark is-highlight"><BulbOutlined /></div><div className="recruitment-report-section-body"><span>主要优势</span><h3>AI 判断依据支持的匹配点</h3><FindingList findings={v5.strengths} empty="当前报告没有单列主要优势" /></div></section>
           <section className="recruitment-report-section is-gap"><div className="recruitment-report-section-mark is-tradeoff"><SwapOutlined /></div><div className="recruitment-report-section-body"><span>主要差距</span><h3>与岗位要求之间的缺口</h3><FindingList findings={v5.gaps} empty="当前报告没有单列差距" /></div></section>
           <section className="recruitment-report-section is-risk"><div className="recruitment-report-section-mark is-risk"><WarningOutlined /></div><div className="recruitment-report-section-body"><span>风险与事实冲突</span><h3>需要谨慎解释或核对的内容</h3><FindingList findings={v5.risksOrConflicts} empty="当前报告未发现需要单列的风险或事实冲突" /></div></section>
           <section className="recruitment-report-section is-missing"><div className="recruitment-report-section-mark is-question"><QuestionCircleOutlined /></div><div className="recruitment-report-section-body"><span>缺失信息</span><h3>简历没有充分说明的内容</h3><FindingList findings={v5.missingInfo} empty="当前报告没有单列缺失信息" /></div></section>
@@ -431,7 +431,7 @@ const ScreeningReportView: React.FC<Props> = ({ report, plan }) => {
                   ghost
                   items={[{
                     key: 'evidence',
-                    label: `查看简历证据（${highlight.evidence.length}）`,
+                    label: `查看 AI 判断依据（${highlight.evidence.length}）`,
                     children: <EvidenceList evidence={highlight.evidence} />,
                   }]}
                 />

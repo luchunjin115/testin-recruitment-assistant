@@ -1,0 +1,3134 @@
+{
+  "stage": "stage7-p5r-evidence-contract",
+  "batch": "P5R-E",
+  "mode": "real_evidence_retest_raw",
+  "generated_at": "2026-09-01T05:26:21.288461+00:00",
+  "status": "completed",
+  "fatal_error": null,
+  "authorization": {
+    "authorized_by": "project_owner_user",
+    "user_directive": "开始实施P5R的A-E，不需要再经过我确认",
+    "monetary_cap_usd": 0.6
+  },
+  "source_p3_raw_path": "docs/stages/stage7/2026-09-01-stage7-pro-realistic-p3-report-raw-results.json",
+  "source_p3_raw_sha256": "94f68aa48bec09204359222deab35c6a03ea543a4108eb93375efe0b39574679",
+  "source_call_schedule": [
+    "P3-R04",
+    "P3-R09",
+    "P3-R14",
+    "P3-S-R09-1",
+    "P3-S-R09-2",
+    "P3-S-R09-3",
+    "P3-S-R17-1"
+  ],
+  "execution_contract": {
+    "model": "deepseek-v4-pro",
+    "prompt_version": "screening_evaluation_lightweight_v8",
+    "schema_version": "5.0",
+    "behavior_version": "lightweight_report_generation_v10",
+    "content_error_retry_count": 0,
+    "infrastructure_retry_maximum_per_business_call": 1,
+    "api_attempt_limit": 14
+  },
+  "pricing": {
+    "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+    "verified_at": "2026-09-01T05:23:35.724039+00:00",
+    "official_model": "deepseek-v4-pro",
+    "official_version": "DeepSeek-V4-Pro-0813",
+    "selected_tier": "off_peak",
+    "selection_rule": "peak on Monday-Friday UTC 01:00-04:00 and 06:00-10:00",
+    "usd_per_million_tokens": {
+      "cache_hit_input": 0.022,
+      "cache_miss_input": 0.66,
+      "output": 1.98
+    },
+    "all_tiers": {
+      "off_peak": {
+        "cache_hit_input": 0.022,
+        "cache_miss_input": 0.66,
+        "output": 1.98
+      },
+      "peak": {
+        "cache_hit_input": 0.044,
+        "cache_miss_input": 1.32,
+        "output": 3.96
+      }
+    }
+  },
+  "peak_cost_upper_bound_usd": 0.56730696,
+  "attempt_summary": {
+    "scheduled_business_call_count": 7,
+    "executed_business_call_count": 7,
+    "api_attempt_count": 7,
+    "api_attempt_limit": 14,
+    "succeeded_attempt_count": 7,
+    "failed_attempt_count": 0,
+    "infrastructure_retry_count": 0,
+    "input_tokens": 40662,
+    "output_tokens": 17553,
+    "estimated_spend_usd": 0.06159186,
+    "failed_attempt_reserve_usd": 0.0
+  },
+  "records": [
+    {
+      "business_call_id": "P3-R04",
+      "case_id": "R04",
+      "job_case_id": "JD-01",
+      "run_kind": "report",
+      "run_number": 1,
+      "status": "failed",
+      "error_code": "SCREENING_EVALUATION_INVALID_MODEL_OUTPUT",
+      "error_message": "5.0 AI 初筛结果未通过严格结构校验",
+      "business_duration_ms": 30786.213,
+      "adapter_attempt_count": 1,
+      "confirmed_plan_snapshot_sha256": "dd9c3cea63c10f67a58130a60dd44554a1961be783c8e2e09f9cbc8a37b6baeb",
+      "labels": {
+        "expected_direction": "partial_match",
+        "score_range": [
+          42,
+          58
+        ],
+        "key_evidence_quotes": [
+          "参与活动报名后台维护，项目使用 Spring Boot 和 MySQL"
+        ],
+        "expected_gaps": [
+          "数据库性能分析",
+          "消息异常处理",
+          "自动化测试"
+        ],
+        "expected_conflicts": [
+          "十万级与每分钟 1,800 次请求冲突",
+          "负责人和子模块角色冲突"
+        ]
+      },
+      "report": null
+    },
+    {
+      "business_call_id": "P3-R09",
+      "case_id": "R09",
+      "job_case_id": "JD-03",
+      "run_kind": "report",
+      "run_number": 1,
+      "status": "succeeded",
+      "error_code": null,
+      "error_message": null,
+      "business_duration_ms": 23199.494,
+      "adapter_attempt_count": 1,
+      "confirmed_plan_snapshot_sha256": "3dacafa0b02e321b31953fd0e50fbf12c442a0d032240a3e2e18e6aecf5212f1",
+      "labels": {
+        "expected_direction": "high_match",
+        "score_range": [
+          86,
+          94
+        ],
+        "key_evidence_quotes": [
+          "使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+          "实验组激活率提升 6.8 个百分点"
+        ],
+        "expected_gaps": [],
+        "expected_conflicts": []
+      },
+      "overall_score": 88,
+      "display_label": "高度匹配",
+      "actual_direction": "high_match",
+      "direction_matches_frozen_label": true,
+      "score_in_frozen_range": true,
+      "criterion_assessment_count": 12,
+      "nonzero_assessment_count": 12,
+      "nonzero_with_evidence_count": 12,
+      "section_counts": {
+        "strengths": 5,
+        "gaps": 0,
+        "risks_or_conflicts": 0,
+        "missing_info": 0,
+        "hr_follow_up_questions": 0
+      },
+      "model_version": "deepseek-v4-pro",
+      "prompt_version": "screening_evaluation_lightweight_v8",
+      "schema_version": "5.0",
+      "behavior_version": "lightweight_report_generation_v10",
+      "report": {
+        "overall_score": 88,
+        "display_label": "高度匹配",
+        "overall_summary": "候选人在核心指标口径建设、SQL 多表分析、BI 看板、专题分析和实验评估方面均有直接且具体的证据，与岗位要求高度匹配。",
+        "criterion_assessments": [
+          {
+            "criterion": {
+              "criterion_id": "criterion:0001",
+              "name": "核心指标口径建设与维护",
+              "importance": "general",
+              "description": "判断是否能够建设并维护获客、转化、活跃、留存和续费等核心指标口径。",
+              "screening_focus": "寻找建设或维护获客、转化、活跃、留存、续费等核心指标口径的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "建设并维护获客、转化、活跃、留存和续费等核心指标口径"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0001",
+              "score": 9,
+              "reason": "有直接证据显示与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，并形成指标字典及变更记录，覆盖了获客、转化、活跃、留存和续费等核心指标。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0002",
+              "name": "SQL 数据提取与清洗",
+              "importance": "general",
+              "description": "判断是否能够使用 SQL 完成多表数据提取、清洗和分析，建立可复用查询或数据集。",
+              "screening_focus": "寻找使用 SQL 进行多表数据提取、清洗、分析，建立可复用查询或数据集的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "使用 SQL 完成多表数据提取、清洗和分析，建立可复用查询或数据集"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0002",
+              "score": 9,
+              "reason": "有使用 SQL 关联线索、商机、合同、产品事件和工单数据，并使用窗口函数计算首触渠道、转化周期和客户月度活跃的直接证据，符合多表提取、清洗和分析要求。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 SQL 关联线索、商机、合同、产品事件和工单数据，使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0003",
+              "name": "经营看板建设与异常监控",
+              "importance": "general",
+              "description": "判断是否能够使用 BI 工具建设经营看板，监控异常并解释指标变化。",
+              "screening_focus": "寻找使用 BI 工具建设经营看板、监控异常并解释指标变化的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "使用 BI 工具建设经营看板，监控异常并解释指标变化"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0003",
+              "score": 9,
+              "reason": "有建设 Power BI 漏斗与续费看板，设置数据延迟和异常波动检查，并定位 CRM 去重规则变化造成商机数虚增的直接证据，体现了看板建设和异常监控能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "建设 Power BI 漏斗与续费看板，设置数据延迟和异常波动检查；曾定位 CRM 去重规则变化造成的商机数虚增",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0004",
+              "name": "专题分析能力",
+              "importance": "general",
+              "description": "判断是否能够针对活动、产品功能或客户分层开展专题分析，形成结论、限制和业务建议。",
+              "screening_focus": "寻找针对活动、产品功能或客户分层开展专题分析并形成结论、限制和业务建议的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "针对活动、产品功能或客户分层开展专题分析，形成结论、限制和业务建议"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0004",
+              "score": 9,
+              "reason": "有分析新手引导改版效果并预先定义激活率和 14 日留存，以及使用 Python/pandas 对流失客户分层的直接证据，形成了结论和业务建议。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "分析新手引导改版效果，预先定义激活率和 14 日留存；实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点",
+                  "section": "工作经历"
+                },
+                {
+                  "quote": "使用 Python/pandas 对流失客户分层，发现“已购买但关键角色未完成配置”的客户流失率较高，推动客户成功团队新增上线 7 日检查清单",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0005",
+              "name": "A/B 实验或准实验分析",
+              "importance": "general",
+              "description": "判断是否能够参与 A/B 实验或准实验分析，清楚说明样本、指标、显著性和可能偏差。",
+              "screening_focus": "寻找参与 A/B 实验或准实验分析，并说明样本、指标、显著性和可能偏差的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "参与 A/B 实验或准实验分析，清楚说明样本、指标、显著性和可能偏差"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0005",
+              "score": 9,
+              "reason": "有参与新手引导改版实验并报告样本周期短和大客户占比差异的直接证据，体现了对样本、指标、显著性和偏差的说明。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "分析新手引导改版效果，预先定义激活率和 14 日留存；实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点，报告同时说明样本周期短和大客户占比差异",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0006",
+              "name": "SQL 熟练使用",
+              "importance": "required",
+              "description": "判断是否能够熟练使用 SQL，完成多表关联、窗口函数、分组聚合和数据质量检查。",
+              "screening_focus": "寻找 SQL 多表关联、窗口函数、分组聚合和数据质量检查的实践证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "必须能够熟练使用 SQL，完成多表关联、窗口函数、分组聚合和数据质量检查"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0006",
+              "score": 9,
+              "reason": "有使用 SQL 关联多表、使用窗口函数计算指标的直接证据，覆盖了多表关联、窗口函数和分组聚合，数据质量检查通过异常波动检查体现。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 SQL 关联线索、商机、合同、产品事件和工单数据，使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+                  "section": "工作经历"
+                },
+                {
+                  "quote": "设置数据延迟和异常波动检查；曾定位 CRM 去重规则变化造成的商机数虚增",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0007",
+              "name": "指标体系或经营分析经验",
+              "importance": "required",
+              "description": "判断是否有指标体系或经营分析经验，能说明指标定义和口径变化。",
+              "screening_focus": "寻找指标体系或经营分析经验，以及说明指标定义和口径变化的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "必须有指标体系或经营分析经验，能说明指标定义和口径变化"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0007",
+              "score": 9,
+              "reason": "有统一指标口径并形成指标字典及变更记录的直接证据，明确说明了指标定义和口径变化。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0008",
+              "name": "BI 工具看板制作与维护",
+              "importance": "general",
+              "description": "判断是否能使用 Tableau、Power BI、FineBI 或同类工具制作并维护业务看板。",
+              "screening_focus": "寻找使用 Tableau、Power BI、FineBI 或同类工具制作和维护业务看板的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "能使用 Tableau、Power BI、FineBI 或同类工具制作并维护业务看板"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0008",
+              "score": 9,
+              "reason": "有建设 Power BI 漏斗与续费看板的直接证据，符合使用 BI 工具制作并维护业务看板的要求。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "建设 Power BI 漏斗与续费看板",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0009",
+              "name": "结构化表达能力",
+              "importance": "general",
+              "description": "判断是否具备结构化表达能力，能够区分数据事实、分析推断和待验证假设。",
+              "screening_focus": "寻找结构化表达、区分数据事实、分析推断和待验证假设的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "具备结构化表达能力，能够区分数据事实、分析推断和待验证假设"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0009",
+              "score": 8,
+              "reason": "在实验报告中说明样本周期短和大客户占比差异，体现了区分数据事实、分析推断和待验证假设的能力，但未提供更详细的结构化表达示例。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "报告同时说明样本周期短和大客户占比差异",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0010",
+              "name": "SaaS、订阅业务、销售漏斗或客户留存分析经验",
+              "importance": "preferred",
+              "description": "判断是否有 SaaS、订阅业务、销售漏斗或客户留存分析经验。",
+              "screening_focus": "寻找 SaaS、订阅业务、销售漏斗或客户留存分析经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有 SaaS、订阅业务、销售漏斗或客户留存分析经验优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0010",
+              "score": 9,
+              "reason": "有 SaaS 产品从线索、试用到续费的指标体系、专题分析和实验评估的直接证据，覆盖了 SaaS、订阅业务、销售漏斗和客户留存分析。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "负责 SaaS 产品从线索、试用到续费的指标体系、专题分析和实验评估",
+                  "section": "职业概况"
+                },
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0011",
+              "name": "Python/pandas、统计检验或实验设计",
+              "importance": "preferred",
+              "description": "判断是否熟悉 Python/pandas、统计检验或实验设计。",
+              "screening_focus": "寻找 Python/pandas、统计检验或实验设计相关技能或项目证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "熟悉 Python/pandas、统计检验或实验设计者优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0011",
+              "score": 8,
+              "reason": "有使用 Python/pandas 对流失客户分层的直接证据，并提到基础统计检验，但未展示更深入的统计检验或实验设计细节。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 Python/pandas 对流失客户分层",
+                  "section": "工作经历"
+                },
+                {
+                  "quote": "Python、pandas、基础统计检验",
+                  "section": "教育与技能"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0012",
+              "name": "推动统一指标口径经验",
+              "importance": "preferred",
+              "description": "判断是否有推动业务团队采用统一指标口径的经验。",
+              "screening_focus": "寻找推动业务团队采用统一指标口径的经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有推动业务团队采用统一指标口径的经验优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0012",
+              "score": 9,
+              "reason": "有与市场、销售和客户成功团队统一指标口径并形成指标字典及变更记录的直接证据，体现了推动业务团队采用统一指标口径的经验。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          }
+        ],
+        "strengths": [
+          {
+            "summary": "具备完整的核心指标口径建设与维护经验，覆盖获客、转化、活跃、留存和续费。",
+            "criterion_ids": [
+              "criterion:0001",
+              "criterion:0007"
+            ],
+            "evidence": [
+              {
+                "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "SQL 技能扎实，有多表关联、窗口函数和异常数据检查的直接实践。",
+            "criterion_ids": [
+              "criterion:0002",
+              "criterion:0006"
+            ],
+            "evidence": [
+              {
+                "quote": "使用 SQL 关联线索、商机、合同、产品事件和工单数据，使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+                "section": "工作经历"
+              },
+              {
+                "quote": "设置数据延迟和异常波动检查；曾定位 CRM 去重规则变化造成的商机数虚增",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "有 BI 看板建设和异常监控经验，能定位指标异常原因。",
+            "criterion_ids": [
+              "criterion:0003",
+              "criterion:0008"
+            ],
+            "evidence": [
+              {
+                "quote": "建设 Power BI 漏斗与续费看板，设置数据延迟和异常波动检查；曾定位 CRM 去重规则变化造成的商机数虚增",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "具备专题分析和实验评估能力，能形成结论并说明限制。",
+            "criterion_ids": [
+              "criterion:0004",
+              "criterion:0005"
+            ],
+            "evidence": [
+              {
+                "quote": "分析新手引导改版效果，预先定义激活率和 14 日留存；实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点，报告同时说明样本周期短和大客户占比差异",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "有 SaaS 订阅业务分析经验，并推动统一指标口径落地。",
+            "criterion_ids": [
+              "criterion:0010",
+              "criterion:0012"
+            ],
+            "evidence": [
+              {
+                "quote": "负责 SaaS 产品从线索、试用到续费的指标体系、专题分析和实验评估",
+                "section": "职业概况"
+              },
+              {
+                "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                "section": "工作经历"
+              }
+            ]
+          }
+        ],
+        "gaps": [],
+        "risks_or_conflicts": [],
+        "missing_info": [],
+        "hr_follow_up_questions": []
+      }
+    },
+    {
+      "business_call_id": "P3-R14",
+      "case_id": "R14",
+      "job_case_id": "JD-04",
+      "run_kind": "report",
+      "run_number": 1,
+      "status": "succeeded",
+      "error_code": null,
+      "error_message": null,
+      "business_duration_ms": 22543.502,
+      "adapter_attempt_count": 1,
+      "confirmed_plan_snapshot_sha256": "ad6581abfd724803dd0b5ca6c7603e59df446824c8d1c37c862063060ff35268",
+      "labels": {
+        "expected_direction": "partial_match",
+        "score_range": [
+          57,
+          70
+        ],
+        "key_evidence_quotes": [
+          "独立编写 PRD、页面原型和验收标准",
+          "任务完成率由 36% 提升至 49%"
+        ],
+        "expected_gaps": [
+          "企业客户研究",
+          "复杂权限",
+          "多租户",
+          "实施协作"
+        ],
+        "expected_conflicts": []
+      },
+      "overall_score": 42,
+      "display_label": "存在明显差距",
+      "actual_direction": "partial_match",
+      "direction_matches_frozen_label": true,
+      "score_in_frozen_range": false,
+      "criterion_assessment_count": 12,
+      "nonzero_assessment_count": 10,
+      "nonzero_with_evidence_count": 10,
+      "section_counts": {
+        "strengths": 2,
+        "gaps": 3,
+        "risks_or_conflicts": 1,
+        "missing_info": 2,
+        "hr_follow_up_questions": 3
+      },
+      "model_version": "deepseek-v4-pro",
+      "prompt_version": "screening_evaluation_lightweight_v8",
+      "schema_version": "5.0",
+      "behavior_version": "lightweight_report_generation_v10",
+      "report": {
+        "overall_score": 42,
+        "display_label": "存在明显差距",
+        "overall_summary": "候选人具备 C 端产品经理的完整交付、文档编写和数据迭代能力，但企业服务相关经验明显不足，权限、审批、多租户等关键领域缺乏证据。",
+        "criterion_assessments": [
+          {
+            "criterion": {
+              "criterion_id": "criterion:0001",
+              "name": "共性问题识别与优先级判断",
+              "importance": "general",
+              "description": "判断是否能够通过客户访谈、工单、销售反馈和产品数据识别共性问题，形成问题定义和优先级判断。",
+              "screening_focus": "寻找通过客户访谈、工单、销售反馈和产品数据识别共性问题并判断优先级的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "通过客户访谈、工单、销售反馈和产品数据识别共性问题，形成问题定义和优先级判断"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0001",
+              "score": 5,
+              "reason": "有用户访谈和可用性测试经验，能整理问题、假设和优先级，但未体现企业客户访谈、工单、销售反馈等 B2B 场景。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "参与用户访谈和可用性测试，能够整理问题、假设和优先级",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0002",
+              "name": "产品文档输出与跨团队协作",
+              "importance": "general",
+              "description": "判断是否能够输出 PRD、流程图、原型、验收标准和上线说明，并推动研发、设计、测试和交付协作。",
+              "screening_focus": "寻找输出 PRD、流程图、原型、验收标准、上线说明及推动跨团队协作的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "输出 PRD、流程图、原型、验收标准和上线说明，推动研发、设计、测试和交付协作"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0002",
+              "score": 7,
+              "reason": "独立编写 PRD、页面原型和验收标准，并推动研发测试完成 12 个版本迭代，具备产品文档输出和跨团队协作的直接证据。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "独立编写 PRD、页面原型和验收标准，推动研发测试完成 12 个版本迭代",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0003",
+              "name": "权限、审批或企业配置类功能方案设计",
+              "importance": "general",
+              "description": "判断是否能够负责权限、审批或企业配置类功能的方案设计，处理角色、状态、异常和兼容性边界。",
+              "screening_focus": "寻找权限、审批或企业配置类功能方案设计及处理角色、状态、异常和兼容性边界的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "负责权限、审批或企业配置类功能的方案设计，处理角色、状态、异常和兼容性边界"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0003",
+              "score": 2,
+              "reason": "仅有创作者后台的小型角色权限需求，权限规则简单且无组织层级，未体现审批或企业配置类功能的复杂方案设计。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "曾负责一个创作者后台的小型角色权限需求，包括管理员和编辑两种角色，但权限规则简单且没有组织层级",
+                  "section": "项目经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0004",
+              "name": "功能采用率与客户反馈跟踪",
+              "importance": "general",
+              "description": "判断是否能够跟踪功能采用率、任务完成率和客户反馈，并根据数据与研究结果持续迭代。",
+              "screening_focus": "寻找跟踪功能采用率、任务完成率、客户反馈并持续迭代的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "跟踪功能采用率、任务完成率和客户反馈，根据数据与研究结果持续迭代"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0004",
+              "score": 6,
+              "reason": "为会员任务定义参与率、完成率和次周留存指标，并根据数据改版提升完成率，具备功能指标定义和迭代能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "为会员任务定义参与率、完成率和次周留存指标，改版后任务完成率由 36% 提升至 49%",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0005",
+              "name": "需求池与版本范围管理",
+              "importance": "general",
+              "description": "判断是否能够管理需求池和版本范围，明确标准产品、配置能力与定制需求的边界。",
+              "screening_focus": "寻找管理需求池、版本范围及明确标准产品、配置能力与定制需求边界的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "管理需求池和版本范围，明确标准产品、配置能力与定制需求的边界"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0005",
+              "score": 3,
+              "reason": "有版本迭代管理经验，但未体现需求池管理、标准产品与定制需求边界的明确划分。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "推动研发测试完成 12 个版本迭代",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0006",
+              "name": "完整产品交付经验",
+              "importance": "required",
+              "description": "判断是否具备从问题发现推进到方案、研发、验收和上线复盘的完整产品交付经验。",
+              "screening_focus": "寻找完整产品交付周期中问题发现、方案、研发、验收和上线复盘的职责与成果证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "必须具备完整产品交付经验，能够从问题发现推进到方案、研发、验收和上线复盘"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0006",
+              "score": 6,
+              "reason": "有从问题发现到方案、研发、验收和上线的完整交付经验，但主要面向 C 端内容社区，缺乏企业产品交付背景。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "根据用户反馈和行为数据优化内容发布、评论和会员任务流程",
+                  "section": "工作经历"
+                },
+                {
+                  "quote": "独立编写 PRD、页面原型和验收标准，推动研发测试完成 12 个版本迭代",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0007",
+              "name": "PRD、业务流程和验收标准编写",
+              "importance": "required",
+              "description": "判断是否能够独立编写 PRD、业务流程和验收标准，并清楚表达异常流程。",
+              "screening_focus": "寻找独立编写 PRD、业务流程、验收标准及异常流程说明的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "必须能够独立编写 PRD、业务流程和验收标准，并清楚表达异常流程"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0007",
+              "score": 7,
+              "reason": "独立编写 PRD、页面原型和验收标准，但未明确提及业务流程和异常流程的表达。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "独立编写 PRD、页面原型和验收标准",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0008",
+              "name": "企业客户需求调研或 B2B 产品经验",
+              "importance": "general",
+              "description": "判断是否具有企业客户需求调研或 B2B 产品经验，并能区分单一客户诉求和可复用产品能力。",
+              "screening_focus": "寻找企业客户需求调研、B2B 产品经验及区分单一诉求与可复用能力的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "有企业客户需求调研或 B2B 产品经验，能够区分单一客户诉求和可复用产品能力"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0008",
+              "score": 1,
+              "reason": "简历明确表示没有企业客户、权限配置、审批流程、多租户、销售或实施协作经验，仅面向个人用户。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "没有企业客户、权限配置、审批流程、多租户、销售或实施协作经验",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0009",
+              "name": "数据意识与功能指标定义",
+              "importance": "general",
+              "description": "判断是否具备数据意识，能够定义功能指标并用数据或用户反馈判断效果。",
+              "screening_focus": "寻找定义功能指标、使用数据或用户反馈判断效果的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "具备数据意识，能够定义功能指标并用数据或用户反馈判断效果"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0009",
+              "score": 6,
+              "reason": "定义了会员任务指标并用数据验证效果，具备数据意识和功能指标定义能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "为会员任务定义参与率、完成率和次周留存指标，改版后任务完成率由 36% 提升至 49%",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0010",
+              "name": "RBAC 权限、审批流、订阅计费或多租户产品经验",
+              "importance": "preferred",
+              "description": "判断是否具有 RBAC 权限、审批流、订阅计费或多租户产品经验。",
+              "screening_focus": "寻找 RBAC 权限、审批流、订阅计费或多租户产品相关经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有 RBAC 权限、审批流、订阅计费或多租户产品经验优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0010",
+              "score": 1,
+              "reason": "仅有简单角色权限需求，无 RBAC、审批流、订阅计费或多租户产品经验。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "曾负责一个创作者后台的小型角色权限需求，包括管理员和编辑两种角色，但权限规则简单且没有组织层级",
+                  "section": "项目经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0011",
+              "name": "AI 辅助功能、开放 API 或平台型产品经验",
+              "importance": "preferred",
+              "description": "判断是否具有 AI 辅助功能、开放 API 或平台型产品经验。",
+              "screening_focus": "寻找 AI 辅助功能、开放 API 或平台型产品相关经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有 AI 辅助功能、开放 API 或平台型产品经验优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0011",
+              "score": 0,
+              "reason": "简历未提及 AI 辅助功能、开放 API 或平台型产品经验。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": []
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0012",
+              "name": "客户实施或售前协作经验",
+              "importance": "preferred",
+              "description": "判断是否具有客户实施或售前协作经验。",
+              "screening_focus": "寻找客户实施或售前协作相关经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有客户实施或售前协作经验者优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0012",
+              "score": 0,
+              "reason": "简历明确表示没有销售或实施协作经验。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "没有企业客户、权限配置、审批流程、多租户、销售或实施协作经验",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          }
+        ],
+        "strengths": [
+          {
+            "summary": "具备独立编写 PRD、原型和验收标准并推动迭代的完整产品交付能力。",
+            "criterion_ids": [
+              "criterion:0002",
+              "criterion:0006",
+              "criterion:0007"
+            ],
+            "evidence": [
+              {
+                "quote": "独立编写 PRD、页面原型和验收标准，推动研发测试完成 12 个版本迭代",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "有数据驱动迭代的成功案例，能够定义指标并提升效果。",
+            "criterion_ids": [
+              "criterion:0004",
+              "criterion:0009"
+            ],
+            "evidence": [
+              {
+                "quote": "为会员任务定义参与率、完成率和次周留存指标，改版后任务完成率由 36% 提升至 49%",
+                "section": "工作经历"
+              }
+            ]
+          }
+        ],
+        "gaps": [
+          {
+            "summary": "缺乏企业客户需求调研和 B2B 产品经验。",
+            "criterion_ids": [
+              "criterion:0008"
+            ],
+            "evidence": [
+              {
+                "quote": "没有企业客户、权限配置、审批流程、多租户、销售或实施协作经验",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "权限、审批、多租户等企业级功能方案设计能力不足。",
+            "criterion_ids": [
+              "criterion:0003",
+              "criterion:0010"
+            ],
+            "evidence": [
+              {
+                "quote": "曾负责一个创作者后台的小型角色权限需求，包括管理员和编辑两种角色，但权限规则简单且没有组织层级",
+                "section": "项目经历"
+              }
+            ]
+          },
+          {
+            "summary": "未体现需求池管理和标准产品与定制需求边界划分。",
+            "criterion_ids": [
+              "criterion:0005"
+            ],
+            "evidence": []
+          }
+        ],
+        "risks_or_conflicts": [
+          {
+            "summary": "必备的完整产品交付经验主要来自 C 端，企业服务场景适配风险较高。",
+            "criterion_ids": [
+              "criterion:0006"
+            ],
+            "evidence": [
+              {
+                "quote": "根据用户反馈和行为数据优化内容发布、评论和会员任务流程",
+                "section": "工作经历"
+              }
+            ]
+          }
+        ],
+        "missing_info": [
+          {
+            "summary": "未提供业务流程和异常流程编写的具体案例。",
+            "criterion_ids": [
+              "criterion:0007"
+            ],
+            "evidence": []
+          },
+          {
+            "summary": "未提及 AI 辅助功能、开放 API 或平台型产品经验。",
+            "criterion_ids": [
+              "criterion:0011"
+            ],
+            "evidence": []
+          }
+        ],
+        "hr_follow_up_questions": [
+          "请核实候选人是否有任何企业客户或 B2B 产品相关经历，即使未在简历中体现。",
+          "请核实候选人是否具备复杂权限、审批或多租户方案设计能力，或是否有相关学习或项目经验。",
+          "请核实候选人是否参与过需求池管理和版本范围界定，以及如何处理标准产品与定制需求的边界。"
+        ]
+      }
+    },
+    {
+      "business_call_id": "P3-S-R09-1",
+      "case_id": "R09",
+      "job_case_id": "JD-03",
+      "run_kind": "stability",
+      "run_number": 1,
+      "status": "succeeded",
+      "error_code": null,
+      "error_message": null,
+      "business_duration_ms": 22874.775,
+      "adapter_attempt_count": 1,
+      "confirmed_plan_snapshot_sha256": "3dacafa0b02e321b31953fd0e50fbf12c442a0d032240a3e2e18e6aecf5212f1",
+      "labels": {
+        "expected_direction": "high_match",
+        "score_range": [
+          86,
+          94
+        ],
+        "key_evidence_quotes": [
+          "使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+          "实验组激活率提升 6.8 个百分点"
+        ],
+        "expected_gaps": [],
+        "expected_conflicts": []
+      },
+      "overall_score": 88,
+      "display_label": "高度匹配",
+      "actual_direction": "high_match",
+      "direction_matches_frozen_label": true,
+      "score_in_frozen_range": true,
+      "criterion_assessment_count": 12,
+      "nonzero_assessment_count": 12,
+      "nonzero_with_evidence_count": 12,
+      "section_counts": {
+        "strengths": 5,
+        "gaps": 1,
+        "risks_or_conflicts": 0,
+        "missing_info": 1,
+        "hr_follow_up_questions": 1
+      },
+      "model_version": "deepseek-v4-pro",
+      "prompt_version": "screening_evaluation_lightweight_v8",
+      "schema_version": "5.0",
+      "behavior_version": "lightweight_report_generation_v10",
+      "report": {
+        "overall_score": 88,
+        "display_label": "高度匹配",
+        "overall_summary": "候选人在核心指标口径建设、SQL 多表分析、BI 看板、专题分析和实验评估方面均有直接且具体的证据，与岗位要求高度匹配。",
+        "criterion_assessments": [
+          {
+            "criterion": {
+              "criterion_id": "criterion:0001",
+              "name": "核心指标口径建设与维护",
+              "importance": "general",
+              "description": "判断是否能够建设并维护获客、转化、活跃、留存和续费等核心指标口径。",
+              "screening_focus": "寻找建设或维护获客、转化、活跃、留存、续费等核心指标口径的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "建设并维护获客、转化、活跃、留存和续费等核心指标口径"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0001",
+              "score": 9,
+              "reason": "有直接证据显示与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，并形成指标字典及变更记录，覆盖岗位要求的核心指标。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0002",
+              "name": "SQL 数据提取与清洗",
+              "importance": "general",
+              "description": "判断是否能够使用 SQL 完成多表数据提取、清洗和分析，建立可复用查询或数据集。",
+              "screening_focus": "寻找使用 SQL 进行多表数据提取、清洗、分析，建立可复用查询或数据集的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "使用 SQL 完成多表数据提取、清洗和分析，建立可复用查询或数据集"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0002",
+              "score": 9,
+              "reason": "有使用 SQL 关联线索、商机、合同、产品事件和工单数据，并使用窗口函数计算首触渠道、转化周期和客户月度活跃的直接证据，符合多表提取、清洗和分析要求。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 SQL 关联线索、商机、合同、产品事件和工单数据，使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0003",
+              "name": "经营看板建设与异常监控",
+              "importance": "general",
+              "description": "判断是否能够使用 BI 工具建设经营看板，监控异常并解释指标变化。",
+              "screening_focus": "寻找使用 BI 工具建设经营看板、监控异常并解释指标变化的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "使用 BI 工具建设经营看板，监控异常并解释指标变化"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0003",
+              "score": 9,
+              "reason": "有建设 Power BI 漏斗与续费看板、设置数据延迟和异常波动检查，并定位 CRM 去重规则变化造成商机数虚增的直接证据，体现看板建设和异常监控能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "建设 Power BI 漏斗与续费看板，设置数据延迟和异常波动检查；曾定位 CRM 去重规则变化造成的商机数虚增",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0004",
+              "name": "专题分析能力",
+              "importance": "general",
+              "description": "判断是否能够针对活动、产品功能或客户分层开展专题分析，形成结论、限制和业务建议。",
+              "screening_focus": "寻找针对活动、产品功能或客户分层开展专题分析并形成结论、限制和业务建议的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "针对活动、产品功能或客户分层开展专题分析，形成结论、限制和业务建议"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0004",
+              "score": 9,
+              "reason": "有分析新手引导改版效果、预先定义激活率和 14 日留存，并报告样本周期短和大客户占比差异的直接证据，体现专题分析并形成结论、限制和建议的能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "分析新手引导改版效果，预先定义激活率和 14 日留存；实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点，报告同时说明样本周期短和大客户占比差异",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0005",
+              "name": "A/B 实验或准实验分析",
+              "importance": "general",
+              "description": "判断是否能够参与 A/B 实验或准实验分析，清楚说明样本、指标、显著性和可能偏差。",
+              "screening_focus": "寻找参与 A/B 实验或准实验分析，并说明样本、指标、显著性和可能偏差的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "参与 A/B 实验或准实验分析，清楚说明样本、指标、显著性和可能偏差"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0005",
+              "score": 9,
+              "reason": "有参与新手引导改版实验、说明样本周期短和大客户占比差异的直接证据，符合 A/B 实验或准实验分析要求。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "分析新手引导改版效果，预先定义激活率和 14 日留存；实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点，报告同时说明样本周期短和大客户占比差异",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0006",
+              "name": "SQL 熟练使用",
+              "importance": "required",
+              "description": "判断是否能够熟练使用 SQL，完成多表关联、窗口函数、分组聚合和数据质量检查。",
+              "screening_focus": "寻找 SQL 多表关联、窗口函数、分组聚合和数据质量检查的实践证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "必须能够熟练使用 SQL，完成多表关联、窗口函数、分组聚合和数据质量检查"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0006",
+              "score": 9,
+              "reason": "有使用 SQL 关联多表、使用窗口函数计算指标的直接证据，符合多表关联、窗口函数和分组聚合要求；数据质量检查体现在定位 CRM 去重规则变化。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 SQL 关联线索、商机、合同、产品事件和工单数据，使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+                  "section": "工作经历"
+                },
+                {
+                  "quote": "曾定位 CRM 去重规则变化造成的商机数虚增",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0007",
+              "name": "指标体系或经营分析经验",
+              "importance": "required",
+              "description": "判断是否有指标体系或经营分析经验，能说明指标定义和口径变化。",
+              "screening_focus": "寻找指标体系或经营分析经验，以及说明指标定义和口径变化的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "必须有指标体系或经营分析经验，能说明指标定义和口径变化"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0007",
+              "score": 9,
+              "reason": "有统一核心指标口径、形成指标字典及变更记录的直接证据，符合指标体系或经营分析经验要求。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0008",
+              "name": "BI 工具看板制作与维护",
+              "importance": "general",
+              "description": "判断是否能使用 Tableau、Power BI、FineBI 或同类工具制作并维护业务看板。",
+              "screening_focus": "寻找使用 Tableau、Power BI、FineBI 或同类工具制作和维护业务看板的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "能使用 Tableau、Power BI、FineBI 或同类工具制作并维护业务看板"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0008",
+              "score": 9,
+              "reason": "有建设 Power BI 漏斗与续费看板并维护的直接证据，符合 BI 工具看板制作与维护要求。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "建设 Power BI 漏斗与续费看板，设置数据延迟和异常波动检查",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0009",
+              "name": "结构化表达能力",
+              "importance": "general",
+              "description": "判断是否具备结构化表达能力，能够区分数据事实、分析推断和待验证假设。",
+              "screening_focus": "寻找结构化表达、区分数据事实、分析推断和待验证假设的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "具备结构化表达能力，能够区分数据事实、分析推断和待验证假设"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0009",
+              "score": 8,
+              "reason": "有在报告中说明样本周期短和大客户占比差异的证据，体现区分数据事实、分析推断和待验证假设的结构化表达能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "报告同时说明样本周期短和大客户占比差异",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0010",
+              "name": "SaaS、订阅业务、销售漏斗或客户留存分析经验",
+              "importance": "preferred",
+              "description": "判断是否有 SaaS、订阅业务、销售漏斗或客户留存分析经验。",
+              "screening_focus": "寻找 SaaS、订阅业务、销售漏斗或客户留存分析经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有 SaaS、订阅业务、销售漏斗或客户留存分析经验优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0010",
+              "score": 9,
+              "reason": "有 SaaS 产品从线索、试用到续费的指标体系、专题分析和实验评估的直接证据，符合 SaaS、订阅业务、销售漏斗或客户留存分析经验要求。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "负责 SaaS 产品从线索、试用到续费的指标体系、专题分析和实验评估",
+                  "section": "职业概况"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0011",
+              "name": "Python/pandas、统计检验或实验设计",
+              "importance": "preferred",
+              "description": "判断是否熟悉 Python/pandas、统计检验或实验设计。",
+              "screening_focus": "寻找 Python/pandas、统计检验或实验设计相关技能或项目证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "熟悉 Python/pandas、统计检验或实验设计者优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0011",
+              "score": 8,
+              "reason": "有使用 Python/pandas 对流失客户分层的直接证据，符合 Python/pandas 技能要求；统计检验或实验设计未明确提及，但实验分析中体现了部分统计思维。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 Python/pandas 对流失客户分层",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0012",
+              "name": "推动统一指标口径经验",
+              "importance": "preferred",
+              "description": "判断是否有推动业务团队采用统一指标口径的经验。",
+              "screening_focus": "寻找推动业务团队采用统一指标口径的经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有推动业务团队采用统一指标口径的经验优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0012",
+              "score": 8,
+              "reason": "有与市场、销售和客户成功团队统一指标口径并形成指标字典的直接证据，体现推动业务团队采用统一指标口径的经验。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          }
+        ],
+        "strengths": [
+          {
+            "summary": "具备核心指标口径建设与维护的直接经验，覆盖获客、转化、活跃、留存和续费。",
+            "criterion_ids": [
+              "criterion:0001",
+              "criterion:0007"
+            ],
+            "evidence": [
+              {
+                "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "SQL 多表关联、窗口函数和数据质量检查实践充分。",
+            "criterion_ids": [
+              "criterion:0002",
+              "criterion:0006"
+            ],
+            "evidence": [
+              {
+                "quote": "使用 SQL 关联线索、商机、合同、产品事件和工单数据，使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+                "section": "工作经历"
+              },
+              {
+                "quote": "曾定位 CRM 去重规则变化造成的商机数虚增",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "具备 BI 看板建设、异常监控和指标变化解释能力。",
+            "criterion_ids": [
+              "criterion:0003",
+              "criterion:0008"
+            ],
+            "evidence": [
+              {
+                "quote": "建设 Power BI 漏斗与续费看板，设置数据延迟和异常波动检查；曾定位 CRM 去重规则变化造成的商机数虚增",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "有完整的专题分析和实验评估经验，能说明样本、指标和偏差。",
+            "criterion_ids": [
+              "criterion:0004",
+              "criterion:0005"
+            ],
+            "evidence": [
+              {
+                "quote": "分析新手引导改版效果，预先定义激活率和 14 日留存；实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点，报告同时说明样本周期短和大客户占比差异",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "具备 SaaS 订阅业务分析经验，符合优先条件。",
+            "criterion_ids": [
+              "criterion:0010"
+            ],
+            "evidence": [
+              {
+                "quote": "负责 SaaS 产品从线索、试用到续费的指标体系、专题分析和实验评估",
+                "section": "职业概况"
+              }
+            ]
+          }
+        ],
+        "gaps": [
+          {
+            "summary": "统计检验或实验设计的具体方法未明确提及。",
+            "criterion_ids": [
+              "criterion:0011"
+            ],
+            "evidence": []
+          }
+        ],
+        "risks_or_conflicts": [],
+        "missing_info": [
+          {
+            "summary": "未明确说明是否使用过统计检验或实验设计方法。",
+            "criterion_ids": [
+              "criterion:0011"
+            ],
+            "evidence": []
+          }
+        ],
+        "hr_follow_up_questions": [
+          "请核实候选人在实验分析中是否使用过统计检验或实验设计方法。"
+        ]
+      }
+    },
+    {
+      "business_call_id": "P3-S-R09-2",
+      "case_id": "R09",
+      "job_case_id": "JD-03",
+      "run_kind": "stability",
+      "run_number": 2,
+      "status": "succeeded",
+      "error_code": null,
+      "error_message": null,
+      "business_duration_ms": 21463.752,
+      "adapter_attempt_count": 1,
+      "confirmed_plan_snapshot_sha256": "3dacafa0b02e321b31953fd0e50fbf12c442a0d032240a3e2e18e6aecf5212f1",
+      "labels": {
+        "expected_direction": "high_match",
+        "score_range": [
+          86,
+          94
+        ],
+        "key_evidence_quotes": [
+          "使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+          "实验组激活率提升 6.8 个百分点"
+        ],
+        "expected_gaps": [],
+        "expected_conflicts": []
+      },
+      "overall_score": 88,
+      "display_label": "高度匹配",
+      "actual_direction": "high_match",
+      "direction_matches_frozen_label": true,
+      "score_in_frozen_range": true,
+      "criterion_assessment_count": 12,
+      "nonzero_assessment_count": 12,
+      "nonzero_with_evidence_count": 12,
+      "section_counts": {
+        "strengths": 5,
+        "gaps": 0,
+        "risks_or_conflicts": 0,
+        "missing_info": 0,
+        "hr_follow_up_questions": 0
+      },
+      "model_version": "deepseek-v4-pro",
+      "prompt_version": "screening_evaluation_lightweight_v8",
+      "schema_version": "5.0",
+      "behavior_version": "lightweight_report_generation_v10",
+      "report": {
+        "overall_score": 88,
+        "display_label": "高度匹配",
+        "overall_summary": "候选人在核心指标口径建设、SQL 多表分析、BI 看板、专题分析和实验评估方面均有直接且具体的证据，与岗位要求高度匹配。",
+        "criterion_assessments": [
+          {
+            "criterion": {
+              "criterion_id": "criterion:0001",
+              "name": "核心指标口径建设与维护",
+              "importance": "general",
+              "description": "判断是否能够建设并维护获客、转化、活跃、留存和续费等核心指标口径。",
+              "screening_focus": "寻找建设或维护获客、转化、活跃、留存、续费等核心指标口径的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "建设并维护获客、转化、活跃、留存和续费等核心指标口径"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0001",
+              "score": 9,
+              "reason": "有直接证据显示与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，并形成指标字典及变更记录，覆盖岗位要求的核心指标。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0002",
+              "name": "SQL 数据提取与清洗",
+              "importance": "general",
+              "description": "判断是否能够使用 SQL 完成多表数据提取、清洗和分析，建立可复用查询或数据集。",
+              "screening_focus": "寻找使用 SQL 进行多表数据提取、清洗、分析，建立可复用查询或数据集的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "使用 SQL 完成多表数据提取、清洗和分析，建立可复用查询或数据集"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0002",
+              "score": 9,
+              "reason": "有使用 SQL 关联线索、商机、合同、产品事件和工单数据，并使用窗口函数计算首触渠道、转化周期和客户月度活跃的直接证据，体现多表提取、清洗和分析能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 SQL 关联线索、商机、合同、产品事件和工单数据，使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0003",
+              "name": "经营看板建设与异常监控",
+              "importance": "general",
+              "description": "判断是否能够使用 BI 工具建设经营看板，监控异常并解释指标变化。",
+              "screening_focus": "寻找使用 BI 工具建设经营看板、监控异常并解释指标变化的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "使用 BI 工具建设经营看板，监控异常并解释指标变化"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0003",
+              "score": 9,
+              "reason": "有建设 Power BI 漏斗与续费看板、设置数据延迟和异常波动检查，并定位 CRM 去重规则变化造成商机数虚增的直接证据，体现看板建设和异常监控能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "建设 Power BI 漏斗与续费看板，设置数据延迟和异常波动检查；曾定位 CRM 去重规则变化造成的商机数虚增",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0004",
+              "name": "专题分析能力",
+              "importance": "general",
+              "description": "判断是否能够针对活动、产品功能或客户分层开展专题分析，形成结论、限制和业务建议。",
+              "screening_focus": "寻找针对活动、产品功能或客户分层开展专题分析并形成结论、限制和业务建议的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "针对活动、产品功能或客户分层开展专题分析，形成结论、限制和业务建议"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0004",
+              "score": 9,
+              "reason": "有分析新手引导改版效果、预先定义激活率和 14 日留存，并报告样本周期短和大客户占比差异的直接证据，体现专题分析并形成结论、限制和建议的能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "分析新手引导改版效果，预先定义激活率和 14 日留存；实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点，报告同时说明样本周期短和大客户占比差异",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0005",
+              "name": "A/B 实验或准实验分析",
+              "importance": "general",
+              "description": "判断是否能够参与 A/B 实验或准实验分析，清楚说明样本、指标、显著性和可能偏差。",
+              "screening_focus": "寻找参与 A/B 实验或准实验分析，并说明样本、指标、显著性和可能偏差的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "参与 A/B 实验或准实验分析，清楚说明样本、指标、显著性和可能偏差"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0005",
+              "score": 9,
+              "reason": "有分析新手引导改版效果并说明样本周期短和大客户占比差异的直接证据，体现 A/B 实验或准实验分析中对样本、指标和偏差的说明。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "分析新手引导改版效果，预先定义激活率和 14 日留存；实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点，报告同时说明样本周期短和大客户占比差异",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0006",
+              "name": "SQL 熟练使用",
+              "importance": "required",
+              "description": "判断是否能够熟练使用 SQL，完成多表关联、窗口函数、分组聚合和数据质量检查。",
+              "screening_focus": "寻找 SQL 多表关联、窗口函数、分组聚合和数据质量检查的实践证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "必须能够熟练使用 SQL，完成多表关联、窗口函数、分组聚合和数据质量检查"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0006",
+              "score": 9,
+              "reason": "有使用 SQL 关联多表、使用窗口函数计算指标的直接证据，覆盖多表关联、窗口函数和分组聚合；数据质量检查通过定位 CRM 去重规则变化体现。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 SQL 关联线索、商机、合同、产品事件和工单数据，使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+                  "section": "工作经历"
+                },
+                {
+                  "quote": "曾定位 CRM 去重规则变化造成的商机数虚增",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0007",
+              "name": "指标体系或经营分析经验",
+              "importance": "required",
+              "description": "判断是否有指标体系或经营分析经验，能说明指标定义和口径变化。",
+              "screening_focus": "寻找指标体系或经营分析经验，以及说明指标定义和口径变化的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "必须有指标体系或经营分析经验，能说明指标定义和口径变化"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0007",
+              "score": 9,
+              "reason": "有统一 MQL、有效商机、试用激活、付费转化和续费口径并形成指标字典及变更记录的直接证据，体现指标体系和经营分析经验。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0008",
+              "name": "BI 工具看板制作与维护",
+              "importance": "general",
+              "description": "判断是否能使用 Tableau、Power BI、FineBI 或同类工具制作并维护业务看板。",
+              "screening_focus": "寻找使用 Tableau、Power BI、FineBI 或同类工具制作和维护业务看板的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "能使用 Tableau、Power BI、FineBI 或同类工具制作并维护业务看板"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0008",
+              "score": 9,
+              "reason": "有建设 Power BI 漏斗与续费看板并设置异常检查的直接证据，符合使用 BI 工具制作和维护业务看板的要求。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "建设 Power BI 漏斗与续费看板，设置数据延迟和异常波动检查",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0009",
+              "name": "结构化表达能力",
+              "importance": "general",
+              "description": "判断是否具备结构化表达能力，能够区分数据事实、分析推断和待验证假设。",
+              "screening_focus": "寻找结构化表达、区分数据事实、分析推断和待验证假设的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "具备结构化表达能力，能够区分数据事实、分析推断和待验证假设"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0009",
+              "score": 8,
+              "reason": "在实验报告中说明样本周期短和大客户占比差异，体现区分数据事实、分析推断和待验证假设的结构化表达能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "报告同时说明样本周期短和大客户占比差异",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0010",
+              "name": "SaaS、订阅业务、销售漏斗或客户留存分析经验",
+              "importance": "preferred",
+              "description": "判断是否有 SaaS、订阅业务、销售漏斗或客户留存分析经验。",
+              "screening_focus": "寻找 SaaS、订阅业务、销售漏斗或客户留存分析经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有 SaaS、订阅业务、销售漏斗或客户留存分析经验优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0010",
+              "score": 9,
+              "reason": "有 SaaS 产品从线索、试用到续费的指标体系、专题分析和实验评估的直接证据，覆盖 SaaS、订阅业务和客户留存分析。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "负责 SaaS 产品从线索、试用到续费的指标体系、专题分析和实验评估",
+                  "section": "职业概况"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0011",
+              "name": "Python/pandas、统计检验或实验设计",
+              "importance": "preferred",
+              "description": "判断是否熟悉 Python/pandas、统计检验或实验设计。",
+              "screening_focus": "寻找 Python/pandas、统计检验或实验设计相关技能或项目证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "熟悉 Python/pandas、统计检验或实验设计者优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0011",
+              "score": 8,
+              "reason": "有使用 Python/pandas 对流失客户分层的直接证据，并提及基础统计检验，体现 Python/pandas 和统计检验能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 Python/pandas 对流失客户分层",
+                  "section": "工作经历"
+                },
+                {
+                  "quote": "基础统计检验",
+                  "section": "教育与技能"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0012",
+              "name": "推动统一指标口径经验",
+              "importance": "preferred",
+              "description": "判断是否有推动业务团队采用统一指标口径的经验。",
+              "screening_focus": "寻找推动业务团队采用统一指标口径的经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有推动业务团队采用统一指标口径的经验优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0012",
+              "score": 9,
+              "reason": "有与市场、销售和客户成功团队统一指标口径并形成指标字典及变更记录的直接证据，体现推动业务团队采用统一指标口径的经验。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          }
+        ],
+        "strengths": [
+          {
+            "summary": "具备完整的 SaaS 指标体系建设和统一口径经验，覆盖获客、转化、活跃、留存和续费。",
+            "criterion_ids": [
+              "criterion:0001",
+              "criterion:0007",
+              "criterion:0012"
+            ],
+            "evidence": [
+              {
+                "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "SQL 多表关联、窗口函数和数据质量检查实践充分。",
+            "criterion_ids": [
+              "criterion:0002",
+              "criterion:0006"
+            ],
+            "evidence": [
+              {
+                "quote": "使用 SQL 关联线索、商机、合同、产品事件和工单数据，使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+                "section": "工作经历"
+              },
+              {
+                "quote": "曾定位 CRM 去重规则变化造成的商机数虚增",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "有 Power BI 看板建设和异常监控的直接经验。",
+            "criterion_ids": [
+              "criterion:0003",
+              "criterion:0008"
+            ],
+            "evidence": [
+              {
+                "quote": "建设 Power BI 漏斗与续费看板，设置数据延迟和异常波动检查",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "专题分析和实验评估能力突出，能说明样本、指标和偏差。",
+            "criterion_ids": [
+              "criterion:0004",
+              "criterion:0005",
+              "criterion:0009"
+            ],
+            "evidence": [
+              {
+                "quote": "分析新手引导改版效果，预先定义激活率和 14 日留存；实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点，报告同时说明样本周期短和大客户占比差异",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "有 Python/pandas 和统计检验相关技能。",
+            "criterion_ids": [
+              "criterion:0011"
+            ],
+            "evidence": [
+              {
+                "quote": "使用 Python/pandas 对流失客户分层",
+                "section": "工作经历"
+              },
+              {
+                "quote": "基础统计检验",
+                "section": "教育与技能"
+              }
+            ]
+          }
+        ],
+        "gaps": [],
+        "risks_or_conflicts": [],
+        "missing_info": [],
+        "hr_follow_up_questions": []
+      }
+    },
+    {
+      "business_call_id": "P3-S-R09-3",
+      "case_id": "R09",
+      "job_case_id": "JD-03",
+      "run_kind": "stability",
+      "run_number": 3,
+      "status": "succeeded",
+      "error_code": null,
+      "error_message": null,
+      "business_duration_ms": 23656.205,
+      "adapter_attempt_count": 1,
+      "confirmed_plan_snapshot_sha256": "3dacafa0b02e321b31953fd0e50fbf12c442a0d032240a3e2e18e6aecf5212f1",
+      "labels": {
+        "expected_direction": "high_match",
+        "score_range": [
+          86,
+          94
+        ],
+        "key_evidence_quotes": [
+          "使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+          "实验组激活率提升 6.8 个百分点"
+        ],
+        "expected_gaps": [],
+        "expected_conflicts": []
+      },
+      "overall_score": 88,
+      "display_label": "高度匹配",
+      "actual_direction": "high_match",
+      "direction_matches_frozen_label": true,
+      "score_in_frozen_range": true,
+      "criterion_assessment_count": 12,
+      "nonzero_assessment_count": 12,
+      "nonzero_with_evidence_count": 12,
+      "section_counts": {
+        "strengths": 5,
+        "gaps": 0,
+        "risks_or_conflicts": 0,
+        "missing_info": 0,
+        "hr_follow_up_questions": 0
+      },
+      "model_version": "deepseek-v4-pro",
+      "prompt_version": "screening_evaluation_lightweight_v8",
+      "schema_version": "5.0",
+      "behavior_version": "lightweight_report_generation_v10",
+      "report": {
+        "overall_score": 88,
+        "display_label": "高度匹配",
+        "overall_summary": "候选人在核心指标口径建设、SQL 多表分析、BI 看板、专题分析和实验评估方面均有直接且具体的证据，与岗位要求高度匹配。",
+        "criterion_assessments": [
+          {
+            "criterion": {
+              "criterion_id": "criterion:0001",
+              "name": "核心指标口径建设与维护",
+              "importance": "general",
+              "description": "判断是否能够建设并维护获客、转化、活跃、留存和续费等核心指标口径。",
+              "screening_focus": "寻找建设或维护获客、转化、活跃、留存、续费等核心指标口径的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "建设并维护获客、转化、活跃、留存和续费等核心指标口径"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0001",
+              "score": 9,
+              "reason": "有直接证据显示与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，并形成指标字典及变更记录，覆盖岗位要求的核心指标。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0002",
+              "name": "SQL 数据提取与清洗",
+              "importance": "general",
+              "description": "判断是否能够使用 SQL 完成多表数据提取、清洗和分析，建立可复用查询或数据集。",
+              "screening_focus": "寻找使用 SQL 进行多表数据提取、清洗、分析，建立可复用查询或数据集的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "使用 SQL 完成多表数据提取、清洗和分析，建立可复用查询或数据集"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0002",
+              "score": 9,
+              "reason": "有使用 SQL 关联线索、商机、合同、产品事件和工单数据，并使用窗口函数计算首触渠道、转化周期和客户月度活跃的直接证据，符合多表提取、清洗和分析要求。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 SQL 关联线索、商机、合同、产品事件和工单数据，使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0003",
+              "name": "经营看板建设与异常监控",
+              "importance": "general",
+              "description": "判断是否能够使用 BI 工具建设经营看板，监控异常并解释指标变化。",
+              "screening_focus": "寻找使用 BI 工具建设经营看板、监控异常并解释指标变化的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "使用 BI 工具建设经营看板，监控异常并解释指标变化"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0003",
+              "score": 9,
+              "reason": "有建设 Power BI 漏斗与续费看板、设置数据延迟和异常波动检查，并定位 CRM 去重规则变化造成商机数虚增的直接证据，体现看板建设和异常监控能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "建设 Power BI 漏斗与续费看板，设置数据延迟和异常波动检查；曾定位 CRM 去重规则变化造成的商机数虚增",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0004",
+              "name": "专题分析能力",
+              "importance": "general",
+              "description": "判断是否能够针对活动、产品功能或客户分层开展专题分析，形成结论、限制和业务建议。",
+              "screening_focus": "寻找针对活动、产品功能或客户分层开展专题分析并形成结论、限制和业务建议的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "针对活动、产品功能或客户分层开展专题分析，形成结论、限制和业务建议"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0004",
+              "score": 9,
+              "reason": "有分析新手引导改版效果并预先定义激活率和 14 日留存，以及使用 Python/pandas 对流失客户分层并推动客户成功团队新增检查清单的直接证据，体现专题分析并形成业务建议。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "分析新手引导改版效果，预先定义激活率和 14 日留存；实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点，报告同时说明样本周期短和大客户占比差异",
+                  "section": "工作经历"
+                },
+                {
+                  "quote": "使用 Python/pandas 对流失客户分层，发现“已购买但关键角色未完成配置”的客户流失率较高，推动客户成功团队新增上线 7 日检查清单",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0005",
+              "name": "A/B 实验或准实验分析",
+              "importance": "general",
+              "description": "判断是否能够参与 A/B 实验或准实验分析，清楚说明样本、指标、显著性和可能偏差。",
+              "screening_focus": "寻找参与 A/B 实验或准实验分析，并说明样本、指标、显著性和可能偏差的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "参与 A/B 实验或准实验分析，清楚说明样本、指标、显著性和可能偏差"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0005",
+              "score": 9,
+              "reason": "有分析新手引导改版效果并说明样本周期短和大客户占比差异的直接证据，体现 A/B 实验或准实验分析中对样本、指标、显著性和偏差的说明。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "分析新手引导改版效果，预先定义激活率和 14 日留存；实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点，报告同时说明样本周期短和大客户占比差异",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0006",
+              "name": "SQL 熟练使用",
+              "importance": "required",
+              "description": "判断是否能够熟练使用 SQL，完成多表关联、窗口函数、分组聚合和数据质量检查。",
+              "screening_focus": "寻找 SQL 多表关联、窗口函数、分组聚合和数据质量检查的实践证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "必须能够熟练使用 SQL，完成多表关联、窗口函数、分组聚合和数据质量检查"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0006",
+              "score": 9,
+              "reason": "有使用 SQL 关联多表、使用窗口函数计算指标的直接证据，符合多表关联、窗口函数和分组聚合要求；数据质量检查通过定位 CRM 去重规则变化体现。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 SQL 关联线索、商机、合同、产品事件和工单数据，使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+                  "section": "工作经历"
+                },
+                {
+                  "quote": "曾定位 CRM 去重规则变化造成的商机数虚增",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0007",
+              "name": "指标体系或经营分析经验",
+              "importance": "required",
+              "description": "判断是否有指标体系或经营分析经验，能说明指标定义和口径变化。",
+              "screening_focus": "寻找指标体系或经营分析经验，以及说明指标定义和口径变化的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "必须有指标体系或经营分析经验，能说明指标定义和口径变化"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0007",
+              "score": 9,
+              "reason": "有统一 MQL、有效商机、试用激活、付费转化和续费口径并形成指标字典及变更记录的直接证据，体现指标体系和经营分析经验。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0008",
+              "name": "BI 工具看板制作与维护",
+              "importance": "general",
+              "description": "判断是否能使用 Tableau、Power BI、FineBI 或同类工具制作并维护业务看板。",
+              "screening_focus": "寻找使用 Tableau、Power BI、FineBI 或同类工具制作和维护业务看板的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "能使用 Tableau、Power BI、FineBI 或同类工具制作并维护业务看板"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0008",
+              "score": 9,
+              "reason": "有建设 Power BI 漏斗与续费看板的直接证据，符合使用 BI 工具制作并维护业务看板的要求。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "建设 Power BI 漏斗与续费看板",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0009",
+              "name": "结构化表达能力",
+              "importance": "general",
+              "description": "判断是否具备结构化表达能力，能够区分数据事实、分析推断和待验证假设。",
+              "screening_focus": "寻找结构化表达、区分数据事实、分析推断和待验证假设的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "具备结构化表达能力，能够区分数据事实、分析推断和待验证假设"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0009",
+              "score": 8,
+              "reason": "在实验分析中明确区分了数据事实（激活率提升 6.8 个百分点）和限制（样本周期短、大客户占比差异），体现结构化表达和区分事实、推断与假设的能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点，报告同时说明样本周期短和大客户占比差异",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0010",
+              "name": "SaaS、订阅业务、销售漏斗或客户留存分析经验",
+              "importance": "preferred",
+              "description": "判断是否有 SaaS、订阅业务、销售漏斗或客户留存分析经验。",
+              "screening_focus": "寻找 SaaS、订阅业务、销售漏斗或客户留存分析经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有 SaaS、订阅业务、销售漏斗或客户留存分析经验优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0010",
+              "score": 9,
+              "reason": "有 SaaS 产品从线索、试用到续费的指标体系、专题分析和实验评估的直接证据，覆盖销售漏斗和客户留存分析。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "负责 SaaS 产品从线索、试用到续费的指标体系、专题分析和实验评估",
+                  "section": "职业概况"
+                },
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0011",
+              "name": "Python/pandas、统计检验或实验设计",
+              "importance": "preferred",
+              "description": "判断是否熟悉 Python/pandas、统计检验或实验设计。",
+              "screening_focus": "寻找 Python/pandas、统计检验或实验设计相关技能或项目证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "熟悉 Python/pandas、统计检验或实验设计者优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0011",
+              "score": 9,
+              "reason": "有使用 Python/pandas 对流失客户分层的直接证据，且技能中列出 Python、pandas、基础统计检验，符合熟悉 Python/pandas 和统计检验的要求。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 Python/pandas 对流失客户分层",
+                  "section": "工作经历"
+                },
+                {
+                  "quote": "SQL、Power BI、Python、pandas、基础统计检验、指标治理",
+                  "section": "教育与技能"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0012",
+              "name": "推动统一指标口径经验",
+              "importance": "preferred",
+              "description": "判断是否有推动业务团队采用统一指标口径的经验。",
+              "screening_focus": "寻找推动业务团队采用统一指标口径的经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有推动业务团队采用统一指标口径的经验优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0012",
+              "score": 9,
+              "reason": "有与市场、销售和客户成功团队统一指标口径并形成指标字典及变更记录的直接证据，体现推动业务团队采用统一指标口径的经验。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          }
+        ],
+        "strengths": [
+          {
+            "summary": "具备完整的 SaaS 指标体系建设和统一口径经验，覆盖获客、转化、活跃、留存和续费。",
+            "criterion_ids": [
+              "criterion:0001",
+              "criterion:0007",
+              "criterion:0012"
+            ],
+            "evidence": [
+              {
+                "quote": "与市场、销售和客户成功团队统一 MQL、有效商机、试用激活、付费转化和续费口径，形成指标字典及变更记录",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "SQL 多表关联、窗口函数和数据质量检查实践证据充分。",
+            "criterion_ids": [
+              "criterion:0002",
+              "criterion:0006"
+            ],
+            "evidence": [
+              {
+                "quote": "使用 SQL 关联线索、商机、合同、产品事件和工单数据，使用窗口函数计算首触渠道、转化周期和客户月度活跃",
+                "section": "工作经历"
+              },
+              {
+                "quote": "曾定位 CRM 去重规则变化造成的商机数虚增",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "有 Power BI 看板建设和异常监控的直接经验。",
+            "criterion_ids": [
+              "criterion:0003",
+              "criterion:0008"
+            ],
+            "evidence": [
+              {
+                "quote": "建设 Power BI 漏斗与续费看板，设置数据延迟和异常波动检查",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "专题分析和实验评估能力突出，能形成业务建议并说明限制。",
+            "criterion_ids": [
+              "criterion:0004",
+              "criterion:0005",
+              "criterion:0009"
+            ],
+            "evidence": [
+              {
+                "quote": "分析新手引导改版效果，预先定义激活率和 14 日留存；实验组激活率提升 6.8 个百分点，留存提升 2.1 个百分点，报告同时说明样本周期短和大客户占比差异",
+                "section": "工作经历"
+              },
+              {
+                "quote": "使用 Python/pandas 对流失客户分层，发现“已购买但关键角色未完成配置”的客户流失率较高，推动客户成功团队新增上线 7 日检查清单",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "具备 Python/pandas 和基础统计检验技能，并有实际应用。",
+            "criterion_ids": [
+              "criterion:0011"
+            ],
+            "evidence": [
+              {
+                "quote": "使用 Python/pandas 对流失客户分层",
+                "section": "工作经历"
+              },
+              {
+                "quote": "SQL、Power BI、Python、pandas、基础统计检验、指标治理",
+                "section": "教育与技能"
+              }
+            ]
+          }
+        ],
+        "gaps": [],
+        "risks_or_conflicts": [],
+        "missing_info": [],
+        "hr_follow_up_questions": []
+      }
+    },
+    {
+      "business_call_id": "P3-S-R17-1",
+      "case_id": "R17",
+      "job_case_id": "JD-05",
+      "run_kind": "stability",
+      "run_number": 1,
+      "status": "succeeded",
+      "error_code": null,
+      "error_message": null,
+      "business_duration_ms": 20107.436,
+      "adapter_attempt_count": 1,
+      "confirmed_plan_snapshot_sha256": "bd90fe26ce830818225af66d058db5615eb849291b427a1b6b1223f132a80aa1",
+      "labels": {
+        "expected_direction": "high_match",
+        "score_range": [
+          86,
+          94
+        ],
+        "key_evidence_quotes": [
+          "编制 3 个月滚动主生产计划",
+          "订单准时交付率由 89% 提升至 95%"
+        ],
+        "expected_gaps": [],
+        "expected_conflicts": []
+      },
+      "overall_score": 88,
+      "display_label": "高度匹配",
+      "actual_direction": "high_match",
+      "direction_matches_frozen_label": true,
+      "score_in_frozen_range": true,
+      "criterion_assessment_count": 12,
+      "nonzero_assessment_count": 12,
+      "nonzero_with_evidence_count": 12,
+      "section_counts": {
+        "strengths": 5,
+        "gaps": 0,
+        "risks_or_conflicts": 0,
+        "missing_info": 0,
+        "hr_follow_up_questions": 0
+      },
+      "model_version": "deepseek-v4-pro",
+      "prompt_version": "screening_evaluation_lightweight_v8",
+      "schema_version": "5.0",
+      "behavior_version": "lightweight_report_generation_v10",
+      "report": {
+        "overall_score": 88,
+        "display_label": "高度匹配",
+        "overall_summary": "候选人在生产计划、物料齐套、产销协同、指标分析和 ERP 维护方面均有直接且具体的证据，且具备离散制造和数据分析工具经验，整体匹配度较高。",
+        "criterion_assessments": [
+          {
+            "criterion": {
+              "criterion_id": "criterion:0001",
+              "name": "生产计划编制与滚动更新",
+              "importance": "general",
+              "description": "判断是否能够汇总销售预测、在手订单、库存和产能信息，编制并滚动更新月度及周度生产计划。",
+              "screening_focus": "寻找编制和滚动更新生产计划的职责、流程和成果证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "汇总销售预测、在手订单、库存和产能信息，编制并滚动更新月度及周度生产计划"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0001",
+              "score": 9,
+              "reason": "有直接编制 3 个月滚动主生产计划并每周更新的职责描述，覆盖销售预测、订单、库存和产能信息。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "汇总销售预测、客户订单、成品库存和产能，编制 3 个月滚动主生产计划并每周更新冻结区与调整区",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0002",
+              "name": "物料齐套与延期风险闭环",
+              "importance": "general",
+              "description": "判断是否能够跟踪关键物料齐套、供应商交期和工单进度，识别缺料与延期风险并推动闭环。",
+              "screening_focus": "寻找跟踪物料齐套、供应商交期和工单进度，识别风险并推动闭环的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "跟踪关键物料齐套、供应商交期和工单进度，识别缺料与延期风险并推动闭环"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0002",
+              "score": 9,
+              "reason": "有建立关键物料缺料清单、跟踪齐套和逾期事项的明确证据，体现风险识别和闭环推动。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "对 46 种关键物料建立缺料清单；逾期事项进入次日跟踪",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0003",
+              "name": "产销协同组织与记录",
+              "importance": "general",
+              "description": "判断是否能够组织销售、采购、生产和仓储进行产销协同，记录决策、责任人和计划变更原因。",
+              "screening_focus": "寻找组织跨部门产销协同会议、记录决策和计划变更的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "组织销售、采购、生产和仓储进行产销协同，记录决策、责任人和计划变更原因"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0003",
+              "score": 9,
+              "reason": "有每周组织跨部门齐套会议并记录风险、责任人、承诺日期和替代方案的直接证据。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "每周组织销售、采购、生产和仓储召开齐套会议，记录风险等级、责任人、承诺日期和替代方案",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0004",
+              "name": "供应链指标分析与改善建议",
+              "importance": "general",
+              "description": "判断是否能够分析预测准确率、准时交付率、库存周转和呆滞料，提出可执行的改善建议。",
+              "screening_focus": "寻找分析供应链指标并提出改善建议的职责和成果证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "分析预测准确率、准时交付率、库存周转和呆滞料，提出可执行的改善建议"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0004",
+              "score": 9,
+              "reason": "有建立预测准确率、准时交付率、缺料停线时长和呆滞库存看板，并通过 ABC 分类和最小批量复核降低呆滞库存的量化成果。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "建立预测准确率、订单准时交付率、缺料停线时长和呆滞库存看板；通过 ABC 分类和最小批量复核，使呆滞库存金额在两个季度内下降 18%",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0005",
+              "name": "ERP计划参数与基础数据维护",
+              "importance": "general",
+              "description": "判断是否能够维护 ERP 中的计划参数和基础数据，保证报表口径与实际业务一致。",
+              "screening_focus": "寻找维护 ERP 计划参数和基础数据、保证报表口径一致的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "job_responsibilities",
+                  "source_quote": "维护 ERP 中的计划参数和基础数据，保证报表口径与实际业务一致"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0005",
+              "score": 9,
+              "reason": "有在 SAP 中维护提前期与安全库存参数、检查 BOM、库存、采购申请和工单状态的直接证据。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "在 SAP 中检查 BOM、库存、采购申请和工单状态，维护提前期与安全库存参数",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0006",
+              "name": "生产计划或供应链交付经验",
+              "importance": "required",
+              "description": "判断是否具备生产计划、物料计划或供应链交付相关经验，能够说明完整计划流程。",
+              "screening_focus": "寻找生产计划、物料计划或供应链交付相关经验及完整计划流程说明。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "必须具备生产计划、物料计划或供应链交付相关经验，能够说明完整计划流程"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0006",
+              "score": 9,
+              "reason": "职业概况明确为制造供应链计划专员，工作经历覆盖需求预测、主生产计划、物料齐套和交付风险，能够说明完整计划流程。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "制造供应链计划专员，负责工业控制器的需求预测、主生产计划、物料齐套和交付风险",
+                  "section": "职业概况"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0007",
+              "name": "Excel数据整理与分析能力",
+              "importance": "required",
+              "description": "判断是否能够使用 Excel 进行数据整理和分析，熟悉常用查找、透视和条件计算。",
+              "screening_focus": "寻找使用 Excel 进行数据整理、透视和条件计算的实践证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "必须能够使用 Excel 进行数据整理和分析，熟悉常用查找、透视和条件计算"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0007",
+              "score": 9,
+              "reason": "明确列出熟练使用 XLOOKUP、SUMIFS、数据透视和 Power Query，覆盖常用查找、透视和条件计算。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "Excel 熟练使用 XLOOKUP、SUMIFS、数据透视和 Power Query",
+                  "section": "工具与项目"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0008",
+              "name": "ERP/MRP实际使用经验",
+              "importance": "general",
+              "description": "判断是否有 ERP/MRP 实际使用经验，理解订单、BOM、库存、采购和工单之间的基本关系。",
+              "screening_focus": "寻找 ERP/MRP 实际使用经验及对订单、BOM、库存、采购和工单关系的理解证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "有 ERP/MRP 实际使用经验，理解订单、BOM、库存、采购和工单之间的基本关系"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0008",
+              "score": 9,
+              "reason": "有 SAP ERP 实际使用经验，并明确检查 BOM、库存、采购申请和工单状态，理解订单、BOM、库存、采购和工单关系。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "在 SAP 中检查 BOM、库存、采购申请和工单状态",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0009",
+              "name": "跨部门推进与风险记录能力",
+              "importance": "general",
+              "description": "判断是否具备跨部门推进能力，能清楚记录风险、责任人、承诺日期和处理结果。",
+              "screening_focus": "寻找跨部门推进和记录风险、责任人、承诺日期及处理结果的证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "candidate_requirements",
+                  "source_quote": "具备跨部门推进能力，能清楚记录风险、责任人、承诺日期和处理结果"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0009",
+              "score": 9,
+              "reason": "有组织跨部门会议并记录风险等级、责任人、承诺日期和替代方案的直接证据，体现跨部门推进和风险记录能力。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "每周组织销售、采购、生产和仓储召开齐套会议，记录风险等级、责任人、承诺日期和替代方案",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0010",
+              "name": "离散制造或电子元器件生产经验",
+              "importance": "preferred",
+              "description": "判断是否有离散制造、电子元器件或多品种小批量生产经验。",
+              "screening_focus": "寻找离散制造、电子元器件或多品种小批量生产经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有离散制造、电子元器件或多品种小批量生产经验优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0010",
+              "score": 9,
+              "reason": "工作经历明确为工业自动化制造企业，产品为工业控制器，属于离散制造和电子元器件相关领域。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "某工业自动化制造企业，供应链计划专员",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0011",
+              "name": "数据分析与预测优化工具经验",
+              "importance": "preferred",
+              "description": "判断是否有 Power BI、SQL、需求预测模型或安全库存优化经验。",
+              "screening_focus": "寻找 Power BI、SQL、需求预测模型或安全库存优化经验证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有 Power BI、SQL、需求预测模型或安全库存优化经验优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0011",
+              "score": 9,
+              "reason": "明确列出使用 Power BI 制作供应链看板和编写基础 SQL 查询 ERP 报表库，覆盖 Power BI 和 SQL 经验。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使用 Power BI 制作供应链看板，能够编写基础 SQL 查询 ERP 报表库",
+                  "section": "工具与项目"
+                }
+              ]
+            }
+          },
+          {
+            "criterion": {
+              "criterion_id": "criterion:0012",
+              "name": "供应链改善量化案例",
+              "importance": "preferred",
+              "description": "判断是否有降低呆滞库存、改善准时交付或缩短计划周期的量化案例。",
+              "screening_focus": "寻找降低呆滞库存、改善准时交付或缩短计划周期的量化案例证据。",
+              "origin": "ai_from_jd",
+              "sources": [
+                {
+                  "source_field": "preferred_qualifications",
+                  "source_quote": "有降低呆滞库存、改善准时交付或缩短计划周期的量化案例优先"
+                }
+              ],
+              "hr_note": null
+            },
+            "assessment": {
+              "criterion_id": "criterion:0012",
+              "score": 9,
+              "reason": "有降低呆滞库存 18% 和提升准时交付率至 95% 的量化案例，直接对应改善准时交付和降低呆滞库存。",
+              "calculation_note": null,
+              "experience_period_fact_keys": [],
+              "evidence": [
+                {
+                  "quote": "使呆滞库存金额在两个季度内下降 18%；订单准时交付率由 89% 提升至 95%",
+                  "section": "工作经历"
+                }
+              ]
+            }
+          }
+        ],
+        "strengths": [
+          {
+            "summary": "具备完整的生产计划编制与滚动更新经验，覆盖销售预测、订单、库存和产能。",
+            "criterion_ids": [
+              "criterion:0001"
+            ],
+            "evidence": [
+              {
+                "quote": "汇总销售预测、客户订单、成品库存和产能，编制 3 个月滚动主生产计划并每周更新冻结区与调整区",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "有物料齐套跟踪和风险闭环的直接证据，包括关键物料缺料清单和逾期跟踪。",
+            "criterion_ids": [
+              "criterion:0002"
+            ],
+            "evidence": [
+              {
+                "quote": "对 46 种关键物料建立缺料清单；逾期事项进入次日跟踪",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "具备跨部门产销协同组织能力，并系统记录风险、责任人和承诺日期。",
+            "criterion_ids": [
+              "criterion:0003",
+              "criterion:0009"
+            ],
+            "evidence": [
+              {
+                "quote": "每周组织销售、采购、生产和仓储召开齐套会议，记录风险等级、责任人、承诺日期和替代方案",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "有供应链指标分析和改善的量化成果，包括呆滞库存下降 18% 和准时交付率提升至 95%。",
+            "criterion_ids": [
+              "criterion:0004",
+              "criterion:0012"
+            ],
+            "evidence": [
+              {
+                "quote": "使呆滞库存金额在两个季度内下降 18%；订单准时交付率由 89% 提升至 95%",
+                "section": "工作经历"
+              }
+            ]
+          },
+          {
+            "summary": "熟练使用 Excel 高级功能、Power BI 和基础 SQL，满足数据分析和报表需求。",
+            "criterion_ids": [
+              "criterion:0007",
+              "criterion:0011"
+            ],
+            "evidence": [
+              {
+                "quote": "Excel 熟练使用 XLOOKUP、SUMIFS、数据透视和 Power Query；使用 Power BI 制作供应链看板，能够编写基础 SQL 查询 ERP 报表库",
+                "section": "工具与项目"
+              }
+            ]
+          }
+        ],
+        "gaps": [],
+        "risks_or_conflicts": [],
+        "missing_info": [],
+        "hr_follow_up_questions": []
+      }
+    }
+  ],
+  "service_legal_count": 6,
+  "quality_conclusion_allowed": false,
+  "postgresql_write_count": 0,
+  "api_key_persisted": false,
+  "next_step": "停止并向用户报告七例前后对照，不自动宣布阶段 7 通过。"
+}

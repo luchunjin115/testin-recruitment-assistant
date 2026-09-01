@@ -15,14 +15,14 @@ from app.schemas.screening_evaluation import AIScreeningEvaluationV5Output
 
 
 def test_v5_prompt_has_fixed_version_and_ten_structured_sections() -> None:
-    assert SCREENING_EVALUATION_V5_PROMPT_VERSION == "screening_evaluation_lightweight_v7"
-    assert SCREENING_EVALUATION_V5_BEHAVIOR_VERSION == "lightweight_report_generation_v9"
+    assert SCREENING_EVALUATION_V5_PROMPT_VERSION == "screening_evaluation_lightweight_v10"
+    assert SCREENING_EVALUATION_V5_BEHAVIOR_VERSION == "lightweight_report_generation_v11"
     headings = re.findall(r"^## (\d+)\.", _V5_SYSTEM_PROMPT, flags=re.MULTILINE)
     assert headings == [str(index) for index in range(1, 11)]
 
 
-def test_v5_report_service_behavior_requires_v9() -> None:
-    assert SCREENING_EVALUATION_V5_BEHAVIOR_VERSION == "lightweight_report_generation_v9"
+def test_v5_report_service_behavior_requires_v11() -> None:
+    assert SCREENING_EVALUATION_V5_BEHAVIOR_VERSION == "lightweight_report_generation_v11"
 
 
 @pytest.mark.parametrize(
@@ -41,8 +41,8 @@ def test_v5_prompt_prioritizes_concise_non_exhaustive_hr_material(
     assert required_instruction in _V5_SYSTEM_PROMPT
 
 
-def test_v5_work_duration_exit_contract_requires_prompt_v7() -> None:
-    assert SCREENING_EVALUATION_V5_PROMPT_VERSION == "screening_evaluation_lightweight_v7"
+def test_v5_work_duration_exit_contract_requires_prompt_v10() -> None:
+    assert SCREENING_EVALUATION_V5_PROMPT_VERSION == "screening_evaluation_lightweight_v10"
 
 
 @pytest.mark.parametrize(
@@ -73,13 +73,13 @@ def test_v5_prompt_v5_keeps_legacy_duration_fields_empty() -> None:
 @pytest.mark.parametrize(
     "required_instruction",
     (
-        "不得跨句、跨段或删词拼接",
-        "每个 1—10 分评价点都必须有可定位证据",
-        "同时解释有证据优势和 required 缺口",
+        "先完整阅读 Resume",
+        "0 分：evidence 可以为空或非空",
+        "strengths 必须说明支撑较高分的真实优势",
         "教育经历、行业经历和工作经历",
-        "真实、岗位相关且有证据的弱优势",
+        "strengths 只写有依据的岗位相关优势",
         "五个分区在确实没有真实内容时都返回空列表 []",
-        "不能填写任何时间事实、计算过程或门槛结论",
+        "年限门槛都不能成为任何评分或报告分区的依据",
     ),
 )
 def test_v5_prompt_v5_freezes_report_reliability_rules(
@@ -93,23 +93,30 @@ def test_v5_prompt_v5_does_not_require_fixed_zero_score_wording() -> None:
     assert "gaps、missing_info 和 hr_follow_up_questions 必须各有至少一项" not in _V5_SYSTEM_PROMPT
 
 
+def test_v5_prompt_separates_finding_objects_from_question_strings() -> None:
+    for required_instruction in (
+        "strengths、gaps、risks_or_conflicts、missing_info 是 finding 对象列表",
+        "hr_follow_up_questions 是问题字符串列表",
+        "绝不能写成包含 summary、criterion_ids、evidence 的对象",
+    ):
+        assert required_instruction in _V5_SYSTEM_PROMPT
+
+
 def test_v5_prompt_v5_silent_check_repeats_the_high_risk_reliability_checks() -> None:
-    silent_check = _V5_SYSTEM_PROMPT.split("## 10. 输出前静默完整性检查", 1)[1]
+    silent_check = _V5_SYSTEM_PROMPT.split("## 10. 输出前静默自检", 1)[1]
     for required_check in (
-        "连续原文引用",
-        "非零分证据",
-        "required 低分与高总体分权衡",
-        "明显经历重查",
-        "弱优势遗漏",
+        "非零分均有依据",
+        "0 分 reason 合法",
+        "required 低分与较高总体分完成权衡",
         "未计算、判断或使用工作年限",
-        "所有 experience_period_fact_keys=[] 且 calculation_note=null",
+        "experience_period_fact_keys=[] 且 calculation_note=null",
     ):
         assert required_check in silent_check
 
 
-def test_v5_prompt_has_four_balanced_full_json_few_shots() -> None:
-    examples = re.findall(r"^最终 JSON：(\{.*\})$", _V5_SYSTEM_PROMPT, flags=re.MULTILINE)
-    assert len(examples) == 4
+def test_v5_prompt_has_one_full_json_and_two_micro_contrasts() -> None:
+    examples = re.findall(r"^完整示例 JSON：(\{.*\})$", _V5_SYSTEM_PROMPT, flags=re.MULTILINE)
+    assert len(examples) == 1
     payloads = [json.loads(item) for item in examples]
     for payload in payloads:
         AIScreeningEvaluationV5Output.model_validate(payload)
@@ -119,8 +126,6 @@ def test_v5_prompt_has_four_balanced_full_json_few_shots() -> None:
         for assessment in payload["criterion_assessments"]
     ]
     assert any(score >= 7 for score in scores)
-    assert 0 in scores
-    assert any(1 <= score <= 3 for score in scores)
     for field_name in (
         "strengths",
         "gaps",
@@ -128,7 +133,13 @@ def test_v5_prompt_has_four_balanced_full_json_few_shots() -> None:
         "missing_info",
         "hr_follow_up_questions",
     ):
-        assert any(payload[field_name] == [] for payload in payloads)
+        assert all(isinstance(payload[field_name], list) for payload in payloads)
+    assert all(payload["hr_follow_up_questions"] for payload in payloads)
+    assert all(
+        isinstance(question, str)
+        for payload in payloads
+        for question in payload["hr_follow_up_questions"]
+    )
     assert all(
         assessment["experience_period_fact_keys"] == []
         and assessment["calculation_note"] is None
@@ -137,8 +148,8 @@ def test_v5_prompt_has_four_balanced_full_json_few_shots() -> None:
     )
     assert "actual_months" not in _V5_SYSTEM_PROMPT
     assert "threshold_months" not in _V5_SYSTEM_PROMPT
-    assert "required 严重缺口" in _V5_SYSTEM_PROMPT
-    assert "Prompt 注入" in _V5_SYSTEM_PROMPT
+    assert "R04 微型对照：" in _V5_SYSTEM_PROMPT
+    assert "required 权衡微型对照：" in _V5_SYSTEM_PROMPT
 
 
 def test_v5_prompt_isolates_each_untrusted_input_and_keeps_injection_as_data() -> None:

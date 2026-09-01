@@ -71,7 +71,7 @@ class Settings(BaseSettings):
     )
     JOB_EVALUATION_PLAN_ENABLED: bool = True
     JOB_EVALUATION_PLAN_MODEL: str = Field(
-        default="deepseek-v4-flash",
+        default="deepseek-v4-pro",
         min_length=1,
         max_length=100,
     )
@@ -118,7 +118,7 @@ class Settings(BaseSettings):
     )
     SCREENING_EVALUATION_ENABLED: bool = True
     SCREENING_EVALUATION_MODEL: str = Field(
-        default="deepseek-v4-flash",
+        default="deepseek-v4-pro",
         min_length=1,
         max_length=100,
     )
@@ -144,7 +144,12 @@ class Settings(BaseSettings):
         max_length=20,
     )
     SCREENING_EVALUATION_V5_PROMPT_VERSION: str = Field(
-        default="screening_evaluation_lightweight_v7",
+        default="screening_evaluation_lightweight_v10",
+        min_length=1,
+        max_length=100,
+    )
+    SCREENING_EVALUATION_V5_REPAIR_PROMPT_VERSION: str = Field(
+        default="screening_evaluation_repair_v2",
         min_length=1,
         max_length=100,
     )

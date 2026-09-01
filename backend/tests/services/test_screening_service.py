@@ -596,6 +596,70 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(completed.attempt_count, 2)
         self.assertEqual(len(adapter.calls), 2)
 
+    async def test_retry_then_content_repair_records_three_attempts_and_tokens(
+        self,
+    ) -> None:
+        run = await self._queue_and_claim()
+        adapter = FakeScreeningEvaluationAdapter(
+            [
+                ScreeningEvaluationTimeoutError("private"),
+                ScreeningEvaluationAdapterResult(
+                    content="{}",
+                    model="fake-screening-model",
+                    finish_reason="stop",
+                    input_tokens=40,
+                    output_tokens=20,
+                ),
+                valid_model_result(),
+            ]
+        )
+
+        completed = await screening_service.execute_run(
+            self.db,
+            run.id,
+            adapter=adapter,
+            settings=self.settings,
+            clock=lambda: NOW,
+        )
+
+        self.assertEqual(completed.status, "succeeded")
+        self.assertEqual(completed.attempt_count, 3)
+        self.assertEqual(completed.input_tokens, 140)
+        self.assertEqual(completed.output_tokens, 70)
+        self.assertEqual(len(adapter.calls), 2)
+        self.assertEqual(len(adapter.repair_calls), 1)
+
+    async def test_repair_infrastructure_failure_is_not_retried(self) -> None:
+        run = await self._queue_and_claim()
+        adapter = FakeScreeningEvaluationAdapter(
+            [
+                ScreeningEvaluationAdapterResult(
+                    content="{}",
+                    model="fake-screening-model",
+                    finish_reason="stop",
+                    input_tokens=40,
+                    output_tokens=20,
+                ),
+                ScreeningEvaluationTimeoutError("private repair timeout"),
+                valid_model_result(),
+            ]
+        )
+
+        failed = await screening_service.execute_run(
+            self.db,
+            run.id,
+            adapter=adapter,
+            settings=self.settings,
+            clock=lambda: NOW,
+        )
+
+        self.assertEqual(failed.status, "failed")
+        self.assertEqual(failed.attempt_count, 2)
+        self.assertEqual(failed.input_tokens, 40)
+        self.assertEqual(failed.output_tokens, 20)
+        self.assertEqual(len(adapter.calls), 1)
+        self.assertEqual(len(adapter.repair_calls), 1)
+
     async def test_content_failure_does_not_retry_or_replace_old_report(self) -> None:
         await self._complete_success()
         old_report = await self.db.scalar(

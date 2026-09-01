@@ -1,0 +1,1471 @@
+{
+  "stage": "stage7-p5r-g-v10-v2-real-validation",
+  "batch": "P5R-G-v10-v2-real-validation",
+  "mode": "fresh_v10_then_conditional_repair_v2_challenge",
+  "generated_at": "2026-09-01T08:04:28.336672+00:00",
+  "status": "passed",
+  "authorization": {
+    "user_directive": "现在我们再拿真实简历进行测试",
+    "monetary_cap_usd": 0.2
+  },
+  "execution_contract": {
+    "business_call_id": "P5R-G-V10-V2-R04",
+    "source_case_id": "R04",
+    "model": "deepseek-v4-pro",
+    "main_prompt_version": "screening_evaluation_lightweight_v10",
+    "repair_prompt_version": "screening_evaluation_repair_v2",
+    "behavior_version": "lightweight_report_generation_v11",
+    "schema_version": "5.0",
+    "business_call_maximum": 2,
+    "api_attempt_limit": 3,
+    "postgresql_writes_allowed": false
+  },
+  "preflight": {
+    "path": "docs/stages/stage7/2026-09-01-stage7-p5r-g-v10-v2-r04-zero-call-preflight.json",
+    "sha256": "2aed815adf0444c6d2e96af9b456187d0421c3e371e1d0c3605906711a66a0a4"
+  },
+  "pricing": {
+    "source": "https://api-docs.deepseek.com/quick_start/pricing/",
+    "verified_at": "2026-09-01T08:04:28.336672+00:00",
+    "official_model": "deepseek-v4-pro",
+    "official_version": "DeepSeek-V4-Pro-0813",
+    "selected_tier": "peak",
+    "selection_rule": "peak on Monday-Friday UTC 01:00-04:00 and 06:00-10:00",
+    "usd_per_million_tokens": {
+      "cache_hit_input": 0.044,
+      "cache_miss_input": 1.32,
+      "output": 3.96
+    },
+    "all_tiers": {
+      "off_peak": {
+        "cache_hit_input": 0.022,
+        "cache_miss_input": 0.66,
+        "output": 1.98
+      },
+      "peak": {
+        "cache_hit_input": 0.044,
+        "cache_miss_input": 1.32,
+        "output": 3.96
+      }
+    }
+  },
+  "cost_enforcement": {
+    "tier": "peak",
+    "rates_usd_per_million_tokens": {
+      "cache_hit_input": 0.044,
+      "cache_miss_input": 1.32,
+      "output": 3.96
+    },
+    "estimated_spend_usd": 0.03997091999999999,
+    "failed_attempt_reserve_usd": 0.0,
+    "hard_cap_usd": 0.2,
+    "within_hard_cap": true
+  },
+  "attempt_summary": {
+    "api_attempt_count": 2,
+    "business_call_count": 2,
+    "infrastructure_retry_count": 0,
+    "content_repair_or_challenge_count": 1,
+    "input_tokens": 11714,
+    "output_tokens": 6189
+  },
+  "attempt_audit": [
+    {
+      "stage": "stage7-p5r-gf",
+      "business_call_id": "P5R-G-V10-V2-R04",
+      "source_case_id": "R04",
+      "attempt_number": 1,
+      "business_call_number": 1,
+      "call_kind": "initial",
+      "result": "succeeded",
+      "sealed_at": "2026-09-01T08:04:03.611200+00:00",
+      "duration_ms": 32222.409,
+      "requested_model": "deepseek-v4-pro",
+      "model": "deepseek-v4-pro",
+      "finish_reason": "stop",
+      "error_code": null,
+      "retryable": false,
+      "raw_response": "{\n  \"overall_score\": 32,\n  \"overall_summary\": \"候选人具备 Java 和 Spring Boot 基础使用经验，但核心交易系统、MySQL 优化、Redis/Kafka 实际使用及线上问题定位等关键要求缺乏可核实证据，且存在多处自述与项目记录冲突。\",\n  \"criterion_assessments\": [\n    {\n      \"criterion_id\": \"criterion:0001\",\n      \"score\": 2,\n      \"reason\": \"简历中未体现订单、库存预占或履约相关 Java 服务的需求分析、接口设计、开发和维护职责；仅有活动报名后台维护，且角色为子模块开发，与目标领域不直接相关。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"AI 判断：工作经历为活动报名后台维护，未涉及订单、库存预占或履约服务。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0002\",\n      \"score\": 1,\n      \"reason\": \"简历未提及参与定义 REST API、异常码、幂等和数据一致性方案；仅有字段校验修改，无接口设计或一致性方案证据。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"AI 判断：工作描述仅涉及字段校验修改，未提及 REST API 设计、异常码、幂等或数据一致性方案。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0003\",\n      \"score\": 1,\n      \"reason\": \"简历未体现分析慢 SQL、缓存热点、消息堆积和线上告警；仅有一次数据库连接池耗尽通过重启恢复，无根因分析或优化措施。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"AI 判断：处理过数据库连接池耗尽，但仅重启恢复，未记录根因分析、索引优化或预防措施。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0004\",\n      \"score\": 2,\n      \"reason\": \"简历未提及编写单元测试、集成测试、参与代码评审、发布检查或技术文档维护；仅有日常工单处理，无相关质量保障活动证据。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"AI 判断：工作描述未提及测试编写、代码评审、发布检查或文档维护。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0005\",\n      \"score\": 0,\n      \"reason\": \"简历未提及参与服务拆分、容量评估或可观测性建设，无相关证据。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    },\n    {\n      \"criterion_id\": \"criterion:0006\",\n      \"score\": 5,\n      \"reason\": \"简历显示有 Java 项目开发经验，使用 Spring Boot 和 MySQL 进行后台维护，但项目复杂度较低，且自述与项目记录存在冲突。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"AI 判断：工作经历中使用 Spring Boot 和 MySQL 进行活动报名后台维护。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0007\",\n      \"score\": 4,\n      \"reason\": \"简历显示使用 Spring Boot 进行后台开发，但未体现 REST API 的设计与实现细节，仅涉及字段校验修改。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"AI 判断：项目使用 Spring Boot，但工作描述仅涉及字段校验修改，未提及 REST API 设计实现。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0008\",\n      \"score\": 3,\n      \"reason\": \"简历提及 MySQL，但未体现表设计、事务和索引的理解或实践，仅有一次连接池问题处理。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"AI 判断：项目使用 MySQL，但未提及表设计、事务或索引相关实践。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0009\",\n      \"score\": 0,\n      \"reason\": \"简历未提及结合执行计划定位 SQL 性能问题，无相关证据。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    },\n    {\n      \"criterion_id\": \"criterion:0010\",\n      \"score\": 2,\n      \"reason\": \"简历技能栏写有 Redis 和 Kafka，但工作描述仅提到调用公司封装的缓存组件，未说明 Kafka 使用场景或异常处理，实际深度待核实。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"AI 判断：技能栏写有 Redis 和 Kafka，但工作描述仅提到调用公司封装的缓存组件，未说明 Kafka 使用场景或异常处理。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0011\",\n      \"score\": 2,\n      \"reason\": \"简历未体现阅读日志、定位线上问题及与测试和业务同事沟通处理过程；仅有一次连接池问题通过重启恢复，无定位和沟通记录。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"AI 判断：处理过数据库连接池耗尽，但仅重启恢复，未记录日志分析或沟通处理过程。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0012\",\n      \"score\": 0,\n      \"reason\": \"简历未提及订单、支付、库存或履约系统经验。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    },\n    {\n      \"criterion_id\": \"criterion:0013\",\n      \"score\": 0,\n      \"reason\": \"简历未提及高并发压测、限流降级、容器化部署或 Kubernetes 实践。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    },\n    {\n      \"criterion_id\": \"criterion:0014\",\n      \"score\": 0,\n      \"reason\": \"简历未提及技术方案文档或线上事故复盘经验。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    }\n  ],\n  \"strengths\": [\n    {\n      \"summary\": \"具备 Java 和 Spring Boot 基础使用经验，能够进行后台维护开发。\",\n      \"criterion_ids\": [\"criterion:0006\", \"criterion:0007\"],\n      \"evidence\": []\n    }\n  ],\n  \"gaps\": [\n    {\n      \"summary\": \"缺乏订单、库存预占或履约相关 Java 服务开发经验。\",\n      \"criterion_ids\": [\"criterion:0001\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"未体现 REST API 设计、异常码、幂等和数据一致性方案定义能力。\",\n      \"criterion_ids\": [\"criterion:0002\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"未体现慢 SQL、缓存热点、消息堆积和线上告警分析能力。\",\n      \"criterion_ids\": [\"criterion:0003\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"未体现单元测试、集成测试、代码评审与文档维护实践。\",\n      \"criterion_ids\": [\"criterion:0004\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"未体现服务拆分、容量评估和可观测性建设参与。\",\n      \"criterion_ids\": [\"criterion:0005\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"MySQL 表设计、事务和索引理解缺乏实践证据。\",\n      \"criterion_ids\": [\"criterion:0008\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"未体现结合执行计划定位 SQL 性能问题。\",\n      \"criterion_ids\": [\"criterion:0009\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"Redis 或消息队列实际使用经验不足，未说明使用场景和异常处理。\",\n      \"criterion_ids\": [\"criterion:0010\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"未体现阅读日志、定位线上问题及沟通处理过程。\",\n      \"criterion_ids\": [\"criterion:0011\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺乏订单、支付、库存或履约系统经验。\",\n      \"criterion_ids\": [\"criterion:0012\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺乏高并发压测、限流降级、容器化部署或 Kubernetes 实践。\",\n      \"criterion_ids\": [\"criterion:0013\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺乏技术方案文档或线上事故复盘经验。\",\n      \"criterion_ids\": [\"criterion:0014\"],\n      \"evidence\": []\n    }\n  ],\n  \"risks_or_conflicts\": [\n    {\n      \"summary\": \"简历自述“精通 Java 高并发架构，拥有 5 年 Spring Boot 大型交易系统经验”与项目记录中活动报名峰值和容量方案由客户提供存在冲突。\",\n      \"criterion_ids\": [\"criterion:0006\", \"criterion:0007\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"自述“主导每秒十万级交易系统”与可核实的活动报名峰值约每分钟 1,800 次请求不符。\",\n      \"criterion_ids\": [\"criterion:0006\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"自述“订单微服务负责人”与项目角色说明“在 6 人团队中负责报名查询和导出子模块”冲突。\",\n      \"criterion_ids\": [\"criterion:0001\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"技能栏写有 Redis 和 Kafka，但工作描述仅提到调用公司封装的缓存组件，未说明 Kafka 使用场景，实际深度待核实。\",\n      \"criterion_ids\": [\"criterion:0010\"],\n      \"evidence\": []\n    }\n  ],\n  \"missing_info\": [\n    {\n      \"summary\": \"缺少订单、库存预占或履约相关 Java 服务开发的具体项目经历。\",\n      \"criterion_ids\": [\"criterion:0001\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少 REST API 设计、异常码、幂等和数据一致性方案的具体案例。\",\n      \"criterion_ids\": [\"criterion:0002\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少慢 SQL、缓存热点、消息堆积和线上告警分析的具体案例。\",\n      \"criterion_ids\": [\"criterion:0003\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少单元测试、集成测试、代码评审与文档维护的具体实践。\",\n      \"criterion_ids\": [\"criterion:0004\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少服务拆分、容量评估和可观测性建设参与的具体经历。\",\n      \"criterion_ids\": [\"criterion:0005\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少 MySQL 表设计、事务和索引理解的具体实践。\",\n      \"criterion_ids\": [\"criterion:0008\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少结合执行计划定位 SQL 性能问题的具体案例。\",\n      \"criterion_ids\": [\"criterion:0009\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少 Redis 或消息队列实际使用场景和异常处理的具体说明。\",\n      \"criterion_ids\": [\"criterion:0010\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少阅读日志、定位线上问题及沟通处理过程的具体案例。\",\n      \"criterion_ids\": [\"criterion:0011\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少订单、支付、库存或履约系统经验的具体项目。\",\n      \"criterion_ids\": [\"criterion:0012\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少高并发压测、限流降级、容器化部署或 Kubernetes 实践的具体经历。\",\n      \"criterion_ids\": [\"criterion:0013\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少技术方案文档或线上事故复盘经验的具体案例。\",\n      \"criterion_ids\": [\"criterion:0014\"],\n      \"evidence\": []\n    }\n  ],\n  \"hr_follow_up_questions\": [\n    \"请核实候选人是否具备订单、库存预占或履约相关 Java 服务开发经验。\",\n    \"请核实候选人是否参与过 REST API、异常码、幂等和数据一致性方案的定义。\",\n    \"请核实候选人是否具备慢 SQL、缓存热点、消息堆积和线上告警分析能力。\",\n    \"请核实候选人是否编写过单元测试和集成测试，并参与代码评审和文档维护。\",\n    \"请核实候选人是否参与过服务拆分、容量评估和可观测性建设。\",\n    \"请核实候选人对 MySQL 表设计、事务和索引的理解程度。\",\n    \"请核实候选人是否能够结合执行计划定位 SQL 性能问题。\",\n    \"请核实候选人 Redis 或消息队列的实际使用场景和异常处理经验。\",\n    \"请核实候选人是否具备阅读日志、定位线上问题及沟通处理过程的能力。\",\n    \"请核实候选人是否有订单、支付、库存或履约系统经验。\",\n    \"请核实候选人是否有高并发压测、限流降级、容器化部署或 Kubernetes 实践。\",\n    \"请核实候选人是否有技术方案文档或线上事故复盘经验。\"\n  ]\n}",
+      "input_tokens": 5121,
+      "output_tokens": 3227,
+      "peak_reservation_usd": 0.0772728,
+      "peak_estimated_cost_usd": 0.01953864,
+      "raw_sealed_before_service_validation": true,
+      "journal_path": "docs/stages/stage7/2026-09-01-stage7-p5r-g-v10-v2-r04-attempt-01.json",
+      "journal_sha256": "1d295aae8b948ad3aab09149e45868cf7ed8cfb470f111104c063c44860f226c"
+    },
+    {
+      "stage": "stage7-p5r-gf",
+      "business_call_id": "P5R-G-V10-V2-R04",
+      "source_case_id": "R04",
+      "attempt_number": 2,
+      "business_call_number": 2,
+      "call_kind": "repair",
+      "result": "succeeded",
+      "sealed_at": "2026-09-01T08:04:28.334665+00:00",
+      "duration_ms": 24713.537,
+      "requested_model": "deepseek-v4-pro",
+      "model": "deepseek-v4-pro",
+      "finish_reason": "stop",
+      "error_code": null,
+      "retryable": false,
+      "raw_response": "{\n  \"overall_score\": 38,\n  \"overall_summary\": \"候选人具备 Java 和 Spring Boot 基础使用经验，但核心交易系统、MySQL 优化、Redis/Kafka 实际使用及线上问题定位等关键要求缺乏可核实证据，且存在多处自述与项目记录冲突。\",\n  \"criterion_assessments\": [\n    {\n      \"criterion_id\": \"criterion:0001\",\n      \"score\": 2,\n      \"reason\": \"简历中未体现订单、库存预占或履约相关 Java 服务的开发职责，仅提及活动报名后台维护，与目标领域不直接相关。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"参与活动报名后台维护，项目使用 Spring Boot 和 MySQL；个人主要工作是修改字段校验、导出报表和处理日常工单。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0002\",\n      \"score\": 0,\n      \"reason\": \"未提及参与定义 REST API、异常码、幂等或数据一致性方案。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    },\n    {\n      \"criterion_id\": \"criterion:0003\",\n      \"score\": 0,\n      \"reason\": \"未提及分析慢 SQL、缓存热点、消息堆积或线上告警的经历。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    },\n    {\n      \"criterion_id\": \"criterion:0004\",\n      \"score\": 0,\n      \"reason\": \"未提及编写单元测试、集成测试、参与代码评审或技术文档维护。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    },\n    {\n      \"criterion_id\": \"criterion:0005\",\n      \"score\": 0,\n      \"reason\": \"未提及参与服务拆分、容量评估或可观测性建设。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    },\n    {\n      \"criterion_id\": \"criterion:0006\",\n      \"score\": 5,\n      \"reason\": \"有 Java 项目开发经验，但主要限于活动报名后台的维护性工作，缺乏复杂业务开发证据。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"参与活动报名后台维护，项目使用 Spring Boot 和 MySQL。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0007\",\n      \"score\": 4,\n      \"reason\": \"使用 Spring Boot 的项目经历存在，但未体现 REST API 的设计与实现细节。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"项目使用 Spring Boot 和 MySQL。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0008\",\n      \"score\": 2,\n      \"reason\": \"仅提及使用 MySQL，未体现表设计、事务或索引理解。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"项目使用 Spring Boot 和 MySQL。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0009\",\n      \"score\": 0,\n      \"reason\": \"未提及结合执行计划定位 SQL 性能问题。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    },\n    {\n      \"criterion_id\": \"criterion:0010\",\n      \"score\": 1,\n      \"reason\": \"技能栏写有 Redis 和 Kafka，但工作描述仅提到调用公司封装的缓存组件，未说明 Kafka 使用场景或异常处理。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"技能栏写有 Redis 和 Kafka；工作描述仅提到调用公司封装的缓存组件。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0011\",\n      \"score\": 1,\n      \"reason\": \"处理过一次数据库连接池耗尽问题，但仅通过重启恢复，未体现日志分析、根因定位或沟通处理过程。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": [\n        {\n          \"quote\": \"处理过一次数据库连接池耗尽问题，通过重启服务恢复；未记录根因分析、索引优化或后续预防措施。\",\n          \"section\": \"工作经历\"\n        }\n      ]\n    },\n    {\n      \"criterion_id\": \"criterion:0012\",\n      \"score\": 0,\n      \"reason\": \"未提及订单、支付、库存或履约系统经验。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    },\n    {\n      \"criterion_id\": \"criterion:0013\",\n      \"score\": 0,\n      \"reason\": \"未提及高并发压测、限流降级、容器化部署或 Kubernetes 实践。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    },\n    {\n      \"criterion_id\": \"criterion:0014\",\n      \"score\": 0,\n      \"reason\": \"未提及技术方案文档或线上事故复盘经验。\",\n      \"calculation_note\": null,\n      \"experience_period_fact_keys\": [],\n      \"evidence\": []\n    }\n  ],\n  \"strengths\": [\n    {\n      \"summary\": \"具备 Java 和 Spring Boot 的基础使用经验，能够参与维护性开发工作。\",\n      \"criterion_ids\": [\"criterion:0006\", \"criterion:0007\"],\n      \"evidence\": []\n    }\n  ],\n  \"gaps\": [\n    {\n      \"summary\": \"缺乏订单、库存预占或履约相关 Java 服务开发经验。\",\n      \"criterion_ids\": [\"criterion:0001\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"未体现 REST API 设计、异常码、幂等和数据一致性方案定义能力。\",\n      \"criterion_ids\": [\"criterion:0002\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"未体现慢 SQL、缓存热点、消息堆积和线上告警分析能力。\",\n      \"criterion_ids\": [\"criterion:0003\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"未体现单元测试、集成测试、代码评审与文档维护经验。\",\n      \"criterion_ids\": [\"criterion:0004\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"未体现服务拆分、容量评估和可观测性建设参与。\",\n      \"criterion_ids\": [\"criterion:0005\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"MySQL 表设计、事务和索引理解缺乏证据。\",\n      \"criterion_ids\": [\"criterion:0008\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"未体现结合执行计划定位 SQL 性能问题的能力。\",\n      \"criterion_ids\": [\"criterion:0009\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"Redis 或消息队列实际使用经验不足，未说明使用场景及异常处理。\",\n      \"criterion_ids\": [\"criterion:0010\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"线上问题定位与沟通能力缺乏有效证据。\",\n      \"criterion_ids\": [\"criterion:0011\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"无订单、支付、库存或履约系统经验。\",\n      \"criterion_ids\": [\"criterion:0012\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"无高并发压测、限流降级、容器化部署或 Kubernetes 实践。\",\n      \"criterion_ids\": [\"criterion:0013\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"无技术方案文档或线上事故复盘经验。\",\n      \"criterion_ids\": [\"criterion:0014\"],\n      \"evidence\": []\n    }\n  ],\n  \"risks_or_conflicts\": [\n    {\n      \"summary\": \"简历自述“精通 Java 高并发架构，拥有 5 年 Spring Boot 大型交易系统经验”与项目记录中活动报名峰值约每分钟 1,800 次请求、容量方案由客户架构团队提供相矛盾。\",\n      \"criterion_ids\": [\"criterion:0006\", \"criterion:0007\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"自述“主导每秒十万级交易系统”与可核实的活动报名峰值不符。\",\n      \"criterion_ids\": [\"criterion:0006\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"自述“订单微服务负责人”与项目角色说明“在 6 人团队中负责报名查询和导出子模块”冲突。\",\n      \"criterion_ids\": [\"criterion:0001\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"技能栏写有 Redis 和 Kafka，但工作描述仅提到调用公司封装的缓存组件，未说明 Kafka 对应项目、消息类型或异常处理，实际深度待核实。\",\n      \"criterion_ids\": [\"criterion:0010\"],\n      \"evidence\": []\n    }\n  ],\n  \"missing_info\": [\n    {\n      \"summary\": \"缺少订单、库存预占或履约相关 Java 服务开发的具体项目经历。\",\n      \"criterion_ids\": [\"criterion:0001\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少 REST API 设计、异常码、幂等和数据一致性方案的定义细节。\",\n      \"criterion_ids\": [\"criterion:0002\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少慢 SQL、缓存热点、消息堆积和线上告警分析的具体案例。\",\n      \"criterion_ids\": [\"criterion:0003\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少单元测试、集成测试、代码评审与文档维护的实践证据。\",\n      \"criterion_ids\": [\"criterion:0004\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少服务拆分、容量评估和可观测性建设的参与记录。\",\n      \"criterion_ids\": [\"criterion:0005\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少 MySQL 表设计、事务和索引的具体实践。\",\n      \"criterion_ids\": [\"criterion:0008\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少结合执行计划定位 SQL 性能问题的案例。\",\n      \"criterion_ids\": [\"criterion:0009\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少 Redis 或消息队列使用场景及异常处理方式的说明。\",\n      \"criterion_ids\": [\"criterion:0010\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少阅读日志、定位线上问题及沟通处理过程的详细记录。\",\n      \"criterion_ids\": [\"criterion:0011\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少订单、支付、库存或履约系统经验。\",\n      \"criterion_ids\": [\"criterion:0012\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少高并发压测、限流降级、容器化部署或 Kubernetes 实践。\",\n      \"criterion_ids\": [\"criterion:0013\"],\n      \"evidence\": []\n    },\n    {\n      \"summary\": \"缺少技术方案文档或线上事故复盘经验。\",\n      \"criterion_ids\": [\"criterion:0014\"],\n      \"evidence\": []\n    }\n  ],\n  \"hr_follow_up_questions\": [\n    \"请核实候选人是否实际参与过订单、库存预占或履约相关 Java 服务开发，具体职责和成果是什么？\",\n    \"请核实候选人是否参与过 REST API、异常码、幂等和数据一致性方案的定义，能否提供具体案例？\",\n    \"请核实候选人是否具备分析慢 SQL、缓存热点、消息堆积和线上告警的经验，有无具体案例？\",\n    \"请核实候选人是否编写过单元测试和集成测试，是否参与过代码评审和技术文档维护？\",\n    \"请核实候选人是否参与过服务拆分、容量评估和可观测性建设？\",\n    \"请核实候选人对 MySQL 表设计、事务和索引的理解程度，能否举例说明？\",\n    \"请核实候选人是否能够结合执行计划定位 SQL 性能问题，有无实际案例？\",\n    \"请核实候选人 Redis 和 Kafka 的实际使用深度，包括使用场景和异常处理方式。\",\n    \"请核实候选人线上问题定位和沟通处理的具体经历，例如数据库连接池耗尽问题的处理过程。\",\n    \"请核实候选人是否有订单、支付、库存或履约系统经验。\",\n    \"请核实候选人是否有高并发压测、限流降级、容器化部署或 Kubernetes 实践。\",\n    \"请核实候选人是否有技术方案文档或线上事故复盘经验。\"\n  ]\n}",
+      "input_tokens": 6593,
+      "output_tokens": 2962,
+      "peak_reservation_usd": 0.08586732000000001,
+      "peak_estimated_cost_usd": 0.020432279999999997,
+      "raw_sealed_before_service_validation": true,
+      "journal_path": "docs/stages/stage7/2026-09-01-stage7-p5r-g-v10-v2-r04-attempt-02.json",
+      "journal_sha256": "8cc9fde424c5cdaa0a90cee24cda9c8ae3e1a2ef31b7e85f01d97a7399fe5443"
+    }
+  ],
+  "fresh_v10_flow": {
+    "status": "legal",
+    "error_type": null,
+    "error_code": null,
+    "repair_triggered": false,
+    "validation_errors": [],
+    "report": {
+      "overall_score": 32,
+      "display_label": "存在明显差距",
+      "overall_summary": "候选人具备 Java 和 Spring Boot 基础使用经验，但核心交易系统、MySQL 优化、Redis/Kafka 实际使用及线上问题定位等关键要求缺乏可核实证据，且存在多处自述与项目记录冲突。",
+      "criterion_assessments": [
+        {
+          "criterion": {
+            "criterion_id": "criterion:0001",
+            "name": "订单、库存预占或履约服务开发",
+            "importance": "general",
+            "description": "判断是否能够负责订单、库存预占或履约相关 Java 服务的需求分析、接口设计、开发和维护。",
+            "screening_focus": "寻找订单、库存预占或履约相关 Java 服务开发职责和成果证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "负责订单、库存预占或履约相关 Java 服务的需求分析、接口设计、开发和维护"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0001",
+            "score": 2,
+            "reason": "简历中未体现订单、库存预占或履约相关 Java 服务的需求分析、接口设计、开发和维护职责；仅有活动报名后台维护，且角色为子模块开发，与目标领域不直接相关。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "AI 判断：工作经历为活动报名后台维护，未涉及订单、库存预占或履约服务。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0002",
+            "name": "REST API、异常码、幂等和数据一致性方案定义",
+            "importance": "general",
+            "description": "判断是否能够与产品、前端、测试及上下游团队共同定义 REST API、异常码、幂等和数据一致性方案。",
+            "screening_focus": "寻找参与定义 REST API、异常码、幂等和数据一致性方案的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "与产品、前端、测试及上下游团队共同定义 REST API、异常码、幂等和数据一致性方案"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0002",
+            "score": 1,
+            "reason": "简历未提及参与定义 REST API、异常码、幂等和数据一致性方案；仅有字段校验修改，无接口设计或一致性方案证据。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "AI 判断：工作描述仅涉及字段校验修改，未提及 REST API 设计、异常码、幂等或数据一致性方案。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0003",
+            "name": "慢 SQL、缓存热点、消息堆积和线上告警分析",
+            "importance": "general",
+            "description": "判断是否能够分析慢 SQL、缓存热点、消息堆积和线上告警，推动性能优化及问题复盘。",
+            "screening_focus": "寻找分析慢 SQL、缓存热点、消息堆积和线上告警并推动优化的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "分析慢 SQL、缓存热点、消息堆积和线上告警，推动性能优化及问题复盘"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0003",
+            "score": 1,
+            "reason": "简历未体现分析慢 SQL、缓存热点、消息堆积和线上告警；仅有一次数据库连接池耗尽通过重启恢复，无根因分析或优化措施。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "AI 判断：处理过数据库连接池耗尽，但仅重启恢复，未记录根因分析、索引优化或预防措施。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0004",
+            "name": "单元测试、集成测试、代码评审与文档维护",
+            "importance": "general",
+            "description": "判断是否能够编写单元测试和必要的集成测试，参与代码评审、发布检查与技术文档维护。",
+            "screening_focus": "寻找编写测试、参与代码评审、发布检查和技术文档维护的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "编写单元测试和必要的集成测试，参与代码评审、发布检查与技术文档维护"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0004",
+            "score": 2,
+            "reason": "简历未提及编写单元测试、集成测试、参与代码评审、发布检查或技术文档维护；仅有日常工单处理，无相关质量保障活动证据。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "AI 判断：工作描述未提及测试编写、代码评审、发布检查或文档维护。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0005",
+            "name": "服务拆分、容量评估和可观测性建设参与",
+            "importance": "general",
+            "description": "判断是否能够根据业务增长参与服务拆分、容量评估和可观测性建设，但不要求入职后立即承担整体架构负责人职责。",
+            "screening_focus": "寻找参与服务拆分、容量评估和可观测性建设的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "根据业务增长参与服务拆分、容量评估和可观测性建设，但不要求入职后立即承担整体架构负责人职责"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0005",
+            "score": 0,
+            "reason": "简历未提及参与服务拆分、容量评估或可观测性建设，无相关证据。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0006",
+            "name": "Java 项目开发经验",
+            "importance": "required",
+            "description": "判断是否具备 Java 项目开发经验。",
+            "screening_focus": "寻找 Java 项目开发职责和成果证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须具备 Java 项目开发经验"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0006",
+            "score": 5,
+            "reason": "简历显示有 Java 项目开发经验，使用 Spring Boot 和 MySQL 进行后台维护，但项目复杂度较低，且自述与项目记录存在冲突。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "AI 判断：工作经历中使用 Spring Boot 和 MySQL 进行活动报名后台维护。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0007",
+            "name": "Spring Boot REST API 设计与实现",
+            "importance": "required",
+            "description": "判断是否能够使用 Spring Boot 完成 REST API 的设计与实现。",
+            "screening_focus": "寻找使用 Spring Boot 设计并实现 REST API 的项目证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "能够使用 Spring Boot 完成 REST API 的设计与实现"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0007",
+            "score": 4,
+            "reason": "简历显示使用 Spring Boot 进行后台开发，但未体现 REST API 的设计与实现细节，仅涉及字段校验修改。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "AI 判断：项目使用 Spring Boot，但工作描述仅涉及字段校验修改，未提及 REST API 设计实现。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0008",
+            "name": "MySQL 表设计、事务和索引理解",
+            "importance": "required",
+            "description": "判断是否理解 MySQL 表设计、事务和索引。",
+            "screening_focus": "寻找 MySQL 表设计、事务和索引相关实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须理解 MySQL 表设计、事务和索引"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0008",
+            "score": 3,
+            "reason": "简历提及 MySQL，但未体现表设计、事务和索引的理解或实践，仅有一次连接池问题处理。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "AI 判断：项目使用 MySQL，但未提及表设计、事务或索引相关实践。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0009",
+            "name": "SQL 性能问题定位",
+            "importance": "required",
+            "description": "判断是否能够结合执行计划定位常见 SQL 性能问题。",
+            "screening_focus": "寻找结合执行计划定位 SQL 性能问题的实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "能够结合执行计划定位常见 SQL 性能问题"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0009",
+            "score": 0,
+            "reason": "简历未提及结合执行计划定位 SQL 性能问题，无相关证据。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0010",
+            "name": "Redis 或消息队列实际使用经验",
+            "importance": "required",
+            "description": "判断是否具备 Redis 或主流消息队列的实际使用经验，并能说明使用场景及异常处理方式。",
+            "screening_focus": "寻找 Redis 或消息队列使用场景、异常处理实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "需要具备 Redis 或主流消息队列的实际使用经验，并能说明使用场景及异常处理方式"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0010",
+            "score": 2,
+            "reason": "简历技能栏写有 Redis 和 Kafka，但工作描述仅提到调用公司封装的缓存组件，未说明 Kafka 使用场景或异常处理，实际深度待核实。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "AI 判断：技能栏写有 Redis 和 Kafka，但工作描述仅提到调用公司封装的缓存组件，未说明 Kafka 使用场景或异常处理。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0011",
+            "name": "线上问题定位与沟通",
+            "importance": "required",
+            "description": "判断是否能够阅读日志、定位线上问题，并与测试和业务同事清晰沟通处理过程。",
+            "screening_focus": "寻找阅读日志、定位线上问题及沟通处理过程的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "能够阅读日志、定位线上问题，并与测试和业务同事清晰沟通处理过程"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0011",
+            "score": 2,
+            "reason": "简历未体现阅读日志、定位线上问题及与测试和业务同事沟通处理过程；仅有一次连接池问题通过重启恢复，无定位和沟通记录。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "AI 判断：处理过数据库连接池耗尽，但仅重启恢复，未记录日志分析或沟通处理过程。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0012",
+            "name": "订单、支付、库存或履约系统经验",
+            "importance": "preferred",
+            "description": "判断是否有订单、支付、库存或履约系统经验。",
+            "screening_focus": "寻找订单、支付、库存或履约系统相关项目经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有订单、支付、库存或履约系统经验优先"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0012",
+            "score": 0,
+            "reason": "简历未提及订单、支付、库存或履约系统经验。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0013",
+            "name": "高并发压测、限流降级、容器化部署或 Kubernetes 实践",
+            "importance": "preferred",
+            "description": "判断是否有高并发压测、限流降级、容器化部署或 Kubernetes 实践。",
+            "screening_focus": "寻找高并发压测、限流降级、容器化部署或 Kubernetes 实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有高并发压测、限流降级、容器化部署或 Kubernetes 实践者优先"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0013",
+            "score": 0,
+            "reason": "简历未提及高并发压测、限流降级、容器化部署或 Kubernetes 实践。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0014",
+            "name": "技术方案文档或线上事故复盘经验",
+            "importance": "preferred",
+            "description": "判断是否有技术方案文档或线上事故复盘经验。",
+            "screening_focus": "寻找技术方案文档或线上事故复盘经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有技术方案文档或线上事故复盘经验者优先"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0014",
+            "score": 0,
+            "reason": "简历未提及技术方案文档或线上事故复盘经验。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        }
+      ],
+      "strengths": [
+        {
+          "summary": "具备 Java 和 Spring Boot 基础使用经验，能够进行后台维护开发。",
+          "criterion_ids": [
+            "criterion:0006",
+            "criterion:0007"
+          ],
+          "evidence": []
+        }
+      ],
+      "gaps": [
+        {
+          "summary": "缺乏订单、库存预占或履约相关 Java 服务开发经验。",
+          "criterion_ids": [
+            "criterion:0001"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "未体现 REST API 设计、异常码、幂等和数据一致性方案定义能力。",
+          "criterion_ids": [
+            "criterion:0002"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "未体现慢 SQL、缓存热点、消息堆积和线上告警分析能力。",
+          "criterion_ids": [
+            "criterion:0003"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "未体现单元测试、集成测试、代码评审与文档维护实践。",
+          "criterion_ids": [
+            "criterion:0004"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "未体现服务拆分、容量评估和可观测性建设参与。",
+          "criterion_ids": [
+            "criterion:0005"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "MySQL 表设计、事务和索引理解缺乏实践证据。",
+          "criterion_ids": [
+            "criterion:0008"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "未体现结合执行计划定位 SQL 性能问题。",
+          "criterion_ids": [
+            "criterion:0009"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "Redis 或消息队列实际使用经验不足，未说明使用场景和异常处理。",
+          "criterion_ids": [
+            "criterion:0010"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "未体现阅读日志、定位线上问题及沟通处理过程。",
+          "criterion_ids": [
+            "criterion:0011"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺乏订单、支付、库存或履约系统经验。",
+          "criterion_ids": [
+            "criterion:0012"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺乏高并发压测、限流降级、容器化部署或 Kubernetes 实践。",
+          "criterion_ids": [
+            "criterion:0013"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺乏技术方案文档或线上事故复盘经验。",
+          "criterion_ids": [
+            "criterion:0014"
+          ],
+          "evidence": []
+        }
+      ],
+      "risks_or_conflicts": [
+        {
+          "summary": "简历自述“精通 Java 高并发架构，拥有 5 年 Spring Boot 大型交易系统经验”与项目记录中活动报名峰值和容量方案由客户提供存在冲突。",
+          "criterion_ids": [
+            "criterion:0006",
+            "criterion:0007"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "自述“主导每秒十万级交易系统”与可核实的活动报名峰值约每分钟 1,800 次请求不符。",
+          "criterion_ids": [
+            "criterion:0006"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "自述“订单微服务负责人”与项目角色说明“在 6 人团队中负责报名查询和导出子模块”冲突。",
+          "criterion_ids": [
+            "criterion:0001"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "技能栏写有 Redis 和 Kafka，但工作描述仅提到调用公司封装的缓存组件，未说明 Kafka 使用场景，实际深度待核实。",
+          "criterion_ids": [
+            "criterion:0010"
+          ],
+          "evidence": []
+        }
+      ],
+      "missing_info": [
+        {
+          "summary": "缺少订单、库存预占或履约相关 Java 服务开发的具体项目经历。",
+          "criterion_ids": [
+            "criterion:0001"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少 REST API 设计、异常码、幂等和数据一致性方案的具体案例。",
+          "criterion_ids": [
+            "criterion:0002"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少慢 SQL、缓存热点、消息堆积和线上告警分析的具体案例。",
+          "criterion_ids": [
+            "criterion:0003"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少单元测试、集成测试、代码评审与文档维护的具体实践。",
+          "criterion_ids": [
+            "criterion:0004"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少服务拆分、容量评估和可观测性建设参与的具体经历。",
+          "criterion_ids": [
+            "criterion:0005"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少 MySQL 表设计、事务和索引理解的具体实践。",
+          "criterion_ids": [
+            "criterion:0008"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少结合执行计划定位 SQL 性能问题的具体案例。",
+          "criterion_ids": [
+            "criterion:0009"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少 Redis 或消息队列实际使用场景和异常处理的具体说明。",
+          "criterion_ids": [
+            "criterion:0010"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少阅读日志、定位线上问题及沟通处理过程的具体案例。",
+          "criterion_ids": [
+            "criterion:0011"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少订单、支付、库存或履约系统经验的具体项目。",
+          "criterion_ids": [
+            "criterion:0012"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少高并发压测、限流降级、容器化部署或 Kubernetes 实践的具体经历。",
+          "criterion_ids": [
+            "criterion:0013"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少技术方案文档或线上事故复盘经验的具体案例。",
+          "criterion_ids": [
+            "criterion:0014"
+          ],
+          "evidence": []
+        }
+      ],
+      "hr_follow_up_questions": [
+        "请核实候选人是否具备订单、库存预占或履约相关 Java 服务开发经验。",
+        "请核实候选人是否参与过 REST API、异常码、幂等和数据一致性方案的定义。",
+        "请核实候选人是否具备慢 SQL、缓存热点、消息堆积和线上告警分析能力。",
+        "请核实候选人是否编写过单元测试和集成测试，并参与代码评审和文档维护。",
+        "请核实候选人是否参与过服务拆分、容量评估和可观测性建设。",
+        "请核实候选人对 MySQL 表设计、事务和索引的理解程度。",
+        "请核实候选人是否能够结合执行计划定位 SQL 性能问题。",
+        "请核实候选人 Redis 或消息队列的实际使用场景和异常处理经验。",
+        "请核实候选人是否具备阅读日志、定位线上问题及沟通处理过程的能力。",
+        "请核实候选人是否有订单、支付、库存或履约系统经验。",
+        "请核实候选人是否有高并发压测、限流降级、容器化部署或 Kubernetes 实践。",
+        "请核实候选人是否有技术方案文档或线上事故复盘经验。"
+      ]
+    }
+  },
+  "direct_repair_v2_challenge": {
+    "triggered": true,
+    "status": "passed",
+    "source_raw_path": "docs/stages/stage7/2026-09-01-stage7-p5r-gf-r04-attempt-01.json",
+    "source_raw_sha256": "3cdbff6ebb6a4b7588c31ce55dcce6cfccd82754f927ccc26ba37dd5fe8a0f70",
+    "validation_errors": [
+      {
+        "code": "SCHEMA_TYPE_INVALID",
+        "path": "$.hr_follow_up_questions[0]",
+        "actual_type": "object",
+        "expected": "非空问题字符串",
+        "correction": "把该对象改为一条完整问题字符串；不得包含 summary、criterion_ids、evidence"
+      },
+      {
+        "code": "SCHEMA_TYPE_INVALID",
+        "path": "$.hr_follow_up_questions[1]",
+        "actual_type": "object",
+        "expected": "非空问题字符串",
+        "correction": "把该对象改为一条完整问题字符串；不得包含 summary、criterion_ids、evidence"
+      },
+      {
+        "code": "SCHEMA_TYPE_INVALID",
+        "path": "$.hr_follow_up_questions[2]",
+        "actual_type": "object",
+        "expected": "非空问题字符串",
+        "correction": "把该对象改为一条完整问题字符串；不得包含 summary、criterion_ids、evidence"
+      },
+      {
+        "code": "SCHEMA_TYPE_INVALID",
+        "path": "$.hr_follow_up_questions[3]",
+        "actual_type": "object",
+        "expected": "非空问题字符串",
+        "correction": "把该对象改为一条完整问题字符串；不得包含 summary、criterion_ids、evidence"
+      },
+      {
+        "code": "SCHEMA_TYPE_INVALID",
+        "path": "$.hr_follow_up_questions[4]",
+        "actual_type": "object",
+        "expected": "非空问题字符串",
+        "correction": "把该对象改为一条完整问题字符串；不得包含 summary、criterion_ids、evidence"
+      },
+      {
+        "code": "SCHEMA_TYPE_INVALID",
+        "path": "$.hr_follow_up_questions[5]",
+        "actual_type": "object",
+        "expected": "非空问题字符串",
+        "correction": "把该对象改为一条完整问题字符串；不得包含 summary、criterion_ids、evidence"
+      },
+      {
+        "code": "SCHEMA_TYPE_INVALID",
+        "path": "$.hr_follow_up_questions[6]",
+        "actual_type": "object",
+        "expected": "非空问题字符串",
+        "correction": "把该对象改为一条完整问题字符串；不得包含 summary、criterion_ids、evidence"
+      },
+      {
+        "code": "SCHEMA_TYPE_INVALID",
+        "path": "$.hr_follow_up_questions[7]",
+        "actual_type": "object",
+        "expected": "非空问题字符串",
+        "correction": "把该对象改为一条完整问题字符串；不得包含 summary、criterion_ids、evidence"
+      },
+      {
+        "code": "SCHEMA_TYPE_INVALID",
+        "path": "$.hr_follow_up_questions[8]",
+        "actual_type": "object",
+        "expected": "非空问题字符串",
+        "correction": "把该对象改为一条完整问题字符串；不得包含 summary、criterion_ids、evidence"
+      },
+      {
+        "code": "SCHEMA_TYPE_INVALID",
+        "path": "$.hr_follow_up_questions[9]",
+        "actual_type": "object",
+        "expected": "非空问题字符串",
+        "correction": "把该对象改为一条完整问题字符串；不得包含 summary、criterion_ids、evidence"
+      },
+      {
+        "code": "SCHEMA_TYPE_INVALID",
+        "path": "$.hr_follow_up_questions[10]",
+        "actual_type": "object",
+        "expected": "非空问题字符串",
+        "correction": "把该对象改为一条完整问题字符串；不得包含 summary、criterion_ids、evidence"
+      },
+      {
+        "code": "SCHEMA_TYPE_INVALID",
+        "path": "$.hr_follow_up_questions[11]",
+        "actual_type": "object",
+        "expected": "非空问题字符串",
+        "correction": "把该对象改为一条完整问题字符串；不得包含 summary、criterion_ids、evidence"
+      }
+    ],
+    "complete_report_returned": true,
+    "full_json_schema_service_revalidation_passed": true,
+    "raw_changed": true,
+    "report": {
+      "overall_score": 38,
+      "display_label": "存在明显差距",
+      "overall_summary": "候选人具备 Java 和 Spring Boot 基础使用经验，但核心交易系统、MySQL 优化、Redis/Kafka 实际使用及线上问题定位等关键要求缺乏可核实证据，且存在多处自述与项目记录冲突。",
+      "criterion_assessments": [
+        {
+          "criterion": {
+            "criterion_id": "criterion:0001",
+            "name": "订单、库存预占或履约服务开发",
+            "importance": "general",
+            "description": "判断是否能够负责订单、库存预占或履约相关 Java 服务的需求分析、接口设计、开发和维护。",
+            "screening_focus": "寻找订单、库存预占或履约相关 Java 服务开发职责和成果证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "负责订单、库存预占或履约相关 Java 服务的需求分析、接口设计、开发和维护"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0001",
+            "score": 2,
+            "reason": "简历中未体现订单、库存预占或履约相关 Java 服务的开发职责，仅提及活动报名后台维护，与目标领域不直接相关。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "参与活动报名后台维护，项目使用 Spring Boot 和 MySQL；个人主要工作是修改字段校验、导出报表和处理日常工单。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0002",
+            "name": "REST API、异常码、幂等和数据一致性方案定义",
+            "importance": "general",
+            "description": "判断是否能够与产品、前端、测试及上下游团队共同定义 REST API、异常码、幂等和数据一致性方案。",
+            "screening_focus": "寻找参与定义 REST API、异常码、幂等和数据一致性方案的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "与产品、前端、测试及上下游团队共同定义 REST API、异常码、幂等和数据一致性方案"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0002",
+            "score": 0,
+            "reason": "未提及参与定义 REST API、异常码、幂等或数据一致性方案。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0003",
+            "name": "慢 SQL、缓存热点、消息堆积和线上告警分析",
+            "importance": "general",
+            "description": "判断是否能够分析慢 SQL、缓存热点、消息堆积和线上告警，推动性能优化及问题复盘。",
+            "screening_focus": "寻找分析慢 SQL、缓存热点、消息堆积和线上告警并推动优化的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "分析慢 SQL、缓存热点、消息堆积和线上告警，推动性能优化及问题复盘"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0003",
+            "score": 0,
+            "reason": "未提及分析慢 SQL、缓存热点、消息堆积或线上告警的经历。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0004",
+            "name": "单元测试、集成测试、代码评审与文档维护",
+            "importance": "general",
+            "description": "判断是否能够编写单元测试和必要的集成测试，参与代码评审、发布检查与技术文档维护。",
+            "screening_focus": "寻找编写测试、参与代码评审、发布检查和技术文档维护的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "编写单元测试和必要的集成测试，参与代码评审、发布检查与技术文档维护"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0004",
+            "score": 0,
+            "reason": "未提及编写单元测试、集成测试、参与代码评审或技术文档维护。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0005",
+            "name": "服务拆分、容量评估和可观测性建设参与",
+            "importance": "general",
+            "description": "判断是否能够根据业务增长参与服务拆分、容量评估和可观测性建设，但不要求入职后立即承担整体架构负责人职责。",
+            "screening_focus": "寻找参与服务拆分、容量评估和可观测性建设的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "根据业务增长参与服务拆分、容量评估和可观测性建设，但不要求入职后立即承担整体架构负责人职责"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0005",
+            "score": 0,
+            "reason": "未提及参与服务拆分、容量评估或可观测性建设。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0006",
+            "name": "Java 项目开发经验",
+            "importance": "required",
+            "description": "判断是否具备 Java 项目开发经验。",
+            "screening_focus": "寻找 Java 项目开发职责和成果证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须具备 Java 项目开发经验"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0006",
+            "score": 5,
+            "reason": "有 Java 项目开发经验，但主要限于活动报名后台的维护性工作，缺乏复杂业务开发证据。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "参与活动报名后台维护，项目使用 Spring Boot 和 MySQL。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0007",
+            "name": "Spring Boot REST API 设计与实现",
+            "importance": "required",
+            "description": "判断是否能够使用 Spring Boot 完成 REST API 的设计与实现。",
+            "screening_focus": "寻找使用 Spring Boot 设计并实现 REST API 的项目证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "能够使用 Spring Boot 完成 REST API 的设计与实现"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0007",
+            "score": 4,
+            "reason": "使用 Spring Boot 的项目经历存在，但未体现 REST API 的设计与实现细节。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "项目使用 Spring Boot 和 MySQL。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0008",
+            "name": "MySQL 表设计、事务和索引理解",
+            "importance": "required",
+            "description": "判断是否理解 MySQL 表设计、事务和索引。",
+            "screening_focus": "寻找 MySQL 表设计、事务和索引相关实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须理解 MySQL 表设计、事务和索引"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0008",
+            "score": 2,
+            "reason": "仅提及使用 MySQL，未体现表设计、事务或索引理解。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "项目使用 Spring Boot 和 MySQL。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0009",
+            "name": "SQL 性能问题定位",
+            "importance": "required",
+            "description": "判断是否能够结合执行计划定位常见 SQL 性能问题。",
+            "screening_focus": "寻找结合执行计划定位 SQL 性能问题的实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "能够结合执行计划定位常见 SQL 性能问题"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0009",
+            "score": 0,
+            "reason": "未提及结合执行计划定位 SQL 性能问题。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0010",
+            "name": "Redis 或消息队列实际使用经验",
+            "importance": "required",
+            "description": "判断是否具备 Redis 或主流消息队列的实际使用经验，并能说明使用场景及异常处理方式。",
+            "screening_focus": "寻找 Redis 或消息队列使用场景、异常处理实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "需要具备 Redis 或主流消息队列的实际使用经验，并能说明使用场景及异常处理方式"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0010",
+            "score": 1,
+            "reason": "技能栏写有 Redis 和 Kafka，但工作描述仅提到调用公司封装的缓存组件，未说明 Kafka 使用场景或异常处理。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "技能栏写有 Redis 和 Kafka；工作描述仅提到调用公司封装的缓存组件。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0011",
+            "name": "线上问题定位与沟通",
+            "importance": "required",
+            "description": "判断是否能够阅读日志、定位线上问题，并与测试和业务同事清晰沟通处理过程。",
+            "screening_focus": "寻找阅读日志、定位线上问题及沟通处理过程的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "能够阅读日志、定位线上问题，并与测试和业务同事清晰沟通处理过程"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0011",
+            "score": 1,
+            "reason": "处理过一次数据库连接池耗尽问题，但仅通过重启恢复，未体现日志分析、根因定位或沟通处理过程。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": [
+              {
+                "quote": "处理过一次数据库连接池耗尽问题，通过重启服务恢复；未记录根因分析、索引优化或后续预防措施。",
+                "section": "工作经历"
+              }
+            ]
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0012",
+            "name": "订单、支付、库存或履约系统经验",
+            "importance": "preferred",
+            "description": "判断是否有订单、支付、库存或履约系统经验。",
+            "screening_focus": "寻找订单、支付、库存或履约系统相关项目经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有订单、支付、库存或履约系统经验优先"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0012",
+            "score": 0,
+            "reason": "未提及订单、支付、库存或履约系统经验。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0013",
+            "name": "高并发压测、限流降级、容器化部署或 Kubernetes 实践",
+            "importance": "preferred",
+            "description": "判断是否有高并发压测、限流降级、容器化部署或 Kubernetes 实践。",
+            "screening_focus": "寻找高并发压测、限流降级、容器化部署或 Kubernetes 实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有高并发压测、限流降级、容器化部署或 Kubernetes 实践者优先"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0013",
+            "score": 0,
+            "reason": "未提及高并发压测、限流降级、容器化部署或 Kubernetes 实践。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        },
+        {
+          "criterion": {
+            "criterion_id": "criterion:0014",
+            "name": "技术方案文档或线上事故复盘经验",
+            "importance": "preferred",
+            "description": "判断是否有技术方案文档或线上事故复盘经验。",
+            "screening_focus": "寻找技术方案文档或线上事故复盘经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有技术方案文档或线上事故复盘经验者优先"
+              }
+            ],
+            "hr_note": null
+          },
+          "assessment": {
+            "criterion_id": "criterion:0014",
+            "score": 0,
+            "reason": "未提及技术方案文档或线上事故复盘经验。",
+            "calculation_note": null,
+            "experience_period_fact_keys": [],
+            "evidence": []
+          }
+        }
+      ],
+      "strengths": [
+        {
+          "summary": "具备 Java 和 Spring Boot 的基础使用经验，能够参与维护性开发工作。",
+          "criterion_ids": [
+            "criterion:0006",
+            "criterion:0007"
+          ],
+          "evidence": []
+        }
+      ],
+      "gaps": [
+        {
+          "summary": "缺乏订单、库存预占或履约相关 Java 服务开发经验。",
+          "criterion_ids": [
+            "criterion:0001"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "未体现 REST API 设计、异常码、幂等和数据一致性方案定义能力。",
+          "criterion_ids": [
+            "criterion:0002"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "未体现慢 SQL、缓存热点、消息堆积和线上告警分析能力。",
+          "criterion_ids": [
+            "criterion:0003"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "未体现单元测试、集成测试、代码评审与文档维护经验。",
+          "criterion_ids": [
+            "criterion:0004"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "未体现服务拆分、容量评估和可观测性建设参与。",
+          "criterion_ids": [
+            "criterion:0005"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "MySQL 表设计、事务和索引理解缺乏证据。",
+          "criterion_ids": [
+            "criterion:0008"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "未体现结合执行计划定位 SQL 性能问题的能力。",
+          "criterion_ids": [
+            "criterion:0009"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "Redis 或消息队列实际使用经验不足，未说明使用场景及异常处理。",
+          "criterion_ids": [
+            "criterion:0010"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "线上问题定位与沟通能力缺乏有效证据。",
+          "criterion_ids": [
+            "criterion:0011"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "无订单、支付、库存或履约系统经验。",
+          "criterion_ids": [
+            "criterion:0012"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "无高并发压测、限流降级、容器化部署或 Kubernetes 实践。",
+          "criterion_ids": [
+            "criterion:0013"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "无技术方案文档或线上事故复盘经验。",
+          "criterion_ids": [
+            "criterion:0014"
+          ],
+          "evidence": []
+        }
+      ],
+      "risks_or_conflicts": [
+        {
+          "summary": "简历自述“精通 Java 高并发架构，拥有 5 年 Spring Boot 大型交易系统经验”与项目记录中活动报名峰值约每分钟 1,800 次请求、容量方案由客户架构团队提供相矛盾。",
+          "criterion_ids": [
+            "criterion:0006",
+            "criterion:0007"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "自述“主导每秒十万级交易系统”与可核实的活动报名峰值不符。",
+          "criterion_ids": [
+            "criterion:0006"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "自述“订单微服务负责人”与项目角色说明“在 6 人团队中负责报名查询和导出子模块”冲突。",
+          "criterion_ids": [
+            "criterion:0001"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "技能栏写有 Redis 和 Kafka，但工作描述仅提到调用公司封装的缓存组件，未说明 Kafka 对应项目、消息类型或异常处理，实际深度待核实。",
+          "criterion_ids": [
+            "criterion:0010"
+          ],
+          "evidence": []
+        }
+      ],
+      "missing_info": [
+        {
+          "summary": "缺少订单、库存预占或履约相关 Java 服务开发的具体项目经历。",
+          "criterion_ids": [
+            "criterion:0001"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少 REST API 设计、异常码、幂等和数据一致性方案的定义细节。",
+          "criterion_ids": [
+            "criterion:0002"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少慢 SQL、缓存热点、消息堆积和线上告警分析的具体案例。",
+          "criterion_ids": [
+            "criterion:0003"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少单元测试、集成测试、代码评审与文档维护的实践证据。",
+          "criterion_ids": [
+            "criterion:0004"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少服务拆分、容量评估和可观测性建设的参与记录。",
+          "criterion_ids": [
+            "criterion:0005"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少 MySQL 表设计、事务和索引的具体实践。",
+          "criterion_ids": [
+            "criterion:0008"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少结合执行计划定位 SQL 性能问题的案例。",
+          "criterion_ids": [
+            "criterion:0009"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少 Redis 或消息队列使用场景及异常处理方式的说明。",
+          "criterion_ids": [
+            "criterion:0010"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少阅读日志、定位线上问题及沟通处理过程的详细记录。",
+          "criterion_ids": [
+            "criterion:0011"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少订单、支付、库存或履约系统经验。",
+          "criterion_ids": [
+            "criterion:0012"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少高并发压测、限流降级、容器化部署或 Kubernetes 实践。",
+          "criterion_ids": [
+            "criterion:0013"
+          ],
+          "evidence": []
+        },
+        {
+          "summary": "缺少技术方案文档或线上事故复盘经验。",
+          "criterion_ids": [
+            "criterion:0014"
+          ],
+          "evidence": []
+        }
+      ],
+      "hr_follow_up_questions": [
+        "请核实候选人是否实际参与过订单、库存预占或履约相关 Java 服务开发，具体职责和成果是什么？",
+        "请核实候选人是否参与过 REST API、异常码、幂等和数据一致性方案的定义，能否提供具体案例？",
+        "请核实候选人是否具备分析慢 SQL、缓存热点、消息堆积和线上告警的经验，有无具体案例？",
+        "请核实候选人是否编写过单元测试和集成测试，是否参与过代码评审和技术文档维护？",
+        "请核实候选人是否参与过服务拆分、容量评估和可观测性建设？",
+        "请核实候选人对 MySQL 表设计、事务和索引的理解程度，能否举例说明？",
+        "请核实候选人是否能够结合执行计划定位 SQL 性能问题，有无实际案例？",
+        "请核实候选人 Redis 和 Kafka 的实际使用深度，包括使用场景和异常处理方式。",
+        "请核实候选人线上问题定位和沟通处理的具体经历，例如数据库连接池耗尽问题的处理过程。",
+        "请核实候选人是否有订单、支付、库存或履约系统经验。",
+        "请核实候选人是否有高并发压测、限流降级、容器化部署或 Kubernetes 实践。",
+        "请核实候选人是否有技术方案文档或线上事故复盘经验。"
+      ]
+    }
+  },
+  "postgresql_business_write_count": 0,
+  "api_key_persisted": false,
+  "internal_exception_text_persisted": false,
+  "terminal_instruction": "v10/v2 R04 真实验证已停止；不得覆盖结果或自动扩大样本。"
+}

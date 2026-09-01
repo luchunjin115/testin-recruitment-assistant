@@ -1,0 +1,1043 @@
+{
+  "stage": "stage7-pro-realistic-quality",
+  "batch": "P2-confirmation",
+  "mode": "confirmed_plan_snapshots",
+  "generated_at": "2026-09-01T10:23:22.3769083+08:00",
+  "status": "complete",
+  "source_raw_path": "docs/stages/stage7/2026-09-01-stage7-pro-realistic-p2-plan-raw-results.json",
+  "source_raw_structured_sha256": "e3604afc3e2caae4f7ebbcd50d31c54c748cad30063dca338babf112d7cab740",
+  "source_fixture_fingerprint": "91939d52d65b78efa0b9c135c79127d8debd0e19a0a6522fe0de54b7cbccbe18",
+  "model": "deepseek-v4-pro",
+  "confirmed_plan_count": 5,
+  "all_warnings_acknowledged": true,
+  "plans": [
+    {
+      "case_id": "JD-01",
+      "title": "交易平台 Java 后端工程师",
+      "status": "confirmed",
+      "confirmed_by": "project_owner_user",
+      "confirmed_at": "2026-09-01T10:23:22.3769083+08:00",
+      "user_directive": "全部按当前计划确认",
+      "warnings_acknowledged": true,
+      "warning_count": 5,
+      "plan": {
+        "schema_version": "5.0",
+        "criteria": [
+          {
+            "criterion_id": "criterion:0001",
+            "name": "订单、库存预占或履约服务开发",
+            "importance": "general",
+            "description": "判断是否能够负责订单、库存预占或履约相关 Java 服务的需求分析、接口设计、开发和维护。",
+            "screening_focus": "寻找订单、库存预占或履约相关 Java 服务开发职责和成果证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "负责订单、库存预占或履约相关 Java 服务的需求分析、接口设计、开发和维护"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0002",
+            "name": "REST API、异常码、幂等和数据一致性方案定义",
+            "importance": "general",
+            "description": "判断是否能够与产品、前端、测试及上下游团队共同定义 REST API、异常码、幂等和数据一致性方案。",
+            "screening_focus": "寻找参与定义 REST API、异常码、幂等和数据一致性方案的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "与产品、前端、测试及上下游团队共同定义 REST API、异常码、幂等和数据一致性方案"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0003",
+            "name": "慢 SQL、缓存热点、消息堆积和线上告警分析",
+            "importance": "general",
+            "description": "判断是否能够分析慢 SQL、缓存热点、消息堆积和线上告警，推动性能优化及问题复盘。",
+            "screening_focus": "寻找分析慢 SQL、缓存热点、消息堆积和线上告警并推动优化的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "分析慢 SQL、缓存热点、消息堆积和线上告警，推动性能优化及问题复盘"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0004",
+            "name": "单元测试、集成测试、代码评审与文档维护",
+            "importance": "general",
+            "description": "判断是否能够编写单元测试和必要的集成测试，参与代码评审、发布检查与技术文档维护。",
+            "screening_focus": "寻找编写测试、参与代码评审、发布检查和技术文档维护的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "编写单元测试和必要的集成测试，参与代码评审、发布检查与技术文档维护"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0005",
+            "name": "服务拆分、容量评估和可观测性建设参与",
+            "importance": "general",
+            "description": "判断是否能够根据业务增长参与服务拆分、容量评估和可观测性建设，但不要求入职后立即承担整体架构负责人职责。",
+            "screening_focus": "寻找参与服务拆分、容量评估和可观测性建设的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "根据业务增长参与服务拆分、容量评估和可观测性建设，但不要求入职后立即承担整体架构负责人职责"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0006",
+            "name": "Java 项目开发经验",
+            "importance": "required",
+            "description": "判断是否具备 Java 项目开发经验。",
+            "screening_focus": "寻找 Java 项目开发职责和成果证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须具备 Java 项目开发经验"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0007",
+            "name": "Spring Boot REST API 设计与实现",
+            "importance": "required",
+            "description": "判断是否能够使用 Spring Boot 完成 REST API 的设计与实现。",
+            "screening_focus": "寻找使用 Spring Boot 设计并实现 REST API 的项目证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "能够使用 Spring Boot 完成 REST API 的设计与实现"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0008",
+            "name": "MySQL 表设计、事务和索引理解",
+            "importance": "required",
+            "description": "判断是否理解 MySQL 表设计、事务和索引。",
+            "screening_focus": "寻找 MySQL 表设计、事务和索引相关实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须理解 MySQL 表设计、事务和索引"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0009",
+            "name": "SQL 性能问题定位",
+            "importance": "required",
+            "description": "判断是否能够结合执行计划定位常见 SQL 性能问题。",
+            "screening_focus": "寻找结合执行计划定位 SQL 性能问题的实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "能够结合执行计划定位常见 SQL 性能问题"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0010",
+            "name": "Redis 或消息队列实际使用经验",
+            "importance": "required",
+            "description": "判断是否具备 Redis 或主流消息队列的实际使用经验，并能说明使用场景及异常处理方式。",
+            "screening_focus": "寻找 Redis 或消息队列使用场景、异常处理实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "需要具备 Redis 或主流消息队列的实际使用经验，并能说明使用场景及异常处理方式"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0011",
+            "name": "线上问题定位与沟通",
+            "importance": "required",
+            "description": "判断是否能够阅读日志、定位线上问题，并与测试和业务同事清晰沟通处理过程。",
+            "screening_focus": "寻找阅读日志、定位线上问题及沟通处理过程的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "能够阅读日志、定位线上问题，并与测试和业务同事清晰沟通处理过程"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0012",
+            "name": "订单、支付、库存或履约系统经验",
+            "importance": "preferred",
+            "description": "判断是否有订单、支付、库存或履约系统经验。",
+            "screening_focus": "寻找订单、支付、库存或履约系统相关项目经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有订单、支付、库存或履约系统经验优先"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0013",
+            "name": "高并发压测、限流降级、容器化部署或 Kubernetes 实践",
+            "importance": "preferred",
+            "description": "判断是否有高并发压测、限流降级、容器化部署或 Kubernetes 实践。",
+            "screening_focus": "寻找高并发压测、限流降级、容器化部署或 Kubernetes 实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有高并发压测、限流降级、容器化部署或 Kubernetes 实践者优先"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0014",
+            "name": "技术方案文档或线上事故复盘经验",
+            "importance": "preferred",
+            "description": "判断是否有技术方案文档或线上事故复盘经验。",
+            "screening_focus": "寻找技术方案文档或线上事故复盘经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有技术方案文档或线上事故复盘经验者优先"
+              }
+            ],
+            "hr_note": null
+          }
+        ]
+      },
+      "snapshot_sha256": "dd9c3cea63c10f67a58130a60dd44554a1961be783c8e2e09f9cbc8a37b6baeb"
+    },
+    {
+      "case_id": "JD-02",
+      "title": "测试开发工程师",
+      "status": "confirmed",
+      "confirmed_by": "project_owner_user",
+      "confirmed_at": "2026-09-01T10:23:22.3769083+08:00",
+      "user_directive": "全部按当前计划确认",
+      "warnings_acknowledged": true,
+      "warning_count": 1,
+      "plan": {
+        "schema_version": "5.0",
+        "criteria": [
+          {
+            "criterion_id": "criterion:0001",
+            "name": "需求和技术方案评审",
+            "importance": "general",
+            "description": "判断是否参与需求和技术方案评审，识别接口、权限、状态流转、异常与兼容性风险。",
+            "screening_focus": "寻找参与需求或技术方案评审并识别风险的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "参与需求和技术方案评审，识别接口、权限、状态流转、异常与兼容性风险"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0002",
+            "name": "API 测试经验",
+            "importance": "required",
+            "description": "判断是否具备 API 测试经验，理解 HTTP、鉴权、幂等、数据库校验和异常场景。",
+            "screening_focus": "寻找 API 测试职责、覆盖场景和结果证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须具备 API 测试经验，理解 HTTP、鉴权、幂等、数据库校验和异常场景"
+              },
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "使用 Python 或 Java 建设和维护 API 自动化测试"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0003",
+            "name": "Python 或 Java 编程能力",
+            "importance": "required",
+            "description": "判断是否具备 Python 或 Java 编程能力，能独立编写和调试测试代码。",
+            "screening_focus": "寻找使用 Python 或 Java 编写和调试测试代码的职责、项目或成果证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须具备 Python 或 Java 编程能力，能独立编写和调试测试代码"
+              },
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "使用 Python 或 Java 建设和维护 API 自动化测试"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0004",
+            "name": "API 自动化测试建设与维护",
+            "importance": "general",
+            "description": "判断是否能建设和维护 API 自动化测试，保证数据隔离、断言质量和失败可定位。",
+            "screening_focus": "寻找建设和维护 API 自动化测试并保证数据隔离、断言质量和失败可定位的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "使用 Python 或 Java 建设和维护 API 自动化测试，保证数据隔离、断言质量和失败可定位"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0005",
+            "name": "Web UI 自动化建设",
+            "importance": "general",
+            "description": "判断是否能为关键业务流程建设必要的 Web UI 自动化，并控制脆弱用例和维护成本。",
+            "screening_focus": "寻找建设 Web UI 自动化并控制脆弱用例和维护成本的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "为关键业务流程建设必要的 Web UI 自动化，并控制脆弱用例和维护成本"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0006",
+            "name": "CI 流水线集成与质量跟踪",
+            "importance": "general",
+            "description": "判断是否能将自动化测试接入 CI 流水线，跟踪失败、缺陷逃逸率和关键链路覆盖情况。",
+            "screening_focus": "寻找将自动化测试接入 CI 流水线并跟踪失败、缺陷逃逸率和关键链路覆盖情况的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "把自动化测试接入 CI 流水线，跟踪失败、缺陷逃逸率和关键链路覆盖情况"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0007",
+            "name": "性能测试、线上问题复盘或测试工具开发",
+            "importance": "general",
+            "description": "判断是否参与性能测试、线上问题复盘或测试工具开发，推动可重复的质量改进。",
+            "screening_focus": "寻找参与性能测试、线上问题复盘或测试工具开发并推动质量改进的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "参与性能测试、线上问题复盘或测试工具开发，推动可重复的质量改进"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0008",
+            "name": "自动化测试框架使用",
+            "importance": "required",
+            "description": "判断是否熟悉 pytest、JUnit/TestNG 或同类自动化框架中的至少一种。",
+            "screening_focus": "寻找使用 pytest、JUnit/TestNG 或同类框架的测试项目证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "熟悉 pytest、JUnit/TestNG 或同类自动化框架中的至少一种"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0009",
+            "name": "SQL 和 Linux 问题定位",
+            "importance": "required",
+            "description": "判断是否能使用 SQL 和 Linux 命令辅助定位问题，并清楚记录复现步骤和结论。",
+            "screening_focus": "寻找使用 SQL 和 Linux 命令定位问题并记录复现步骤和结论的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "能使用 SQL 和 Linux 命令辅助定位问题，并清楚记录复现步骤和结论"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0010",
+            "name": "可维护 UI 自动化经验",
+            "importance": "preferred",
+            "description": "判断是否有 Playwright、Cypress 或 Selenium 的可维护 UI 自动化经验。",
+            "screening_focus": "寻找使用 Playwright、Cypress 或 Selenium 进行可维护 UI 自动化的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有 Playwright、Cypress 或 Selenium 的可维护 UI 自动化经验优先"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0011",
+            "name": "CI/CD、性能测试、容器或质量平台开发经验",
+            "importance": "preferred",
+            "description": "判断是否有 Jenkins/GitLab CI、性能测试、Docker/Kubernetes 或质量平台开发经验。",
+            "screening_focus": "寻找 Jenkins/GitLab CI、性能测试、Docker/Kubernetes 或质量平台开发经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有 Jenkins/GitLab CI、性能测试、Docker/Kubernetes 或质量平台开发经验优先"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0012",
+            "name": "通过质量数据推动流程改进",
+            "importance": "preferred",
+            "description": "判断是否有通过质量数据推动流程改进的案例。",
+            "screening_focus": "寻找通过质量数据推动流程改进的案例证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有通过质量数据推动流程改进的案例优先"
+              }
+            ],
+            "hr_note": null
+          }
+        ]
+      },
+      "snapshot_sha256": "d497bb0d590751f2bfbf390227d4c811b9f83d558e84c37734f43d1976d4ec39"
+    },
+    {
+      "case_id": "JD-03",
+      "title": "商业数据分析师",
+      "status": "confirmed",
+      "confirmed_by": "project_owner_user",
+      "confirmed_at": "2026-09-01T10:23:22.3769083+08:00",
+      "user_directive": "全部按当前计划确认",
+      "warnings_acknowledged": true,
+      "warning_count": 0,
+      "plan": {
+        "schema_version": "5.0",
+        "criteria": [
+          {
+            "criterion_id": "criterion:0001",
+            "name": "核心指标口径建设与维护",
+            "importance": "general",
+            "description": "判断是否能够建设并维护获客、转化、活跃、留存和续费等核心指标口径。",
+            "screening_focus": "寻找建设或维护获客、转化、活跃、留存、续费等核心指标口径的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "建设并维护获客、转化、活跃、留存和续费等核心指标口径"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0002",
+            "name": "SQL 数据提取与清洗",
+            "importance": "general",
+            "description": "判断是否能够使用 SQL 完成多表数据提取、清洗和分析，建立可复用查询或数据集。",
+            "screening_focus": "寻找使用 SQL 进行多表数据提取、清洗、分析，建立可复用查询或数据集的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "使用 SQL 完成多表数据提取、清洗和分析，建立可复用查询或数据集"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0003",
+            "name": "经营看板建设与异常监控",
+            "importance": "general",
+            "description": "判断是否能够使用 BI 工具建设经营看板，监控异常并解释指标变化。",
+            "screening_focus": "寻找使用 BI 工具建设经营看板、监控异常并解释指标变化的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "使用 BI 工具建设经营看板，监控异常并解释指标变化"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0004",
+            "name": "专题分析能力",
+            "importance": "general",
+            "description": "判断是否能够针对活动、产品功能或客户分层开展专题分析，形成结论、限制和业务建议。",
+            "screening_focus": "寻找针对活动、产品功能或客户分层开展专题分析并形成结论、限制和业务建议的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "针对活动、产品功能或客户分层开展专题分析，形成结论、限制和业务建议"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0005",
+            "name": "A/B 实验或准实验分析",
+            "importance": "general",
+            "description": "判断是否能够参与 A/B 实验或准实验分析，清楚说明样本、指标、显著性和可能偏差。",
+            "screening_focus": "寻找参与 A/B 实验或准实验分析，并说明样本、指标、显著性和可能偏差的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "参与 A/B 实验或准实验分析，清楚说明样本、指标、显著性和可能偏差"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0006",
+            "name": "SQL 熟练使用",
+            "importance": "required",
+            "description": "判断是否能够熟练使用 SQL，完成多表关联、窗口函数、分组聚合和数据质量检查。",
+            "screening_focus": "寻找 SQL 多表关联、窗口函数、分组聚合和数据质量检查的实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须能够熟练使用 SQL，完成多表关联、窗口函数、分组聚合和数据质量检查"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0007",
+            "name": "指标体系或经营分析经验",
+            "importance": "required",
+            "description": "判断是否有指标体系或经营分析经验，能说明指标定义和口径变化。",
+            "screening_focus": "寻找指标体系或经营分析经验，以及说明指标定义和口径变化的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须有指标体系或经营分析经验，能说明指标定义和口径变化"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0008",
+            "name": "BI 工具看板制作与维护",
+            "importance": "general",
+            "description": "判断是否能使用 Tableau、Power BI、FineBI 或同类工具制作并维护业务看板。",
+            "screening_focus": "寻找使用 Tableau、Power BI、FineBI 或同类工具制作和维护业务看板的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "能使用 Tableau、Power BI、FineBI 或同类工具制作并维护业务看板"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0009",
+            "name": "结构化表达能力",
+            "importance": "general",
+            "description": "判断是否具备结构化表达能力，能够区分数据事实、分析推断和待验证假设。",
+            "screening_focus": "寻找结构化表达、区分数据事实、分析推断和待验证假设的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "具备结构化表达能力，能够区分数据事实、分析推断和待验证假设"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0010",
+            "name": "SaaS、订阅业务、销售漏斗或客户留存分析经验",
+            "importance": "preferred",
+            "description": "判断是否有 SaaS、订阅业务、销售漏斗或客户留存分析经验。",
+            "screening_focus": "寻找 SaaS、订阅业务、销售漏斗或客户留存分析经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有 SaaS、订阅业务、销售漏斗或客户留存分析经验优先"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0011",
+            "name": "Python/pandas、统计检验或实验设计",
+            "importance": "preferred",
+            "description": "判断是否熟悉 Python/pandas、统计检验或实验设计。",
+            "screening_focus": "寻找 Python/pandas、统计检验或实验设计相关技能或项目证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "熟悉 Python/pandas、统计检验或实验设计者优先"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0012",
+            "name": "推动统一指标口径经验",
+            "importance": "preferred",
+            "description": "判断是否有推动业务团队采用统一指标口径的经验。",
+            "screening_focus": "寻找推动业务团队采用统一指标口径的经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有推动业务团队采用统一指标口径的经验优先"
+              }
+            ],
+            "hr_note": null
+          }
+        ]
+      },
+      "snapshot_sha256": "3dacafa0b02e321b31953fd0e50fbf12c442a0d032240a3e2e18e6aecf5212f1"
+    },
+    {
+      "case_id": "JD-04",
+      "title": "B2B SaaS 产品经理",
+      "status": "confirmed",
+      "confirmed_by": "project_owner_user",
+      "confirmed_at": "2026-09-01T10:23:22.3769083+08:00",
+      "user_directive": "全部按当前计划确认",
+      "warnings_acknowledged": true,
+      "warning_count": 1,
+      "plan": {
+        "schema_version": "5.0",
+        "criteria": [
+          {
+            "criterion_id": "criterion:0001",
+            "name": "共性问题识别与优先级判断",
+            "importance": "general",
+            "description": "判断是否能够通过客户访谈、工单、销售反馈和产品数据识别共性问题，形成问题定义和优先级判断。",
+            "screening_focus": "寻找通过客户访谈、工单、销售反馈和产品数据识别共性问题并判断优先级的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "通过客户访谈、工单、销售反馈和产品数据识别共性问题，形成问题定义和优先级判断"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0002",
+            "name": "产品文档输出与跨团队协作",
+            "importance": "general",
+            "description": "判断是否能够输出 PRD、流程图、原型、验收标准和上线说明，并推动研发、设计、测试和交付协作。",
+            "screening_focus": "寻找输出 PRD、流程图、原型、验收标准、上线说明及推动跨团队协作的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "输出 PRD、流程图、原型、验收标准和上线说明，推动研发、设计、测试和交付协作"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0003",
+            "name": "权限、审批或企业配置类功能方案设计",
+            "importance": "general",
+            "description": "判断是否能够负责权限、审批或企业配置类功能的方案设计，处理角色、状态、异常和兼容性边界。",
+            "screening_focus": "寻找权限、审批或企业配置类功能方案设计及处理角色、状态、异常和兼容性边界的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "负责权限、审批或企业配置类功能的方案设计，处理角色、状态、异常和兼容性边界"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0004",
+            "name": "功能采用率与客户反馈跟踪",
+            "importance": "general",
+            "description": "判断是否能够跟踪功能采用率、任务完成率和客户反馈，并根据数据与研究结果持续迭代。",
+            "screening_focus": "寻找跟踪功能采用率、任务完成率、客户反馈并持续迭代的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "跟踪功能采用率、任务完成率和客户反馈，根据数据与研究结果持续迭代"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0005",
+            "name": "需求池与版本范围管理",
+            "importance": "general",
+            "description": "判断是否能够管理需求池和版本范围，明确标准产品、配置能力与定制需求的边界。",
+            "screening_focus": "寻找管理需求池、版本范围及明确标准产品、配置能力与定制需求边界的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "管理需求池和版本范围，明确标准产品、配置能力与定制需求的边界"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0006",
+            "name": "完整产品交付经验",
+            "importance": "required",
+            "description": "判断是否具备从问题发现推进到方案、研发、验收和上线复盘的完整产品交付经验。",
+            "screening_focus": "寻找完整产品交付周期中问题发现、方案、研发、验收和上线复盘的职责与成果证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须具备完整产品交付经验，能够从问题发现推进到方案、研发、验收和上线复盘"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0007",
+            "name": "PRD、业务流程和验收标准编写",
+            "importance": "required",
+            "description": "判断是否能够独立编写 PRD、业务流程和验收标准，并清楚表达异常流程。",
+            "screening_focus": "寻找独立编写 PRD、业务流程、验收标准及异常流程说明的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须能够独立编写 PRD、业务流程和验收标准，并清楚表达异常流程"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0008",
+            "name": "企业客户需求调研或 B2B 产品经验",
+            "importance": "general",
+            "description": "判断是否具有企业客户需求调研或 B2B 产品经验，并能区分单一客户诉求和可复用产品能力。",
+            "screening_focus": "寻找企业客户需求调研、B2B 产品经验及区分单一诉求与可复用能力的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "有企业客户需求调研或 B2B 产品经验，能够区分单一客户诉求和可复用产品能力"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0009",
+            "name": "数据意识与功能指标定义",
+            "importance": "general",
+            "description": "判断是否具备数据意识，能够定义功能指标并用数据或用户反馈判断效果。",
+            "screening_focus": "寻找定义功能指标、使用数据或用户反馈判断效果的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "具备数据意识，能够定义功能指标并用数据或用户反馈判断效果"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0010",
+            "name": "RBAC 权限、审批流、订阅计费或多租户产品经验",
+            "importance": "preferred",
+            "description": "判断是否具有 RBAC 权限、审批流、订阅计费或多租户产品经验。",
+            "screening_focus": "寻找 RBAC 权限、审批流、订阅计费或多租户产品相关经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有 RBAC 权限、审批流、订阅计费或多租户产品经验优先"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0011",
+            "name": "AI 辅助功能、开放 API 或平台型产品经验",
+            "importance": "preferred",
+            "description": "判断是否具有 AI 辅助功能、开放 API 或平台型产品经验。",
+            "screening_focus": "寻找 AI 辅助功能、开放 API 或平台型产品相关经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有 AI 辅助功能、开放 API 或平台型产品经验优先"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0012",
+            "name": "客户实施或售前协作经验",
+            "importance": "preferred",
+            "description": "判断是否具有客户实施或售前协作经验。",
+            "screening_focus": "寻找客户实施或售前协作相关经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有客户实施或售前协作经验者优先"
+              }
+            ],
+            "hr_note": null
+          }
+        ]
+      },
+      "snapshot_sha256": "ad6581abfd724803dd0b5ca6c7603e59df446824c8d1c37c862063060ff35268"
+    },
+    {
+      "case_id": "JD-05",
+      "title": "制造供应链计划专员",
+      "status": "confirmed",
+      "confirmed_by": "project_owner_user",
+      "confirmed_at": "2026-09-01T10:23:22.3769083+08:00",
+      "user_directive": "全部按当前计划确认",
+      "warnings_acknowledged": true,
+      "warning_count": 0,
+      "plan": {
+        "schema_version": "5.0",
+        "criteria": [
+          {
+            "criterion_id": "criterion:0001",
+            "name": "生产计划编制与滚动更新",
+            "importance": "general",
+            "description": "判断是否能够汇总销售预测、在手订单、库存和产能信息，编制并滚动更新月度及周度生产计划。",
+            "screening_focus": "寻找编制和滚动更新生产计划的职责、流程和成果证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "汇总销售预测、在手订单、库存和产能信息，编制并滚动更新月度及周度生产计划"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0002",
+            "name": "物料齐套与延期风险闭环",
+            "importance": "general",
+            "description": "判断是否能够跟踪关键物料齐套、供应商交期和工单进度，识别缺料与延期风险并推动闭环。",
+            "screening_focus": "寻找跟踪物料齐套、供应商交期和工单进度，识别风险并推动闭环的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "跟踪关键物料齐套、供应商交期和工单进度，识别缺料与延期风险并推动闭环"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0003",
+            "name": "产销协同组织与记录",
+            "importance": "general",
+            "description": "判断是否能够组织销售、采购、生产和仓储进行产销协同，记录决策、责任人和计划变更原因。",
+            "screening_focus": "寻找组织跨部门产销协同会议、记录决策和计划变更的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "组织销售、采购、生产和仓储进行产销协同，记录决策、责任人和计划变更原因"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0004",
+            "name": "供应链指标分析与改善建议",
+            "importance": "general",
+            "description": "判断是否能够分析预测准确率、准时交付率、库存周转和呆滞料，提出可执行的改善建议。",
+            "screening_focus": "寻找分析供应链指标并提出改善建议的职责和成果证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "分析预测准确率、准时交付率、库存周转和呆滞料，提出可执行的改善建议"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0005",
+            "name": "ERP计划参数与基础数据维护",
+            "importance": "general",
+            "description": "判断是否能够维护 ERP 中的计划参数和基础数据，保证报表口径与实际业务一致。",
+            "screening_focus": "寻找维护 ERP 计划参数和基础数据、保证报表口径一致的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "job_responsibilities",
+                "source_quote": "维护 ERP 中的计划参数和基础数据，保证报表口径与实际业务一致"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0006",
+            "name": "生产计划或供应链交付经验",
+            "importance": "required",
+            "description": "判断是否具备生产计划、物料计划或供应链交付相关经验，能够说明完整计划流程。",
+            "screening_focus": "寻找生产计划、物料计划或供应链交付相关经验及完整计划流程说明。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须具备生产计划、物料计划或供应链交付相关经验，能够说明完整计划流程"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0007",
+            "name": "Excel数据整理与分析能力",
+            "importance": "required",
+            "description": "判断是否能够使用 Excel 进行数据整理和分析，熟悉常用查找、透视和条件计算。",
+            "screening_focus": "寻找使用 Excel 进行数据整理、透视和条件计算的实践证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "必须能够使用 Excel 进行数据整理和分析，熟悉常用查找、透视和条件计算"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0008",
+            "name": "ERP/MRP实际使用经验",
+            "importance": "general",
+            "description": "判断是否有 ERP/MRP 实际使用经验，理解订单、BOM、库存、采购和工单之间的基本关系。",
+            "screening_focus": "寻找 ERP/MRP 实际使用经验及对订单、BOM、库存、采购和工单关系的理解证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "有 ERP/MRP 实际使用经验，理解订单、BOM、库存、采购和工单之间的基本关系"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0009",
+            "name": "跨部门推进与风险记录能力",
+            "importance": "general",
+            "description": "判断是否具备跨部门推进能力，能清楚记录风险、责任人、承诺日期和处理结果。",
+            "screening_focus": "寻找跨部门推进和记录风险、责任人、承诺日期及处理结果的证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "candidate_requirements",
+                "source_quote": "具备跨部门推进能力，能清楚记录风险、责任人、承诺日期和处理结果"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0010",
+            "name": "离散制造或电子元器件生产经验",
+            "importance": "preferred",
+            "description": "判断是否有离散制造、电子元器件或多品种小批量生产经验。",
+            "screening_focus": "寻找离散制造、电子元器件或多品种小批量生产经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有离散制造、电子元器件或多品种小批量生产经验优先"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0011",
+            "name": "数据分析与预测优化工具经验",
+            "importance": "preferred",
+            "description": "判断是否有 Power BI、SQL、需求预测模型或安全库存优化经验。",
+            "screening_focus": "寻找 Power BI、SQL、需求预测模型或安全库存优化经验证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有 Power BI、SQL、需求预测模型或安全库存优化经验优先"
+              }
+            ],
+            "hr_note": null
+          },
+          {
+            "criterion_id": "criterion:0012",
+            "name": "供应链改善量化案例",
+            "importance": "preferred",
+            "description": "判断是否有降低呆滞库存、改善准时交付或缩短计划周期的量化案例。",
+            "screening_focus": "寻找降低呆滞库存、改善准时交付或缩短计划周期的量化案例证据。",
+            "origin": "ai_from_jd",
+            "sources": [
+              {
+                "source_field": "preferred_qualifications",
+                "source_quote": "有降低呆滞库存、改善准时交付或缩短计划周期的量化案例优先"
+              }
+            ],
+            "hr_note": null
+          }
+        ]
+      },
+      "snapshot_sha256": "bd90fe26ce830818225af66d058db5615eb849291b427a1b6b1223f132a80aa1"
+    }
+  ],
+  "p3_input_ready": true,
+  "p3_report_calls_authorized": false,
+  "real_model_call_count": 0,
+  "api_attempt_count": 0,
+  "input_token_count": 0,
+  "output_token_count": 0,
+  "estimated_spend_usd": 0,
+  "postgresql_write_count": 0,
+  "next_step": "Await explicit user confirmation to start P3 report calls."
+}
+

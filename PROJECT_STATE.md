@@ -1,6 +1,6 @@
 # 项目当前状态
 
-> 最新更新：2026-08-31
+> 最新更新：2026-09-01
 >
 > 本文件只记录“现在是什么状态、下一步做什么”。完整开发过程已归档到 `docs/archive/history/2026-08-20-project-history.md`，不再作为新对话的默认阅读材料。
 
@@ -8,7 +8,14 @@
 
 - 项目正在建设新版招聘主链，旧 React + FastAPI + SQLite + Mock LLM 演示系统已经退役。
 - 阶段 4“简历上传与原文提取”和阶段 5“AI 结构化草稿”已经完成；阶段 6 五段式 JD 整改的 6R-A—6R-D 已全部完成，自动化、真实 PostgreSQL/API 和 Microsoft Playwright 三档浏览器验收通过。
-- 阶段 7 的 5.0 产品主链已实现，但产品验收未通过。I2 final 仍为不可覆盖的失败历史，I3-R1 只保留 raw；I4 唯一真实 raw 仍以 `i4_raw_complete` 封存，计划合法 10/10、报告合法 19/20、稳定性合法 13/15，human/final 按既有决定保持不存在。用户此前接受 I4 raw 作为进入 CLOSE-07 的证据，但在实际使用后于 2026-08-31 明确更新结论：界面已经人工验收完成，AI 初筛仍有问题，需要继续改进，因此阶段 7 当前不能验收通过。CLOSE-07 不得封存为通过，CLOSE-08 不得开始；先前浏览器工具阻塞不再是当前首要问题。当前唯一下一步是收集具体 AI 初筛失败案例、实际输出、期望行为与影响范围，完成新的整改设计和实施顺序并再次获得确认；在此之前不修改生产 Prompt/Schema/Service、不补跑 I4、不调用模型。本机 Alembic 为 current=head=`d6e8f0a2b434`。
+- 阶段 7 已于 2026-09-01 完成产品验收并关闭。项目负责人明确接受两项非阻塞已知限制：R12 的普通“手机号用户”业务语境会被当前隐私规则保守拒绝；部分匹配及其他样本的 LLM 分数可能系统性偏低，五个 high 稳定组均固定为 88。两项均未修复，计划在整个平台主链完成后另立专项；I2/I3-R1/I4 和最终 v10/v2 raw 的原始统计与空质量结论不回算、不覆盖。
+- 2026-09-01 用户单独确认把阶段 7 的评价清单与初筛报告模型切换为 `deepseek-v4-pro` 并做有限真实测试；简历结构化与通用 DeepSeek 默认仍为 `deepseek-v4-flash`，Prompt/Schema/Service/API/PostgreSQL 均未改变。真实 smoke 共 4 次业务调用、4 次 API attempt、0 次失败：计划生成 6 个且 6/6 可追溯；同一报告连续三次均为 72 分和 `high_match`，分差 0，非零评分证据 9/9，保守高峰价估算 USD 0.031548。该小样只证明 Pro 已接通并通过现有硬校验，不代表阶段 7 或整体 AI 质量验收通过；结果见 `docs/stages/stage7/2026-09-01-stage7-v4-pro-smoke-results.json`。
+- 用户随后确认 5 个拟真脱敏岗位与 20 份简历并要求开始正式 Pro 测试。P1 数据冻结和零调用预检已完成：5/20 分母、5 high + 10 partial + 5 low、5 个冲突样本、5 个稳定性样本、标签范围、证据定位、隐私和当前生产输入边界均通过，专项 `8 passed`；真实模型调用、token、费用和 PostgreSQL 写入均为 0。当前停止点是等待用户确认 P2：只生成 5 份真实 Pro 评价计划并交给用户逐岗审核，未确认计划前不得开始 20 份报告。
+- P2 已完成并停在 HR 计划审核：5 份 Pro 计划全部一次成功，评价点为 14/12/12/12/12，共 5 API attempts、21,324 input tokens、7,878 output tokens，peak 估算费用 USD 0.043665072；全部来源可追溯，纯工作年限和 public notes 未进入计划，PostgreSQL 写入为 0。warning 为 5/1/0/1/0，JD-01 粒度偏细，JD-02 与 JD-05 有 required/general 待确认，JD-04 暴露“优先级”触发 importance warning 的词语边界。当前 `report_calls_allowed=false`；唯一下一步是用户逐岗确认或修改复核卡，不能直接开始 P3 的 35 次报告调用。
+- 用户已明确“全部按当前计划确认”，五份计划未修改并已形成独立不可变 confirmed snapshots，全部 warning 视为知情确认；确认步骤没有新模型调用或费用。当前 `p3_input_ready=true`、`p3_report_calls_authorized=false`。唯一下一步是等待用户单独确认 P3；P3 将执行 R01—R20 各一次和 R01/R05/R09/R13/R17 各三次，共 35 次 Pro 报告调用，不写 PostgreSQL。
+- 用户随后明确“确认开始 P3”，35 次 Pro 报告业务调用已按冻结顺序完成，对应 35 次 API attempt、0 基础设施失败和 0 技术重试；基础报告 Service 合法 17/20，R04/R09/R14 被证据形状或逐字引用门禁拒绝，合法报告粗方向一致 14/17、分数入冻结区间 10/17。额外稳定性合法 11/15：R01/R05/R13 三次均为 88 且分差 0，R09 为 0/3，R17 为 2/3，因此完整方向稳定与分差达标均为 3/5 组。总输入 203,000 tokens、输出 82,408 tokens，peak 保守费用 USD 0.59429568，PostgreSQL 写入 0；raw SHA-256 为 `94f68aa...74679`。当前 `quality_gate_passed=null`、`requires_human_audit=true`，唯一下一步是等待用户另行确认 P4，不能由 Codex 代替人工审阅事实、证据和评分后直接宣布质量结论。
+- 通用一次 Repair 方案的 P5R-GA—GF 已按确认范围完成。GF 实证使用主 Prompt v9、Repair Prompt v1 和 Service behavior v11；Service 仅对白名单 LLM 输出合同错误 repair 一次，安全/输入/基础设施/数据库错误不 repair，程序不自动改分或补 evidence，修正版从 JSON 开始全量复验且第二次非法直接失败。ScreeningRun/API/ORM 和 migration `e7f9a1b3c545` 已支持 0—3 attempts，成功或失败尽可能记录真实 attempts 和 token；开发 PostgreSQL migration 往返通过并最终 `current=head=e7f9a1b3c545`。GE 定向全链 `288 passed + 36 subtests passed`、PostgreSQL ScreeningRun `37 passed`、四个前端合同与生产 build 通过；后端全量 `1537 passed + 425 subtests passed + 8` 个既有冻结哈希/日期失败，没有改写历史证据。GF 在用户授权 USD 0.20 硬上限后仅执行固定 R04：首次 v9 raw 已把旧 6 个非零分空 evidence 全部改为 0 分且 evidence 为空，所有正分项均有 evidence；但 12 个 `hr_follow_up_questions` 被生成为 finding 对象而非字符串，触发一次 Repair，Repair raw 与首次 raw 完全相同，重新从 JSON/Schema/Service 全量校验后仍非法并最终失败，没有第二次 Repair。真实共 2 个业务调用、2 个 API attempts、11,160 input tokens、6,524 output tokens，按 peak 保守估算 USD 0.04056624；PostgreSQL 业务写入 0，第三个 attempt 路径保持为空，P3/P5R-E/P5R-F 均未覆盖。GF 单例只证明触发、审计、一次上限和失败停止边界按合同运行，不能证明真实 Repair 成功率或阶段 7 已通过。随后用户确认主 Prompt 不完整回退 v8，而以 v9 为基础恢复不可压缩的类型合同；当前主 Prompt已升级为 v10，明确四个 finding 对象列表与 `hr_follow_up_questions` 字符串列表的区别，并在严格骨架和完整示例中加入非空问题字符串，v9 的 score/evidence 规则保持不变。用户继续确认 Repair 必须同时包含固定说明书和本次具体问题反馈；当前 Repair Prompt 已升级为 v2，固定携带紧凑完整 5.0 形状，并把每条安全错误统一为 `{code,path,actual_type,expected,correction}`，其中 GF 问题会明确为“当前 object、目标非空问题字符串、删除 finding 对象外壳”。最终 5.0 报告、API 和 JSONB 形状、一次 Repair 上限及安全禁区均未变化。随后用户明确要求再次使用真实简历测试；新路径只读复用同一脱敏冻结 R04，不覆盖 GF。v10 首次报告一次合法，总分 32，14 个 assessment 中 9 个正分项均有 evidence、5 个 0 分项允许空 evidence，12 个 HR 追问均为非空字符串，因此生产流程未触发 Repair；运行器随后用旧 GF 错误 raw 对 v2 做一次独立真实挑战，v2 把 12 个 finding 对象准确改为 12 条字符串，除 `hr_follow_up_questions` 外全部报告内容保持相同，总分仍为 38，并从 JSON、Schema 到 Service 全量复验通过。两次调用、两次 API attempts、0 基础设施重试，共 11,714 input tokens、6,189 output tokens，按 peak 保守估算 USD 0.03997092，PostgreSQL 写入 0、attempt 03 不存在、旧 GF 哈希未变。该单例证明 v10 预防和 v2 对已知错误的真实定向修复均成功，不证明其他错误类型的 Repair 成功率、报告语义质量或阶段 7 整体验收通过。
+- 阶段 7 最终 `FINAL-V10-V2` 原始证据保持：35 个业务调用/35 个 API attempts、0 基础设施重试、0 Repair、基础报告合法 `19/20`、合法报告方向 `14/19`、分数入冻结区间 `7/19`、稳定性 `15/15` 且五组均为 `88/88/88`，peak 保守费用 USD 0.52694268，PostgreSQL 写入 0。原始 `quality_gate_passed=null`、`quality_conclusion_allowed=false` 不变；阶段完成来自项目负责人对已知限制的产品验收决定，不表示机器质量门槛全部通过。当前生产报告合同为主 Prompt v10、Repair Prompt v2、Service behavior v11、Schema 5.0，ScreeningRun 最多 3 个 API attempts；Alembic `current=head=e7f9a1b3c545`。
 - 小步骤 9-I 已完成 20 次 JD 正式复验和 60 次下游真实诊断。18/18 正常 JD 可用、主要要求与结构化覆盖均为 100%，但 JD18 没有形成预期 `too_many_items`，因此 `step9_quality_gate_passed=false`，小步骤 9 仍未通过；下游诊断也仅有 9/20 至少一份合法报告、1/20 三次全部合法。
 - Application、Resume 隔离、HR 内部录入和 HR 决策等公共能力继续保留。
 - 旧 Rubric、五维权重、确定性评分、`unknown`、证据覆盖率和 Python 加权总分已经废弃。
@@ -21,7 +28,7 @@
 当前阶段的权威顺序是：
 
 1. 阶段 7 轻量评价清单 5.0 当前设计：`docs/stages/stage7/2026-08-26-stage7-lightweight-evaluation-ai-screening-v5-redesign.md`，负责产品目标、业务合同、状态、数据、安全、验收标准和完整历史证据
-2. 阶段 7 剩余工作与收尾计划：`docs/stages/stage7/2026-08-30-stage7-remaining-work-plan.md`，只负责从当前状态到阶段完成评审的执行看板、依赖、逐批边界和停止点；CLOSE-06R2-A—C 已完成且 CLOSE-07 留有未完成记录，用户最新判定 AI 初筛仍有问题，当前重新进入问题梳理与整改设计
+2. 阶段 7 剩余工作与收尾计划：`docs/stages/stage7/2026-08-30-stage7-remaining-work-plan.md`，保留从 I2 到最终 v10/v2 验收的收尾过程、历史停止点和 2026-09-01 最终关闭决定
 3. 阶段 7 评价计划 4.0 历史实现与失败证据：`docs/stages/stage7/2026-08-24-stage7-job-evaluation-plan-v4-redesign.md`，保留 RequirementFact、三/四次调用、HR2 `6/6` 和正式 20 份 `15/20` 的不可覆盖记录，不再授权新增实现
 4. 阶段 7 五段式计划 3.0 记录：`docs/stages/stage7/2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md`，只负责已完成实现事实和历史失败证据
 5. 阶段 7 原设计：`docs/stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`，其已实现的 Application、Resume、异步运行、报告、时间事实和 HR 决策底座继续有效
@@ -37,7 +44,7 @@
 
 ## 3. 当前阶段 7 方案摘要
 
-> 当前说明：5.0 产品主链已实现，当前生产计划为 v4/v5/5.0、报告为 v7/v9/5.0；I4 raw 及 10/10、19/20、13/15 统计继续作为不可覆盖历史证据。用户已完成人工界面验收，但最新产品结论是 AI 初筛仍有问题，阶段 7 不通过。CLOSE-07 不封存、CLOSE-08 不开始；当前先做问题梳理和整改设计，不补跑 raw、不调用模型。下文第 4—9 节同时记录可复用能力和历史基线，若与最新确认的整改设计冲突，以后续经确认的当前设计为准。
+> 当前说明：阶段 7 已在项目负责人明确接受 R12 隐私语境误报和评分偏保守两项已知限制后完成。当前生产计划为 v4/v5/5.0，报告为主 Prompt v10 / Repair Prompt v2 / Service behavior v11 / Schema 5.0；历史 raw、失败和空质量结论继续只读保留。下文第 4—9 节记录可复用能力和历史基线。
 
 ### 3.1 固定流程
 
@@ -178,6 +185,14 @@ HR 阅读报告并独立作出通过 / 备选 / 淘汰决定
 - 新功能应复用 Candidate、Application、Resume、Job、StageHistory、Report 和通用 DeepSeek/数据库基础设施。
 
 ## 11. 当前唯一下一步
+
+阶段 7 已停止新增实现。当前进入阶段 8 的需求确认门禁：先讨论公开岗位展示与投递、Candidate/Application/Resume 的可靠保存顺序、原文提取/结构化/初筛的后台任务链、持久化队列与 Worker、幂等/重试/失败隔离/可观察性，以及 HR 正常处理池与异常处理区；随后形成独立阶段 8 设计，明确数据、状态、权限、API、失败语义、自动化、真实集成和人工验收，并再次获得用户确认。
+
+在阶段 8 设计确认前，不修改阶段 8 生产代码、Model、migration、React 或 PostgreSQL；也不借新阶段顺手调整阶段 7 隐私正则、评分 Prompt 或冻结质量证据。下一轮开始前仍须重新检查 Git 状态和相关差异。
+
+## 11A. 阶段 7 收尾实施记录（历史）
+
+> 本节保留 2026-08-30—09-01 的批次证据，其中每批当时的“唯一下一步”均为历史停止点，不再覆盖本文第 12 节。
 
 2026-08-30 已把阶段 7 的剩余工作从完整历史中拆分为 `docs/stages/stage7/2026-08-30-stage7-remaining-work-plan.md`。当前状态应统一理解为：5.0 产品主链已实现，I2 final 的历史真实判定仍失败；I3-R1 和 I4 均只保留各自唯一 raw。CLOSE-05G—05I、CLOSE-06R2-A—C 已完成，CLOSE-07 执行过自动化与 PostgreSQL/API 收尾但没有封存正式通过结果。用户已经完成人工界面验收，随后明确判定 AI 初筛仍有问题、阶段 7 不能通过，因此当前重新进入问题梳理与整改设计，CLOSE-08 不得开始。
 

@@ -159,7 +159,7 @@ class ScreeningRunRead(BaseModel):
     input_tokens: int | None = Field(default=None, ge=0)
     output_tokens: int | None = Field(default=None, ge=0)
     duration_ms: int | None = Field(default=None, ge=0)
-    attempt_count: int = Field(ge=0, le=2)
+    attempt_count: int = Field(ge=0, le=3)
     created_at: datetime
     updated_at: datetime
 

@@ -1,0 +1,68 @@
+{
+  "stage": "stage7-pro-realistic-quality",
+  "batch": "P1",
+  "mode": "zero_call_preflight",
+  "generated_at": "2026-09-01T10:01:15.7381296+08:00",
+  "status": "passed",
+  "source_review_path": "docs/stages/stage7/2026-09-01-stage7-pro-realistic-test-data-review.md",
+  "normalized_fixture_fingerprint": "91939d52d65b78efa0b9c135c79127d8debd0e19a0a6522fe0de54b7cbccbe18",
+  "denominators": {
+    "plan_job_count": 5,
+    "report_pair_count": 20,
+    "resumes_per_job": 4,
+    "high_match_count": 5,
+    "partial_match_count": 10,
+    "low_match_count": 5,
+    "conflict_case_count": 5,
+    "stability_case_count": 5,
+    "stability_runs_per_case": 3,
+    "planned_business_call_count": 40
+  },
+  "case_contract": {
+    "plan_case_ids": ["JD-01", "JD-02", "JD-03", "JD-04", "JD-05"],
+    "report_case_ids": [
+      "R01", "R02", "R03", "R04", "R05",
+      "R06", "R07", "R08", "R09", "R10",
+      "R11", "R12", "R13", "R14", "R15",
+      "R16", "R17", "R18", "R19", "R20"
+    ],
+    "conflict_case_ids": ["R04", "R08", "R12", "R16", "R20"],
+    "stability_case_ids": ["R01", "R05", "R09", "R13", "R17"]
+  },
+  "preflight_checks": {
+    "five_section_job_fields_nonempty": true,
+    "report_case_ids_unique": true,
+    "four_resumes_per_job": true,
+    "score_ranges_bounded": true,
+    "key_evidence_quotes_locatable": true,
+    "production_plan_input_compatible": true,
+    "resume_sanitization_preserves_key_evidence": true,
+    "conflict_labels_frozen": true,
+    "stability_selection_frozen": true,
+    "direct_email_count": 0,
+    "direct_mobile_count": 0,
+    "direct_identity_number_count": 0,
+    "all_passed": true
+  },
+  "execution_contract": {
+    "model": "deepseek-v4-pro",
+    "plan_business_calls": 5,
+    "report_business_calls": 20,
+    "stability_business_calls": 15,
+    "maximum_infrastructure_retries_per_business_call": 1,
+    "content_error_retry_count": 0,
+    "monetary_cap_usd": 2.0,
+    "postgresql_write_count": 0
+  },
+  "external_effects": {
+    "api_key_read": false,
+    "real_adapter_instantiated": false,
+    "real_model_call_count": 0,
+    "api_attempt_count": 0,
+    "input_token_count": 0,
+    "output_token_count": 0,
+    "estimated_spend_usd": 0,
+    "postgresql_write_count": 0
+  },
+  "next_step": "P2: generate five real evaluation plans and stop for user review"
+}

@@ -50,7 +50,7 @@ class ScreeningRun(Base):
             name="ck_screening_runs_waiting_reason_matches_status",
         ),
         CheckConstraint(
-            "attempt_count BETWEEN 0 AND 2",
+            "attempt_count BETWEEN 0 AND 3",
             name="ck_screening_runs_attempt_count_range",
         ),
         CheckConstraint(

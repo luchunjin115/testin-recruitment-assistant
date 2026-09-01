@@ -36,7 +36,10 @@ test('7R5-G 静态合同覆盖 5.0 编辑、报告、历史、五人批量和安
   for (const token of [
     '评价点逐项结论', '主要优势', '主要差距', '风险与事实冲突', '缺失信息',
     'HR 后续核实', '不平均、不加权、不重算', '来自 JD', 'HR 补充',
+    '查看 AI 判断依据', 'AI 标注', 'AI 未单独列出判断依据',
   ]) assert.ok(reportSource.includes(token), `5.0 报告缺少 ${token}`);
+  assert.equal(reportSource.includes('查看简历证据'), false);
+  assert.equal(reportSource.includes('“{item.quote}”'), false);
   for (const token of ['最多选择 5 份申请', 'failedCount', 'failures.map', 'AI 评估进行中']) {
     assert.ok(`${centerSource}${serviceSource}${decisionSource}`.includes(token), `初筛中心缺少 ${token}`);
   }
@@ -165,6 +168,10 @@ test('7R5-G Service 映射严格 5.0 合同并发送确认字段', async () => {
     assert.equal((await service.listJobEvaluationPlans(7)).length, 1);
     const state = await service.getApplicationScreening(11);
     assert.equal(state.report.v5Report.criterionAssessments[0].assessment.score, 8);
+    assert.equal(
+      state.report.v5Report.criterionAssessments[0].assessment.evidence[0].text,
+      evidence.quote,
+    );
     assert.equal(state.report.v5Report.strengths[0].criterionIds[0], 'criterion:0001');
     assert.equal((await service.listApplicationScreeningReports(11))[0].isCurrent, true);
     const batch = await service.reassessJobApplications(7, [11, 12]);

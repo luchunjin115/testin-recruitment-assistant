@@ -52,6 +52,89 @@ from app.services.experience_period_service import (
 SCREENING_REDACTION_VERSION = "screening_redaction_v1"
 
 
+def _complete_v5_repair_errors(
+    validation_errors: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    defaults = {
+        "JSON_SYNTAX_INVALID": (
+            "invalid_json",
+            "重新生成一个语法合法、可独立解析且字段齐全的完整 JSON 对象",
+        ),
+        "JSON_SERIALIZATION_INVALID": (
+            "invalid_json",
+            "重新生成不含重复键或其他序列化错误的完整 JSON 对象",
+        ),
+        "SCHEMA_FIELD_REQUIRED": (
+            "missing",
+            "补齐该字段，并使用 expected 指定的合同形状",
+        ),
+        "SCHEMA_FIELD_FORBIDDEN": (
+            "unexpected_field",
+            "删除该额外字段，不要把它移动到其他位置",
+        ),
+        "SCHEMA_VALUE_OUT_OF_RANGE": (
+            "invalid_value",
+            "把该值调整到 expected 指定的合法范围",
+        ),
+        "SCHEMA_TYPE_INVALID": (
+            "invalid_type",
+            "按 expected 把该字段改为正确 JSON 类型",
+        ),
+        "SCHEMA_FIXED_VALUE_INVALID": (
+            "invalid_value",
+            "把该字段改为 expected 指定的固定值",
+        ),
+        "SCHEMA_ENUM_INVALID": (
+            "invalid_value",
+            "只使用 expected 允许的枚举值",
+        ),
+        "SCHEMA_LENGTH_INVALID": (
+            "invalid_length",
+            "调整该字段长度或项目数量以满足 expected",
+        ),
+        "SCORE_EVIDENCE_CONFLICT": (
+            "score_evidence_conflict",
+            "重新阅读 Resume 后选择 score=0，或保留正分并提供至少一条 evidence",
+        ),
+        "CRITERION_ASSESSMENT_DUPLICATE": (
+            "identifier_set",
+            "删除重复项并保证每个 confirmed criterion_id 恰好一次",
+        ),
+        "CRITERION_ASSESSMENT_MISSING": (
+            "identifier_set",
+            "补齐遗漏项并保证每个 confirmed criterion_id 恰好一次",
+        ),
+        "CRITERION_ASSESSMENT_UNKNOWN": (
+            "identifier_set",
+            "删除未知 criterion_id，只保留 confirmed criteria",
+        ),
+        "FINDING_CRITERION_UNKNOWN": (
+            "identifier_reference",
+            "删除未知引用，finding 只能引用 confirmed criterion_id",
+        ),
+        "TIME_COMPATIBILITY_FIELDS_NONEMPTY": (
+            "compatibility_fields",
+            "把 experience_period_fact_keys 设为 []，把 calculation_note 设为 null",
+        ),
+    }
+    completed: list[dict[str, str]] = []
+    for item in validation_errors:
+        actual_type, correction = defaults.get(
+            item.get("code", ""),
+            ("invalid_value", "按 expected 修正该字段并保留完整报告形状"),
+        )
+        completed.append(
+            {
+                "code": item["code"],
+                "path": item["path"],
+                "actual_type": item.get("actual_type", actual_type),
+                "expected": item["expected"],
+                "correction": item.get("correction", correction),
+            }
+        )
+    return completed
+
+
 class ScreeningEvaluationServiceError(RuntimeError):
     code = "SCREENING_EVALUATION_FAILED"
 
@@ -70,6 +153,25 @@ class ScreeningEvaluationInputError(ScreeningEvaluationServiceError):
 
 class ScreeningEvaluationInvalidOutputError(ScreeningEvaluationServiceError):
     code = "SCREENING_EVALUATION_INVALID_MODEL_OUTPUT"
+
+
+class ScreeningEvaluationRepairableOutputError(
+    ScreeningEvaluationInvalidOutputError
+):
+    def __init__(self, validation_errors: list[dict[str, str]]) -> None:
+        completed_errors = _complete_v5_repair_errors(validation_errors)
+        codes = {item.get("code") for item in completed_errors}
+        if codes == {"TIME_COMPATIBILITY_FIELDS_NONEMPTY"}:
+            message = "5.0 AI 初筛经历时间兼容字段必须为空"
+        elif codes and codes <= {
+            "CRITERION_ASSESSMENT_MISSING",
+            "CRITERION_ASSESSMENT_UNKNOWN",
+        }:
+            message = "5.0 AI 初筛评价点存在未知或遗漏 criterion_id"
+        else:
+            message = "5.0 AI 初筛结果未通过可修复的输出合同校验"
+        super().__init__(message)
+        self.validation_errors = completed_errors
 
 
 class ScreeningEvaluationUnexpectedError(ScreeningEvaluationServiceError):
@@ -99,6 +201,15 @@ class ScreeningEvaluationAdapter(Protocol):
         experience_period_facts: dict[str, Any],
     ) -> ScreeningEvaluationAdapterResult: ...
 
+    async def repair_v5(
+        self,
+        *,
+        sanitized_resume: str,
+        confirmed_criteria: list[dict[str, Any]],
+        original_response: str,
+        validation_errors: list[dict[str, str]],
+    ) -> ScreeningEvaluationAdapterResult: ...
+
 
 @dataclass(frozen=True, slots=True)
 class ScreeningEvaluationMetadata:
@@ -118,10 +229,23 @@ class ScreeningEvaluationResult:
 
 
 @dataclass(frozen=True, slots=True)
+class ScreeningEvaluationV5Audit:
+    initial_raw_response: str
+    repair_raw_response: str | None
+    validation_errors: tuple[dict[str, str], ...]
+    business_call_count: int
+    content_repair_count: int
+    adapter_attempt_count: int
+    input_tokens: int | None
+    output_tokens: int | None
+
+
+@dataclass(frozen=True, slots=True)
 class ScreeningEvaluationV5Result:
     report: ScreeningEvaluationV5ReportPayload
     metadata: ScreeningEvaluationMetadata
     behavior_version: str
+    audit: ScreeningEvaluationV5Audit
 
 
 class ScreeningEvaluationService:
@@ -334,7 +458,7 @@ class ScreeningEvaluationService:
             resolved_adapter = adapter or DeepSeekScreeningEvaluationAdapter(
                 settings=resolved_settings
             )
-            adapter_result = await resolved_adapter.evaluate_v5(
+            initial_result = await resolved_adapter.evaluate_v5(
                 job_snapshot=snapshot.model_dump(mode="json"),
                 evaluation_plan=plan.model_dump(mode="json"),
                 sanitized_resume=sanitized_resume,
@@ -349,23 +473,146 @@ class ScreeningEvaluationService:
                 "5.0 AI 初筛评价发生未预期错误"
             ) from None
 
-        report = self.parse_and_validate_v5_output(
-            adapter_result.content,
-            evaluation_plan=plan,
-            sanitized_resume=sanitized_resume,
+        repair_result: ScreeningEvaluationAdapterResult | None = None
+        validation_errors: list[dict[str, str]] = []
+        try:
+            report = self.parse_and_validate_v5_output(
+                initial_result.content,
+                evaluation_plan=plan,
+                sanitized_resume=sanitized_resume,
+            )
+        except ScreeningEvaluationRepairableOutputError as exc:
+            validation_errors = exc.validation_errors
+            try:
+                repair_result = await resolved_adapter.repair_v5(
+                    sanitized_resume=sanitized_resume,
+                    confirmed_criteria=plan.model_dump(mode="json")["criteria"],
+                    original_response=initial_result.content,
+                    validation_errors=validation_errors,
+                )
+            except ScreeningEvaluationAdapterError as repair_error:
+                repair_error.audit = self._build_v5_audit(
+                    initial_result,
+                    None,
+                    validation_errors,
+                    adapter_attempt_count=2,
+                )
+                setattr(repair_error, "adapter_attempt_count", 2)
+                setattr(repair_error, "content_repair_count", 1)
+                raise
+            except Exception:
+                error = ScreeningEvaluationUnexpectedError(
+                    "5.0 AI 初筛 Repair 发生未预期错误"
+                )
+                error.audit = self._build_v5_audit(
+                    initial_result,
+                    None,
+                    validation_errors,
+                    adapter_attempt_count=2,
+                )
+                error.adapter_attempt_count = 2
+                error.content_repair_count = 1
+                raise error from None
+            try:
+                report = self.parse_and_validate_v5_output(
+                    repair_result.content,
+                    evaluation_plan=plan,
+                    sanitized_resume=sanitized_resume,
+                )
+            except ScreeningEvaluationRepairableOutputError:
+                error = ScreeningEvaluationInvalidOutputError(
+                    "5.0 AI 初筛修正版仍未通过严格合同校验"
+                )
+                error.audit = self._build_v5_audit(
+                    initial_result,
+                    repair_result,
+                    validation_errors,
+                    adapter_attempt_count=2,
+                )
+                error.adapter_attempt_count = 2
+                error.content_repair_count = 1
+                raise error from None
+            except ScreeningEvaluationInvalidOutputError as error:
+                error.audit = self._build_v5_audit(
+                    initial_result,
+                    repair_result,
+                    validation_errors,
+                    adapter_attempt_count=2,
+                )
+                error.adapter_attempt_count = 2
+                error.content_repair_count = 1
+                raise
+        except ScreeningEvaluationInvalidOutputError as error:
+            error.audit = self._build_v5_audit(
+                initial_result,
+                None,
+                [],
+                adapter_attempt_count=1,
+            )
+            error.adapter_attempt_count = 1
+            raise
+
+        final_result = repair_result or initial_result
+        input_tokens = self._sum_optional_tokens(
+            initial_result.input_tokens,
+            repair_result.input_tokens if repair_result else None,
         )
+        output_tokens = self._sum_optional_tokens(
+            initial_result.output_tokens,
+            repair_result.output_tokens if repair_result else None,
+        )
+        business_call_count = 2 if repair_result else 1
         return ScreeningEvaluationV5Result(
             report=report,
             metadata=ScreeningEvaluationMetadata(
-                model_version=adapter_result.model,
+                model_version=final_result.model,
                 prompt_version=SCREENING_EVALUATION_V5_PROMPT_VERSION,
                 schema_version=SCREENING_EVALUATION_V5_SCHEMA_VERSION,
                 redaction_version=SCREENING_REDACTION_VERSION,
-                input_tokens=adapter_result.input_tokens,
-                output_tokens=adapter_result.output_tokens,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
             ),
             behavior_version=SCREENING_EVALUATION_V5_BEHAVIOR_VERSION,
+            audit=self._build_v5_audit(
+                initial_result,
+                repair_result,
+                validation_errors,
+                adapter_attempt_count=business_call_count,
+            ),
         )
+
+    @classmethod
+    def _build_v5_audit(
+        cls,
+        initial_result: ScreeningEvaluationAdapterResult,
+        repair_result: ScreeningEvaluationAdapterResult | None,
+        validation_errors: list[dict[str, str]],
+        *,
+        adapter_attempt_count: int,
+    ) -> ScreeningEvaluationV5Audit:
+        return ScreeningEvaluationV5Audit(
+            initial_raw_response=initial_result.content,
+            repair_raw_response=(
+                repair_result.content if repair_result is not None else None
+            ),
+            validation_errors=tuple(validation_errors),
+            business_call_count=2 if adapter_attempt_count > 1 else 1,
+            content_repair_count=1 if adapter_attempt_count > 1 else 0,
+            adapter_attempt_count=adapter_attempt_count,
+            input_tokens=cls._sum_optional_tokens(
+                initial_result.input_tokens,
+                repair_result.input_tokens if repair_result else None,
+            ),
+            output_tokens=cls._sum_optional_tokens(
+                initial_result.output_tokens,
+                repair_result.output_tokens if repair_result else None,
+            ),
+        )
+
+    @staticmethod
+    def _sum_optional_tokens(*values: int | None) -> int | None:
+        present = [value for value in values if value is not None]
+        return sum(present) if present else None
 
     def parse_and_validate_v5_output(
         self,
@@ -375,24 +622,61 @@ class ScreeningEvaluationService:
         sanitized_resume: str,
         experience_period_facts: ExperiencePeriodFactsSnapshot | None = None,
     ) -> ScreeningEvaluationV5ReportPayload:
+        if not isinstance(content, str) or not content.strip():
+            raise ScreeningEvaluationInvalidOutputError(
+                "5.0 AI 初筛模型返回了空内容"
+            )
         try:
             payload = json.loads(content, object_pairs_hook=self._unique_json_object)
-            output = AIScreeningEvaluationV5Output.model_validate(payload)
-            plan = ScreeningEvaluationPlanInputV5.model_validate(evaluation_plan)
-        except (json.JSONDecodeError, ValidationError, TypeError, ValueError):
-            raise ScreeningEvaluationInvalidOutputError(
-                "5.0 AI 初筛结果未通过严格结构校验"
+        except json.JSONDecodeError:
+            raise ScreeningEvaluationRepairableOutputError(
+                [
+                    {
+                        "code": "JSON_SYNTAX_INVALID",
+                        "path": "$",
+                        "expected": "返回一个语法合法且可独立解析的完整 JSON 对象",
+                    }
+                ]
+            ) from None
+        except (TypeError, ValueError):
+            raise ScreeningEvaluationRepairableOutputError(
+                [
+                    {
+                        "code": "JSON_SERIALIZATION_INVALID",
+                        "path": "$",
+                        "expected": "JSON 对象不得包含重复键或其他确定性序列化错误",
+                    }
+                ]
             ) from None
 
-        self.validate_v5_criterion_cross_reference(output, plan)
-        criteria_by_id = {item.criterion_id: item for item in plan.criteria}
-        for assessment in output.criterion_assessments:
-            self.validate_v5_evidence_required(assessment)
-            self._validate_evidence(assessment.evidence, sanitized_resume)
-            self._validate_v5_compatibility_time_fields(assessment)
+        try:
+            plan = ScreeningEvaluationPlanInputV5.model_validate(evaluation_plan)
+        except (ValidationError, TypeError, ValueError):
+            raise ScreeningEvaluationInputError(
+                "5.0 岗位评价计划输入无效"
+            ) from None
+        try:
+            output = AIScreeningEvaluationV5Output.model_validate(payload)
+        except ValidationError as exc:
+            raise ScreeningEvaluationRepairableOutputError(
+                self._v5_schema_validation_errors(exc)
+            ) from None
+        except (TypeError, ValueError):
+            raise ScreeningEvaluationRepairableOutputError(
+                [
+                    {
+                        "code": "SCHEMA_CONTRACT_INVALID",
+                        "path": "$",
+                        "expected": "返回字段完整、类型正确且无额外字段的 5.0 完整报告",
+                    }
+                ]
+            ) from None
 
-        self._validate_v5_findings(output, plan, sanitized_resume)
-        self._validate_v5_safety(output)
+        self._validate_v5_high_risk_safety(output)
+        validation_errors = self._collect_v5_service_validation_errors(output, plan)
+        if validation_errors:
+            raise ScreeningEvaluationRepairableOutputError(validation_errors)
+        criteria_by_id = {item.criterion_id: item for item in plan.criteria}
 
         display_label = self.display_label_for_score(output.overall_score)
         enriched = [
@@ -413,6 +697,221 @@ class ScreeningEvaluationService:
             missing_info=output.missing_info,
             hr_follow_up_questions=output.hr_follow_up_questions,
         )
+
+    @classmethod
+    def _v5_schema_validation_errors(
+        cls,
+        error: ValidationError,
+    ) -> list[dict[str, str]]:
+        mapped: list[dict[str, str]] = []
+        for item in error.errors(include_url=False, include_context=False):
+            error_type = str(item.get("type", ""))
+            path = cls._v5_json_path(item.get("loc", ()))
+            actual_type: str | None = None
+            correction: str | None = None
+            if error_type == "missing":
+                code = "SCHEMA_FIELD_REQUIRED"
+                expected = "该字段必填且必须符合 5.0 报告合同"
+            elif error_type == "extra_forbidden":
+                code = "SCHEMA_FIELD_FORBIDDEN"
+                expected = "删除 5.0 报告合同未定义的字段"
+            elif error_type in {
+                "greater_than",
+                "greater_than_equal",
+                "less_than",
+                "less_than_equal",
+            }:
+                code = "SCHEMA_VALUE_OUT_OF_RANGE"
+                expected = "该数值必须位于 5.0 报告合同规定的范围内"
+            elif error_type.endswith("_type") or error_type in {
+                "dict_type",
+                "int_parsing",
+                "string_type",
+            }:
+                code = "SCHEMA_TYPE_INVALID"
+                actual_type = cls._v5_json_type(item.get("input"))
+                if path.startswith("$.hr_follow_up_questions["):
+                    expected = "非空问题字符串"
+                    correction = (
+                        "把该对象改为一条完整问题字符串；不得包含 "
+                        "summary、criterion_ids、evidence"
+                    )
+                else:
+                    target_type = cls._v5_expected_json_type(error_type)
+                    expected = f"JSON {target_type}"
+                    correction = (
+                        f"把该字段从 {actual_type} 改为 {target_type}，"
+                        "并保持完整报告的其他合法字段"
+                    )
+            elif error_type == "literal_error":
+                code = "SCHEMA_FIXED_VALUE_INVALID"
+                expected = "该字段必须使用 5.0 报告合同规定的固定值"
+            elif error_type == "enum":
+                code = "SCHEMA_ENUM_INVALID"
+                expected = "该字段必须使用 5.0 报告合同允许的枚举值"
+            elif error_type in {
+                "too_short",
+                "too_long",
+                "string_too_short",
+                "string_too_long",
+            }:
+                code = "SCHEMA_LENGTH_INVALID"
+                expected = "该字段长度或项目数量必须符合 5.0 报告合同"
+            elif (
+                error_type == "value_error"
+                and path.startswith("$.criterion_assessments[")
+            ):
+                code = "SCORE_EVIDENCE_CONFLICT"
+                expected = "score 为 1—10 时 evidence 至少一项；score 为 0 时 evidence 可为空或非空"
+            else:
+                code = "SCHEMA_VALUE_INVALID"
+                expected = "该字段值必须符合 5.0 报告合同"
+            mapped_error = {"code": code, "path": path, "expected": expected}
+            if error_type.endswith("_type") or error_type in {
+                "dict_type",
+                "int_parsing",
+                "string_type",
+            }:
+                mapped_error["actual_type"] = actual_type or cls._v5_json_type(
+                    item.get("input")
+                )
+                mapped_error["correction"] = correction or (
+                    "按 expected 把该字段改为正确 JSON 类型"
+                )
+            mapped.append(mapped_error)
+        return mapped or [
+            {
+                "code": "SCHEMA_CONTRACT_INVALID",
+                "path": "$",
+                "expected": "返回字段完整、类型正确且无额外字段的 5.0 完整报告",
+            }
+        ]
+
+    @staticmethod
+    def _v5_json_path(location: Any) -> str:
+        path = "$"
+        for part in location:
+            if isinstance(part, int):
+                path += f"[{part}]"
+            elif isinstance(part, str) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", part):
+                path += f".{part}"
+        return path
+
+    @staticmethod
+    def _v5_json_type(value: Any) -> str:
+        if value is None:
+            return "null"
+        if isinstance(value, bool):
+            return "boolean"
+        if isinstance(value, int):
+            return "integer"
+        if isinstance(value, float):
+            return "number"
+        if isinstance(value, str):
+            return "string"
+        if isinstance(value, dict):
+            return "object"
+        if isinstance(value, (list, tuple)):
+            return "array"
+        return "unknown"
+
+    @staticmethod
+    def _v5_expected_json_type(error_type: str) -> str:
+        if error_type in {"int_type", "int_parsing"}:
+            return "整数"
+        if error_type in {"float_type", "float_parsing"}:
+            return "数字"
+        if error_type == "string_type":
+            return "非空字符串"
+        if error_type in {"list_type", "tuple_type", "set_type"}:
+            return "数组"
+        if error_type in {"dict_type", "model_type"}:
+            return "对象"
+        if error_type == "bool_type":
+            return "布尔值"
+        return "5.0 合同规定的类型"
+
+    def _collect_v5_service_validation_errors(
+        self,
+        report: AIScreeningEvaluationV5Output,
+        plan: ScreeningEvaluationPlanInputV5,
+    ) -> list[dict[str, str]]:
+        errors: list[dict[str, str]] = []
+        expected_ids = [item.criterion_id for item in plan.criteria]
+        actual_ids = [item.criterion_id for item in report.criterion_assessments]
+        counts = Counter(actual_ids)
+        if any(count > 1 for count in counts.values()):
+            errors.append(
+                {
+                    "code": "CRITERION_ASSESSMENT_DUPLICATE",
+                    "path": "$.criterion_assessments",
+                    "expected": "confirmed criteria 的每个 criterion_id 恰好出现一次",
+                }
+            )
+        if set(expected_ids) - set(actual_ids):
+            errors.append(
+                {
+                    "code": "CRITERION_ASSESSMENT_MISSING",
+                    "path": "$.criterion_assessments",
+                    "expected": "补齐 confirmed criteria 中遗漏的 criterion_id",
+                }
+            )
+        if set(actual_ids) - set(expected_ids):
+            errors.append(
+                {
+                    "code": "CRITERION_ASSESSMENT_UNKNOWN",
+                    "path": "$.criterion_assessments",
+                    "expected": "只使用 confirmed criteria 中存在的 criterion_id",
+                }
+            )
+
+        valid_ids = set(expected_ids)
+        for section_name, findings in (
+            ("strengths", report.strengths),
+            ("gaps", report.gaps),
+            ("risks_or_conflicts", report.risks_or_conflicts),
+            ("missing_info", report.missing_info),
+        ):
+            for index, finding in enumerate(findings):
+                path = f"$.{section_name}[{index}]"
+                if any(item not in valid_ids for item in finding.criterion_ids):
+                    errors.append(
+                        {
+                            "code": "FINDING_CRITERION_UNKNOWN",
+                            "path": f"{path}.criterion_ids",
+                            "expected": "finding 只能引用 confirmed criteria 中存在的 criterion_id",
+                        }
+                    )
+                if not finding.evidence and not finding.criterion_ids:
+                    errors.append(
+                        {
+                            "code": "FINDING_REFERENCE_REQUIRED",
+                            "path": path,
+                            "expected": "没有 evidence 的 finding 必须至少关联一个有效 criterion_id",
+                        }
+                    )
+
+        if any(
+            assessment.experience_period_fact_keys
+            or assessment.calculation_note is not None
+            for assessment in report.criterion_assessments
+        ):
+            errors.append(
+                {
+                    "code": "TIME_COMPATIBILITY_FIELDS_NONEMPTY",
+                    "path": "$.criterion_assessments",
+                    "expected": "所有 experience_period_fact_keys 必须为 [] 且 calculation_note 必须为 null",
+                }
+            )
+        if self._UNKNOWN_PATTERN.search("\n".join(self._v5_hr_visible_text(report))):
+            errors.append(
+                {
+                    "code": "UNKNOWN_SEMANTIC_FORBIDDEN",
+                    "path": "$",
+                    "expected": "报告可表达信息缺失，但不得输出 unknown 语义",
+                }
+            )
+        return errors
 
     @staticmethod
     def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
@@ -472,18 +971,10 @@ class ScreeningEvaluationService:
                 "5.0 AI 初筛评价点存在未知或遗漏 criterion_id"
             )
 
-    @staticmethod
-    def validate_v5_evidence_required(assessment: CriterionAssessment) -> None:
-        if assessment.score > 0 and not assessment.evidence:
-            raise ScreeningEvaluationInvalidOutputError(
-                "5.0 非零分必须至少包含一条当前 Resume 证据"
-            )
-
     def _validate_v5_findings(
         self,
         report: AIScreeningEvaluationV5Output,
         plan: ScreeningEvaluationPlanInputV5,
-        sanitized_resume: str,
     ) -> None:
         valid_ids = {item.criterion_id for item in plan.criteria}
         for section_name, findings in (
@@ -496,11 +987,6 @@ class ScreeningEvaluationService:
                 if any(item not in valid_ids for item in finding.criterion_ids):
                     raise ScreeningEvaluationInvalidOutputError(
                         "5.0 报告分区引用了未知 criterion_id"
-                    )
-                self._validate_evidence(finding.evidence, sanitized_resume)
-                if section_name == "strengths" and not finding.evidence:
-                    raise ScreeningEvaluationInvalidOutputError(
-                        "5.0 优势必须包含当前 Resume 可定位证据"
                     )
                 if not finding.evidence and not finding.criterion_ids:
                     raise ScreeningEvaluationInvalidOutputError(
@@ -533,7 +1019,10 @@ class ScreeningEvaluationService:
         texts.extend(report.hr_follow_up_questions)
         return tuple(texts)
 
-    def _validate_v5_safety(self, report: AIScreeningEvaluationV5Output) -> None:
+    def _validate_v5_high_risk_safety(
+        self,
+        report: AIScreeningEvaluationV5Output,
+    ) -> None:
         combined = "\n".join(self._v5_hr_visible_text(report))
         if any(
             pattern.search(combined)
@@ -550,6 +1039,10 @@ class ScreeningEvaluationService:
             raise ScreeningEvaluationInvalidOutputError(
                 "5.0 AI 初筛输出复述或执行了 Prompt 注入内容"
             )
+
+    def _validate_v5_safety(self, report: AIScreeningEvaluationV5Output) -> None:
+        self._validate_v5_high_risk_safety(report)
+        combined = "\n".join(self._v5_hr_visible_text(report))
         if self._UNKNOWN_PATTERN.search(combined):
             raise ScreeningEvaluationInvalidOutputError(
                 "5.0 AI 初筛不得使用 unknown 语义"

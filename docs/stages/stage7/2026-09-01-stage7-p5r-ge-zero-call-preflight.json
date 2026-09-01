@@ -1,0 +1,115 @@
+{
+  "stage": "stage7-p5r-g",
+  "batch": "P5R-GE",
+  "mode": "zero_call_full_chain_preflight",
+  "generated_at": "2026-09-01T07:03:10.4467900Z",
+  "status": "passed_with_preexisting_full_suite_failures",
+  "contract": {
+    "model": "deepseek-v4-pro",
+    "main_prompt_version": "screening_evaluation_lightweight_v9",
+    "repair_prompt_version": "screening_evaluation_repair_v1",
+    "behavior_version": "lightweight_report_generation_v11",
+    "schema_version": "5.0",
+    "content_repair_maximum": 1,
+    "api_attempt_limit": 3,
+    "final_report_shape_changed": false
+  },
+  "verification": {
+    "repair_prompt_schema_service_api_migration": {
+      "passed": 288,
+      "subtests_passed": 36,
+      "failed": 0
+    },
+    "postgresql_screening_run": {
+      "passed": 37,
+      "failed": 0
+    },
+    "frontend_stage7_ai_screening_scripts": {
+      "passed": 4,
+      "failed": 0
+    },
+    "frontend_typescript_and_vite_build": "passed",
+    "backend_full_suite": {
+      "passed": 1537,
+      "subtests_passed": 425,
+      "failed": 8,
+      "preexisting_failures": [
+        "resume upload test freezes the previous calendar month in its path assertion",
+        "two I4 pricing tests reject the already-drifted frozen preflight hash",
+        "one I4 real-runner gate rejects the already-drifted frozen preflight hash",
+        "one sealed I4 raw test rejects the already-drifted frozen preflight hash",
+        "three CLOSE-07 tests reject the already-drifted frozen I4 raw hash"
+      ]
+    },
+    "alembic_round_trip": {
+      "from": "d6e8f0a2b434",
+      "to": "e7f9a1b3c545",
+      "downgrade_verified": true,
+      "upgrade_verified": true,
+      "final_current": "e7f9a1b3c545",
+      "final_head": "e7f9a1b3c545",
+      "alembic_check": "No new upgrade operations detected"
+    }
+  },
+  "repair_boundaries_verified": [
+    "invalid JSON triggers exactly one repair",
+    "multiple schema errors are aggregated into one repair",
+    "criterion and finding errors trigger exactly one repair",
+    "mixed whitelisted errors trigger exactly one repair",
+    "input infrastructure database and high-risk safety errors do not repair",
+    "repair receives sanitized structured errors without internal exception text",
+    "repair returns a complete report and validation restarts from JSON",
+    "R04 supports score zero with optional evidence or positive score with evidence",
+    "the program never changes score or fills evidence",
+    "a second invalid output fails without a second repair",
+    "attempt counts one two and three and successful token totals are audited",
+    "the existing 5.0 API and PostgreSQL report JSON shape remains unchanged"
+  ],
+  "gf_paths": {
+    "result": "docs/stages/stage7/2026-09-01-stage7-p5r-gf-r04-repair-results.json",
+    "attempt_01": "docs/stages/stage7/2026-09-01-stage7-p5r-gf-r04-attempt-01.json",
+    "attempt_02": "docs/stages/stage7/2026-09-01-stage7-p5r-gf-r04-attempt-02.json",
+    "attempt_03": "docs/stages/stage7/2026-09-01-stage7-p5r-gf-r04-attempt-03.json",
+    "all_absent": true
+  },
+  "official_pricing": {
+    "checked_at": "2026-09-01T07:03:10.4467900Z",
+    "source_url": "https://api-docs.deepseek.com/quick_start/pricing/",
+    "currency": "USD",
+    "unit": "per_1m_tokens",
+    "model": "deepseek-v4-pro",
+    "peak": {
+      "cache_hit_input": 0.044,
+      "cache_miss_input": 1.32,
+      "output": 3.96
+    },
+    "off_peak": {
+      "cache_hit_input": 0.022,
+      "cache_miss_input": 0.66,
+      "output": 1.98
+    }
+  },
+  "gf_peak_upper_bound": {
+    "main_input_byte_upper": 22227,
+    "repair_static_input_byte_upper": 11947,
+    "initial_raw_token_upper": 12000,
+    "output_token_upper_per_business_call": 12000,
+    "business_call_maximum": 2,
+    "peak_cost_upper_bound_usd": 0.15598968,
+    "recommended_explicit_cap_usd": 0.20
+  },
+  "execution_audit": {
+    "api_key_read": false,
+    "real_network_client_created": false,
+    "deepseek_business_call_count": 0,
+    "api_attempt_count": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "estimated_spend_usd": 0,
+    "postgresql_business_write_count": 0,
+    "database_schema_migration_count": 3
+  },
+  "gf_authorized": false,
+  "blocking_gate": "P5R-GF requires a separate explicit USD cap; recommend USD 0.20.",
+  "next_step": "Wait for the user to explicitly authorize P5R-GF with a USD 0.20 hard cap; do not read the API key or call DeepSeek before that authorization."
+}

@@ -199,7 +199,7 @@ def make_settings(**updates: object) -> Settings:
     values: dict[str, object] = {
         "SCREENING_EVALUATION_ENABLED": True,
         "SCREENING_EVALUATION_MODEL": "fake-v5-model",
-        "SCREENING_EVALUATION_V5_PROMPT_VERSION": "screening_evaluation_lightweight_v7",
+        "SCREENING_EVALUATION_V5_PROMPT_VERSION": "screening_evaluation_lightweight_v10",
         "SCREENING_EVALUATION_V5_SCHEMA_VERSION": "5.0",
         "SCREENING_EVALUATION_TIMEZONE": "Asia/Shanghai",
         "EXPERIENCE_PERIOD_FACTS_RULE_VERSION": "experience_period_facts_v1",
@@ -238,7 +238,7 @@ def parse_with_inputs(
     )
 
 
-def test_v5_schema_requires_nonzero_evidence_and_zero_has_no_positive_evidence() -> None:
+def test_v5_schema_requires_nonzero_evidence_and_allows_zero_score_basis() -> None:
     with pytest.raises(ValidationError):
         CriterionAssessment(
             criterion_id="criterion:0001",
@@ -246,18 +246,19 @@ def test_v5_schema_requires_nonzero_evidence_and_zero_has_no_positive_evidence()
             reason="有一些经验。",
             evidence=[],
         )
-    with pytest.raises(ValidationError):
-        CriterionAssessment(
-            criterion_id="criterion:0001",
-            score=0,
-            reason="简历中没有看到直接项目证据。",
-            evidence=[
-                {
-                    "quote": "使用 Python 开发 FastAPI 服务",
-                    "section": "工作经历",
-                }
-            ],
-        )
+    assessment = CriterionAssessment(
+        criterion_id="criterion:0001",
+        score=0,
+        reason="材料提到 Python，但不足以支持该评价点。",
+        evidence=[
+            {
+                "quote": "材料只体现 Python 使用，未体现所要求的服务治理能力。",
+                "section": "AI 标注的工作经历",
+            }
+        ],
+    )
+    assert assessment.score == 0
+    assert len(assessment.evidence) == 1
 
 
 def test_v5_schema_requires_reason_but_does_not_rejudge_zero_reason_wording() -> None:
@@ -496,7 +497,6 @@ def test_v5_no_evidence_findings_accept_natural_gap_wording_without_keyword_whit
     service._validate_v5_findings(
         report,
         ScreeningEvaluationPlanInputV5.model_validate(make_plan()),
-        sanitized_resume,
     )
 
 
@@ -535,29 +535,23 @@ def test_v5_no_evidence_findings_still_require_valid_criterion_ids(
         service._validate_v5_findings(
             report,
             ScreeningEvaluationPlanInputV5.model_validate(make_plan()),
-            sanitized_resume,
         )
 
 
-def test_v5_finding_evidence_protections_remain_hard_failures() -> None:
+def test_v5_findings_accept_empty_strength_basis_and_paraphrased_basis() -> None:
     payload = make_report()
     payload["strengths"][0]["evidence"] = []
     report = AIScreeningEvaluationV5Output.model_validate(payload)
     service = ScreeningEvaluationService()
     plan = ScreeningEvaluationPlanInputV5.model_validate(make_plan())
-    sanitized_resume = service.sanitize_resume_text(RAW_RESUME)
-
-    with pytest.raises(
-        ScreeningEvaluationInvalidOutputError,
-        match="5.0 优势必须包含当前 Resume 可定位证据",
-    ):
-        service._validate_v5_findings(report, plan, sanitized_resume)
+    service._validate_v5_findings(report, plan)
 
     payload = make_report()
-    payload["strengths"][0]["evidence"][0]["quote"] = "Resume 中不存在的优势"
+    payload["strengths"][0]["evidence"][0]["quote"] = (
+        "AI 概括：候选人具备 Python 服务开发经历。"
+    )
     report = AIScreeningEvaluationV5Output.model_validate(payload)
-    with pytest.raises(ScreeningEvaluationInvalidOutputError):
-        service._validate_v5_findings(report, plan, sanitized_resume)
+    service._validate_v5_findings(report, plan)
 
 
 @pytest.mark.parametrize("mutation", ("unknown", "omitted", "duplicate"))
@@ -573,11 +567,15 @@ def test_unknown_omitted_and_duplicate_criterion_ids_are_rejected(mutation: str)
         parse(ScreeningEvaluationService(), payload)
 
 
-def test_unlocatable_evidence_remains_rejected() -> None:
+def test_evidence_text_is_not_compared_with_resume_by_service() -> None:
     payload = make_report()
-    payload["criterion_assessments"][0]["evidence"][0]["quote"] = "不存在的项目"
-    with pytest.raises(ScreeningEvaluationInvalidOutputError):
-        parse(ScreeningEvaluationService(), payload)
+    payload["criterion_assessments"][0]["evidence"][0]["quote"] = (
+        "AI 概括：候选人的项目经历支持该项评分。"
+    )
+    report = parse(ScreeningEvaluationService(), payload)
+    assert report.criterion_assessments[0].assessment.evidence[0].quote.startswith(
+        "AI 概括"
+    )
 
 
 @pytest.mark.parametrize(
@@ -995,13 +993,13 @@ def test_one_business_call_returns_program_metadata_without_raw_response() -> No
     assert adapter.calls[0]["experience_period_facts"] == {}
     assert adapter.calls[0]["evaluation_reference_at"] == ""
     assert adapter.calls[0]["evaluation_timezone"] == ""
-    assert result.metadata.prompt_version == "screening_evaluation_lightweight_v7"
+    assert result.metadata.prompt_version == "screening_evaluation_lightweight_v10"
     assert result.metadata.schema_version == "5.0"
-    assert result.behavior_version == "lightweight_report_generation_v9"
+    assert result.behavior_version == "lightweight_report_generation_v11"
     assert not hasattr(result, "raw_response")
 
 
-def test_content_error_is_not_retried_or_partially_returned() -> None:
+def test_content_error_repairs_once_and_never_returns_partial_output() -> None:
     adapter = FakeScreeningEvaluationAdapter(
         [
             ScreeningEvaluationAdapterResult(
@@ -1009,7 +1007,11 @@ def test_content_error_is_not_retried_or_partially_returned() -> None:
                 model="fake-v5-model",
                 finish_reason="stop",
             ),
-            AssertionError("content errors must not consume a second outcome"),
+            ScreeningEvaluationAdapterResult(
+                content="{}",
+                model="fake-v5-model",
+                finish_reason="stop",
+            ),
         ]
     )
     service = ScreeningEvaluationService()
@@ -1029,3 +1031,4 @@ def test_content_error_is_not_retried_or_partially_returned() -> None:
             )
         )
     assert len(adapter.calls) == 1
+    assert len(adapter.repair_calls) == 1

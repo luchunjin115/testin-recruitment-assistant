@@ -603,11 +603,11 @@
   gap: 8px;
 }
 
-.recruitment-screening-evidence-list blockquote {
+.recruitment-screening-evidence-item {
   margin: 0;
   padding: 10px 12px;
-  border-left: 3px solid #a9bde4;
-  border-radius: 0 8px 8px 0;
+  border: 1px solid #dbe4f4;
+  border-radius: 8px;
   background: #f7f9fd;
 }
 

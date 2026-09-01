@@ -98,6 +98,15 @@ class ScreeningAdapter(Protocol):
         experience_period_facts: dict[str, Any],
     ): ...
 
+    async def repair_v5(
+        self,
+        *,
+        sanitized_resume: str,
+        confirmed_criteria: list[dict[str, Any]],
+        original_response: str,
+        validation_errors: list[dict[str, str]],
+    ): ...
+
 
 @dataclass(frozen=True, slots=True)
 class ScreeningInputContext:
@@ -693,8 +702,7 @@ class ScreeningService:
                 settings=resolved
             )
             result: ScreeningEvaluationV5Result | None = None
-            for attempt in range(2):
-                attempts = attempt + 1
+            for infrastructure_retry in range(2):
                 try:
                     result = await screening_evaluation_service.evaluate_v5(
                         job_snapshot=context.job_snapshot,
@@ -705,12 +713,23 @@ class ScreeningService:
                         adapter=resolved_adapter,
                         settings=resolved,
                     )
+                    attempts += result.audit.adapter_attempt_count
                     break
                 except ScreeningEvaluationAdapterError as exc:
-                    if not exc.retryable or attempt == 1:
+                    attempts += getattr(exc, "adapter_attempt_count", 1)
+                    repair_started = getattr(exc, "content_repair_count", 0) > 0
+                    if (
+                        repair_started
+                        or not exc.retryable
+                        or infrastructure_retry == 1
+                    ):
                         raise
+                except Exception as exc:
+                    attempts += getattr(exc, "adapter_attempt_count", 1)
+                    raise
             assert result is not None
         except ScreeningEvaluationAdapterError as exc:
+            audit = getattr(exc, "audit", None)
             message = (
                 "模型服务暂时不可用，已自动重试一次，请稍后重新评估"
                 if exc.retryable
@@ -724,8 +743,11 @@ class ScreeningService:
                 now_provider(),
                 attempts=attempts,
                 duration_ms=int((time.perf_counter() - started) * 1000),
+                input_tokens=getattr(audit, "input_tokens", None),
+                output_tokens=getattr(audit, "output_tokens", None),
             )
         except Exception as exc:
+            audit = getattr(exc, "audit", None)
             code = getattr(exc, "code", "SCREENING_EVALUATION_UNEXPECTED_ERROR")
             return await self._mark_failed(
                 db,
@@ -735,6 +757,8 @@ class ScreeningService:
                 now_provider(),
                 attempts=max(attempts, 1),
                 duration_ms=int((time.perf_counter() - started) * 1000),
+                input_tokens=getattr(audit, "input_tokens", None),
+                output_tokens=getattr(audit, "output_tokens", None),
             )
 
         try:
@@ -758,6 +782,8 @@ class ScreeningService:
                 now_provider(),
                 attempts=attempts,
                 duration_ms=int((time.perf_counter() - started) * 1000),
+                input_tokens=result.metadata.input_tokens,
+                output_tokens=result.metadata.output_tokens,
             )
 
     async def _save_success(
@@ -890,6 +916,8 @@ class ScreeningService:
         *,
         attempts: int = 0,
         duration_ms: int | None = None,
+        input_tokens: int | None = None,
+        output_tokens: int | None = None,
     ) -> ScreeningRun:
         try:
             run = await db.scalar(
@@ -904,8 +932,10 @@ class ScreeningService:
             run.completed_at = completed_at
             run.error_code = self._safe_code(code)
             run.error_message = message[:500]
-            run.attempt_count = min(max(attempts, 0), 2)
+            run.attempt_count = min(max(attempts, 0), 3)
             run.duration_ms = duration_ms
+            run.input_tokens = input_tokens
+            run.output_tokens = output_tokens
             run.lease_owner = None
             run.lease_expires_at = None
             application = await db.scalar(

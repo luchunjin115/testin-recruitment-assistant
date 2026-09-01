@@ -349,7 +349,7 @@ type ScreeningBatchResponse = {
 };
 
 const mapEvidence = (value: ScreeningEvidenceResponse): ScreeningEvidence => ({
-  quote: value.quote,
+  text: value.quote,
   section: value.section,
 });
 
