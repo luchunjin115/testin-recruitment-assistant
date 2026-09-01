@@ -217,5 +217,5 @@ backend/migrations/                 Alembic 历史与向前迁移
 - 当前状态：`../../PROJECT_STATE.md`
 - 实施计划：`../planning/implementation-plan.md`
 - 产品路线：`../planning/2026-08-14-post-stage5-product-roadmap.md`
-- 阶段 7 当前设计：`../stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`
+- 阶段 7 单一入口：`../stages/stage7/README.md`
 - 旧系统退役：`../archive/legacy-system/retirement/2026-08-18-legacy-system-retirement-decision.md`

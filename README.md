@@ -308,7 +308,7 @@ docker compose stop postgres redis chroma
 - [实施计划](docs/planning/implementation-plan.md)
 - [总体设计](docs/architecture/2026-07-15-hr-agent-platform-design.md)
 - [阶段 5 后路线图](docs/planning/2026-08-14-post-stage5-product-roadmap.md)
-- [阶段 7 当前设计](docs/stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md)
+- [阶段 7 单一入口](docs/stages/stage7/README.md)
 - [项目文档索引](docs/DOCUMENT_INDEX.md)
 - [旧系统退役决策](docs/archive/legacy-system/retirement/2026-08-18-legacy-system-retirement-decision.md)
 - [最终命名与交付计划](docs/archive/legacy-system/retirement/2026-08-18-final-naming-and-delivery-closure-plan.md)

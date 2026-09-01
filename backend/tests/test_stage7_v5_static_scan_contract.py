@@ -1,8 +1,7 @@
 """v5.0 static scan contract tests.
 
-Static proofs that v5.0 removes all weight/weighted scoring, has no
-RequirementFact dependency in the v5 code path, and that quality baseline
-constants are correctly defined.
+Static proofs that v5.0 removes all weight/weighted scoring and keeps
+RequirementFact out of the v5 code path.
 
 These tests scan source code and project structure -- they do NOT call
 AI services or require a database.
@@ -11,20 +10,16 @@ Sections:
 - A. No weight fields in schemas (5 tests)
 - B. No weight in services (3 tests)
 - C. RequirementFact separation proof (4 tests)
-- D. Quality baseline constants (5 tests)
-- E. Historical result protection (3 tests)
-- F. No Python weighted total (2 tests)
+- D. No Python weighted total (2 tests)
 """
 
 from __future__ import annotations
 
 import ast
-import importlib
 import inspect
 import re
 from pathlib import Path
 
-import pytest
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -41,25 +36,6 @@ _SCREENING_SCHEMA_PATH = _SCHEMAS_DIR / "screening.py"
 _SCREENING_EVAL_SERVICE_PATH = _SERVICES_DIR / "screening_evaluation_service.py"
 _SCREENING_SERVICE_PATH = _SERVICES_DIR / "screening_service.py"
 _JOB_EVAL_PLAN_SERVICE_PATH = _SERVICES_DIR / "job_evaluation_plan_service.py"
-_QUALITY_CONTRACT_PATH = _PROJECT_ROOT / "scripts" / "stage7_7r5_quality_contract.py"
-
-_V4_FORMAL_RESULTS_PATH = (
-    _PROJECT_ROOT
-    / "docs"
-    / "stages"
-    / "stage7"
-    / "2026-08-25-stage7-7r4h-plan-quality-formal-results.json"
-)
-_V4_REVALIDATION_RESULTS_PATH = (
-    _PROJECT_ROOT
-    / "docs"
-    / "stages"
-    / "stage7"
-    / "2026-08-26-stage7-7r4hr2-plan-quality-targeted-revalidation-results.json"
-)
-_V5_RESULTS_DIR = _PROJECT_ROOT / "docs" / "stages" / "stage7" / "v5-quality-results"
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -286,130 +262,7 @@ class TestRequirementFactSeparation:
 
 
 # ===========================================================================
-# D. Quality baseline constants (5 tests) -- partially xfail
-# ===========================================================================
-
-
-_V5_FIXTURE_MODULE = "backend.tests.fixtures.v5_quality_samples"
-
-
-def _try_import_v5_fixtures():
-    """Attempt to import v5 quality fixtures; return None if unavailable."""
-    try:
-        return importlib.import_module("tests.fixtures.v5_quality_samples")
-    except (ImportError, ModuleNotFoundError):
-        return None
-
-
-class TestQualityBaselineConstants:
-    """Verify v5.0 quality baseline budgets and paths.
-
-    These tests read from the v5 fixtures module. If the module does not
-    exist yet, they xfail with a clear reason."""
-
-    def test_v5_result_path_prefix_distinct_from_v4(self) -> None:
-        """v5 results must go to a different directory than v4 results."""
-        fixtures = _try_import_v5_fixtures()
-        if fixtures is None:
-            pytest.xfail("7R5-A: fixture not yet created")
-        v5_path = getattr(fixtures, "V5_RESULT_PATH_PREFIX", None)
-        assert v5_path is not None, (
-            "V5_RESULT_PATH_PREFIX not defined in fixtures"
-        )
-        # v4 results live directly under docs/stages/stage7/
-        assert "v5-quality-results" in str(v5_path), (
-            "v5 result path must contain 'v5-quality-results'"
-        )
-        # Must not overlap with v4 result file paths
-        assert v5_path != "docs/stages/stage7/", (
-            "v5 result path must differ from v4 results directory"
-        )
-
-    def test_v5_plan_jd_count_is_10(self) -> None:
-        """v5.0 plan acceptance uses 10 JDs."""
-        fixtures = _try_import_v5_fixtures()
-        if fixtures is None:
-            pytest.xfail("7R5-A: fixture not yet created")
-        count = getattr(fixtures, "V5_PLAN_JD_COUNT", None)
-        assert count == 10, f"Expected 10 JDs, got {count}"
-
-    def test_v5_report_pair_count_is_20(self) -> None:
-        """v5.0 report acceptance uses 20 JD+Resume pairs."""
-        fixtures = _try_import_v5_fixtures()
-        if fixtures is None:
-            pytest.xfail("7R5-A: fixture not yet created")
-        count = getattr(fixtures, "V5_REPORT_PAIR_COUNT", None)
-        assert count == 20, f"Expected 20 pairs, got {count}"
-
-    def test_v5_stability_sample_and_runs(self) -> None:
-        """v5.0 stability tests use 5 samples x 3 runs each."""
-        fixtures = _try_import_v5_fixtures()
-        if fixtures is None:
-            pytest.xfail("7R5-A: fixture not yet created")
-        samples = getattr(fixtures, "V5_STABILITY_SAMPLE_COUNT", None)
-        runs = getattr(fixtures, "V5_STABILITY_RUNS_PER_SAMPLE", None)
-        assert samples == 5, f"Expected 5 stability samples, got {samples}"
-        assert runs == 3, f"Expected 3 runs per sample, got {runs}"
-
-    def test_v5_call_budgets_correct(self) -> None:
-        """v5.0 total call budget is 10 + 20 + 15 = 45."""
-        fixtures = _try_import_v5_fixtures()
-        if fixtures is None:
-            pytest.xfail("7R5-A: fixture not yet created")
-        plan_budget = getattr(fixtures, "V5_PLAN_CALL_BUDGET", None)
-        report_budget = getattr(fixtures, "V5_REPORT_CALL_BUDGET", None)
-        stability_budget = getattr(fixtures, "V5_STABILITY_CALL_BUDGET", None)
-        assert plan_budget == 10, f"Plan budget: expected 10, got {plan_budget}"
-        assert report_budget == 20, (
-            f"Report budget: expected 20, got {report_budget}"
-        )
-        assert stability_budget == 15, (
-            f"Stability budget: expected 15, got {stability_budget}"
-        )
-        total = plan_budget + report_budget + stability_budget
-        assert total == 45, f"Total budget: expected 45, got {total}"
-
-
-# ===========================================================================
-# E. Historical result protection (3 tests) -- should PASS
-# ===========================================================================
-
-
-class TestHistoricalResultProtection:
-    """Verify that historical evidence is preserved and v5.0 uses an
-    explicit result lifecycle instead of requiring an empty directory."""
-
-    def test_v4_formal_results_file_exists(self) -> None:
-        """The 4.0 formal results JSON file must exist at its expected
-        path and must not be overwritten by v5 work."""
-        assert _V4_FORMAL_RESULTS_PATH.exists(), (
-            f"4.0 formal results file missing: {_V4_FORMAL_RESULTS_PATH}"
-        )
-        assert _V4_FORMAL_RESULTS_PATH.stat().st_size > 0, (
-            "4.0 formal results file is empty"
-        )
-
-    def test_v4_targeted_revalidation_results_file_exists(self) -> None:
-        """The 4.0 targeted revalidation results JSON file must exist."""
-        assert _V4_REVALIDATION_RESULTS_PATH.exists(), (
-            f"4.0 revalidation results file missing: "
-            f"{_V4_REVALIDATION_RESULTS_PATH}"
-        )
-        assert _V4_REVALIDATION_RESULTS_PATH.stat().st_size > 0, (
-            "4.0 revalidation results file is empty"
-        )
-
-    def test_v5_results_use_registered_i2_lifecycle_not_empty_directory(self) -> None:
-        """A preserved raw/helper directory is legal; the contract must
-        identify the sealed run and the active I2 lifecycle explicitly."""
-        source = _QUALITY_CONTRACT_PATH.read_text(encoding="utf-8")
-        assert "7R5-I2" in source
-        assert "validate_result_lifecycle" in source
-        assert "2026-08-28-stage7-7r5i2-zero-call-preflight.json" in source
-
-
-# ===========================================================================
-# F. No Python weighted total (2 tests) -- static proof, should PASS
+# D. No Python weighted total (2 tests) -- static proof, should PASS
 # ===========================================================================
 
 

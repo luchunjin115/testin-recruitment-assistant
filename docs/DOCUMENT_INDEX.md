@@ -67,15 +67,11 @@ docs/
 
 ### 阶段 7：Application 与 AI 初筛
 
-- `stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`
-- `stages/stage7/2026-08-21-stage7-step9-jd-decomposition-quality-remediation-design.md`
-- `stages/stage7/2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md`
-- `stages/stage7/2026-08-24-stage7-job-evaluation-plan-v4-redesign.md`
+- `stages/stage7/README.md`
 - `stages/stage7/2026-08-26-stage7-lightweight-evaluation-ai-screening-v5-redesign.md`
-- `stages/stage7/2026-08-30-stage7-remaining-work-plan.md`
 - `stages/stage7/2026-09-01-stage7-final-v10-v2-acceptance-review.md`
 
-第一份记录阶段 7 已实现并继续保留的 Application、Resume、报告、异步运行、时间事实和 HR 决策底座；第二份记录旧输入合同下的小步骤 9 和历史诊断；第三、四份分别保存 3.0 与 4.0 的实现事实、失败和真实调用证据；第五份是 5.0 最终业务合同；第六份保留完整收尾顺序和历史停止点；第七份记录 v10/v2 最终数据、项目负责人接受的已知限制和阶段关闭结论。阶段 7 已于 2026-09-01 完成，后续只有回归排查或另立评分/隐私专项时才按改动范围阅读这些资料。
+`README.md` 是单一入口；5.0 设计记录现行产品合同；最终审核卡记录真实结果、已知限制和关闭决定。最终 raw 与 attempt journal 由入口链接，不作为日常阅读材料。中间实验、旧合同和一次性验收过程由 Git 历史恢复。
 
 ### 阶段 8：公开投递与异步自动处理
 
@@ -121,8 +117,8 @@ docs/
 | 任务 | 补充阅读 |
 | --- | --- |
 | 查看当前进度 | 不补充；读取 `CLAUDE.md` 和 `PROJECT_STATE.md` 即可 |
-| 修改阶段 7 | 阶段 7 的 5.0 当前设计 + 剩余工作计划 + 原阶段 7 保留能力 + 4.0 历史实现/失败证据 + 阶段 6 五段式补充 + 相关代码和测试 |
-| 盘点旧 Rubric | 5.0 当前设计第 3 节 + 4.0 历史设计 + 旧阶段 7 归档 |
+| 修改阶段 7 | 阶段 7 `README.md` + 5.0 当前设计 + 与改动直接相关的代码和测试；涉及岗位输入合同再读阶段 6 五段式补充 |
+| 追溯阶段 7 中间实验 | 从 Git 历史恢复对应提交，不把旧过程文档重新列为当前入口 |
 | 修改简历处理 | 对应阶段 4/5 资料 |
 | 修改岗位管理 | 阶段 6 原设计 + 五段式 JD 整改补充；旧验收仅作历史基线 |
 | 调整总体架构 | architecture + planning 两份现行文档 |

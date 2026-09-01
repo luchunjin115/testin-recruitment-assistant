@@ -6,7 +6,7 @@
 >
 > 上游权威文档：`2026-08-15-stage6-structured-job-management-design.md`
 >
-> 下游依赖：`../stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`
+> 下游依赖：`../stage7/README.md`
 
 ## 1. 文档目的与权威边界
 

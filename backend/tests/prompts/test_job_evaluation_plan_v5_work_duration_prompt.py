@@ -7,7 +7,7 @@ from app.prompts.job_evaluation_plan import (
     JOB_EVALUATION_PLAN_V5_PROMPT_VERSION,
     build_job_evaluation_plan_v5_messages,
 )
-from tests.fixtures.v5_i4_quality_samples import I4_PLAN_JDS
+from tests.fixtures.stage7_work_duration_cases import WORK_DURATION_PLAN_CASES
 
 
 def _snapshot() -> dict:
@@ -93,7 +93,7 @@ def test_close_05h_prompt_does_not_copy_formal_i4_plan_requirements() -> None:
 
     formal_requirements = {
         requirement
-        for plan in I4_PLAN_JDS
+        for plan in WORK_DURATION_PLAN_CASES
         for requirement in (
             *plan["labels"]["excluded_pure_work_duration_requirements"],
             *(

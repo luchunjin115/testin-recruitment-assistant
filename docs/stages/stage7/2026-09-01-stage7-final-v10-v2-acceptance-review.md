@@ -54,16 +54,16 @@ R12 的简历事实是转化率统计分母从“全部访问用户”改为“�
 
 ## 4. 自动化与证据
 
-- 最终验收专项：7 passed。
-- 当前 API、Schema、Service、ScreeningRun、migration 与 PostgreSQL 专项：202 passed + 6 subtests passed。
-- 后端全量：1557 passed + 425 subtests passed；8 个失败均为此前登记的 1 个旧月份断言和 7 个 I4/CLOSE-07 历史哈希基线，不是本批新增回归。
-- 前端 20 个合同脚本、TypeScript 与 Vite production build 全部通过，构建转换 3121 modules。
+- 整理后阶段 7 当前合同专项：240 passed。
+- 整理后后端全量：1312 passed。
+- 前端阶段 7 的 10 个合同脚本、TypeScript 与 Vite production build 全部通过，构建转换 3121 modules。
 - Alembic `current=head=e7f9a1b3c545`，`alembic check` 返回 `No new upgrade operations detected`。
 - `py_compile`、证据哈希/敏感标记扫描和 `git diff --check` 以最终命令结果为准。
 
 原始结果：`2026-09-01-stage7-final-v10-v2-raw-results.json`。  
 逐 attempt raw journal：`2026-09-01-stage7-final-v10-v2-attempt-journal.jsonl`。  
-零调用预检：`2026-09-01-stage7-final-v10-v2-zero-call-preflight.json`。
+
+零调用预检和中间批次证据已从当前目录移除，需要时从 Git 历史恢复；最终 raw 中记录的原路径保持不改写。
 
 ## 5. 阶段 7 最终结论
 

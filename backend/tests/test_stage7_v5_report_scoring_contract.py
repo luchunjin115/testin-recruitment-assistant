@@ -161,7 +161,7 @@ class TestDirectionContradictionDetection:
 
 
 # ===========================================================================
-# D. 5.0 report structure fields missing (5 tests) -- 7R5-E
+# D. 5.0 report structure fields (5 tests)
 # ===========================================================================
 
 
@@ -199,7 +199,7 @@ class TestV5ReportStructureFieldsMissing:
 
 
 # ===========================================================================
-# E. Evidence contract (4 tests) -- 7R5-E
+# E. Evidence contract (4 tests)
 # ===========================================================================
 
 

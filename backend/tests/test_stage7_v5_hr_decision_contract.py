@@ -4,7 +4,7 @@ Verifies that the three-dimensional status model (AI run status, HR decision,
 recruitment stage), decision transitions, stage history audit trail, and
 AI-to-HR handoff contracts are in place.
 
-These are executable 7R5-F completion contracts.
+These tests protect the current production contract.
 """
 
 from __future__ import annotations
@@ -66,7 +66,7 @@ class TestDecisionEnumsExist:
 
 
 # ===================================================================
-# B. StageHistory fields (4 tests) -- partially xfail
+# B. StageHistory fields (4 tests)
 # ===================================================================
 
 
@@ -123,7 +123,7 @@ class TestStageHistoryFields:
 
 
 # ===================================================================
-# C. Decision service methods (4 tests) -- partially xfail
+# C. Decision service methods (4 tests)
 # ===================================================================
 
 
@@ -182,7 +182,7 @@ class TestDecisionServiceMethods:
 
 
 # ===================================================================
-# D. AI -> HR handoff (3 tests) -- 7R5-F xfail
+# D. AI -> HR handoff (3 tests)
 # ===================================================================
 
 

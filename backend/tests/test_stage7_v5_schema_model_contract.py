@@ -1,15 +1,4 @@
-"""v5.0 AI screening schema/model contract tests.
-
-Tests are organized by responsibility batch:
-
-- 7R5-B: schema_version "5.0" support, lightweight criterion fields, model columns
-- 7R5-E: structured report sections (strengths, gaps, risks, missing_info)
-- Static proof: fields that must never exist (weights) and display label ranges
-
-Every xfail test SHOULD fail because v5.0 production code has not been built yet.
-When implementation lands, the strict xfail will alert us that the test now passes
-and the marker can be removed.
-"""
+"""Current v5.0 AI screening schema/model contract tests."""
 
 from __future__ import annotations
 
@@ -29,13 +18,12 @@ from app.schemas.screening_evaluation import AIScreeningEvaluationV5Output
 
 
 # ---------------------------------------------------------------------------
-# A. Schema version 5.0 not yet supported (7R5-B)
+# A. Schema version 5.0 support
 # ---------------------------------------------------------------------------
 
 
-class TestSchemaVersion50NotSupported:
-    """5.0 schema version is not accepted by any current schema or model.
-    All tests xfail because 7R5-B has not landed yet."""
+class TestSchemaVersion50Support:
+    """Schema and model objects accept the current 5.0 contract."""
 
     def test_plan_read_accepts_valid_schema_version_5(self) -> None:
         """JobEvaluationPlanRead accepts a complete 5.0 pending draft."""
@@ -96,9 +84,9 @@ class TestSchemaVersion50NotSupported:
         assert plan.schema_version == "5.0"
         assert plan.edit_version == 1
 
-    def test_input_snapshot_rejects_schema_version_5(self) -> None:
+    def test_input_snapshot_accepts_schema_version_5(self) -> None:
         """JobEvaluationPlanInputSnapshot.schema_version Literal['3.0', '4.0']
-        does not include '5.0'. After 7R5-B it should."""
+        does not include '5.0'. The current contract it should."""
         JobEvaluationPlanInputSnapshot.model_validate({
             "schema_version": "5.0",
             "job_context": {"title": "Test"},
@@ -113,11 +101,11 @@ class TestSchemaVersion50NotSupported:
             ],
         })
 
-    def test_model_check_constraint_excludes_5(self) -> None:
+    def test_model_check_constraint_includes_5(self) -> None:
         """The model-level CheckConstraint on schema_version must allow '5.0'.
 
         Currently: schema_version IN ('1.0', '2.0', '3.0', '4.0').
-        After 7R5-B: should include '5.0'.
+        The current contract includes '5.0'.
         """
         constraint_texts = []
         for constraint in JobEvaluationPlan.__table_args__:
@@ -125,13 +113,12 @@ class TestSchemaVersion50NotSupported:
                 constraint_texts.append(str(constraint.sqltext))
         assert len(constraint_texts) == 1, "Expected exactly one schema_version CheckConstraint"
         assert "'5.0'" in constraint_texts[0], (
-            "CheckConstraint must include '5.0' after 7R5-B"
+            "CheckConstraint must include '5.0' in the current contract"
         )
-
-    def test_screening_evaluation_plan_input_only_accepts_4(self) -> None:
+    def test_screening_evaluation_plan_input_accepts_5(self) -> None:
         """ScreeningEvaluationPlanInput.schema_version is pinned to r'^4\\.0$'.
 
-        After 7R5-B the screening pipeline must also accept 5.0 plans.
+        The current contract the screening pipeline must also accept 5.0 plans.
         """
         ScreeningEvaluationPlanInput.model_validate({
             "schema_version": "5.0",
@@ -160,19 +147,18 @@ class TestSchemaVersion50NotSupported:
 
 
 # ---------------------------------------------------------------------------
-# B. v5 criterion fields don't exist yet (7R5-B)
+# B. v5 criterion fields
 # ---------------------------------------------------------------------------
 
 
-class TestV5CriterionFieldsMissing:
-    """v5.0 lightweight criteria need new fields that don't exist on
-    current EvaluationCriterion or as standalone schemas."""
+class TestV5CriterionFields:
+    """Lightweight criteria expose the fields required by v5.0."""
 
-    def test_no_v5_criterion_item_schema(self) -> None:
+    def test_v5_criterion_item_schema_exists(self) -> None:
         """A dedicated V5CriterionItem (or V5LightweightCriterion) should exist
         in the job_evaluation_plan schema module for 5.0 plans.
 
-        Currently absent -- importing it raises ImportError.
+        The schema must expose one supported v5 criterion type.
         """
         import app.schemas.job_evaluation_plan as plan_mod
 
@@ -189,7 +175,7 @@ class TestV5CriterionFieldsMissing:
             + ", ".join(v5_names)
         )
 
-    def test_evaluation_criterion_has_no_description(self) -> None:
+    def test_evaluation_criterion_has_description(self) -> None:
         """v5.0 criteria need a 'description' field for screening focus context.
 
         Current EvaluationCriterion only has: criterion_id, name, fact_ids.
@@ -198,21 +184,21 @@ class TestV5CriterionFieldsMissing:
             "EvaluationCriterion should have a 'description' field for v5.0"
         )
 
-    def test_evaluation_criterion_has_no_screening_focus(self) -> None:
+    def test_evaluation_criterion_has_screening_focus(self) -> None:
         """v5.0 criteria need a 'screening_focus' field to guide the AI screener
         on what to look for in resumes for this criterion."""
         assert "screening_focus" in EvaluationCriterion.model_fields, (
             "EvaluationCriterion should have a 'screening_focus' field for v5.0"
         )
 
-    def test_evaluation_criterion_has_no_origin(self) -> None:
+    def test_evaluation_criterion_has_origin(self) -> None:
         """v5.0 criteria need an 'origin' field to distinguish AI-generated
         criteria (ai_from_jd) from HR-added criteria (hr_added)."""
         assert "origin" in EvaluationCriterion.model_fields, (
             "EvaluationCriterion should have an 'origin' field for v5.0"
         )
 
-    def test_evaluation_criterion_has_no_hr_note(self) -> None:
+    def test_evaluation_criterion_has_hr_note(self) -> None:
         """v5.0 criteria need an 'hr_note' field so HR can annotate criteria
         with context or instructions for the AI screener."""
         assert "hr_note" in EvaluationCriterion.model_fields, (
@@ -221,7 +207,7 @@ class TestV5CriterionFieldsMissing:
 
 
 # ---------------------------------------------------------------------------
-# D. Model constraints (7R5-B)
+# D. Model constraints
 # ---------------------------------------------------------------------------
 
 
@@ -229,11 +215,11 @@ class TestModelConstraints:
     """DB model must be extended for v5.0 with edit versioning and
     new payload columns."""
 
-    def test_schema_version_constraint_only_allows_up_to_4(self) -> None:
+    def test_schema_version_constraint_allows_5(self) -> None:
         """The model's schema_version CheckConstraint currently only allows
         '1.0', '2.0', '3.0', '4.0'.
 
-        After 7R5-B, it must also allow '5.0'.
+        The current contract, it must also allow '5.0'.
         """
         constraint_text = None
         for constraint in JobEvaluationPlan.__table_args__:
@@ -241,16 +227,16 @@ class TestModelConstraints:
                 constraint_text = str(constraint.sqltext)
                 break
         assert constraint_text is not None, "schema_version constraint not found"
-        # After 7R5-B this must include '5.0'
+        # The current contract this must include '5.0'
         assert "'5.0'" in constraint_text, (
             "schema_version CheckConstraint must include '5.0'"
         )
 
-    def test_model_has_no_edit_version_columns(self) -> None:
+    def test_model_has_edit_version_columns(self) -> None:
         """v5.0 requires version/concurrency columns for HR editing:
         edit_version and/or confirmed_version.
 
-        Currently absent from the model.
+        These columns are required by the current model.
         """
         column_names = {col.name for col in JobEvaluationPlan.__table__.columns}
         version_columns = column_names & {"edit_version", "confirmed_version"}
@@ -259,11 +245,11 @@ class TestModelConstraints:
             "for v5.0 HR editing concurrency"
         )
 
-    def test_model_has_no_v5_criteria_column(self) -> None:
+    def test_model_has_v5_criteria_column(self) -> None:
         """v5.0 may need a dedicated column for the lightweight criteria snapshot
         (criteria_snapshot or v5_criteria) separate from the v4 evaluation_criteria.
 
-        Currently absent from the model.
+        These columns are required by the current model.
         """
         column_names = {col.name for col in JobEvaluationPlan.__table__.columns}
         v5_columns = column_names & {"criteria_snapshot", "v5_criteria"}
@@ -273,38 +259,35 @@ class TestModelConstraints:
 
 
 # ---------------------------------------------------------------------------
-# F. 5.0 report structure (7R5-E)
+# F. 5.0 report structure
 # ---------------------------------------------------------------------------
 
 
-class TestV5ReportStructureMissing:
-    """v5.0 reports need structured narrative sections (strengths, gaps,
-    risks, missing_info) on AIScreeningEvaluationOutput.
+class TestV5ReportStructure:
+    """The current output exposes all structured narrative sections."""
 
-    These fields don't exist yet; 7R5-E will add them."""
-
-    def test_ai_output_has_no_strengths(self) -> None:
+    def test_ai_output_has_strengths(self) -> None:
         """v5.0 reports need a 'strengths' section listing candidate strengths
         relative to the criteria."""
         assert "strengths" in AIScreeningEvaluationV5Output.model_fields, (
             "AIScreeningEvaluationOutput should have a 'strengths' field for v5.0"
         )
 
-    def test_ai_output_has_no_gaps(self) -> None:
+    def test_ai_output_has_gaps(self) -> None:
         """v5.0 reports need a 'gaps' section listing where the candidate
         falls short of criteria requirements."""
         assert "gaps" in AIScreeningEvaluationV5Output.model_fields, (
             "AIScreeningEvaluationOutput should have a 'gaps' field for v5.0"
         )
 
-    def test_ai_output_has_no_risks(self) -> None:
+    def test_ai_output_has_risks(self) -> None:
         """v5.0 reports need a 'risks' section for concerns about the candidate
         (e.g., short tenures, unexplained gaps)."""
         assert "risks_or_conflicts" in AIScreeningEvaluationV5Output.model_fields, (
             "AIScreeningEvaluationV5Output should have a 'risks_or_conflicts' field"
         )
 
-    def test_ai_output_has_no_missing_info(self) -> None:
+    def test_ai_output_has_missing_info(self) -> None:
         """v5.0 reports need a 'missing_info' section for information that
         could not be determined from the resume."""
         assert "missing_info" in AIScreeningEvaluationV5Output.model_fields, (

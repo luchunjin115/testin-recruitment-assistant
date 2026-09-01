@@ -1,4 +1,3 @@
-import ast
 from pathlib import Path
 from unittest import TestCase
 
@@ -21,25 +20,8 @@ def _env_example_values() -> dict[str, str]:
     return values
 
 
-def _planned_quality_model() -> str:
-    source = (PROJECT_ROOT / "scripts" / "stage7_7r4_quality_contract.py").read_text(
-        encoding="utf-8"
-    )
-    tree = ast.parse(source)
-    for node in tree.body:
-        if not isinstance(node, ast.Assign):
-            continue
-        if any(
-            isinstance(target, ast.Name) and target.id == "PLANNED_MODEL"
-            for target in node.targets
-        ):
-            if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
-                return node.value.value
-    raise AssertionError("质量合同缺少 PLANNED_MODEL 字符串常量")
-
-
 class SettingsTest(TestCase):
-    def test_stage7_pro_defaults_do_not_rewrite_historical_flash_contract(self) -> None:
+    def test_stage7_pro_defaults_keep_general_resume_model_on_flash(self) -> None:
         settings = Settings(_env_file=None)
         example = _env_example_values()
         historical_model = "deepseek-v4-flash"
@@ -51,7 +33,6 @@ class SettingsTest(TestCase):
         self.assertEqual(example["DEEPSEEK_MODEL"], historical_model)
         self.assertEqual(example["JOB_EVALUATION_PLAN_MODEL"], stage7_model)
         self.assertEqual(example["SCREENING_EVALUATION_MODEL"], stage7_model)
-        self.assertEqual(_planned_quality_model(), historical_model)
 
     def test_resume_cleanup_defaults_are_safe_and_bounded(self) -> None:
         settings = Settings(_env_file=None)

@@ -10,7 +10,7 @@ from app.prompts.screening_evaluation import (
     build_screening_evaluation_v5_messages,
 )
 from app.schemas.screening_evaluation import AIScreeningEvaluationV5Output
-from tests.fixtures.v5_i4_quality_samples import I4_REPORT_PAIRS
+from tests.fixtures.stage7_work_duration_cases import WORK_DURATION_REPORT_CASES
 
 
 def _messages() -> list[dict[str, str]]:
@@ -100,7 +100,7 @@ def test_close_05i_all_few_shots_keep_compatibility_time_fields_empty() -> None:
 def test_close_05i_prompt_does_not_copy_formal_i4_report_material() -> None:
     formal_markers = {
         marker
-        for case in I4_REPORT_PAIRS
+        for case in WORK_DURATION_REPORT_CASES
         for marker in (
             case["jd"]["job_responsibilities"],
             case["resume_text"],

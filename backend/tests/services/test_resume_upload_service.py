@@ -98,6 +98,7 @@ class ResumeUploadServiceTest(IsolatedAsyncioTestCase):
 
     async def test_pdf_upload_writes_namespaced_file_and_commits_metadata(self) -> None:
         db = make_session()
+        current_prefix = datetime.now(timezone.utc).strftime("v2/resumes/%Y/%m/")
 
         resume = await self.upload(db, "candidate.pdf", b"%PDF-1.4\nresume")
 
@@ -106,7 +107,7 @@ class ResumeUploadServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(resume.file_type, "application/pdf")
         self.assertEqual(resume.file_size, 15)
         self.assertEqual(resume.parse_status, "uploaded")
-        self.assertTrue(resume.file_path.startswith("v2/resumes/2026/08/"))
+        self.assertTrue(resume.file_path.startswith(current_prefix))
         stored_path = self.upload_root / Path(resume.file_path)
         self.assertEqual(stored_path.read_bytes(), b"%PDF-1.4\nresume")
         db.flush.assert_awaited_once()

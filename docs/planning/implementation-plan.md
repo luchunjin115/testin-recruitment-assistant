@@ -13,11 +13,9 @@
 - 总体架构：`../architecture/2026-07-15-hr-agent-platform-design.md`
 - 阶段 5 后路线：`2026-08-14-post-stage5-product-roadmap.md`
 - 阶段 6 五段式 JD 整改：`../stages/stage6/2026-08-21-stage6-five-section-jd-remediation-design.md`
-- 阶段 7 轻量评价清单 5.0 当前设计：`../stages/stage7/2026-08-26-stage7-lightweight-evaluation-ai-screening-v5-redesign.md`
-- 阶段 7 当前剩余工作与收尾计划：`../stages/stage7/2026-08-30-stage7-remaining-work-plan.md`
-- 阶段 7 评价计划 4.0 历史实现与失败证据：`../stages/stage7/2026-08-24-stage7-job-evaluation-plan-v4-redesign.md`
-- 阶段 7 评价计划 3.0 实施与失败记录：`../stages/stage7/2026-08-22-stage7-five-section-job-evaluation-plan-redesign.md`
-- 阶段 7 原设计与保留能力：`../stages/stage7/2026-08-20-stage7-jd-driven-ai-screening-redesign.md`
+- 阶段 7 单一入口：`../stages/stage7/README.md`
+- 阶段 7 最终业务合同：`../stages/stage7/2026-08-26-stage7-lightweight-evaluation-ai-screening-v5-redesign.md`
+- 阶段 7 最终验收：`../stages/stage7/2026-09-01-stage7-final-v10-v2-acceptance-review.md`
 - 本计划的详细旧版本：`../archive/history/2026-08-20-implementation-plan-detailed.md`
 
 发生冲突时，当前阶段专项设计负责具体业务合同，`PROJECT_STATE.md` 负责当前进度，本计划只负责执行顺序。

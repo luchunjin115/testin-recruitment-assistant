@@ -1,22 +1,4 @@
-"""Stage 7 — v5.0 plan editing, confirmation, versioning and expiration contracts.
-
-These tests document what v5.0 SHOULD provide on top of the current v4.0 system.
-Tests that assert the ABSENCE of a v5.0 capability use ``strict=True`` xfail:
-they must fail today (the capability does not exist) and will start passing once
-the corresponding batch implements it — at which point the xfail must be removed.
-
-Batch key
----------
-- 7R5-D : v5.0 plan editing, draft workflow, version/concurrency control
-- 7R5-F : v5.0 screening gate (only 5.0 ready plans can start new screening)
-- (none): tests that exercise existing v4.0 behaviour and should pass today
-
-References
-----------
-- Service: backend/app/services/job_evaluation_plan_service.py
-- Model:   backend/app/models/job_evaluation_plan.py
-- Schema:  backend/app/schemas/job_evaluation_plan.py
-"""
+"""Current v5.0 plan editing, confirmation, versioning and gate contracts."""
 
 from __future__ import annotations
 
@@ -58,85 +40,68 @@ def _has_column(name: str) -> bool:
 
 
 # ===================================================================
-# A. Plan editing methods don't exist yet (6 tests) — batch 7R5-D
+# A. Plan editing methods (6 tests)
 # ===================================================================
 
 
-class TestEditingMethodsAbsent:
-    """v4.0 only supports AI-generated plans confirmed as-is.  HR cannot yet
-    modify individual criteria.  Each test asserts that a required v5.0
-    editing method does NOT exist on ``JobEvaluationPlanService``."""
+class TestEditingMethods:
+    """HR can edit individual criteria before confirming a v5.0 plan."""
 
     def test_edit_plan_criteria_exists(self) -> None:
-        """v5.0 must provide ``edit_plan_criteria`` for bulk criterion edits
-        (rename, change description, change screening_focus).  Batch 7R5-D
-        will add this method."""
+        """Bulk criterion edits are available."""
         assert _has_method("edit_plan_criteria")
 
     def test_add_criterion_exists(self) -> None:
-        """v5.0 must let HR add a brand-new criterion with origin=hr_added.
-        Batch 7R5-D will add ``add_criterion``."""
+        """HR can add a criterion with origin=hr_added."""
         assert _has_method("add_criterion")
 
     def test_delete_criterion_exists(self) -> None:
-        """v5.0 must let HR remove a criterion entirely.
-        Batch 7R5-D will add ``delete_criterion``."""
+        """HR can remove a criterion."""
         assert _has_method("delete_criterion")
 
     def test_merge_criteria_exists(self) -> None:
-        """v5.0 must let HR merge two or more criteria into one.
-        Batch 7R5-D will add ``merge_criteria``."""
+        """HR can merge criteria."""
         assert _has_method("merge_criteria")
 
     def test_update_criterion_importance_exists(self) -> None:
-        """v5.0 must let HR change a criterion's importance
-        (required / preferred / general).
-        Batch 7R5-D will add ``update_criterion_importance``."""
+        """HR can change criterion importance."""
         assert _has_method("update_criterion_importance")
 
     def test_save_draft_exists(self) -> None:
-        """v5.0 must let HR save edits as a pending_confirmation draft
-        without confirming.  Batch 7R5-D will add ``save_draft``."""
+        """HR can save a pending_confirmation draft."""
         assert _has_method("save_draft")
 
 
 # ===================================================================
-# B. Version and concurrency don't exist yet (4 tests) — batch 7R5-D
+# B. Version and concurrency (4 tests)
 # ===================================================================
 
 
-class TestVersionConcurrencyAbsent:
+class TestVersionConcurrency:
     """v5.0 requires optimistic concurrency control so that two HR users
     editing the same plan at the same time get a clear conflict error
     instead of a silent last-write-wins overwrite."""
 
     def test_check_edit_version_conflict_exists(self) -> None:
-        """v5.0 must provide ``check_edit_version_conflict`` to detect
-        concurrent edits.  Batch 7R5-D will add this method."""
+        """Concurrent edits have an explicit conflict check."""
         assert _has_method("check_edit_version_conflict")
 
     def test_model_has_edit_version_column(self) -> None:
-        """v5.0 must add an ``edit_version`` integer column to the
-        JobEvaluationPlan model for optimistic locking.
-        Batch 7R5-D will add this column."""
+        """The model exposes edit_version for optimistic locking."""
         assert _has_column("edit_version")
 
     def test_model_has_confirmed_at_column(self) -> None:
-        """v5.0 must distinguish ``confirmed_at`` (HR confirmation timestamp)
-        from ``completed_at`` (AI generation completion timestamp).
-        Batch 7R5-D will add this column."""
+        """confirmed_at is distinct from AI generation completed_at."""
         assert _has_column("confirmed_at")
 
     def test_plan_edit_conflict_error_exists(self) -> None:
-        """v5.0 must raise a dedicated ``PlanEditConflictError`` when an
-        optimistic-locking conflict is detected.  Batch 7R5-D will add
-        this exception class."""
+        """Optimistic-lock conflicts use a dedicated error."""
         from app.services.job_evaluation_plan_service import PlanEditConflictError  # noqa: F811
         assert issubclass(PlanEditConflictError, JobEvaluationPlanServiceError)
 
 
 # ===================================================================
-# C. Version immutability (3 tests) — batch 7R5-D
+# C. Version immutability (3 tests)
 # ===================================================================
 
 
@@ -146,15 +111,11 @@ class TestVersionImmutability:
     version instead."""
 
     def test_create_new_version_from_confirmed_exists(self) -> None:
-        """v5.0 must provide ``create_new_version_from_confirmed`` to fork a
-        confirmed plan into an editable draft without touching the original.
-        Batch 7R5-D will add this method."""
+        """A confirmed plan can be forked without mutating the original."""
         assert _has_method("create_new_version_from_confirmed")
 
     def test_confirmed_plan_version_fork_mechanism(self) -> None:
-        """v5.0 must have at least one public method whose signature accepts
-        an existing plan id and returns a new draft version.  Today no such
-        method exists.  Batch 7R5-D will add this capability."""
+        """The service exposes a public version-fork method."""
         fork_candidates = [
             name
             for name in dir(JobEvaluationPlanService)
@@ -165,26 +126,19 @@ class TestVersionImmutability:
         ]
         assert len(fork_candidates) > 0, "no version-fork method found"
 
-    def test_schema_version_5_0_not_allowed_yet(self) -> None:
-        """The DB CHECK constraint only allows schema_version IN
-        ('1.0', '2.0', '3.0', '4.0').  v5.0 plans cannot be persisted until
-        batch 7R5-D adds '5.0' to the constraint and the schema constant."""
-        allowed_in_constraint = {"1.0", "2.0", "3.0", "4.0"}
-        assert "5.0" not in allowed_in_constraint, "sanity: 5.0 not yet in DB"
-        # The real assertion: the schema constant for v5.0 must exist.
+    def test_schema_version_5_0_is_supported(self) -> None:
+        """The current schema exposes the persisted v5.0 contract version."""
         from app.schemas.job_evaluation_plan import JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION  # noqa: F811
         assert JOB_EVALUATION_PLAN_V5_SCHEMA_VERSION == "5.0"
 
 
 # ===================================================================
-# D. JD expiration semantics (3 tests) — partial pass / partial 7R5-D
+# D. JD expiration semantics (3 tests)
 # ===================================================================
 
 
 class TestJDExpirationSemantics:
-    """The v4.0 system already expires plans when evaluation-relevant input
-    changes.  These tests confirm existing behaviour and document where v5.0
-    will tighten the contract."""
+    """Evaluation-relevant JD changes expire plans; display notes do not."""
 
     def test_mark_outdated_method_exists(self) -> None:
         """``mark_current_plan_outdated_if_input_changed`` is the v4.0
@@ -215,13 +169,12 @@ class TestJDExpirationSemantics:
 
 
 # ===================================================================
-# E. 5.0 gate for screening (3 tests) — batch 7R5-F
+# E. 5.0 gate for screening (3 tests)
 # ===================================================================
 
 
 class TestScreeningGate:
-    """The screening service's ``_classify_v4_plan`` only accepts 4.0 ready
-    plans.  v5.0 will need its own gate.  These tests document the gap."""
+    """The service keeps v4 compatibility and uses a dedicated v5 gate."""
 
     def test_current_screening_gate_requires_4_0(self) -> None:
         """The screening readiness classifier rejects plans whose
@@ -236,9 +189,7 @@ class TestScreeningGate:
         )
 
     def test_v5_screening_gate_method_exists(self) -> None:
-        """v5.0 screening requires a gate that accepts 5.0 ready plans.
-        Batch 7R5-F will add ``_classify_v5_plan`` or update the existing
-        classifier."""
+        """v5.0 screening uses a dedicated plan classifier."""
         from app.services.screening_service import ScreeningService
 
         v5_methods = [
@@ -249,9 +200,7 @@ class TestScreeningGate:
         assert len(v5_methods) > 0, "no v5 plan classifier found on ScreeningService"
 
     def test_schema_version_5_0_would_pass_screening_gate(self) -> None:
-        """Today the screening gate hard-codes '4.0'.  A plan with
-        schema_version='5.0' would be rejected as PLAN_CONTRACT_OUTDATED.
-        Batch 7R5-F will widen the gate to accept 5.0 ready plans."""
+        """The v5 classifier accepts schema_version 5.0."""
         from app.services.screening_service import ScreeningService
 
         source = inspect.getsource(ScreeningService._classify_v5_plan)

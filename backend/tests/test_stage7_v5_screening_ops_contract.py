@@ -9,7 +9,7 @@ Tests are organized by responsibility:
 - E. Concurrency protection: at most one non-terminal run per Application
 - F. Status enums completeness: all required states, waiting reasons, outdated reasons
 
-These are executable 7R5-F completion contracts.
+These tests protect the current production contract.
 """
 
 from __future__ import annotations
