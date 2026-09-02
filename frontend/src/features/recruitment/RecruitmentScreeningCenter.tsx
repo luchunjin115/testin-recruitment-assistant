@@ -75,8 +75,15 @@ import {
 } from './screeningIntakeAction';
 import type {
   Stage7ApplicationLifecycleStatus,
+  Stage7ApplicationSource,
   Stage7HRDecision,
 } from './types/applicationScreening';
+import {
+  isPublicApplicationException,
+  type ApplicationProcessingStatus,
+  type PublicApplicationWorkbenchSummary,
+} from './services/publicApplicationWorkbench';
+import { PublicApplicationProcessingRail } from './PublicApplicationProcessingPanel';
 
 type LoadState =
   | { status: 'loading' }
@@ -104,11 +111,14 @@ const SOURCE_LABELS = {
   hr_screening: 'HR 待审核录入',
   public_apply: '公开投递',
 } as const;
+type ProcessingFilter = 'all' | 'normal' | 'exception' | ApplicationProcessingStatus;
 
 const RecruitmentScreeningCenter: React.FC = () => {
   const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
   const [jobFilter, setJobFilter] = useState<number | 'all'>('all');
   const [decisionFilter, setDecisionFilter] = useState<Stage7HRDecision | 'all'>('all');
+  const [sourceFilter, setSourceFilter] = useState<Stage7ApplicationSource | 'all'>('all');
+  const [processingFilter, setProcessingFilter] = useState<ProcessingFilter>('all');
   const [intakeOpen, setIntakeOpen] = useState(false);
   const [intakeForm] = Form.useForm<IntakeValues>();
   const [resumeMode, setResumeMode] = useState<'upload' | 'existing'>('upload');
@@ -145,8 +155,20 @@ const RecruitmentScreeningCenter: React.FC = () => {
   const items = useMemo(() => (snapshot?.items || []).filter(item => (
     (jobFilter === 'all' || item.application.jobId === jobFilter)
     && (decisionFilter === 'all' || item.application.hrDecision === decisionFilter)
-  )), [decisionFilter, jobFilter, snapshot]);
-  const hasActiveFilters = jobFilter !== 'all' || decisionFilter !== 'all';
+    && (sourceFilter === 'all' || item.application.source === sourceFilter)
+    && (processingFilter === 'all' || (
+      item.publicSubmission !== null
+      && (processingFilter === 'normal'
+        ? !isPublicApplicationException(item.publicSubmission)
+        : processingFilter === 'exception'
+          ? isPublicApplicationException(item.publicSubmission)
+          : item.publicSubmission.latestRun.status === processingFilter)
+    ))
+  )), [decisionFilter, jobFilter, processingFilter, snapshot, sourceFilter]);
+  const hasActiveFilters = jobFilter !== 'all'
+    || decisionFilter !== 'all'
+    || sourceFilter !== 'all'
+    || processingFilter !== 'all';
   const selectedItems = useMemo(() => (snapshot?.items || [])
     .filter(item => selectedApplicationIds.includes(item.application.id)), [selectedApplicationIds, snapshot]);
   const selectedJobId = selectedItems[0]?.application.jobId ?? null;
@@ -163,6 +185,36 @@ const RecruitmentScreeningCenter: React.FC = () => {
           ...current.data,
           items: current.data.items.map(item => item.application.id === next.applicationId
             ? { ...item, screeningState: next, screeningLoadError: null }
+            : item),
+        },
+      };
+    });
+  }, []);
+
+  const updatePublicSubmission = useCallback((next: PublicApplicationWorkbenchSummary) => {
+    setLoadState(current => {
+      if (current.status !== 'ready') return current;
+      return {
+        status: 'ready',
+        data: {
+          ...current.data,
+          items: current.data.items.map(item => item.application.id === next.applicationId
+            ? { ...item, publicSubmission: next }
+            : item),
+        },
+      };
+    });
+  }, []);
+
+  const updateCurrentResume = useCallback((applicationId: number, resumeId: number) => {
+    setLoadState(current => {
+      if (current.status !== 'ready') return current;
+      return {
+        status: 'ready',
+        data: {
+          ...current.data,
+          items: current.data.items.map(item => item.application.id === applicationId
+            ? { ...item, application: { ...item.application, currentResumeId: resumeId } }
             : item),
         },
       };
@@ -412,8 +464,39 @@ const RecruitmentScreeningCenter: React.FC = () => {
                 ...Object.entries(HR_META).map(([value, meta]) => ({ value, label: meta.label })),
               ]}
             />
+            <Select
+              aria-label="按申请来源筛选"
+              value={sourceFilter}
+              onChange={setSourceFilter}
+              options={[
+                { value: 'all', label: '全部来源' },
+                ...Object.entries(SOURCE_LABELS).map(([value, label]) => ({ value, label })),
+              ]}
+            />
+            <Select
+              aria-label="按自动处理状态筛选"
+              value={processingFilter}
+              onChange={setProcessingFilter}
+              options={[
+                { value: 'all', label: '全部处理状态' },
+                { value: 'normal', label: '公开投递 · 正常' },
+                { value: 'exception', label: '公开投递 · 需人工处理' },
+                { value: 'queued', label: '等待处理' },
+                { value: 'running', label: '正在处理' },
+                { value: 'waiting_screening', label: '等待初筛' },
+                { value: 'succeeded', label: '自动处理完成' },
+                { value: 'succeeded_with_warnings', label: '完成，需留意' },
+                { value: 'failed', label: '处理失败' },
+                { value: 'paused', label: '等待 HR 处理' },
+              ]}
+            />
             {hasActiveFilters && (
-              <Button onClick={() => { setJobFilter('all'); setDecisionFilter('all'); }}>清除筛选</Button>
+              <Button onClick={() => {
+                setJobFilter('all');
+                setDecisionFilter('all');
+                setSourceFilter('all');
+                setProcessingFilter('all');
+              }}>清除筛选</Button>
             )}
             <Button aria-label="刷新申请队列" icon={<ReloadOutlined />} onClick={() => void load()} />
           </div>
@@ -505,7 +588,12 @@ const RecruitmentScreeningCenter: React.FC = () => {
           >
             {loadState.data.items.length === 0
               ? <Button icon={<PlusOutlined />} onClick={openIntake} type="primary">录入第一份申请</Button>
-              : <Button onClick={() => { setJobFilter('all'); setDecisionFilter('all'); }}>清除筛选</Button>}
+              : <Button onClick={() => {
+                setJobFilter('all');
+                setDecisionFilter('all');
+                setSourceFilter('all');
+                setProcessingFilter('all');
+              }}>清除筛选</Button>}
           </Empty>
         )}
         {loadState.status === 'ready' && items.length > 0 && (
@@ -527,12 +615,29 @@ const RecruitmentScreeningCenter: React.FC = () => {
                     <span>Application #{item.application.id}</span>
                     <h3>{item.candidateName}</h3>
                     <p>{item.candidateTitle || '职位信息未填写'} · {item.jobTitle}</p>
-                    <p>当前简历 #{item.application.currentResumeId} · {SOURCE_LABELS[item.application.source]}</p>
+                     <p>当前简历 #{item.application.currentResumeId} · {SOURCE_LABELS[item.application.source]}</p>
+                    {item.publicSubmission && (
+                      <>
+                        <p className="recruitment-public-reference">{item.publicSubmission.submissionReference} · {item.publicSubmission.resumeFilename}</p>
+                        <PublicApplicationProcessingRail compact run={item.publicSubmission.latestRun} />
+                      </>
+                    )}
                   </div>
                   <div>
                     <Tag color={HR_META[item.application.hrDecision].color}>{HR_META[item.application.hrDecision].label}</Tag>
                     <Tag>{LIFECYCLE_META[item.application.lifecycleStatus]}</Tag>
-                    {item.jobStatus === 'closed' && <Tag color="default">岗位已关闭</Tag>}
+                     {item.jobStatus === 'closed' && <Tag color="default">岗位已关闭</Tag>}
+                    {item.publicSubmission?.identityReviewStatus === 'needs_review' && <Tag color="warning">身份待核对</Tag>}
+                    {item.publicSubmission && (
+                      <Tag color={isPublicApplicationException(item.publicSubmission) ? 'warning' : 'processing'}>
+                        {item.publicSubmission.latestRun.status === 'succeeded' ? '自动处理完成'
+                          : item.publicSubmission.latestRun.status === 'failed' ? '处理失败'
+                            : item.publicSubmission.latestRun.status === 'paused' ? '等待 HR 处理'
+                              : item.publicSubmission.latestRun.status === 'succeeded_with_warnings' ? '完成，需留意'
+                                : item.publicSubmission.latestRun.status === 'waiting_screening' ? '等待初筛'
+                                  : item.publicSubmission.latestRun.status === 'running' ? '正在处理' : '等待处理'}
+                      </Tag>
+                    )}
                     <Tag color={item.screeningState?.latestRun
                       ? SCREENING_STATUS_META[item.screeningState.latestRun.status].tone
                       : item.screeningState?.report?.isOutdated ? 'warning' : 'default'}>
@@ -541,7 +646,7 @@ const RecruitmentScreeningCenter: React.FC = () => {
                   </div>
                   <div className="recruitment-screening-card-actions">
                     <Button icon={<FileSearchOutlined />} onClick={() => setReportApplicationId(item.application.id)}>
-                      查看 AI 报告
+                      {item.publicSubmission ? '查看处理与 AI 报告' : '查看 AI 报告'}
                     </Button>
                     <Button
                       icon={<CheckCircleOutlined />}
@@ -658,8 +763,14 @@ const RecruitmentScreeningCenter: React.FC = () => {
         jobId={reportItem?.application.jobId ?? null}
         jobStatus={reportItem?.jobStatus ?? null}
         jobTitle={reportItem?.jobTitle ?? ''}
+        currentResumeId={reportItem?.application.currentResumeId ?? null}
+        publicSubmission={reportItem?.publicSubmission ?? null}
         onClose={() => setReportApplicationId(null)}
         onStateChange={updateScreeningState}
+        onPublicSubmissionChange={updatePublicSubmission}
+        onCurrentResumeChange={resumeId => {
+          if (reportItem) updateCurrentResume(reportItem.application.id, resumeId);
+        }}
         open={reportItem !== null}
       />
     </main>

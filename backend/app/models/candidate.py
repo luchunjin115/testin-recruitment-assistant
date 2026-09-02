@@ -25,7 +25,7 @@ class Candidate(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     phone: Mapped[str | None] = mapped_column(String(20), index=True)
-    email: Mapped[str | None] = mapped_column(String(100), index=True)
+    email: Mapped[str | None] = mapped_column(String(254), index=True)
     gender: Mapped[str | None] = mapped_column(String(10))
     age: Mapped[int | None] = mapped_column(Integer)
     location: Mapped[str | None] = mapped_column(String(100), index=True)

@@ -18,12 +18,14 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 
 if TYPE_CHECKING:
+    from app.models.application_processing_run import ApplicationProcessingRun
     from app.models.candidate import Candidate
     from app.models.job import Job
     from app.models.resume import Resume
     from app.models.stage_history import StageHistory
     from app.models.screening_report import ScreeningReport
     from app.models.screening_run import ScreeningRun
+    from app.models.public_application_submission import PublicApplicationSubmission
 
 
 class Application(Base):
@@ -125,5 +127,16 @@ class Application(Base):
     screening_runs: Mapped[list["ScreeningRun"]] = relationship(
         back_populates="application",
         order_by="ScreeningRun.created_at",
+        passive_deletes=True,
+    )
+    public_submission: Mapped["PublicApplicationSubmission | None"] = relationship(
+        back_populates="application",
+        uselist=False,
+        passive_deletes=True,
+    )
+    application_processing_runs: Mapped[list["ApplicationProcessingRun"]] = relationship(
+        back_populates="application",
+        foreign_keys="ApplicationProcessingRun.application_id",
+        order_by="ApplicationProcessingRun.created_at",
         passive_deletes=True,
     )

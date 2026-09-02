@@ -179,6 +179,50 @@ class Settings(BaseSettings):
     SCREENING_WORKER_BATCH_SIZE: int = Field(default=5, ge=1, le=20)
     STORAGE_DIR: str = str((BACKEND_DIR / "storage").resolve())
     MAX_FILE_SIZE_MB: int = 10
+    PUBLIC_APPLICATION_CONSENT_VERSION: str = Field(
+        default="2026-09-02",
+        min_length=1,
+        max_length=100,
+    )
+    PUBLIC_APPLICATION_RATE_LIMIT_WINDOW_SECONDS: int = Field(
+        default=60,
+        ge=1,
+        le=3_600,
+    )
+    PUBLIC_APPLICATION_RATE_LIMIT_PER_IP: int = Field(default=10, ge=1, le=1_000)
+    PUBLIC_APPLICATION_RATE_LIMIT_PER_CONTACT: int = Field(default=3, ge=1, le=1_000)
+    PUBLIC_APPLICATION_MAX_FORM_OVERHEAD_BYTES: int = Field(
+        default=256 * 1024,
+        ge=16 * 1024,
+        le=1024 * 1024,
+    )
+    APPLICATION_PROCESSING_WORKER_ENABLED: bool = True
+    APPLICATION_PROCESSING_WORKER_POLL_SECONDS: float = Field(
+        default=1.0,
+        ge=0.1,
+        le=60,
+    )
+    APPLICATION_PROCESSING_WORKER_LEASE_SECONDS: int = Field(
+        default=300,
+        ge=30,
+        le=3_600,
+    )
+    APPLICATION_PROCESSING_WORKER_BATCH_SIZE: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+    )
+    APPLICATION_PROCESSING_MAX_ATTEMPTS: int = Field(default=3, ge=1, le=3)
+    APPLICATION_PROCESSING_STEP_INFRASTRUCTURE_RETRIES: int = Field(
+        default=2,
+        ge=0,
+        le=2,
+    )
+    APPLICATION_PROCESSING_RETRY_BACKOFF_SECONDS: float = Field(
+        default=1.0,
+        ge=0,
+        le=60,
+    )
     RESUME_CLEANUP_ENABLED: bool = True
     RESUME_UNBOUND_RETENTION_HOURS: int = Field(default=24, ge=1, le=24 * 365)
     RESUME_CLEANUP_INTERVAL_MINUTES: int = Field(default=60, ge=1, le=24 * 60)
@@ -195,6 +239,15 @@ class Settings(BaseSettings):
         if self.SCREENING_WORKER_LEASE_SECONDS < minimum_lease:
             raise ValueError(
                 "SCREENING_WORKER_LEASE_SECONDS 必须覆盖两次模型超时和收尾时间"
+            )
+        processing_minimum_lease = int(
+            self.RESUME_STRUCTURE_TIMEOUT_SECONDS
+            * (self.APPLICATION_PROCESSING_STEP_INFRASTRUCTURE_RETRIES + 1)
+        ) + 30
+        if self.APPLICATION_PROCESSING_WORKER_LEASE_SECONDS < processing_minimum_lease:
+            raise ValueError(
+                "APPLICATION_PROCESSING_WORKER_LEASE_SECONDS 必须覆盖结构化调用、"
+                "有限基础设施重试和收尾时间"
             )
         return self
 

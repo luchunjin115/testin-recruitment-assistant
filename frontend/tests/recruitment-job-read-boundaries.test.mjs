@@ -14,6 +14,18 @@ const jobs = [
     preferred_qualifications: null, public_notes: null,
     status: 'closed', created_at: '2026-08-14T08:00:00Z', updated_at: '2026-08-14T09:00:00Z' },
 ];
+const publicJobs = [{
+  id: jobs[0].id,
+  title: jobs[0].title,
+  department: jobs[0].department,
+  location: jobs[0].location,
+  employment_type: jobs[0].employment_type,
+  job_background: jobs[0].job_background,
+  job_responsibilities: jobs[0].job_responsibilities,
+  candidate_requirements: jobs[0].candidate_requirements,
+  preferred_qualifications: jobs[0].preferred_qualifications,
+  public_notes: jobs[0].public_notes,
+}];
 const candidates = [{
   id: 5, name: '历史候选人', email: null, phone: null, current_company: null,
   work_years: 3, education_level: '本科', source: '内推', status: 'screening',
@@ -40,6 +52,7 @@ try {
   v2Http.defaults.adapter = async config => {
     requests.push(config);
     let data = [];
+    if (config.url === '/public/jobs') data = publicJobs;
     if (config.url === '/jobs') data = config.params?.status === 'open' ? [jobs[0]] : jobs;
     if (config.url === '/candidates') data = candidates;
     if (config.url === '/applications') data = passedApplications;
@@ -49,6 +62,8 @@ try {
   assert.deepEqual(applicationJobs.map(job => job.id), [1]);
   assert.equal(applicationJobs[0].jobResponsibilities, '负责业务系统开发');
   assert.equal(applicationJobs[0].candidateRequirements, '熟悉 React');
+  assert.equal(requests[0].url, '/public/jobs');
+  assert.equal(requests[0].params, undefined);
   assert.deepEqual((await candidate.getRecruitmentCandidateJobs()).map(job => job.id), [1]);
   const candidateSnapshot = await candidate.getRecruitmentCandidates();
   assert.equal(candidateSnapshot.items[0].jobTitle, '历史关闭岗位');

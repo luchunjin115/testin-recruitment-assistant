@@ -28,6 +28,31 @@ from app.schemas.project_experience import (
     ProjectExperienceRead,
     ProjectExperienceUpdate,
 )
+from app.schemas.public_application import (
+    ApplicationProcessingRunCreate,
+    ApplicationProcessingRunRead,
+    ApplicationProcessingStatus,
+    ApplicationProcessingStep,
+    ApplicationProcessingTriggerType,
+    ApplicationProcessingWaitingReason,
+    ApplicationProcessingWarningCode,
+    PublicApplicationAcceptedResponse,
+    PublicApplicationErrorCode,
+    PublicApplicationForm,
+    PublicApplicationIdentityReviewReason,
+    PublicApplicationIdentityReviewStatus,
+    PublicApplicationSubmissionCreate,
+    PublicApplicationSubmissionRead,
+    PublicJobRead,
+)
+from app.schemas.public_application_workbench import (
+    HRActionConfirmation,
+    PublicApplicationIdentityCandidate,
+    PublicApplicationPool,
+    PublicApplicationProcessingRunSummary,
+    PublicApplicationWorkbenchDetail,
+    PublicApplicationWorkbenchSummary,
+)
 from app.schemas.report import ReportCreate, ReportRead, ReportUpdate
 from app.schemas.resume import ResumeCreate, ResumeRead, ResumeUpdate
 from app.schemas.resume_parse import (

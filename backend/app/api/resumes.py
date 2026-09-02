@@ -300,6 +300,36 @@ async def structure_resume(
     return _structure_response(result)
 
 
+@router.get(
+    "/{resume_id}/structure",
+    response_model=ResumeStructureResponse,
+)
+async def get_stored_resume_structure(
+    resume_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> ResumeStructureResponse:
+    """Read a stored structure result without starting a model call."""
+    try:
+        result = await resume_structure_service.get_current_result(db, resume_id)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "code": "RESUME_STRUCTURE_READ_FAILED",
+                "message": "读取已保存的结构化结果失败，请稍后重试",
+            },
+        ) from exc
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "RESUME_STRUCTURE_RESULT_NOT_FOUND",
+                "message": "当前简历尚无已保存的结构化结果",
+            },
+        )
+    return _structure_response(result)
+
+
 @router.post("", response_model=ResumeRead, status_code=status.HTTP_201_CREATED)
 async def create_resume(
     data: ResumeCreate,

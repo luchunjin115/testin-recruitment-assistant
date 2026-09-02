@@ -11,7 +11,7 @@ from app.schemas.work_experience import WorkExperienceCreate, WorkExperienceRead
 class CandidateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     phone: str | None = Field(default=None, max_length=20)
-    email: str | None = Field(default=None, max_length=100)
+    email: str | None = Field(default=None, max_length=254)
     gender: str | None = Field(default=None, max_length=10)
     age: int | None = Field(default=None, ge=0)
     location: str | None = Field(default=None, max_length=100)
@@ -40,7 +40,7 @@ class CandidateFromResumeCreate(BaseModel):
 class CandidateUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     phone: str | None = Field(default=None, max_length=20)
-    email: str | None = Field(default=None, max_length=100)
+    email: str | None = Field(default=None, max_length=254)
     gender: str | None = Field(default=None, max_length=10)
     age: int | None = Field(default=None, ge=0)
     location: str | None = Field(default=None, max_length=100)

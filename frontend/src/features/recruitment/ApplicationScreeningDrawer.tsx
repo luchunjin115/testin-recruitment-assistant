@@ -24,6 +24,8 @@ import {
 } from './screeningPresentation';
 import type { JobEvaluationPlan, ScreeningReport, ScreeningState } from './types/aiScreening';
 import ScreeningReportView from './ScreeningReportView';
+import PublicApplicationProcessingPanel from './PublicApplicationProcessingPanel';
+import type { PublicApplicationWorkbenchSummary } from './services/publicApplicationWorkbench';
 
 type Props = {
   applicationId: number | null;
@@ -32,9 +34,13 @@ type Props = {
   jobId: number | null;
   jobStatus: JobStatus | null;
   jobTitle: string;
+  currentResumeId: number | null;
+  publicSubmission: PublicApplicationWorkbenchSummary | null;
   open: boolean;
   onClose: () => void;
   onStateChange?: (state: ScreeningState) => void;
+  onPublicSubmissionChange?: (summary: PublicApplicationWorkbenchSummary) => void;
+  onCurrentResumeChange?: (resumeId: number) => void;
 };
 
 const formatReportDate = (value: string) => {
@@ -52,9 +58,13 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
   jobId,
   jobStatus,
   jobTitle,
+  currentResumeId,
+  publicSubmission,
   open,
   onClose,
   onStateChange,
+  onPublicSubmissionChange,
+  onCurrentResumeChange,
 }) => {
   const [state, setState] = useState<ScreeningState | null>(initialState);
   const [plan, setPlan] = useState<JobEvaluationPlan | null>(null);
@@ -224,6 +234,14 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
       title={applicationId ? `${candidateName} · Application #${applicationId}` : 'AI 初筛报告'}
       width="min(980px, 100vw)"
     >
+      {publicSubmission && currentResumeId && (
+        <PublicApplicationProcessingPanel
+          currentResumeId={currentResumeId}
+          onResumeChange={resumeId => onCurrentResumeChange?.(resumeId)}
+          onSummaryChange={summary => onPublicSubmissionChange?.(summary)}
+          summary={publicSubmission}
+        />
+      )}
       <div className="recruitment-screening-context">
         <span><RobotOutlined /> AI 岗位匹配建议</span>
         <strong>{jobTitle}</strong>

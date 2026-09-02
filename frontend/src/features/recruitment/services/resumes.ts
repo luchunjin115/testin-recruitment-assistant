@@ -167,6 +167,22 @@ export const extractRecruitmentResumeText = async (
   return mapResumeDetail(response.data);
 };
 
+export const getRecruitmentResume = async (
+  resumeId: number,
+): Promise<RecruitmentResumeDetail> => {
+  const response = await v2Http.get<ResumeResponse>(`/resumes/${resumeId}`);
+  return mapResumeDetail(response.data);
+};
+
+export const getStoredRecruitmentResumeStructure = async (
+  resumeId: number,
+): Promise<ResumeStructureResponse> => {
+  const response = await v2Http.get<ResumeStructureResponse>(
+    `/resumes/${resumeId}/structure`,
+  );
+  return response.data;
+};
+
 export const structureRecruitmentResume = async (
   resumeId: number,
   force = false,

@@ -26,6 +26,9 @@
     "test:stage7-ai-screening-presentation": "node tests/stage7-ai-screening-presentation.test.mjs",
     "test:stage7-ai-screening-ui": "node tests/stage7-ai-screening-ui.test.mjs",
     "test:stage7-v5-ai-screening": "node tests/stage7-v5-ai-screening-contract.test.mjs",
+    "test:stage8-public-application-service": "node tests/stage8-public-application-service.test.mjs",
+    "test:stage8-public-application-ui": "node tests/stage8-public-application-ui.test.mjs",
+    "test:stage8-public-application-workbench": "node tests/stage8-public-application-workbench.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

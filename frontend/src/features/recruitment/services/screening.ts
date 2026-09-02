@@ -4,6 +4,10 @@ import { listStage7Applications } from './applications';
 import type { JobStatus } from './jobs';
 import type { ScreeningState } from '../types/aiScreening';
 import { getAIScreeningApiError, getApplicationScreening } from './aiScreening';
+import {
+  listPublicApplicationSubmissions,
+  type PublicApplicationWorkbenchSummary,
+} from './publicApplicationWorkbench';
 
 type JobResponse = {
   id: number;
@@ -33,6 +37,7 @@ export type Stage7ScreeningCenterItem = {
   jobStatus: JobStatus | null;
   screeningState: ScreeningState | null;
   screeningLoadError: string | null;
+  publicSubmission: PublicApplicationWorkbenchSummary | null;
 };
 
 export type Stage7ScreeningCenterSnapshot = {
@@ -43,13 +48,15 @@ export type Stage7ScreeningCenterSnapshot = {
 export const getStage7ScreeningCenter = async (
   filters: Stage7ApplicationFilters = {},
 ): Promise<Stage7ScreeningCenterSnapshot> => {
-  const [applications, jobsResponse, candidatesResponse] = await Promise.all([
+  const [applications, jobsResponse, candidatesResponse, publicSubmissions] = await Promise.all([
     listStage7Applications(filters),
     v2Http.get<JobResponse[]>('/jobs'),
     v2Http.get<CandidateResponse[]>('/candidates'),
+    listPublicApplicationSubmissions(),
   ]);
   const jobs = new Map(jobsResponse.data.map(job => [job.id, job]));
   const candidates = new Map(candidatesResponse.data.map(candidate => [candidate.id, candidate]));
+  const submissions = new Map(publicSubmissions.map(item => [item.applicationId, item]));
 
   const items = await Promise.all(applications.map(async application => {
     const candidate = candidates.get(application.candidateId);
@@ -71,6 +78,7 @@ export const getStage7ScreeningCenter = async (
       jobStatus: job?.status || null,
       screeningState,
       screeningLoadError,
+      publicSubmission: submissions.get(application.id) ?? null,
     };
   }));
 

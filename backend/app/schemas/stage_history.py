@@ -26,6 +26,7 @@ class StageHistoryActorType(str, Enum):
 
 class StageHistoryReasonCode(str, Enum):
     APPLICATION_CREATED = "application_created"
+    PUBLIC_APPLICATION_RECEIVED = "public_application_received"
     HR_DIRECT_ENTRY = "hr_direct_entry"
     MEETS_REQUIREMENTS = "meets_requirements"
     MINOR_CAPABILITY_GAP = "minor_capability_gap"

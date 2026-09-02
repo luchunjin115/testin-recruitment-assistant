@@ -715,6 +715,42 @@ class ResumeApiTest(TestCase):
         self.assertTrue(response.json()["has_previous_draft"])
         structure_mock.assert_awaited_once_with(db=self.db, resume_id=32, force=True)
 
+    def test_get_stored_structure_is_read_only_and_returns_cached_result(self) -> None:
+        result = make_structure_result(from_cache=True, has_previous_draft=True)
+        with patch.object(
+            resume_structure_service,
+            "get_current_result",
+            AsyncMock(return_value=result),
+        ) as read_mock, patch.object(
+            resume_structure_service,
+            "structure_resume",
+            AsyncMock(),
+        ) as write_mock:
+            response = self.client.get("/resumes/32/structure")
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["from_cache"])
+        self.assertEqual(response.json()["draft"]["skills"], ["Python"])
+        read_mock.assert_awaited_once_with(self.db, 32)
+        write_mock.assert_not_awaited()
+
+    def test_get_stored_structure_returns_stable_404_without_model_call(self) -> None:
+        with patch.object(
+            resume_structure_service,
+            "get_current_result",
+            AsyncMock(return_value=None),
+        ), patch.object(
+            resume_structure_service,
+            "structure_resume",
+            AsyncMock(),
+        ) as write_mock:
+            response = self.client.get("/resumes/99/structure")
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(
+            response.json()["detail"]["code"],
+            "RESUME_STRUCTURE_RESULT_NOT_FOUND",
+        )
+        write_mock.assert_not_awaited()
+
     def test_structure_resume_rejects_unknown_request_fields(self) -> None:
         structure_mock = AsyncMock()
 

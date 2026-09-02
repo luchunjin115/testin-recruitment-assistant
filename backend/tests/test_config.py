@@ -171,3 +171,46 @@ class SettingsTest(TestCase):
                 SCREENING_EVALUATION_TIMEOUT_SECONDS=200,
                 SCREENING_WORKER_LEASE_SECONDS=300,
             )
+
+    def test_application_processing_worker_defaults_are_bounded(self) -> None:
+        settings = Settings(_env_file=None)
+        example = _env_example_values()
+
+        self.assertTrue(settings.APPLICATION_PROCESSING_WORKER_ENABLED)
+        self.assertEqual(settings.APPLICATION_PROCESSING_WORKER_POLL_SECONDS, 1.0)
+        self.assertEqual(settings.APPLICATION_PROCESSING_WORKER_LEASE_SECONDS, 300)
+        self.assertEqual(settings.APPLICATION_PROCESSING_WORKER_BATCH_SIZE, 5)
+        self.assertEqual(settings.APPLICATION_PROCESSING_MAX_ATTEMPTS, 3)
+        self.assertEqual(
+            settings.APPLICATION_PROCESSING_STEP_INFRASTRUCTURE_RETRIES,
+            2,
+        )
+        self.assertEqual(
+            settings.APPLICATION_PROCESSING_RETRY_BACKOFF_SECONDS,
+            1.0,
+        )
+        self.assertEqual(
+            example["APPLICATION_PROCESSING_MAX_ATTEMPTS"],
+            "3",
+        )
+
+    def test_application_processing_worker_rejects_unsafe_limits(self) -> None:
+        invalid_values = {
+            "APPLICATION_PROCESSING_WORKER_POLL_SECONDS": 0,
+            "APPLICATION_PROCESSING_WORKER_LEASE_SECONDS": 29,
+            "APPLICATION_PROCESSING_WORKER_BATCH_SIZE": 21,
+            "APPLICATION_PROCESSING_MAX_ATTEMPTS": 4,
+            "APPLICATION_PROCESSING_STEP_INFRASTRUCTURE_RETRIES": 3,
+            "APPLICATION_PROCESSING_RETRY_BACKOFF_SECONDS": -1,
+        }
+        for field, value in invalid_values.items():
+            with self.subTest(field=field), self.assertRaises(ValidationError):
+                Settings(_env_file=None, **{field: value})
+
+        with self.assertRaises(ValidationError):
+            Settings(
+                _env_file=None,
+                RESUME_STRUCTURE_TIMEOUT_SECONDS=100,
+                APPLICATION_PROCESSING_STEP_INFRASTRUCTURE_RETRIES=2,
+                APPLICATION_PROCESSING_WORKER_LEASE_SECONDS=300,
+            )

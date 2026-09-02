@@ -28,6 +28,7 @@ try {
     if (config.url === '/applications') data = applications;
     if (config.url === '/jobs') data = jobs;
     if (config.url === '/candidates') data = candidates;
+    if (config.url === '/public-application-submissions') data = [];
     if (config.url === '/applications/31/screening') data = {
       application_id: 31, report: null, latest_run: null,
     };
@@ -43,7 +44,8 @@ try {
   assert.equal(snapshot.items[0].screeningState.applicationId, 31);
   assert.equal('currentResult' in snapshot.items[0], false);
   assert.deepEqual(requests.map(request => request.url), [
-    '/applications', '/jobs', '/candidates', '/applications/31/screening',
+    '/applications', '/jobs', '/candidates', '/public-application-submissions',
+    '/applications/31/screening',
   ]);
   assert.deepEqual(requests[0].params, {
     job_id: 2, recruitment_stage: 'hr_review', hr_decision: 'pending', lifecycle_status: 'active',

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timezone
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest import IsolatedAsyncioTestCase
 from unittest.mock import AsyncMock, Mock, patch
-from zipfile import ZipFile
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from fastapi import UploadFile
 
@@ -114,6 +115,14 @@ class ResumeUploadServiceTest(IsolatedAsyncioTestCase):
         db.commit.assert_awaited_once()
         db.rollback.assert_not_awaited()
 
+        prepared = await self.storage.prepare(
+            make_upload("digest.txt", b"digest"),
+            self.upload_root,
+            1024,
+        )
+        self.assertEqual(prepared.sha256, hashlib.sha256(b"digest").hexdigest())
+        self.storage.discard(prepared)
+
     async def test_upload_without_candidate_creates_unbound_resume(self) -> None:
         db = make_session()
 
@@ -139,6 +148,19 @@ class ResumeUploadServiceTest(IsolatedAsyncioTestCase):
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
         self.assertTrue(resume.file_path.endswith(".docx"))
+
+    async def test_docx_excessive_compression_ratio_is_rejected(self) -> None:
+        output = BytesIO()
+        with ZipFile(output, "w", compression=ZIP_DEFLATED) as archive:
+            archive.writestr("[Content_Types].xml", "<Types />")
+            archive.writestr("word/document.xml", "0" * 200_000)
+
+        with self.assertRaises(InvalidResumeContentError):
+            await self.storage.prepare(
+                make_upload("compressed.docx", output.getvalue()),
+                self.upload_root,
+                1024 * 1024,
+            )
 
     async def test_path_components_are_removed_from_original_filename(self) -> None:
         resume = await self.upload(

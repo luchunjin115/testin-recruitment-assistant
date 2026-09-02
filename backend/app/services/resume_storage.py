@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import uuid
 import zipfile
@@ -15,6 +16,9 @@ RESUME_NAMESPACE = Path("v2") / "resumes"
 STAGING_DIRECTORY = ".staging"
 TRASH_DIRECTORY = ".trash"
 CHUNK_SIZE = 1024 * 1024
+MAX_DOCX_MEMBERS = 2_048
+MAX_DOCX_UNCOMPRESSED_BYTES = 50 * 1024 * 1024
+MAX_DOCX_COMPRESSION_RATIO = 100
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".txt"}
 CANONICAL_MIME_TYPES = {
     ".pdf": "application/pdf",
@@ -57,6 +61,7 @@ class PreparedResumeFile:
     extension: str
     mime_type: str
     file_size: int
+    sha256: str
     temp_path: Path
     final_path: Path
     relative_path: str
@@ -90,6 +95,7 @@ class ResumeFileStorage:
             staging_dir.mkdir(parents=True, exist_ok=True)
             file_size = await self._write_limited(upload, temp_path, max_size_bytes)
             mime_type = self._detect_and_validate_content(temp_path, extension)
+            sha256 = self._sha256(temp_path)
         except ResumeUploadError:
             self.discard_path(temp_path)
             raise
@@ -102,6 +108,7 @@ class ResumeFileStorage:
             extension=extension,
             mime_type=mime_type,
             file_size=file_size,
+            sha256=sha256,
             temp_path=temp_path,
             final_path=final_path,
             relative_path=final_path.relative_to(root).as_posix(),
@@ -168,11 +175,23 @@ class ResumeFileStorage:
         elif zipfile.is_zipfile(path):
             try:
                 with zipfile.ZipFile(path) as archive:
-                    names = set(archive.namelist())
+                    members = archive.infolist()
+                    names = {member.filename for member in members}
             except (OSError, zipfile.BadZipFile) as exc:
                 raise InvalidResumeContentError("DOCX 文件结构无效") from exc
             if "[Content_Types].xml" not in names or "word/document.xml" not in names:
                 raise InvalidResumeContentError("压缩文件不是有效的 DOCX 简历")
+            if len(members) > MAX_DOCX_MEMBERS:
+                raise InvalidResumeContentError("DOCX 文件包含过多压缩条目")
+            uncompressed_size = sum(member.file_size for member in members)
+            compressed_size = sum(member.compress_size for member in members)
+            if uncompressed_size > MAX_DOCX_UNCOMPRESSED_BYTES:
+                raise InvalidResumeContentError("DOCX 解压后大小超过安全限制")
+            if (
+                uncompressed_size > 0
+                and uncompressed_size > max(compressed_size, 1) * MAX_DOCX_COMPRESSION_RATIO
+            ):
+                raise InvalidResumeContentError("DOCX 压缩比例超过安全限制")
             detected_extension = ".docx"
         else:
             ResumeFileStorage.read_text_content(path)
@@ -181,6 +200,14 @@ class ResumeFileStorage:
         if detected_extension != extension:
             raise InvalidResumeContentError("文件扩展名与实际内容类型不一致")
         return CANONICAL_MIME_TYPES[detected_extension]
+
+    @staticmethod
+    def _sha256(path: Path) -> str:
+        digest = hashlib.sha256()
+        with path.open("rb") as source:
+            while chunk := source.read(CHUNK_SIZE):
+                digest.update(chunk)
+        return digest.hexdigest()
 
     @staticmethod
     def read_text_content(path: Path) -> str:

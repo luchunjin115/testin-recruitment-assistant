@@ -20,6 +20,7 @@ from app.adapters.screening_evaluation import (
 )
 from app.core.config import Settings, get_settings
 from app.models.application import Application
+from app.models.activity_log import ActivityLog
 from app.models.job import Job
 from app.models.job_evaluation_plan import JobEvaluationPlan
 from app.models.resume import Resume
@@ -34,6 +35,7 @@ from app.schemas.screening import (
     ScreeningWaitingReason,
 )
 from app.services.application_decision_service import application_decision_service
+from app.services.application_intake_service import LOCAL_HR_ACTOR_LABEL
 from app.services.job_evaluation_plan_service import job_evaluation_plan_service
 from app.services.experience_period_service import experience_period_service
 from app.services.screening_evaluation_service import (
@@ -460,6 +462,7 @@ class ScreeningService:
                 await db.rollback()
                 return application
 
+            previous_resume_id = application.current_resume_id
             application.current_resume_id = resume_id
             report = await db.scalar(
                 select(ScreeningReport)
@@ -480,6 +483,20 @@ class ScreeningService:
                 application_id,
                 now,
                 "当前 Resume 已变化，旧任务不会继续执行",
+            )
+            db.add(
+                ActivityLog(
+                    user_id=None,
+                    action="application_current_resume_changed",
+                    target_type="application",
+                    target_id=application.id,
+                    detail={
+                        "previous_resume_id": previous_resume_id,
+                        "new_resume_id": resume_id,
+                        "actor_type": "hr",
+                        "actor_label": LOCAL_HR_ACTOR_LABEL,
+                    },
+                )
             )
             await db.commit()
             await db.refresh(application)
