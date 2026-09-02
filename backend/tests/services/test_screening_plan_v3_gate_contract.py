@@ -379,6 +379,7 @@ class ScreeningPlanV5GateContractTest(IsolatedAsyncioTestCase):
 
     async def test_ended_application_cannot_start_screening(self) -> None:
         self.application.lifecycle_status = "ended"
+        self.application.final_outcome = "candidate_withdrew"
         await self.db.commit()
 
         with self.assertRaises(ScreeningApplicationNotEligibleError):

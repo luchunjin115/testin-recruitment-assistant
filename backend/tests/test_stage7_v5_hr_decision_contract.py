@@ -249,23 +249,31 @@ class TestAIToHRHandoff:
 
 
 # ===================================================================
-# E. Stage 7 scope boundary (3 tests) -- should PASS
+# E. Stage 7 boundary after the stage 9 shared contract (3 tests)
 # ===================================================================
 
 
 class TestStage7ScopeBoundary:
-    """Verify that stage 7 does not encroach on stage 9 (interview, offer,
-    hired) and that StageHistory is append-only with chronological order."""
+    """Verify stage 7 HR decisions remain independent after shared stage
+    enums expand for stage 9, and history stays append-only."""
 
-    def test_stage_values_exclude_interview_offer_hired(self) -> None:
-        """RecruitmentStage must NOT include interview, offer, or hired
-        -- those belong to stage 9 and are out of scope for stage 7."""
+    def test_shared_stage_values_include_stage9_without_changing_hr_decisions(self) -> None:
+        """The shared Application enum now includes stage 9 nodes while the
+        stage 7 HR decision enum remains the original independent dimension."""
         stage_values = {member.value for member in RecruitmentStage}
-        stage_9_values = {"interview", "offer", "hired"}
-        overlap = stage_values & stage_9_values
-        assert not overlap, (
-            f"RecruitmentStage should not contain stage 9 values: {overlap}"
-        )
+        assert {
+            "interview",
+            "offer",
+            "offer_accepted",
+            "admitted",
+            "hired",
+        }.issubset(stage_values)
+        assert {member.value for member in HRDecision} == {
+            "pending",
+            "passed",
+            "backup",
+            "rejected",
+        }
 
     def test_stage_history_is_append_only(self) -> None:
         """StageHistory model should be append-only -- the service must

@@ -1392,6 +1392,7 @@ class ScreeningServiceTest(IsolatedAsyncioTestCase):
         second.lifecycle_status = "ended"
         second.recruitment_stage = "rejected"
         second.hr_decision = "rejected"
+        second.final_outcome = "screening_rejected"
         await self.db.commit()
         second_id = second.id
 

@@ -10,6 +10,7 @@ from app.schemas.application import (
     ApplicationResumeProfile,
     ApplicationSource,
     CandidateResolution,
+    FinalOutcome,
     HRDecision,
     RecruitmentStage,
 )
@@ -23,10 +24,34 @@ from app.schemas.job import (
     JobStatus,
     JobUpdate,
 )
+from app.schemas.interview import (
+    InterviewCancelReasonCode,
+    InterviewCancelRequest,
+    InterviewCorrectionReasonCode,
+    InterviewDecision,
+    InterviewFeedbackReasonCode,
+    InterviewFeedbackSubmitRequest,
+    InterviewFeedbackUpdateRequest,
+    InterviewNoShowReasonCode,
+    InterviewNoShowRequest,
+    InterviewRecordCreate,
+    InterviewRecordListItem,
+    InterviewRecordRead,
+    InterviewScheduleCreate,
+    InterviewScheduleUpdate,
+    InterviewStatus,
+    InterviewType,
+)
 from app.schemas.project_experience import (
     ProjectExperienceCreate,
     ProjectExperienceRead,
     ProjectExperienceUpdate,
+)
+from app.schemas.offer import (
+    OfferRecordCreate,
+    OfferRecordRead,
+    OfferStatus,
+    SalaryPeriod,
 )
 from app.schemas.public_application import (
     ApplicationProcessingRunCreate,
@@ -54,6 +79,10 @@ from app.schemas.public_application_workbench import (
     PublicApplicationWorkbenchSummary,
 )
 from app.schemas.report import ReportCreate, ReportRead, ReportUpdate
+from app.schemas.recruitment_timeline import (
+    RecruitmentTimelineItem,
+    RecruitmentTimelineSource,
+)
 from app.schemas.resume import ResumeCreate, ResumeRead, ResumeUpdate
 from app.schemas.resume_parse import (
     RESUME_PARSE_SCHEMA_VERSION,

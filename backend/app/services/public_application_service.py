@@ -156,16 +156,21 @@ class PublicApplicationService:
                     lifecycle_status="active",
                     recruitment_stage="applied",
                     hr_decision="pending",
+                    final_outcome=None,
                 )
                 db.add(application)
                 await db.flush()
                 db.add(
                     StageHistory(
                         application_id=application.id,
+                        from_lifecycle_status=None,
+                        to_lifecycle_status="active",
                         from_recruitment_stage=None,
                         to_recruitment_stage="applied",
                         from_hr_decision=None,
                         to_hr_decision="pending",
+                        from_final_outcome=None,
+                        to_final_outcome=None,
                         reason_code=(
                             StageHistoryReasonCode.PUBLIC_APPLICATION_RECEIVED.value
                         ),

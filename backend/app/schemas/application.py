@@ -40,6 +40,11 @@ class RecruitmentStage(str, Enum):
     SCREENING_PASSED = "screening_passed"
     BACKUP = "backup"
     REJECTED = "rejected"
+    INTERVIEW = "interview"
+    OFFER = "offer"
+    OFFER_ACCEPTED = "offer_accepted"
+    ADMITTED = "admitted"
+    HIRED = "hired"
 
 
 class HRDecision(str, Enum):
@@ -47,6 +52,18 @@ class HRDecision(str, Enum):
     PASSED = "passed"
     BACKUP = "backup"
     REJECTED = "rejected"
+
+
+class FinalOutcome(str, Enum):
+    SCREENING_REJECTED = "screening_rejected"
+    INTERVIEW_REJECTED = "interview_rejected"
+    INTERVIEW_NO_SHOW = "interview_no_show"
+    OFFER_DECLINED = "offer_declined"
+    OFFER_WITHDRAWN = "offer_withdrawn"
+    OFFER_EXPIRED = "offer_expired"
+    CANDIDATE_WITHDREW = "candidate_withdrew"
+    COMPANY_CANCELED = "company_canceled"
+    HIRED = "hired"
 
 
 class CandidateResolution(str, Enum):
@@ -158,11 +175,15 @@ class ApplicationCreate(BaseModel):
     lifecycle_status: ApplicationLifecycleStatus = ApplicationLifecycleStatus.ACTIVE
     recruitment_stage: RecruitmentStage
     hr_decision: HRDecision
+    final_outcome: FinalOutcome | None = None
     applied_at: AwareDatetime | None = None
     model_config = ConfigDict(extra="forbid")
 
     @model_validator(mode="after")
     def validate_initial_state(self) -> ApplicationCreate:
+        if self.final_outcome is not None:
+            raise ValueError("新建 Application 不能预设最终结果")
+
         if self.source is ApplicationSource.HR_DIRECT:
             expected = (
                 ApplicationLifecycleStatus.ACTIVE,
@@ -205,6 +226,7 @@ class ApplicationRead(BaseModel):
     lifecycle_status: ApplicationLifecycleStatus
     recruitment_stage: RecruitmentStage
     hr_decision: HRDecision
+    final_outcome: FinalOutcome | None = None
     applied_at: AwareDatetime
     created_at: AwareDatetime
     updated_at: AwareDatetime
@@ -229,6 +251,7 @@ __all__ = [
     "ApplicationRead",
     "ApplicationSource",
     "CandidateResolution",
+    "FinalOutcome",
     "HRDecision",
     "PositiveId",
     "ReasonText",

@@ -396,6 +396,7 @@ class PublicApplicationServicePostgresTest(IsolatedAsyncioTestCase):
                 lifecycle_status="ended",
                 recruitment_stage="rejected",
                 hr_decision="rejected",
+                final_outcome="screening_rejected",
             )
         )
         await self.db.commit()

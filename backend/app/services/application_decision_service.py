@@ -49,6 +49,7 @@ class _TransitionTarget:
     hr_decision: str
     recruitment_stage: str
     lifecycle_status: str
+    final_outcome: str | None
 
 
 class ApplicationDecisionService:
@@ -72,7 +73,7 @@ class ApplicationDecisionService:
             application_id,
             data=data,
             allowed_decisions={"pending", "backup"},
-            target=_TransitionTarget("passed", "screening_passed", "active"),
+            target=_TransitionTarget("passed", "screening_passed", "active", None),
             action=_DecisionAction.PASS,
         )
 
@@ -87,7 +88,7 @@ class ApplicationDecisionService:
             application_id,
             data=data,
             allowed_decisions={"pending", "passed"},
-            target=_TransitionTarget("backup", "backup", "active"),
+            target=_TransitionTarget("backup", "backup", "active", None),
             action=_DecisionAction.BACKUP,
         )
 
@@ -102,7 +103,12 @@ class ApplicationDecisionService:
             application_id,
             data=data,
             allowed_decisions={"pending", "passed", "backup"},
-            target=_TransitionTarget("rejected", "rejected", "ended"),
+            target=_TransitionTarget(
+                "rejected",
+                "rejected",
+                "ended",
+                "screening_rejected",
+            ),
             action=_DecisionAction.REJECT,
         )
 
@@ -121,6 +127,7 @@ class ApplicationDecisionService:
                 application.lifecycle_status != "ended"
                 or application.hr_decision != "rejected"
                 or application.recruitment_stage != "rejected"
+                or application.final_outcome != "screening_rejected"
             ):
                 raise InvalidApplicationTransitionError("只有已淘汰申请可以撤销淘汰")
             active_application = await self._get_other_active_application_for_update(
@@ -136,7 +143,7 @@ class ApplicationDecisionService:
                 db,
                 application,
                 data=data,
-                target=_TransitionTarget("pending", "hr_review", "active"),
+                target=_TransitionTarget("pending", "hr_review", "active", None),
                 action=_DecisionAction.UNDO_REJECTION,
             )
             await db.commit()
@@ -174,6 +181,7 @@ class ApplicationDecisionService:
                     application.hr_decision,
                     application.recruitment_stage,
                     "voided",
+                    None,
                 ),
                 action=_DecisionAction.VOID,
             )
@@ -263,10 +271,14 @@ class ApplicationDecisionService:
         history = StageHistory(
             application_id=application.id,
             report_id=report_id,
+            from_lifecycle_status="active",
+            to_lifecycle_status="active",
             from_recruitment_stage="applied",
             to_recruitment_stage="hr_review",
             from_hr_decision="pending",
             to_hr_decision="pending",
+            from_final_outcome=application.final_outcome,
+            to_final_outcome=application.final_outcome,
             reason_code=reason_code,
             reason_detail=None,
             actor_type="system",
@@ -354,11 +366,13 @@ class ApplicationDecisionService:
         from_lifecycle_status = application.lifecycle_status
         from_recruitment_stage = application.recruitment_stage
         from_hr_decision = application.hr_decision
+        from_final_outcome = application.final_outcome
         reason_code = data.reason_code.value
 
         application.lifecycle_status = target.lifecycle_status
         application.recruitment_stage = target.recruitment_stage
         application.hr_decision = target.hr_decision
+        application.final_outcome = target.final_outcome
 
         report_id = await db.scalar(
             select(ScreeningReport.id).where(
@@ -370,10 +384,14 @@ class ApplicationDecisionService:
         history = StageHistory(
             application_id=application.id,
             report_id=report_id,
+            from_lifecycle_status=from_lifecycle_status,
+            to_lifecycle_status=target.lifecycle_status,
             from_recruitment_stage=from_recruitment_stage,
             to_recruitment_stage=target.recruitment_stage,
             from_hr_decision=from_hr_decision,
             to_hr_decision=target.hr_decision,
+            from_final_outcome=from_final_outcome,
+            to_final_outcome=target.final_outcome,
             reason_code=reason_code,
             reason_detail=data.reason_detail,
             actor_type="hr",
@@ -392,6 +410,8 @@ class ApplicationDecisionService:
                 "to_recruitment_stage": target.recruitment_stage,
                 "from_hr_decision": from_hr_decision,
                 "to_hr_decision": target.hr_decision,
+                "from_final_outcome": from_final_outcome,
+                "to_final_outcome": target.final_outcome,
                 "reason_code": reason_code,
                 "reason_detail": data.reason_detail,
                 "report_id": report_id,

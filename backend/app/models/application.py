@@ -21,6 +21,8 @@ if TYPE_CHECKING:
     from app.models.application_processing_run import ApplicationProcessingRun
     from app.models.candidate import Candidate
     from app.models.job import Job
+    from app.models.interview_record import InterviewRecord
+    from app.models.offer_record import OfferRecord
     from app.models.resume import Resume
     from app.models.stage_history import StageHistory
     from app.models.screening_report import ScreeningReport
@@ -41,12 +43,36 @@ class Application(Base):
         ),
         CheckConstraint(
             "recruitment_stage IN "
-            "('applied', 'hr_review', 'screening_passed', 'backup', 'rejected')",
+            "('applied', 'hr_review', 'screening_passed', 'backup', 'rejected', "
+            "'interview', 'offer', 'offer_accepted', 'admitted', 'hired')",
             name="ck_applications_recruitment_stage_allowed",
         ),
         CheckConstraint(
             "hr_decision IN ('pending', 'passed', 'backup', 'rejected')",
             name="ck_applications_hr_decision_allowed",
+        ),
+        CheckConstraint(
+            "final_outcome IS NULL OR final_outcome IN "
+            "('screening_rejected', 'interview_rejected', 'interview_no_show', "
+            "'offer_declined', 'offer_withdrawn', 'offer_expired', "
+            "'candidate_withdrew', 'company_canceled', 'hired')",
+            name="ck_applications_final_outcome_allowed",
+        ),
+        CheckConstraint(
+            "(lifecycle_status = 'active' AND final_outcome IS NULL) OR "
+            "(lifecycle_status = 'ended' AND final_outcome IS NOT NULL) OR "
+            "(lifecycle_status = 'voided' AND final_outcome IS NULL)",
+            name="ck_applications_lifecycle_final_outcome_consistent",
+        ),
+        CheckConstraint(
+            "(final_outcome IS DISTINCT FROM 'hired' OR "
+            "(recruitment_stage = 'hired' AND hr_decision = 'passed')) AND "
+            "(final_outcome IS DISTINCT FROM 'screening_rejected' OR "
+            "(recruitment_stage = 'rejected' AND hr_decision = 'rejected')) AND "
+            "(recruitment_stage IS DISTINCT FROM 'hired' OR "
+            "(lifecycle_status = 'ended' AND final_outcome = 'hired' "
+            "AND hr_decision = 'passed'))",
+            name="ck_applications_terminal_outcome_consistent",
         ),
         Index(
             "uq_applications_active_candidate_job",
@@ -91,6 +117,11 @@ class Application(Base):
         nullable=False,
         index=True,
     )
+    final_outcome: Mapped[str | None] = mapped_column(
+        String(30),
+        nullable=True,
+        index=True,
+    )
     applied_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
@@ -123,6 +154,16 @@ class Application(Base):
         back_populates="application",
         passive_deletes=True,
         order_by="ScreeningReport.generated_at.desc()",
+    )
+    interview_records: Mapped[list["InterviewRecord"]] = relationship(
+        back_populates="application",
+        order_by="InterviewRecord.round_number",
+        passive_deletes=True,
+    )
+    offer_records: Mapped[list["OfferRecord"]] = relationship(
+        back_populates="application",
+        order_by="OfferRecord.version_number",
+        passive_deletes=True,
     )
     screening_runs: Mapped[list["ScreeningRun"]] = relationship(
         back_populates="application",

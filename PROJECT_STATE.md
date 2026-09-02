@@ -7,9 +7,10 @@
 ## 当前结论
 
 - 阶段 4—8 已完成。阶段 8 的 8A—8F、真实模型最小链路和项目负责人浏览器检查均已完成；项目负责人于 2026-09-02 明确确认阶段 8 最终验收通过并关闭。
+- 阶段 9 专项设计已由项目负责人确认；9A“合同与 migration”和 9B“面试后端”已完成，9C—9F 尚未开始。
 - 阶段 7 已于 2026-09-01 通过项目负责人验收并关闭；功能链路已经完成，目前不是“等待继续开发才能交付”的状态。
 - 阶段 7 当前生产合同：评价计划 `deepseek-v4-pro` / Prompt v4 / Service v5 / Schema 5.0；初筛报告 `deepseek-v4-pro` / 主 Prompt v10 / Repair Prompt v2 / Service v11 / Schema 5.0。
-- `ScreeningRun` 最多保留 3 个 API attempts；当前 Alembic head 为 `a8d4f2c7e901`。
+- `ScreeningRun` 最多保留 3 个 API attempts；当前 Alembic head 为 `b9e2f4a6c801`。
 - 8A 已固定公开表单/响应、身份核对和 ProcessingRun Schema/枚举，新增 `PublicApplicationSubmission`、`ApplicationProcessingRun` ORM 与数据库约束；`Candidate.email` 已按确认结果扩展到 254 字符，初始审计已补充 `public_application_received` reason code。
 - 8B 已提供独立公开 Job API 和单次 multipart 投递 API；后端已实现请求体上限、Redis 摘要限流、Candidate 解析、重复申请/幂等、私有文件 SHA-256 与 DOCX 安全检查、数据库事务和文件补偿，以及稳定公开错误。
 - 新公开投递会一致创建 Candidate/Resume/Application/Submission/初始 ProcessingRun 和系统 StageHistory；既有内部 active Application 收到公开 Resume 时保留旧 `current_resume_id` 且不伪造阶段变化。初始 Run 只排队，不在 API 请求中解析简历或调用 AI。
@@ -50,12 +51,14 @@ HR 维护完整 JD
 
 1. `CLAUDE.md`：长期架构与技术约束。
 2. `docs/DOCUMENT_INDEX.md`：文档导航与按任务阅读规则。
-3. `docs/stages/stage8/2026-09-02-stage8-public-application-async-processing-design.md`：阶段 8 已确认业务合同与实施入口。
-4. `docs/stages/stage8/2026-09-02-stage8-implementation-record.md`：阶段 8 各批次实际修改、验证、边界和风险。
-5. `docs/stages/stage7/README.md`：阶段 7 单一入口。
-6. `docs/stages/stage7/2026-08-26-stage7-lightweight-evaluation-ai-screening-v5-redesign.md`：阶段 7 最终业务合同。
-7. `docs/stages/stage7/2026-09-01-stage7-final-v10-v2-acceptance-review.md`：最终验收结论与已知限制。
-8. `docs/planning/implementation-plan.md`：跨阶段实施顺序。
+3. `docs/stages/stage9/2026-09-02-stage9-interview-offer-hiring-pipeline-design.md`：阶段 9 已确认业务合同。
+4. `docs/stages/stage9/2026-09-02-stage9-implementation-record.md`：阶段 9 唯一实施记录。
+5. `docs/stages/stage8/2026-09-02-stage8-public-application-async-processing-design.md`：阶段 8 已确认业务合同与实施入口。
+6. `docs/stages/stage8/2026-09-02-stage8-implementation-record.md`：阶段 8 各批次实际修改、验证、边界和风险。
+7. `docs/stages/stage7/README.md`：阶段 7 单一入口。
+8. `docs/stages/stage7/2026-08-26-stage7-lightweight-evaluation-ai-screening-v5-redesign.md`：阶段 7 最终业务合同。
+9. `docs/stages/stage7/2026-09-01-stage7-final-v10-v2-acceptance-review.md`：最终验收结论与已知限制。
+10. `docs/planning/implementation-plan.md`：跨阶段实施顺序。
 
 ## 当前风险与工作区状态
 
@@ -75,12 +78,17 @@ HR 维护完整 JD
 - 8F 真实链路只使用虚构数据；随机临时 PostgreSQL 已删除，Redis 限流键为 0，隔离目录文件数为 0。开发库两张阶段 8 表仍为 0 行，Alembic 仍为 `a8d4f2c7e901 (head)` 且无漂移。执行环境只留下不含文件或业务数据的空目录骨架。
 - `waiting_screening` 当前使用固定短周期数据库轮询，Worker 随 FastAPI 进程运行；这满足本地作品集边界，但生产级高流量需要另行评估退避/通知、独立进程监督、指标和告警。
 - 阶段 8 定位为作品集和本地演示，只能使用虚构或完整脱敏数据；若改为真实公网招聘，必须先另行确认隐私保留/删除、恶意文件扫描和生产安全范围。
+- 阶段 9 设计前已只读复核：Git 起始工作区干净，开发库为 `a8d4f2c7e901 (head)` 且 `alembic check` 无漂移；库内只有 1 条 `active / screening_passed / passed` Application，尚无 InterviewRecord 或 OfferRecord 表。设计过程未修改数据库，也未生成真实候选人或薪资数据。
+- 9A 开始前重新只读复核了 Git、Alembic、PostgreSQL 结构和数据：没有无法解释的 `ended` Application。随机临时 PostgreSQL 已通过阻塞预检、upgrade → downgrade → upgrade、约束和部分唯一索引实测；临时库均已删除。
+- 开发 PostgreSQL 已安全前向升级到 `b9e2f4a6c801 (head)`，`alembic check` 无漂移；原有 Application、StageHistory、ScreeningReport 等行数未变，新增 InterviewRecord 和 OfferRecord 表均为 0 行。
+- 9B 已提供面试安排、改期、取消、未到场、首次反馈、反馈更正和统一安全时间线 API；Application/Interview 行锁、expected_version、幂等、StageHistory/ActivityLog 同事务和稳定错误均已落地。
+- 9B 直接测试、真实 PostgreSQL/API 和多会话并发通过；完整后端回归为 `1412 passed, 502 subtests passed`。测试虚构数据已回滚或精确清理，开发库 InterviewRecord、OfferRecord、ActivityLog 均为 0 行，原 Application 状态和原有行数未变。
 
 ## 唯一下一步
 
-1. 阶段 8 已关闭，不再继续追加阶段 8 功能。
-2. 若进入阶段 9，先按路线图重新评审面试、Offer、录取和流程报告的需求、合同、范围与验收标准；专项设计获得确认前不开始生产实现。
+1. 保持阶段 8 已关闭结论和阶段 9 已确认设计不被后续工作改写。
+2. 下一批只进入 9C“AI 初筛中心收口”；9D—9F 继续按已确认设计顺序实施。
 
 ## 新对话恢复方式
 
-先读 `CLAUDE.md`、本文件和 `docs/DOCUMENT_INDEX.md`；修改阶段 8 时完整阅读阶段 8 已确认设计，涉及阶段 7 时再从 `docs/stages/stage7/README.md` 进入，不默认阅读 Git 历史中的中间实验材料。
+先读 `CLAUDE.md`、本文件和 `docs/DOCUMENT_INDEX.md`；继续阶段 9 时完整阅读阶段 9 当前专项设计，并按涉及范围读取阶段 4—8 当前合同和实际代码；不默认阅读 Git 历史中的中间实验材料。

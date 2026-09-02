@@ -7,6 +7,8 @@ from app.models.candidate import Candidate
 from app.models.education import Education
 from app.models.job import Job
 from app.models.job_evaluation_plan import JobEvaluationPlan
+from app.models.interview_record import InterviewRecord
+from app.models.offer_record import OfferRecord
 from app.models.project_experience import ProjectExperience
 from app.models.public_application_submission import PublicApplicationSubmission
 from app.models.report import Report
@@ -24,6 +26,8 @@ __all__ = [
     "Education",
     "Job",
     "JobEvaluationPlan",
+    "InterviewRecord",
+    "OfferRecord",
     "ProjectExperience",
     "PublicApplicationSubmission",
     "Report",

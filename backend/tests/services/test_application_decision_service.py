@@ -28,7 +28,15 @@ def make_application(
     lifecycle_status: str = "active",
     recruitment_stage: str = "hr_review",
     hr_decision: str = "pending",
+    final_outcome: str | None = None,
 ) -> Application:
+    if (
+        final_outcome is None
+        and lifecycle_status == "ended"
+        and recruitment_stage == "rejected"
+        and hr_decision == "rejected"
+    ):
+        final_outcome = "screening_rejected"
     return Application(
         id=application_id,
         candidate_id=2,
@@ -38,6 +46,7 @@ def make_application(
         lifecycle_status=lifecycle_status,
         recruitment_stage=recruitment_stage,
         hr_decision=hr_decision,
+        final_outcome=final_outcome,
         applied_at=TEST_TIME,
         created_at=TEST_TIME,
         updated_at=TEST_TIME,
@@ -131,6 +140,7 @@ class ApplicationDecisionServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(rejected_application.lifecycle_status, "ended")
         self.assertEqual(rejected_application.recruitment_stage, "rejected")
         self.assertEqual(rejected_application.hr_decision, "rejected")
+        self.assertEqual(rejected_application.final_outcome, "screening_rejected")
         history, activity = reject_db.add_all.call_args.args[0]
         self.assertEqual(history.reason_code, "required_skill_missing")
         self.assertEqual(activity.action, "application_rejected")
@@ -192,6 +202,7 @@ class ApplicationDecisionServiceTest(IsolatedAsyncioTestCase):
         self.assertEqual(application.lifecycle_status, "active")
         self.assertEqual(application.recruitment_stage, "hr_review")
         self.assertEqual(application.hr_decision, "pending")
+        self.assertIsNone(application.final_outcome)
         history, activity = self.db.add_all.call_args.args[0]
         self.assertEqual(history.reason_code, "new_evidence")
         self.assertEqual(activity.action, "application_rejection_undone")

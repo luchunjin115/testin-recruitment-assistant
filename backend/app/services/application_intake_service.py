@@ -238,15 +238,20 @@ class ApplicationIntakeService:
 
         previous_stage = application.recruitment_stage
         previous_decision = application.hr_decision
+        previous_outcome = application.final_outcome
         application.recruitment_stage = "screening_passed"
         application.hr_decision = "passed"
         db.add(
             StageHistory(
                 application_id=application.id,
+                from_lifecycle_status=application.lifecycle_status,
+                to_lifecycle_status=application.lifecycle_status,
                 from_recruitment_stage=previous_stage,
                 to_recruitment_stage=application.recruitment_stage,
                 from_hr_decision=previous_decision,
                 to_hr_decision=application.hr_decision,
+                from_final_outcome=previous_outcome,
+                to_final_outcome=application.final_outcome,
                 reason_code=StageHistoryReasonCode.HR_DIRECT_ENTRY.value,
                 actor_type="hr",
                 actor_id=None,
@@ -360,6 +365,7 @@ class ApplicationIntakeService:
             lifecycle_status="active",
             recruitment_stage=recruitment_stage,
             hr_decision=hr_decision,
+            final_outcome=None,
         )
 
     @staticmethod
@@ -374,10 +380,14 @@ class ApplicationIntakeService:
         )
         return StageHistory(
             application_id=application.id,
+            from_lifecycle_status=None,
+            to_lifecycle_status=application.lifecycle_status,
             from_recruitment_stage=None,
             to_recruitment_stage=application.recruitment_stage,
             from_hr_decision=None,
             to_hr_decision=application.hr_decision,
+            from_final_outcome=None,
+            to_final_outcome=application.final_outcome,
             reason_code=reason_code,
             actor_type="hr",
             actor_id=None,

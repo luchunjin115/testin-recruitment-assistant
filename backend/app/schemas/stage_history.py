@@ -15,7 +15,13 @@ from pydantic import (
     model_validator,
 )
 
-from app.schemas.application import HRDecision, PositiveId, RecruitmentStage
+from app.schemas.application import (
+    ApplicationLifecycleStatus,
+    FinalOutcome,
+    HRDecision,
+    PositiveId,
+    RecruitmentStage,
+)
 from app.schemas.fairness import FAIRNESS_PROHIBITED_TERMS
 
 
@@ -50,6 +56,26 @@ class StageHistoryReasonCode(str, Enum):
     ENTRY_ERROR = "entry_error"
     AI_SCREENING_COMPLETED = "ai_screening_completed"
     AI_SCREENING_FAILED = "ai_screening_failed"
+    INTERVIEW_SCHEDULED = "interview_scheduled"
+    INTERVIEW_RESCHEDULED = "interview_rescheduled"
+    INTERVIEW_CANCELED = "interview_canceled"
+    INTERVIEW_NO_SHOW = "interview_no_show"
+    INTERVIEW_ROUND_COMPLETED = "interview_round_completed"
+    INTERVIEW_NEXT_ROUND = "interview_next_round"
+    INTERVIEW_PROCEED_OFFER = "interview_proceed_offer"
+    INTERVIEW_REJECTED = "interview_rejected"
+    CANDIDATE_WITHDREW = "candidate_withdrew"
+    OFFER_CREATED = "offer_created"
+    OFFER_SENT = "offer_sent"
+    OFFER_ACCEPTED = "offer_accepted"
+    OFFER_DECLINED = "offer_declined"
+    OFFER_WITHDRAWN = "offer_withdrawn"
+    OFFER_EXPIRED = "offer_expired"
+    APPLICATION_ADMITTED = "application_admitted"
+    APPLICATION_HIRED = "application_hired"
+    COMPANY_CANCELED = "company_canceled"
+    STAGE9_CORRECTION = "stage9_correction"
+    STAGE9_REOPENED = "stage9_reopened"
 
 
 class PassReasonCode(str, Enum):
@@ -170,10 +196,16 @@ class VoidApplicationRequest(BaseModel):
 class StageHistoryCreate(BaseModel):
     application_id: PositiveId
     report_id: PositiveId | None = None
+    interview_record_id: PositiveId | None = None
+    offer_record_id: PositiveId | None = None
+    from_lifecycle_status: ApplicationLifecycleStatus | None = None
+    to_lifecycle_status: ApplicationLifecycleStatus | None = None
     from_recruitment_stage: RecruitmentStage | None
     to_recruitment_stage: RecruitmentStage
     from_hr_decision: HRDecision | None
     to_hr_decision: HRDecision
+    from_final_outcome: FinalOutcome | None = None
+    to_final_outcome: FinalOutcome | None = None
     reason_code: StageHistoryReasonCode
     reason_detail: OptionalReasonDetail | None = None
     actor_type: StageHistoryActorType
