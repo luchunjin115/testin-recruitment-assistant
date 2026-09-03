@@ -1,13 +1,13 @@
 # 项目当前状态
 
-> 最新更新：2026-09-02
+> 最新更新：2026-09-03
 >
 > 本文件只记录当前结论、风险和下一步；详细过程由 Git 历史恢复。
 
 ## 当前结论
 
 - 阶段 4—8 已完成。阶段 8 的 8A—8F、真实模型最小链路和项目负责人浏览器检查均已完成；项目负责人于 2026-09-02 明确确认阶段 8 最终验收通过并关闭。
-- 阶段 9 专项设计已由项目负责人确认；9A“合同与 migration”和 9B“面试后端”已完成，9C—9F 尚未开始。
+- 阶段 9 专项设计已由项目负责人确认；9A“合同与 migration”、9B“面试后端”和 9C“AI 初筛中心收口”已完成，9D—9F 尚未开始。
 - 阶段 7 已于 2026-09-01 通过项目负责人验收并关闭；功能链路已经完成，目前不是“等待继续开发才能交付”的状态。
 - 阶段 7 当前生产合同：评价计划 `deepseek-v4-pro` / Prompt v4 / Service v5 / Schema 5.0；初筛报告 `deepseek-v4-pro` / 主 Prompt v10 / Repair Prompt v2 / Service v11 / Schema 5.0。
 - `ScreeningRun` 最多保留 3 个 API attempts；当前 Alembic head 为 `b9e2f4a6c801`。
@@ -83,11 +83,14 @@ HR 维护完整 JD
 - 开发 PostgreSQL 已安全前向升级到 `b9e2f4a6c801 (head)`，`alembic check` 无漂移；原有 Application、StageHistory、ScreeningReport 等行数未变，新增 InterviewRecord 和 OfferRecord 表均为 0 行。
 - 9B 已提供面试安排、改期、取消、未到场、首次反馈、反馈更正和统一安全时间线 API；Application/Interview 行锁、expected_version、幂等、StageHistory/ActivityLog 同事务和稳定错误均已落地。
 - 9B 直接测试、真实 PostgreSQL/API 和多会话并发通过；完整后端回归为 `1412 passed, 502 subtests passed`。测试虚构数据已回滚或精确清理，开发库 InterviewRecord、OfferRecord、ActivityLog 均为 0 行，原 Application 状态和原有行数未变。
+- 9C 已新增单一分页聚合 API、Schema 5 确定性能力标签、四项主导航、旧简历/报告路由 replace 跳转、桌面证据台账/移动卡片、候选人 Application 深链和简历/报告/面试/Offer 边界/时间线统一详情；既有录入、HR 决策、批量重评和公开投递处理能力保留。
+- 9C 完整后端回归为 `1420 passed, 502 subtests passed`，前端 28 个测试文件和 production build 全部通过；开发 PostgreSQL 真实聚合 API 返回 200，Alembic 仍为 `b9e2f4a6c801 (head)` 且无漂移，原有 1 条 Application 及相关数据数量和状态未变。
+- 9C 没有 migration、DeepSeek 调用、模型费用、新 Worker 或浏览器产品验收。当前主要未验风险是真实浏览器中的高密度列表/移动端手感，以及大数据量查询计划和生产级认证权限。
 
 ## 唯一下一步
 
 1. 保持阶段 8 已关闭结论和阶段 9 已确认设计不被后续工作改写。
-2. 下一批只进入 9C“AI 初筛中心收口”；9D—9F 继续按已确认设计顺序实施。
+2. 下一批只进入 9D“Offer 与最终结果”；9E—9F 继续按已确认设计顺序实施。
 
 ## 新对话恢复方式
 

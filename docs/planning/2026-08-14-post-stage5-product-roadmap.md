@@ -82,7 +82,7 @@
 
 高风险操作必须由 HR 明确确认，全部阶段变化可追溯。报告只能基于现有业务数据，不得编造事实。
 
-阶段 9 专项设计已经项目负责人确认，见 `../stages/stage9/2026-09-02-stage9-interview-offer-hiring-pipeline-design.md`。9A“合同与 migration”和 9B“面试后端”已经完成，实际修改和验证见 `../stages/stage9/2026-09-02-stage9-implementation-record.md`；下一批从 9C“AI 初筛中心收口”继续。
+阶段 9 专项设计已经项目负责人确认，见 `../stages/stage9/2026-09-02-stage9-interview-offer-hiring-pipeline-design.md`。9A“合同与 migration”、9B“面试后端”和 9C“AI 初筛中心收口”已经完成，实际修改和验证见 `../stages/stage9/2026-09-02-stage9-implementation-record.md`；下一批从 9D“Offer 与最终结果”继续。
 
 ## 8. 阶段 10：首页综合 Agent
 

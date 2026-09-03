@@ -1,4 +1,3 @@
-import type { Stage7ScreeningCenterItem } from './services/screening';
 import type {
   Stage7BackupApplicationInput,
   Stage7BackupReasonCode,
@@ -10,6 +9,13 @@ import type {
 } from './types/applicationScreening';
 
 export type Stage7DecisionKind = 'pass' | 'backup' | 'reject' | 'undo_rejection';
+export type Stage7DecisionApplicationItem = {
+  application: {
+    lifecycleStatus: 'active' | 'ended' | 'voided';
+    recruitmentStage: string;
+    hrDecision: 'pending' | 'passed' | 'backup' | 'rejected';
+  };
+};
 export type Stage7DecisionEntry = { allowed: boolean; label: string; reason: string };
 export type Stage7DecisionSubmission =
   | { action: 'pass'; input: Stage7PassApplicationInput }
@@ -55,7 +61,7 @@ export const STAGE7_REVERSAL_REASON_OPTIONS: Array<{
 ];
 
 export const getStage7DecisionEntry = (
-  item: Stage7ScreeningCenterItem,
+  item: Stage7DecisionApplicationItem,
   pending: boolean,
 ): Stage7DecisionEntry => {
   const { application } = item;
@@ -82,7 +88,7 @@ export const getStage7DecisionEntry = (
   };
 };
 
-export const getStage7DecisionKinds = (item: Stage7ScreeningCenterItem): Stage7DecisionKind[] => {
+export const getStage7DecisionKinds = (item: Stage7DecisionApplicationItem): Stage7DecisionKind[] => {
   switch (item.application.hrDecision) {
     case 'pending': return ['pass', 'backup', 'reject'];
     case 'passed': return ['backup', 'reject'];
@@ -91,7 +97,7 @@ export const getStage7DecisionKinds = (item: Stage7ScreeningCenterItem): Stage7D
   }
 };
 
-export const getStage7PassPolicy = (item: Stage7ScreeningCenterItem) => {
+export const getStage7PassPolicy = (item: Stage7DecisionApplicationItem) => {
   const isReversal = item.application.hrDecision !== 'pending';
   return {
     reasonCode: 'meets_requirements' as const,
@@ -113,7 +119,7 @@ const findProhibitedTerm = (value: string) => {
 };
 
 export const buildStage7DecisionSubmission = (
-  item: Stage7ScreeningCenterItem,
+  item: Stage7DecisionApplicationItem,
   kind: Stage7DecisionKind | null,
   reasonCode: string | null,
   reasonDetail: string,

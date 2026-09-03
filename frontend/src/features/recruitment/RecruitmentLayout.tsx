@@ -2,8 +2,6 @@ import React, { useState } from 'react';
 import {
   AppstoreOutlined,
   BellOutlined,
-  FileTextOutlined,
-  InboxOutlined,
   MenuOutlined,
   MoreOutlined,
   RobotOutlined,
@@ -18,11 +16,9 @@ import './styles/index.css';
 
 const navItems = [
   { icon: <AppstoreOutlined />, label: '工作台', path: '/app/dashboard' },
-  { icon: <InboxOutlined />, label: '简历管理', path: '/app/resumes' },
   { icon: <TeamOutlined />, label: '候选人', path: '/app/candidates' },
   { icon: <SolutionOutlined />, label: '岗位管理', path: '/app/jobs' },
-  { icon: <RobotOutlined />, label: 'AI 初筛', path: '/app/screening' },
-  { icon: <FileTextOutlined />, label: '初筛报告', path: '/app/reports' },
+  { icon: <RobotOutlined />, label: 'AI 初筛中心', path: '/app/screening' },
 ];
 
 type NavigationProps = {
@@ -92,12 +88,8 @@ const RecruitmentLayout: React.FC = () => {
   const isCandidateCreate = location.pathname === '/app/candidates/new';
   const isCandidateDetail = !isCandidateCreate
     && /^\/app\/candidates\/[^/]+$/.test(location.pathname);
-  const pageTitle = location.pathname.startsWith('/app/resumes')
-    ? '简历管理'
-    : location.pathname.startsWith('/app/reports')
-      ? '初筛报告'
-    : location.pathname.startsWith('/app/screening')
-      ? 'AI 初筛'
+  const pageTitle = location.pathname.startsWith('/app/screening')
+      ? 'AI 初筛中心'
     : location.pathname.startsWith('/app/jobs')
       ? '岗位管理'
     : isCandidateCreate

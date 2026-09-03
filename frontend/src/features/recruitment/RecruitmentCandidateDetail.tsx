@@ -15,7 +15,7 @@ import {
 } from '@ant-design/icons';
 import axios from 'axios';
 import { Alert, Avatar, Button, Empty, Result, Skeleton, Tag } from 'antd';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getCandidateStatusMeta } from './candidateStatus';
 import {
   CandidateDetailData,
@@ -62,8 +62,10 @@ const InfoItem: React.FC<{ label: string; value: React.ReactNode }> = ({ label, 
 
 const RecruitmentCandidateDetail: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { id } = useParams();
   const candidateId = Number(id);
+  const applicationId = Number(searchParams.get('application_id'));
   const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
 
   const loadCandidate = useCallback(async () => {
@@ -284,8 +286,9 @@ const RecruitmentCandidateDetail: React.FC = () => {
             <div className="recruitment-detail-card-header"><div><MailOutlined /><h3>筛选与报告</h3></div></div>
             <p>历史初筛结果和已保存报告可在对应的只读中心查看；本页不运行筛选或生成报告。</p>
             <div className="recruitment-detail-related-links">
-              <Button onClick={() => navigate('/app/screening')} size="small">查看 AI 初筛</Button>
-              <Button onClick={() => navigate('/app/reports')} size="small">查看初筛报告</Button>
+              <Button onClick={() => navigate(Number.isInteger(applicationId) && applicationId > 0
+                ? `/app/screening?application_id=${applicationId}`
+                : '/app/screening')} size="small">查看初筛报告</Button>
             </div>
             <Button disabled>招聘流程操作 · 后续</Button>
           </article>

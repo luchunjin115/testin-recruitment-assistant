@@ -29,6 +29,7 @@
     "test:stage8-public-application-service": "node tests/stage8-public-application-service.test.mjs",
     "test:stage8-public-application-ui": "node tests/stage8-public-application-ui.test.mjs",
     "test:stage8-public-application-workbench": "node tests/stage8-public-application-workbench.test.mjs",
+    "test:stage9-screening-center": "node tests/stage9-screening-center.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

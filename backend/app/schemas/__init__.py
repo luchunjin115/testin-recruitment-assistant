@@ -113,6 +113,16 @@ from app.schemas.stage_history import (
     VoidApplicationRequest,
     VoidReasonCode,
 )
+from app.schemas.screening_center import (
+    ScreeningAbilityTag,
+    ScreeningCenterAllowedAction,
+    ScreeningCenterApplicationPage,
+    ScreeningCenterApplicationSummary,
+    ScreeningCenterDisplayLabel,
+    ScreeningCenterProcessingPool,
+    ScreeningCenterReportStatus,
+    ScreeningCenterSort,
+)
 from app.schemas.work_experience import (
     WorkExperienceCreate,
     WorkExperienceRead,

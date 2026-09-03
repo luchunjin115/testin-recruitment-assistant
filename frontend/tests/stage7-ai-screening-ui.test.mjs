@@ -41,8 +41,8 @@ assert.equal(report.includes('JSON.stringify(report'), false, '页面不得展�
 assert.equal(report.includes('experiencePeriodFactKeys.map'), false, '页面不得展示内部时间事实 key');
 
 for (const text of [
-  '批量重新评估', 'selectedApplicationIds.length', 'validateBatchSelection',
-  'item.jobStatus !== \'open\'', '查看 AI 报告', 'AI 解释匹配依据，HR 作出最终决定',
+  '批量重新评估', 'selectedApplicationIds.length', 'selectedItems[0].jobId !== item.jobId',
+  "item.allowedActions.includes('reassess_screening')", '查看处理与 AI 报告', 'AI 解释匹配依据，HR 作出最终决定',
   'recruitment-page-heading', 'recruitment-screening-workspace', 'recruitment-screening-empty',
 ]) assert.ok(center.includes(text), `初筛中心缺少：${text}`);
 

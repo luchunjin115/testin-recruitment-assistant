@@ -19,6 +19,7 @@ from .api import public_application_workbench
 from .api import reports
 from .api import resumes
 from .api import screening
+from .api import screening_center
 from .api import work_experiences
 from .core.config import get_settings
 
@@ -132,4 +133,5 @@ app.include_router(public_application_workbench.router, prefix="/api/v2")
 app.include_router(reports.router, prefix="/api/v2")
 app.include_router(resumes.router, prefix="/api/v2")
 app.include_router(screening.router, prefix="/api/v2")
+app.include_router(screening_center.router, prefix="/api/v2")
 app.include_router(work_experiences.router, prefix="/api/v2")

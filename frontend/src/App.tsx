@@ -7,13 +7,11 @@ import './App.css';
 
 const RecruitmentDashboard = lazy(() => import('./features/recruitment/RecruitmentDashboard'));
 const RecruitmentLayout = lazy(() => import('./features/recruitment/RecruitmentLayout'));
-const RecruitmentResumeList = lazy(() => import('./features/recruitment/RecruitmentResumeList'));
 const RecruitmentCandidateList = lazy(() => import('./features/recruitment/RecruitmentCandidateList'));
 const RecruitmentCandidateCreate = lazy(() => import('./features/recruitment/RecruitmentCandidateCreate'));
 const RecruitmentCandidateDetail = lazy(() => import('./features/recruitment/RecruitmentCandidateDetail'));
 const RecruitmentJobList = lazy(() => import('./features/recruitment/RecruitmentJobList'));
 const RecruitmentScreeningCenter = lazy(() => import('./features/recruitment/RecruitmentScreeningCenter'));
-const RecruitmentReportCenter = lazy(() => import('./features/recruitment/RecruitmentReportCenter'));
 const RecruitmentApplicationForm = lazy(() => import('./features/recruitment/RecruitmentApplicationForm'));
 
 const RouteLoading: React.FC = () => (
@@ -41,13 +39,13 @@ const App: React.FC = () => {
         <Route path="/app" element={withRouteLoading(<RecruitmentLayout />)}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={withRouteLoading(<RecruitmentDashboard />)} />
-          <Route path="resumes" element={withRouteLoading(<RecruitmentResumeList />)} />
+          <Route path="resumes" element={<Navigate to="/app/screening" replace />} />
           <Route path="candidates" element={withRouteLoading(<RecruitmentCandidateList />)} />
           <Route path="candidates/new" element={withRouteLoading(<RecruitmentCandidateCreate />)} />
           <Route path="candidates/:id" element={withRouteLoading(<RecruitmentCandidateDetail />)} />
           <Route path="jobs" element={withRouteLoading(<RecruitmentJobList />)} />
           <Route path="screening" element={withRouteLoading(<RecruitmentScreeningCenter />)} />
-          <Route path="reports" element={withRouteLoading(<RecruitmentReportCenter />)} />
+          <Route path="reports" element={<Navigate to="/app/screening" replace />} />
         </Route>
         <Route path="*" element={<Navigate to="/app/dashboard" replace />} />
       </Routes>

@@ -1,7 +1,7 @@
 # 阶段 9 实施记录
 
 > 日期：2026-09-02  
-> 当前状态：9A“合同与 migration”和 9B“面试后端”已完成；9C—9F 未开始  
+> 当前状态：9A“合同与 migration”、9B“面试后端”和 9C“AI 初筛中心收口”已完成；9D—9F 未开始
 > 业务合同：以 `2026-09-02-stage9-interview-offer-hiring-pipeline-design.md` 为唯一来源
 
 本文只记录阶段 9 实际做过的修改、验证、证明边界、风险和下一步，不重新定义状态、字段语义、权限或验收标准。
@@ -119,4 +119,50 @@
 
 ### 下一步入口
 
-当前唯一下一步是 9C“AI 初筛中心收口”。开始前重新核对工作区、Alembic、开发库和本节结果；9C 只做列表聚合 API、确定性标签、导航精简、桌面/移动列表与简历/报告统一详情，不提前进入 Offer 或最终结果操作。
+9B 完成时的下一步是 9C“AI 初筛中心收口”；实际结果见下节。
+
+## 9C：AI 初筛中心收口
+
+### 实际修改
+
+| 层级 | 文件 | 职责与本次效果 |
+| --- | --- | --- |
+| Schema | `backend/app/schemas/screening_center.py`、`schemas/__init__.py` | 固定分页、筛选、排序、报告状态、处理池、能力标签、最小列表字段和允许操作的响应合同；无报告使用独立状态，分数保持空值。 |
+| Query Service | `backend/app/services/screening_center_service.py` | 用固定两条 SELECT 完成总数和分页聚合，拼接 Application、Candidate、Job、当前 Resume、当前成功报告、最新初筛运行及最新公开投递处理运行；生成脱敏电话、业务更新时间、报告状态和保守的允许操作。 |
+| 确定性标签 | 同上 | 只读取当前 Schema 5.0 报告中 strengths 引用的持久化评价点及非零、有证据的 assessment；按分数、重要性、strength 顺序和评价点顺序排序，名称归一化去重后最多返回 4 个；旧报告、坏引用或无可靠证据返回空数组。 |
+| API | `backend/app/api/screening_center.py`、`app/main.py` | 新增 `GET /api/v2/screening-center/applications`；提供分页、Application 精确深链和已确认的业务筛选/排序，校验非法分数和日期区间，并把内部异常收口成稳定安全错误。 |
+| 前端 Service | `frontend/src/features/recruitment/services/screeningCenter.ts`、`recruitmentPipeline.ts` | 映射聚合接口的小字段，并为统一详情只读获取现有面试和安全时间线；没有新增模型或 Offer 请求。 |
+| 前端入口 | `frontend/src/App.tsx`、`RecruitmentLayout.tsx` | 主导航收为工作台、候选人、岗位管理、AI 初筛中心；旧 `/app/resumes` 和 `/app/reports` 使用 replace 跳转到统一中心。 |
+| 前端列表 | `RecruitmentScreeningCenter.tsx`、`styles/screening.css` | 新增桌面证据台账和移动卡片布局；同屏展示人员/岗位、真实报告状态、最多 4 个能力标签、两条优势、两条风险、招聘阶段轨迹、异常、时间和允许操作；保留录入待审核申请、HR 决策和五人批量重评。 |
+| 统一详情 | `ApplicationScreeningDrawer.tsx` | 在现有完整 `ScreeningReportView` 和公开投递处理组件上补齐申请概览、当前简历元数据/下载/已保存原文/结构草稿摘要、面试只读列表、Offer 未开放边界和安全时间线；所有读取都不会启动 AI。 |
+| 深链接 | `RecruitmentCandidateList.tsx`、`RecruitmentCandidateDetail.tsx` | 候选人业务行携带准确 Application ID；“查看初筛报告”进入 `/app/screening?application_id=...`，聚合 API 精确返回并自动打开对应详情。 |
+| 测试 | 后端 3 个新增测试文件、`frontend/tests/stage9-screening-center.test.mjs` 及 3 个既有前端合同测试 | 直接覆盖标签排序/去重/安全、无报告状态、允许操作、API 参数与安全失败、真实 PostgreSQL 固定查询数、小字段边界、路由跳转、导航、深链接、统一详情、响应式和旧能力回归。 |
+
+### 实际验证结果
+
+- 9C 直接后端测试共 `8 passed`；其中真实 PostgreSQL 事务测试监听 SQL，确认一个带 Schema 5 报告的分页请求只有 2 条业务 SELECT（总数 + 当前页），并在回滚后核对业务表数量未变。
+- 完整后端回归为 `1420 passed, 502 subtests passed`；保留 PyPDF2 弃用和既有异步连接清理 2 个非阻塞 warning。
+- 前端 28 个 `*.test.mjs` 文件全部通过，TypeScript + Vite production build 通过；既有简历录入、HR 决策、批量重评逐项失败、公开投递处理和阶段 7 Schema 5 报告合同继续通过。
+- 直接调用开发 PostgreSQL 上的真实 HTTP API 返回 200、`total=1`，响应只含列表所需小字段；未返回 `raw_text`、完整 `parsed_snapshot`、完整 `v5_report`、联系方式原值、薪资或会议信息。
+- 最终 `alembic current`、`heads` 均为 `b9e2f4a6c801 (head)`，`alembic check` 为无待生成操作。9C 没有数据库结构变化，也没有新增 migration。
+- 开发库最终仍为 Candidate 1、Job 1、Resume 1、Application 1、StageHistory 1、ScreeningReport 1、ScreeningRun 1；PublicApplicationSubmission、ApplicationProcessingRun、InterviewRecord、OfferRecord、ActivityLog 均为 0。原 Application 仍是 `active / screening_passed / passed / final_outcome=NULL`。
+
+### 能够证明
+
+- 列表不再由前端对每条 Application 逐行请求；聚合查询数不会随当前页行数线性增加。
+- “没有报告”“正在等待”“失败无报告”“旧报告保留”“报告过期”使用不同状态，列表不会把缺失报告显示成 0 分。
+- 能力标签来自已保存的 Schema 5 证据链，旧 Schema、坏引用、零分、无证据和敏感标签不会被包装成可靠能力。
+- 内部录入和公开投递共享同一列表；旧页面 URL、候选人 Application 深链及统一详情的读取边界已经接通。
+- 9C 没有改写数据库数据、没有新增 Worker、没有调用 DeepSeek，也没有产生模型费用。
+
+### 不能证明与遗留风险
+
+- 本批次没有浏览器产品验收；自动化覆盖结构、映射、构建和响应式 CSS 合同，不能替代真实浏览器中的视觉密度、滚动、焦点顺序和小屏手感检查。
+- 固定两条 SELECT 已在当前 PostgreSQL fixture 和开发库证明，但没有进行十万级 Application 的查询计划、索引命中或压力测试。
+- 开发库没有公开投递、失败、过期和面试样本；这些组合由虚构/回滚测试覆盖，不代表开发库中实际走过每一种 UI 状态。
+- 内部 HR 工作台仍没有登录和 RBAC；时间线和简历原文属于本地作品集边界，正式公网环境仍需权限、审计和隐私治理。
+- Offer 区只显示 9D 边界，没有 Offer Service/API/页面、录取或入职操作；统计和最终浏览器验收仍属于 9D—9F。
+
+### 下一步入口
+
+当前唯一下一步是 9D“Offer 与最终结果”。开始前继续只读核对当前 Git、Alembic 和开发库；9D 必须沿用 9A 已固定的 `offer → offer_accepted → admitted → hired` 独立节点，不在 9C 页面或标签层推断业务状态。

@@ -26,6 +26,20 @@ import type { JobEvaluationPlan, ScreeningReport, ScreeningState } from './types
 import ScreeningReportView from './ScreeningReportView';
 import PublicApplicationProcessingPanel from './PublicApplicationProcessingPanel';
 import type { PublicApplicationWorkbenchSummary } from './services/publicApplicationWorkbench';
+import {
+  getRecruitmentResume,
+  getRecruitmentResumeFileUrl,
+  getStoredRecruitmentResumeStructure,
+  type RecruitmentResumeDetail,
+} from './services/resumes';
+import {
+  listApplicationInterviews,
+  listApplicationTimeline,
+  type InterviewListItem,
+  type TimelineItem,
+} from './services/recruitmentPipeline';
+import type { ScreeningCenterItem } from './services/screeningCenter';
+import type { ResumeParseDraft } from './types/resumeStructure';
 
 type Props = {
   applicationId: number | null;
@@ -41,6 +55,7 @@ type Props = {
   onStateChange?: (state: ScreeningState) => void;
   onPublicSubmissionChange?: (summary: PublicApplicationWorkbenchSummary) => void;
   onCurrentResumeChange?: (resumeId: number) => void;
+  summary?: ScreeningCenterItem | null;
 };
 
 const formatReportDate = (value: string) => {
@@ -65,6 +80,7 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
   onStateChange,
   onPublicSubmissionChange,
   onCurrentResumeChange,
+  summary,
 }) => {
   const [state, setState] = useState<ScreeningState | null>(initialState);
   const [plan, setPlan] = useState<JobEvaluationPlan | null>(null);
@@ -73,6 +89,11 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
   const [initialLoading, setInitialLoading] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [actionPending, setActionPending] = useState(false);
+  const [resume, setResume] = useState<RecruitmentResumeDetail | null>(null);
+  const [resumeStructureNote, setResumeStructureNote] = useState('正在读取已保存的结构化结果…');
+  const [resumeDraft, setResumeDraft] = useState<ResumeParseDraft | null>(null);
+  const [interviews, setInterviews] = useState<InterviewListItem[]>([]);
+  const [timeline, setTimeline] = useState<TimelineItem[]>([]);
   const [modal, modalContextHolder] = Modal.useModal();
   const requestIdRef = useRef(0);
 
@@ -125,6 +146,34 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
     // initialState is intentionally read only when opening or switching Application.
     // Poll responses update the parent snapshot and must not restart the initial request.
   }, [applicationId, jobId, loadState, open]);
+
+  useEffect(() => {
+    if (!open || !applicationId || !currentResumeId) return undefined;
+    let cancelled = false;
+    setResume(null);
+    setResumeDraft(null);
+    setResumeStructureNote('正在读取已保存的结构化结果…');
+    void Promise.allSettled([
+      getRecruitmentResume(currentResumeId),
+      getStoredRecruitmentResumeStructure(currentResumeId),
+      listApplicationInterviews(applicationId),
+      listApplicationTimeline(applicationId),
+    ]).then(([resumeResult, structureResult, interviewResult, timelineResult]) => {
+      if (cancelled) return;
+      if (resumeResult.status === 'fulfilled') setResume(resumeResult.value);
+      setResumeStructureNote(structureResult.status === 'fulfilled'
+        ? structureResult.value.draft
+          ? structureResult.value.has_previous_draft && structureResult.value.structure_status === 'failed'
+            ? '本次结构化失败，仍保留上一次成功草稿。'
+            : '已读取最近一次成功保存的结构化草稿。'
+          : '当前没有可读取的结构化草稿。'
+        : '结构化状态暂时无法读取；不会触发新的 AI 调用。');
+      setResumeDraft(structureResult.status === 'fulfilled' ? structureResult.value.draft : null);
+      setInterviews(interviewResult.status === 'fulfilled' ? interviewResult.value : []);
+      setTimeline(timelineResult.status === 'fulfilled' ? timelineResult.value : []);
+    });
+    return () => { cancelled = true; };
+  }, [applicationId, currentResumeId, open]);
 
   useEffect(() => {
     const status = state?.latestRun?.status;
@@ -234,6 +283,40 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
       title={applicationId ? `${candidateName} · Application #${applicationId}` : 'AI 初筛报告'}
       width="min(980px, 100vw)"
     >
+      <div className="recruitment-unified-detail-sections">
+        <section aria-labelledby="application-overview-title" className="recruitment-unified-detail-card">
+          <div><span>01</span><h3 id="application-overview-title">申请概览</h3></div>
+          <p>{candidateName} · {jobTitle}</p>
+          <div className="recruitment-unified-detail-meta">
+            <Tag>{summary?.source === 'public_apply' ? '公开投递' : '内部录入'}</Tag>
+            {summary && <Tag>{summary.recruitmentStage}</Tag>}
+            {summary && <Tag>{summary.hrDecision}</Tag>}
+            {summary?.finalOutcome && <Tag color="default">{summary.finalOutcome}</Tag>}
+          </div>
+        </section>
+        <section aria-labelledby="resume-section-title" className="recruitment-unified-detail-card">
+          <div><span>02</span><h3 id="resume-section-title">简历</h3></div>
+          {resume ? <>
+            <p><strong>{resume.filename}</strong> · {resume.parseStatus} · 上传于 {formatReportDate(resume.uploadedAt)}</p>
+            <p>{resumeStructureNote}</p>
+            {resumeDraft && <p>已保存结构：{resumeDraft.work_experiences.length} 段工作经历、{resumeDraft.project_experiences.length} 个项目、{resumeDraft.skills.length} 项技能。</p>}
+            <details className="recruitment-resume-text-preview"><summary>查看已保存的简历文本</summary><pre>{resume.rawText || '当前没有已保存的简历文本。'}</pre></details>
+            <Button href={getRecruitmentResumeFileUrl(resume.id, true)} rel="noopener noreferrer" target="_blank">下载当前简历</Button>
+          </> : <p>简历元数据暂时无法读取；报告和其它业务记录仍可继续查看。</p>}
+        </section>
+        <section aria-labelledby="interview-section-title" className="recruitment-unified-detail-card">
+          <div><span>04</span><h3 id="interview-section-title">面试</h3></div>
+          {interviews.length ? interviews.map(item => <p key={item.id}>第 {item.roundNumber} 轮 · {item.status} · {formatReportDate(item.scheduledStartAt)} · {item.decision}</p>) : <p>暂无面试记录。安排和反馈操作将在面试工作流中进行。</p>}
+        </section>
+        <section aria-labelledby="offer-section-title" className="recruitment-unified-detail-card is-future">
+          <div><span>05</span><h3 id="offer-section-title">Offer</h3></div>
+          <p>Offer 是独立业务节点，将在 9D 开放；本阶段不读取薪资，也不提供操作。</p>
+        </section>
+        <section aria-labelledby="timeline-section-title" className="recruitment-unified-detail-card">
+          <div><span>06</span><h3 id="timeline-section-title">时间线</h3></div>
+          {timeline.length ? timeline.slice(0, 8).map(item => <p key={`${item.eventType}-${item.sourceId}`}>{formatReportDate(item.occurredAt)} · {item.actorLabel} · {item.reasonCode}{item.reasonDetail ? ` · ${item.reasonDetail}` : ''}</p>) : <p>暂无可展示的招聘事件。</p>}
+        </section>
+      </div>
       {publicSubmission && currentResumeId && (
         <PublicApplicationProcessingPanel
           currentResumeId={currentResumeId}
@@ -243,7 +326,7 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
         />
       )}
       <div className="recruitment-screening-context">
-        <span><RobotOutlined /> AI 岗位匹配建议</span>
+        <span><RobotOutlined /> 03 · AI 岗位匹配建议</span>
         <strong>{jobTitle}</strong>
         <p>报告只解释当前简历与岗位的匹配情况，不会代替 HR 作出决定。</p>
       </div>

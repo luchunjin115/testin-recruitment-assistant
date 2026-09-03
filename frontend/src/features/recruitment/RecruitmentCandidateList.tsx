@@ -239,7 +239,7 @@ const RecruitmentCandidateList: React.FC = () => {
                       {item.name.slice(0, 1)}
                     </Avatar>
                     <div>
-                      <Link className="recruitment-candidate-name-link" to={`/app/candidates/${item.candidateId}`}>{item.name}</Link>
+                      <Link className="recruitment-candidate-name-link" to={`/app/candidates/${item.candidateId}?application_id=${item.applicationId}`}>{item.name}</Link>
                       <span>{item.email || item.phone || `Candidate #${item.candidateId}`}</span>
                     </div>
                   </div>

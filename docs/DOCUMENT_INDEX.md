@@ -86,7 +86,7 @@ docs/
 - `stages/stage9/2026-09-02-stage9-interview-offer-hiring-pipeline-design.md`
 - `stages/stage9/2026-09-02-stage9-implementation-record.md`
 
-第一份是项目负责人已确认的阶段 9 唯一业务设计，统一维护 Application 后半程状态、InterviewRecord、OfferRecord、具体薪资、审计与更正、AI 初筛中心信息收口、确定性 AI 标签和招聘流程统计合同。第二份是阶段 9 唯一实施记录，只维护 9A—9F 实际修改、验证、证明边界、风险和下一步，不复制业务合同。当前 9A、9B 已完成，9C—9F 尚未开始；当前进度以 `PROJECT_STATE.md` 为准。
+第一份是项目负责人已确认的阶段 9 唯一业务设计，统一维护 Application 后半程状态、InterviewRecord、OfferRecord、具体薪资、审计与更正、AI 初筛中心信息收口、确定性 AI 标签和招聘流程统计合同。第二份是阶段 9 唯一实施记录，只维护 9A—9F 实际修改、验证、证明边界、风险和下一步，不复制业务合同。当前 9A—9C 已完成，9D—9F 尚未开始；当前进度以 `PROJECT_STATE.md` 为准。
 
 ## 5. 研究资料
 
