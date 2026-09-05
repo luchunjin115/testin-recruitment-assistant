@@ -107,3 +107,59 @@ def test_allowed_actions_follow_existing_service_preconditions() -> None:
     assert ScreeningCenterAllowedAction.BACKUP in actions
     assert ScreeningCenterAllowedAction.REJECT in actions
     assert ScreeningCenterAllowedAction.PASS not in actions
+
+
+def test_stage9_allowed_actions_follow_offer_and_final_result_state() -> None:
+    service = ScreeningCenterService()
+    job = SimpleNamespace(status="open")
+    application = SimpleNamespace(
+        lifecycle_status="active",
+        recruitment_stage="offer",
+        hr_decision="passed",
+        final_outcome=None,
+    )
+    assert ScreeningCenterAllowedAction.CREATE_OFFER in service._allowed_actions(
+        application, job, None, None, latest_offer_status=None
+    )
+    draft_actions = service._allowed_actions(
+        application, job, None, None, latest_offer_status="draft"
+    )
+    assert ScreeningCenterAllowedAction.EDIT_OFFER in draft_actions
+    assert ScreeningCenterAllowedAction.SEND_OFFER in draft_actions
+
+    sent_actions = service._allowed_actions(
+        application, job, None, None, latest_offer_status="sent"
+    )
+    for expected in (
+        ScreeningCenterAllowedAction.EDIT_OFFER,
+        ScreeningCenterAllowedAction.ACCEPT_OFFER,
+        ScreeningCenterAllowedAction.DECLINE_OFFER,
+        ScreeningCenterAllowedAction.WITHDRAW_OFFER,
+        ScreeningCenterAllowedAction.EXPIRE_OFFER,
+    ):
+        assert expected in sent_actions
+    for forbidden in (
+        ScreeningCenterAllowedAction.PASS,
+        ScreeningCenterAllowedAction.BACKUP,
+        ScreeningCenterAllowedAction.REJECT,
+    ):
+        assert forbidden not in sent_actions
+
+    application.recruitment_stage = "offer_accepted"
+    accepted_actions = service._allowed_actions(application, job, None, None)
+    assert ScreeningCenterAllowedAction.CONFIRM_ADMISSION in accepted_actions
+    assert ScreeningCenterAllowedAction.REOPEN_STAGE9 in accepted_actions
+
+    application.recruitment_stage = "admitted"
+    admitted_actions = service._allowed_actions(application, job, None, None)
+    assert ScreeningCenterAllowedAction.CONFIRM_HIRE in admitted_actions
+    assert ScreeningCenterAllowedAction.REOPEN_STAGE9 in admitted_actions
+
+    application.lifecycle_status = "ended"
+    application.recruitment_stage = "offer"
+    application.final_outcome = "offer_declined"
+    ended_actions = service._allowed_actions(application, job, None, None)
+    assert ended_actions == [
+        ScreeningCenterAllowedAction.VIEW_DETAIL,
+        ScreeningCenterAllowedAction.REOPEN_STAGE9,
+    ]

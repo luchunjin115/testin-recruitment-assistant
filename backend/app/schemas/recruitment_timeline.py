@@ -12,6 +12,7 @@ from app.schemas.application import (
     RecruitmentStage,
 )
 from app.schemas.interview import InterviewDecision, InterviewStatus
+from app.schemas.offer import OfferStatus
 from app.schemas.stage_history import OptionalReasonDetail, StageHistoryActorType
 
 
@@ -39,6 +40,8 @@ class RecruitmentTimelineItem(BaseModel):
     to_interview_status: InterviewStatus | None = None
     from_interview_decision: InterviewDecision | None = None
     to_interview_decision: InterviewDecision | None = None
+    from_offer_status: OfferStatus | None = None
+    to_offer_status: OfferStatus | None = None
     from_scheduled_start_at: AwareDatetime | None = None
     to_scheduled_start_at: AwareDatetime | None = None
     from_version: int | None = None

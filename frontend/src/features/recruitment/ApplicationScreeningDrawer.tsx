@@ -40,8 +40,11 @@ import {
 } from './services/recruitmentPipeline';
 import type { ScreeningCenterItem } from './services/screeningCenter';
 import type { ResumeParseDraft } from './types/resumeStructure';
+import OfferPipelinePanel from './OfferPipelinePanel';
+import InterviewPipelinePanel from './InterviewPipelinePanel';
 
 type Props = {
+  workspace: 'screening' | 'candidate';
   applicationId: number | null;
   candidateName: string;
   initialState: ScreeningState | null;
@@ -55,6 +58,7 @@ type Props = {
   onStateChange?: (state: ScreeningState) => void;
   onPublicSubmissionChange?: (summary: PublicApplicationWorkbenchSummary) => void;
   onCurrentResumeChange?: (resumeId: number) => void;
+  onPipelineChange?: () => Promise<void> | void;
   summary?: ScreeningCenterItem | null;
 };
 
@@ -66,7 +70,95 @@ const formatReportDate = (value: string) => {
   }).format(date);
 };
 
+const STAGE_LABELS = {
+  applied: '已申请',
+  hr_review: 'HR 初筛',
+  screening_passed: '初筛通过',
+  backup: '初筛备选',
+  rejected: '初筛淘汰',
+  interview: '面试中',
+  offer: 'Offer 沟通',
+  offer_accepted: 'Offer 已接受',
+  admitted: '已录取待入职',
+  hired: '已正式入职',
+} as const;
+
+const DECISION_LABELS = {
+  pending: '待 HR 决定',
+  passed: 'HR 已通过',
+  backup: '备选',
+  rejected: '已淘汰',
+} as const;
+
+const FINAL_OUTCOME_LABELS = {
+  screening_rejected: '初筛淘汰',
+  interview_rejected: '面试淘汰',
+  interview_no_show: '面试未到场',
+  offer_declined: '候选人拒绝 Offer',
+  offer_withdrawn: '公司撤回 Offer',
+  offer_expired: 'Offer 已过期',
+  candidate_withdrew: '候选人退出',
+  company_canceled: '公司取消流程',
+  hired: '已正式入职',
+} as const;
+
+const RESUME_STATUS_LABELS = {
+  uploaded: '等待解析',
+  parsing: '解析中',
+  parsed: '解析完成',
+  failed: '解析失败',
+} as const;
+
+const TIMELINE_REASON_LABELS: Record<string, string> = {
+  application_created: '创建岗位申请',
+  public_application_received: '收到公开投递',
+  hr_direct_entry: 'HR 内部录入',
+  meets_requirements: 'HR 初筛通过',
+  minor_capability_gap: '因轻微能力差距转为备选',
+  waiting_for_comparison: '等待横向比较',
+  limited_headcount: '因名额有限转为备选',
+  information_pending: '等待补充信息',
+  compensation_pending: '等待薪酬沟通',
+  availability_pending: '等待到岗时间确认',
+  required_skill_missing: '缺少岗位必需技能',
+  work_experience_insufficient: '工作经验不足',
+  education_requirement_not_met: '学历要求未满足',
+  required_experience_missing: '缺少必需经历',
+  role_mismatch: '岗位匹配度不足',
+  new_evidence: '根据新证据调整决定',
+  candidate_information_updated: '候选人信息更新后调整决定',
+  job_requirements_changed: '岗位要求变化后调整决定',
+  decision_correction: '修正此前决定',
+  hr_reassessment: 'HR 重新评估',
+  duplicate_entry: '作废重复申请',
+  wrong_job: '作废错误岗位申请',
+  entry_error: '作废误录申请',
+  ai_screening_completed: 'AI 岗位匹配分析完成',
+  ai_screening_failed: 'AI 岗位匹配分析失败',
+  interview_scheduled: '安排面试',
+  interview_rescheduled: '调整面试安排',
+  interview_canceled: '取消面试',
+  interview_no_show: '记录面试未到场',
+  interview_round_completed: '完成本轮面试',
+  interview_next_round: '进入下一轮面试',
+  interview_proceed_offer: '面试通过并进入 Offer',
+  interview_rejected: '面试淘汰',
+  candidate_withdrew: '候选人退出流程',
+  offer_created: '创建 Offer 草稿',
+  offer_sent: '标记 Offer 已发送',
+  offer_accepted: '候选人接受 Offer',
+  offer_declined: '候选人拒绝 Offer',
+  offer_withdrawn: '公司撤回 Offer',
+  offer_expired: '标记 Offer 已过期',
+  application_admitted: '确认录取并等待入职',
+  application_hired: '确认正式入职',
+  company_canceled: '公司取消招聘流程',
+  stage9_correction: '更正招聘流程记录',
+  stage9_reopened: '重新打开招聘流程',
+};
+
 const ApplicationScreeningDrawer: React.FC<Props> = ({
+  workspace,
   applicationId,
   candidateName,
   initialState,
@@ -80,6 +172,7 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
   onStateChange,
   onPublicSubmissionChange,
   onCurrentResumeChange,
+  onPipelineChange,
   summary,
 }) => {
   const [state, setState] = useState<ScreeningState | null>(initialState);
@@ -97,19 +190,24 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
   const [modal, modalContextHolder] = Modal.useModal();
   const requestIdRef = useRef(0);
 
-  const applyState = useCallback((next: ScreeningState) => {
+  const applyState = useCallback((next: ScreeningState, notifyParent = false) => {
     setState(next);
     setRefreshError(null);
-    onStateChange?.(next);
+    if (notifyParent) onStateChange?.(next);
   }, [onStateChange]);
 
-  const loadState = useCallback(async (showLoading = false): Promise<ScreeningState | null> => {
+  const loadState = useCallback(async (
+    showLoading = false,
+    notifyParent = false,
+  ): Promise<ScreeningState | null> => {
     if (!applicationId || !open) return null;
     const requestId = ++requestIdRef.current;
     if (showLoading) setInitialLoading(true);
     try {
       const next = await getApplicationScreening(applicationId);
-      if (shouldApplyScreeningResponse(requestId, requestIdRef.current)) applyState(next);
+      if (shouldApplyScreeningResponse(requestId, requestIdRef.current)) {
+        applyState(next, notifyParent);
+      }
       return next;
     } catch (error) {
       if (!shouldApplyScreeningResponse(requestId, requestIdRef.current)) return null;
@@ -121,6 +219,16 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
       }
     }
   }, [applicationId, applyState, open]);
+
+  const refreshPipelineRecords = useCallback(async () => {
+    if (!applicationId || !open) return;
+    const [interviewResult, timelineResult] = await Promise.allSettled([
+      listApplicationInterviews(applicationId),
+      listApplicationTimeline(applicationId),
+    ]);
+    setInterviews(interviewResult.status === 'fulfilled' ? interviewResult.value : []);
+    setTimeline(timelineResult.status === 'fulfilled' ? timelineResult.value : []);
+  }, [applicationId, open]);
 
   useEffect(() => {
     if (!open || !applicationId) return undefined;
@@ -148,6 +256,11 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
   }, [applicationId, jobId, loadState, open]);
 
   useEffect(() => {
+    if (!open || !applicationId) return;
+    void refreshPipelineRecords();
+  }, [applicationId, open, refreshPipelineRecords]);
+
+  useEffect(() => {
     if (!open || !applicationId || !currentResumeId) return undefined;
     let cancelled = false;
     setResume(null);
@@ -156,9 +269,7 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
     void Promise.allSettled([
       getRecruitmentResume(currentResumeId),
       getStoredRecruitmentResumeStructure(currentResumeId),
-      listApplicationInterviews(applicationId),
-      listApplicationTimeline(applicationId),
-    ]).then(([resumeResult, structureResult, interviewResult, timelineResult]) => {
+    ]).then(([resumeResult, structureResult]) => {
       if (cancelled) return;
       if (resumeResult.status === 'fulfilled') setResume(resumeResult.value);
       setResumeStructureNote(structureResult.status === 'fulfilled'
@@ -169,8 +280,6 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
           : '当前没有可读取的结构化草稿。'
         : '结构化状态暂时无法读取；不会触发新的 AI 调用。');
       setResumeDraft(structureResult.status === 'fulfilled' ? structureResult.value.draft : null);
-      setInterviews(interviewResult.status === 'fulfilled' ? interviewResult.value : []);
-      setTimeline(timelineResult.status === 'fulfilled' ? timelineResult.value : []);
     });
     return () => { cancelled = true; };
   }, [applicationId, currentResumeId, open]);
@@ -182,7 +291,7 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
     let timerId: number | undefined;
     const schedule = () => {
       timerId = window.setTimeout(async () => {
-        const next = await loadState(false);
+        const next = await loadState(false, true);
         if (!cancelled && (!next || shouldPollScreeningStatus(next.latestRun?.status))) schedule();
       }, SCREENING_POLL_INTERVAL_MS);
     };
@@ -206,7 +315,7 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
         report: result.report ?? state?.report ?? null,
         latestRun: result.run ?? state?.latestRun ?? null,
       };
-      applyState(next);
+      applyState(next, true);
       setSelectedReportId(null);
       void listApplicationScreeningReports(applicationId).then(setReportHistory).catch(() => undefined);
       if (result.reusedReport) {
@@ -259,11 +368,11 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
     <>
     {modalContextHolder}
     <Drawer
-      className="recruitment-screening-report-drawer"
+      className={`recruitment-screening-report-drawer is-${workspace}`}
       destroyOnClose
       extra={(
         <div className="recruitment-screening-drawer-actions">
-          <Button icon={<ReloadOutlined />} onClick={() => void loadState(false)}>刷新</Button>
+          <Button icon={<ReloadOutlined />} onClick={() => void loadState(false, true)}>刷新</Button>
           <Tooltip title={actionDisabledReason}>
             <span>
               <Button
@@ -280,41 +389,57 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
       )}
       onClose={onClose}
       open={open}
-      title={applicationId ? `${candidateName} · Application #${applicationId}` : 'AI 初筛报告'}
+      title={applicationId ? `${candidateName} · ${workspace === 'candidate' ? '招聘流程' : '初筛详情'} · 申请 #${applicationId}` : '申请详情'}
       width="min(980px, 100vw)"
     >
       <div className="recruitment-unified-detail-sections">
         <section aria-labelledby="application-overview-title" className="recruitment-unified-detail-card">
-          <div><span>01</span><h3 id="application-overview-title">申请概览</h3></div>
+          <div><span>申请</span><h3 id="application-overview-title">申请概览</h3></div>
           <p>{candidateName} · {jobTitle}</p>
           <div className="recruitment-unified-detail-meta">
             <Tag>{summary?.source === 'public_apply' ? '公开投递' : '内部录入'}</Tag>
-            {summary && <Tag>{summary.recruitmentStage}</Tag>}
-            {summary && <Tag>{summary.hrDecision}</Tag>}
-            {summary?.finalOutcome && <Tag color="default">{summary.finalOutcome}</Tag>}
+            {summary && <Tag>{STAGE_LABELS[summary.recruitmentStage]}</Tag>}
+            {summary && <Tag>{DECISION_LABELS[summary.hrDecision]}</Tag>}
+            {summary?.finalOutcome && <Tag color="default">{FINAL_OUTCOME_LABELS[summary.finalOutcome]}</Tag>}
           </div>
         </section>
         <section aria-labelledby="resume-section-title" className="recruitment-unified-detail-card">
-          <div><span>02</span><h3 id="resume-section-title">简历</h3></div>
+          <div><span>材料</span><h3 id="resume-section-title">简历</h3></div>
           {resume ? <>
-            <p><strong>{resume.filename}</strong> · {resume.parseStatus} · 上传于 {formatReportDate(resume.uploadedAt)}</p>
+            <p><strong>{resume.filename}</strong> · {RESUME_STATUS_LABELS[resume.parseStatus]} · 上传于 {formatReportDate(resume.uploadedAt)}</p>
             <p>{resumeStructureNote}</p>
             {resumeDraft && <p>已保存结构：{resumeDraft.work_experiences.length} 段工作经历、{resumeDraft.project_experiences.length} 个项目、{resumeDraft.skills.length} 项技能。</p>}
             <details className="recruitment-resume-text-preview"><summary>查看已保存的简历文本</summary><pre>{resume.rawText || '当前没有已保存的简历文本。'}</pre></details>
             <Button href={getRecruitmentResumeFileUrl(resume.id, true)} rel="noopener noreferrer" target="_blank">下载当前简历</Button>
           </> : <p>简历元数据暂时无法读取；报告和其它业务记录仍可继续查看。</p>}
         </section>
-        <section aria-labelledby="interview-section-title" className="recruitment-unified-detail-card">
-          <div><span>04</span><h3 id="interview-section-title">面试</h3></div>
-          {interviews.length ? interviews.map(item => <p key={item.id}>第 {item.roundNumber} 轮 · {item.status} · {formatReportDate(item.scheduledStartAt)} · {item.decision}</p>) : <p>暂无面试记录。安排和反馈操作将在面试工作流中进行。</p>}
-        </section>
-        <section aria-labelledby="offer-section-title" className="recruitment-unified-detail-card is-future">
-          <div><span>05</span><h3 id="offer-section-title">Offer</h3></div>
-          <p>Offer 是独立业务节点，将在 9D 开放；本阶段不读取薪资，也不提供操作。</p>
-        </section>
+        {workspace === 'candidate' && <section aria-labelledby="interview-section-title" className="recruitment-unified-detail-card">
+          <div><span>流程</span><h3 id="interview-section-title">面试</h3></div>
+          {applicationId && <InterviewPipelinePanel
+            applicationId={applicationId}
+            interviews={interviews}
+            onChanged={async () => {
+              await Promise.all([refreshPipelineRecords(), loadState(false)]);
+              await onPipelineChange?.();
+            }}
+            summary={summary}
+          />}
+        </section>}
+        {workspace === 'candidate' && <section aria-labelledby="offer-section-title" className="recruitment-unified-detail-card recruitment-offer-section">
+          <div><span>结果</span><h3 id="offer-section-title">Offer</h3></div>
+          {applicationId && <OfferPipelinePanel
+            applicationId={applicationId}
+            latestInterviewVersion={interviews.length ? interviews[interviews.length - 1].version : null}
+            onChanged={async () => {
+              await Promise.all([refreshPipelineRecords(), loadState(false)]);
+              await onPipelineChange?.();
+            }}
+            summary={summary}
+          />}
+        </section>}
         <section aria-labelledby="timeline-section-title" className="recruitment-unified-detail-card">
-          <div><span>06</span><h3 id="timeline-section-title">时间线</h3></div>
-          {timeline.length ? timeline.slice(0, 8).map(item => <p key={`${item.eventType}-${item.sourceId}`}>{formatReportDate(item.occurredAt)} · {item.actorLabel} · {item.reasonCode}{item.reasonDetail ? ` · ${item.reasonDetail}` : ''}</p>) : <p>暂无可展示的招聘事件。</p>}
+          <div><span>审计</span><h3 id="timeline-section-title">时间线</h3></div>
+          {timeline.length ? timeline.map(item => <p key={`${item.eventType}-${item.sourceId}`}>{formatReportDate(item.occurredAt)} · {item.actorLabel} · {TIMELINE_REASON_LABELS[item.reasonCode] ?? '招聘流程更新'}{item.reasonDetail ? ` · ${item.reasonDetail}` : ''}</p>) : <p>暂无可展示的招聘事件。</p>}
         </section>
       </div>
       {publicSubmission && currentResumeId && (
@@ -326,7 +451,7 @@ const ApplicationScreeningDrawer: React.FC<Props> = ({
         />
       )}
       <div className="recruitment-screening-context">
-        <span><RobotOutlined /> 03 · AI 岗位匹配建议</span>
+        <span><RobotOutlined /> AI 岗位匹配建议</span>
         <strong>{jobTitle}</strong>
         <p>报告只解释当前简历与岗位的匹配情况，不会代替 HR 作出决定。</p>
       </div>

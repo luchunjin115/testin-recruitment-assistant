@@ -1,262 +1,131 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  LinkOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  TeamOutlined,
-  UserAddOutlined,
-} from '@ant-design/icons';
-import { Alert, Avatar, Button, Empty, Input, Select, Skeleton, Tag, Tooltip } from 'antd';
-import { Link, useNavigate } from 'react-router-dom';
-import {
-  type CandidateListSnapshot,
-  getRecruitmentCandidates,
-} from './services/candidates';
+import React, { useCallback, useEffect, useState } from 'react';
+import { FileSearchOutlined, FilterOutlined, ReloadOutlined, SearchOutlined, UserAddOutlined } from '@ant-design/icons';
+import { Alert, Button, Empty, Input, Pagination, Select, Skeleton } from 'antd';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import ApplicationEvidenceTable from './ApplicationEvidenceTable';
+import ApplicationScreeningDrawer from './ApplicationScreeningDrawer';
+import { getRecruitmentJobs, type RecruitmentJob } from './services/jobs';
+import { getPublicApplicationSubmission, type PublicApplicationWorkbenchSummary } from './services/publicApplicationWorkbench';
+import { getScreeningCenterError, listScreeningCenterApplications, type ScreeningCenterItem, type ScreeningCenterPage, type ScreeningCenterSort, type ScreeningCenterSource, type ScreeningCenterStage } from './services/screeningCenter';
 
-type LoadState =
-  | { status: 'loading' }
-  | { status: 'error'; message: string }
-  | { status: 'ready'; data: CandidateListSnapshot };
-
-const avatarTones = ['blue', 'violet', 'green', 'orange'];
-
-const SOURCE_LABELS = {
-  hr_direct: 'HR 人工直通',
-  hr_screening: 'HR 审核通过',
-  public_apply: '公开投递通过',
-} as const;
-
-const formatDateTime = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '时间未记录';
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).format(date);
+type LoadState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; data: ScreeningCenterPage };
+type CandidateStage = Extract<ScreeningCenterStage, 'screening_passed' | 'interview' | 'offer' | 'offer_accepted' | 'admitted' | 'hired'> | 'all';
+type FilterState = {
+  keyword: string;
+  jobId: number | 'all';
+  source: ScreeningCenterSource | 'all';
+  stage: CandidateStage;
+  sort: ScreeningCenterSort;
 };
+
+const INITIAL_FILTERS: FilterState = { keyword: '', jobId: 'all', source: 'all', stage: 'all', sort: 'updated_desc' };
+const SOURCE_LABELS: Record<ScreeningCenterSource, string> = { hr_direct: 'HR 直通', hr_screening: '内部初筛通过', public_apply: '公开投递通过' };
+const STAGE_OPTIONS: Array<{ value: CandidateStage; label: string }> = [
+  { value: 'all', label: '全部招聘阶段' },
+  { value: 'screening_passed', label: '待安排面试' },
+  { value: 'interview', label: '面试中' },
+  { value: 'offer', label: 'Offer 沟通' },
+  { value: 'offer_accepted', label: 'Offer 已接受' },
+  { value: 'admitted', label: '已录取待入职' },
+  { value: 'hired', label: '已正式入职' },
+];
 
 const RecruitmentCandidateList: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const deepLinkedApplicationId = Number(searchParams.get('application_id'));
   const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
-  const [keyword, setKeyword] = useState('');
-  const [jobFilter, setJobFilter] = useState<number | 'all'>('all');
+  const [jobs, setJobs] = useState<RecruitmentJob[]>([]);
+  const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
+  const [keywordInput, setKeywordInput] = useState('');
+  const [page, setPage] = useState(1);
+  const [selectedItem, setSelectedItem] = useState<ScreeningCenterItem | null>(null);
+  const [publicSubmission, setPublicSubmission] = useState<PublicApplicationWorkbenchSummary | null>(null);
 
-  const loadCandidates = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoadState({ status: 'loading' });
     try {
-      setLoadState({ status: 'ready', data: await getRecruitmentCandidates() });
-    } catch (error) {
-      setLoadState({
-        status: 'error',
-        message: error instanceof Error ? error.message : '无法读取已通过 Application',
+      const hasDeepLink = Number.isInteger(deepLinkedApplicationId) && deepLinkedApplicationId > 0;
+      const data = await listScreeningCenterApplications({
+        view: 'candidate',
+        page,
+        pageSize: 30,
+        applicationId: hasDeepLink ? deepLinkedApplicationId : undefined,
+        keyword: hasDeepLink ? undefined : filters.keyword || undefined,
+        jobId: hasDeepLink || filters.jobId === 'all' ? undefined : filters.jobId,
+        source: hasDeepLink || filters.source === 'all' ? undefined : filters.source,
+        stage: hasDeepLink || filters.stage === 'all' ? undefined : filters.stage,
+        sort: filters.sort,
       });
+      setLoadState({ status: 'ready', data });
+      if (hasDeepLink) setSelectedItem(data.items[0] ?? null);
+    } catch (error) {
+      setLoadState({ status: 'error', message: getScreeningCenterError(error) });
     }
-  }, []);
+  }, [deepLinkedApplicationId, filters, page]);
 
+  const refreshApplicationSummary = useCallback(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void getRecruitmentJobs().then(value => setJobs(value.items)).catch(() => setJobs([])); }, []);
   useEffect(() => {
-    void loadCandidates();
-  }, [loadCandidates]);
+    if (!selectedItem?.submissionId) { setPublicSubmission(null); return undefined; }
+    let cancelled = false;
+    void getPublicApplicationSubmission(selectedItem.submissionId)
+      .then(value => { if (!cancelled) setPublicSubmission(value); })
+      .catch(() => { if (!cancelled) setPublicSubmission(null); });
+    return () => { cancelled = true; };
+  }, [selectedItem?.submissionId]);
 
-  const filteredItems = useMemo(() => {
-    if (loadState.status !== 'ready') return [];
-    const normalizedKeyword = keyword.trim().toLowerCase();
-
-    return loadState.data.items.filter(item => {
-      const matchesJob = jobFilter === 'all' || item.jobId === jobFilter;
-      const matchesKeyword = !normalizedKeyword || [
-        item.name,
-        item.email,
-        item.phone,
-        item.currentCompany,
-        item.currentTitle,
-        item.jobTitle,
-        item.jobDepartment,
-        `application #${item.applicationId}`,
-      ].some(value => value?.toLowerCase().includes(normalizedKeyword));
-      return matchesJob && matchesKeyword;
-    });
-  }, [jobFilter, keyword, loadState]);
-
-  const resetFilters = () => {
-    setKeyword('');
-    setJobFilter('all');
+  const openDetail = (item: ScreeningCenterItem) => {
+    setSelectedItem(item);
+    setPublicSubmission(null);
+    setSearchParams({ application_id: String(item.applicationId) }, { replace: true });
   };
-
-  if (loadState.status === 'loading') {
-    return (
-      <main aria-busy="true" aria-label="已通过 Application 加载中" className="recruitment-main">
-        <section className="recruitment-page-heading"><Skeleton active paragraph={{ rows: 2 }} /></section>
-        <section className="recruitment-candidate-entry-rule is-loading"><Skeleton active paragraph={{ rows: 1 }} /></section>
-        <section className="recruitment-stat-grid">
-          {[0, 1, 2, 3].map(item => <article className="recruitment-stat-card" key={item}><Skeleton active paragraph={false} /></article>)}
-        </section>
-        <section className="recruitment-state-panel"><Skeleton active paragraph={{ rows: 6 }} /></section>
-      </main>
-    );
-  }
-
-  if (loadState.status === 'error') {
-    return (
-      <main className="recruitment-main">
-        <section className="recruitment-page-heading">
-          <div>
-            <span className="recruitment-section-kicker">阶段 7 · 已通过 Application 业务视图</span>
-            <h2>候选人</h2>
-            <p>每一行对应一份已经由 HR 通过的岗位申请。</p>
-          </div>
-        </section>
-        <Alert
-          action={<Button icon={<ReloadOutlined />} onClick={() => void loadCandidates()}>重新加载</Button>}
-          className="recruitment-dashboard-alert recruitment-section-gap"
-          description={`请确认 applications、candidates 和 jobs 接口可访问。技术信息：${loadState.message}`}
-          message="已通过候选人数据加载失败"
-          showIcon
-          type="error"
-        />
-      </main>
-    );
-  }
-
-  const { data } = loadState;
-  const stats = [
-    {
-      label: '已通过申请', value: data.total, note: '每一行是一份 Application',
-      icon: <CheckCircleOutlined />, tone: 'green',
-    },
-    {
-      label: '实际人数', value: data.uniqueCandidateCount, note: '同一人多岗位只计一次',
-      icon: <TeamOutlined />, tone: 'blue',
-    },
-    {
-      label: '覆盖岗位', value: data.linkedJobCount, note: '已有 HR 通过记录',
-      icon: <LinkOutlined />, tone: 'orange',
-    },
-    {
-      label: '资料待补充', value: data.needsAttentionCount, note: '手机号或邮箱尚不完整',
-      icon: <ExclamationCircleOutlined />, tone: 'red',
-    },
-  ];
+  const closeDetail = () => { setSelectedItem(null); setPublicSubmission(null); setSearchParams({}, { replace: true }); };
+  const applySearch = () => { setPage(1); setFilters(value => ({ ...value, keyword: keywordInput.trim() })); };
+  const clearFilters = () => { setKeywordInput(''); setFilters(INITIAL_FILTERS); setPage(1); };
+  const items = loadState.status === 'ready' ? loadState.data.items : [];
+  const hasFilters = JSON.stringify(filters) !== JSON.stringify(INITIAL_FILTERS);
 
   return (
-    <main className="recruitment-main">
+    <main className="recruitment-main recruitment-candidate-pipeline-page">
       <section className="recruitment-page-heading">
-        <div>
-          <span className="recruitment-section-kicker">阶段 7 · 已通过 Application 业务视图</span>
-          <h2>候选人</h2>
-          <p>只展示 HR 已通过的岗位申请；人工决定与 AI 报告相互独立。</p>
-        </div>
-        <Tooltip title="上传简历并由 HR 明确确认后，候选人进入已通过业务视图">
-          <Button icon={<UserAddOutlined />} onClick={() => navigate('/app/candidates/new')} type="primary">新增候选人</Button>
-        </Tooltip>
+        <div><span className="recruitment-section-kicker">HR 初筛通过 → 面试 → Offer → 入职</span><h2>候选人</h2><p>每一行代表候选人对一个岗位的招聘进程，面试、Offer 和入职均从详情中推进。</p></div>
+        <Button icon={<UserAddOutlined />} onClick={() => navigate('/app/candidates/new')} type="primary">新增直通候选人</Button>
       </section>
-
-      <section aria-label="候选人页面准入规则" className="recruitment-candidate-entry-rule">
-        <div className="recruitment-candidate-entry-rule-mark"><CheckCircleOutlined /></div>
-        <div>
-          <span>页面准入规则</span>
-          <strong>HR 已通过 Application → 进入候选人业务视图</strong>
-          <p>待决策、备选和淘汰仍留在 AI 初筛中心；Candidate 可以存在于数据库，但不会因此自动出现在这里。</p>
-        </div>
-        <div className="recruitment-candidate-entry-rule-count">
-          <strong>{data.total}</strong><span>份申请</span><b>/</b><strong>{data.uniqueCandidateCount}</strong><span>人</span>
-        </div>
+      <section aria-label="候选人页面准入规则" className="recruitment-candidate-entry-rule is-compact">
+        <strong>准入规则</strong><span>只有 HR 明确通过初筛的岗位申请显示在这里</span><i />
+        <span>AI 报告仍是辅助证据</span><i /><span>面试、Offer、录取和入职在详情中操作</span>
       </section>
-
-      <section aria-label="已通过 Application 统计" className="recruitment-stat-grid">
-        {stats.map(stat => (
-          <article className="recruitment-stat-card" key={stat.label}>
-            <div className={`recruitment-stat-icon is-${stat.tone}`}>{stat.icon}</div>
-            <div className="recruitment-stat-content"><span>{stat.label}</span><strong>{stat.value}</strong><small>{stat.note}</small></div>
-          </article>
-        ))}
-      </section>
-
-      <section className="recruitment-panel recruitment-candidate-list-panel">
-        <div className="recruitment-candidate-toolbar">
-          <div>
-            <h3>已通过申请</h3>
-            <p>按 Application 更新时间倒序排列，共 {data.total} 份；同一人通过多个岗位时分行展示</p>
-          </div>
-          <div className="recruitment-candidate-filter-controls">
-            <Input
-              allowClear
-              aria-label="搜索已通过候选人"
-              onChange={event => setKeyword(event.target.value)}
-              placeholder="搜索姓名、联系方式、岗位或 Application"
-              prefix={<SearchOutlined />}
-              value={keyword}
-            />
-            <Select
-              aria-label="按通过岗位筛选"
-              onChange={setJobFilter}
-              options={[
-                { value: 'all', label: '全部岗位' },
-                ...data.jobs.map(job => ({ value: job.id, label: job.title })),
-              ]}
-              value={jobFilter}
-            />
-            {(keyword || jobFilter !== 'all') && <Button onClick={resetFilters}>清除筛选</Button>}
-            <Button aria-label="刷新已通过 Application" icon={<ReloadOutlined />} onClick={() => void loadCandidates()} />
+      <section className="recruitment-panel recruitment-candidate-pipeline-panel">
+        <div className="recruitment-screening-toolbar is-table-toolbar">
+          <div className="recruitment-screening-toolbar-heading"><h3>候选人列表</h3><p>{loadState.status === 'ready' ? `共 ${loadState.data.total} 份已通过的岗位申请` : '正在读取候选人'}</p></div>
+          <div className="recruitment-screening-quick-filters">
+            <Input allowClear aria-label="搜索候选人岗位申请" onChange={event => setKeywordInput(event.target.value)} onPressEnter={applySearch} placeholder="姓名 / 联系方式 / 岗位 / 申请编号" prefix={<SearchOutlined />} value={keywordInput} />
+            <Select aria-label="按岗位筛选候选人" value={filters.jobId} onChange={jobId => { setPage(1); setFilters(value => ({ ...value, jobId })); }} options={[{ value: 'all', label: '全部岗位' }, ...jobs.map(job => ({ value: job.id, label: job.title }))]} />
+            <Select aria-label="按招聘阶段筛选候选人" value={filters.stage} onChange={stage => { setPage(1); setFilters(value => ({ ...value, stage })); }} options={STAGE_OPTIONS} />
+            <Button icon={<SearchOutlined />} onClick={applySearch} type="primary">搜索</Button>
+            <Button aria-label="刷新候选人列表" icon={<ReloadOutlined />} onClick={() => void load()} />
           </div>
         </div>
-
-        {data.total === 0 ? (
-          <Empty
-            className="recruitment-panel-empty recruitment-candidate-empty"
-            description={
-              <div className="recruitment-empty-copy">
-                <strong>目前没有 HR 已通过的 Application</strong>
-                <span>待决策、备选和淘汰不会显示在这里；请先前往 AI 初筛中心处理申请。</span>
-              </div>
-            }
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          >
-            <Button onClick={() => navigate('/app/screening')} type="primary">前往 HR 初筛工作台</Button>
-          </Empty>
-        ) : filteredItems.length === 0 ? (
-          <Empty
-            className="recruitment-panel-empty recruitment-candidate-empty"
-            description="没有符合当前搜索和筛选条件的已通过申请"
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-          >
-            <Button onClick={resetFilters}>清除筛选</Button>
-          </Empty>
-        ) : (
-          <div aria-label="HR 已通过 Application 列表" className="recruitment-table" role="table">
-            <div className="recruitment-table-head recruitment-candidate-table-columns" role="row">
-              <span>候选人</span><span>已通过岗位</span><span>HR 决策</span><span>联系方式</span><span>招聘阶段</span><span>申请来源</span><span>更新时间</span>
-            </div>
-            {filteredItems.map(item => (
-                <div className="recruitment-table-row recruitment-candidate-table-columns" key={item.applicationId} role="row">
-                  <div className="recruitment-candidate-cell">
-                    <Avatar className={`recruitment-candidate-avatar is-${avatarTones[item.candidateId % avatarTones.length]}`}>
-                      {item.name.slice(0, 1)}
-                    </Avatar>
-                    <div>
-                      <Link className="recruitment-candidate-name-link" to={`/app/candidates/${item.candidateId}?application_id=${item.applicationId}`}>{item.name}</Link>
-                      <span>{item.email || item.phone || `Candidate #${item.candidateId}`}</span>
-                    </div>
-                  </div>
-                  <div className="recruitment-candidate-application-role">
-                    <strong>{item.jobTitle}</strong>
-                    <span>{item.jobDepartment || '部门未填写'} · Application #{item.applicationId}</span>
-                  </div>
-                  <div><Tag bordered={false} className="recruitment-status-tag is-success">HR 已通过</Tag></div>
-                  <span>{item.email || item.phone || '待补充'}</span>
-                  <div><Tag bordered={false} className="recruitment-status-tag is-success">初筛已通过</Tag></div>
-                  <span className="recruitment-role-cell">{SOURCE_LABELS[item.applicationSource]}</span>
-                  <span className="recruitment-time-cell">{formatDateTime(item.updatedAt)}</span>
-                </div>
-            ))}
+        <details className="recruitment-screening-advanced-filters">
+          <summary><FilterOutlined /> 更多筛选</summary>
+          <div className="recruitment-screening-filter-controls">
+            <Select aria-label="按来源筛选候选人" value={filters.source} onChange={source => { setPage(1); setFilters(value => ({ ...value, source })); }} options={[{ value: 'all', label: '全部来源' }, ...Object.entries(SOURCE_LABELS).map(([value, label]) => ({ value, label }))]} />
+            <Select aria-label="候选人排序方式" value={filters.sort} onChange={sort => setFilters(value => ({ ...value, sort }))} options={[{ value: 'updated_desc', label: '最近进展' }, { value: 'applied_desc', label: '最近通过' }, { value: 'score_desc', label: 'AI 分数从高到低' }, { value: 'score_asc', label: 'AI 分数从低到高' }]} />
+            {hasFilters && <Button onClick={clearFilters}>清除全部筛选</Button>}
           </div>
-        )}
+        </details>
+        {loadState.status === 'loading' && <div className="recruitment-screening-loading"><Skeleton active paragraph={{ rows: 10 }} /></div>}
+        {loadState.status === 'error' && <Alert className="recruitment-screening-inline-alert" action={<Button onClick={() => void load()}>重试</Button>} description={loadState.message} message="候选人列表读取失败" showIcon type="error" />}
+        {loadState.status === 'ready' && items.length === 0 && <Empty className="recruitment-screening-empty" image={<FileSearchOutlined />} description="当前没有符合条件的已通过候选人" />}
+        {loadState.status === 'ready' && items.length > 0 && <ApplicationEvidenceTable items={items} mode="candidate" onOpen={openDetail} />}
+        {loadState.status === 'ready' && loadState.data.total > loadState.data.pageSize && <Pagination className="recruitment-application-pagination" current={loadState.data.page} pageSize={loadState.data.pageSize} total={loadState.data.total} showSizeChanger={false} onChange={setPage} />}
       </section>
+      <ApplicationScreeningDrawer applicationId={selectedItem?.applicationId ?? null} candidateName={selectedItem?.candidateName ?? ''} currentResumeId={selectedItem?.resumeId ?? null} initialState={null} jobId={selectedItem?.jobId ?? null} jobStatus={selectedItem?.jobStatus ?? null} jobTitle={selectedItem?.jobTitle ?? ''} open={selectedItem !== null} onClose={closeDetail} onStateChange={refreshApplicationSummary} onPipelineChange={load} onPublicSubmissionChange={setPublicSubmission} onCurrentResumeChange={refreshApplicationSummary} publicSubmission={publicSubmission} summary={selectedItem} workspace="candidate" />
     </main>
   );
 };

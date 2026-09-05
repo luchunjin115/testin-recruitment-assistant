@@ -2,11 +2,11 @@
 
 > 日期：2026-09-02
 >
-> 状态：已由项目负责人确认，可以开始 9A
+> 状态：已由项目负责人确认；2026-09-05 追加确认初筛中心与候选人业务分流
 >
 > 上游依赖：阶段 4—8 已完成并关闭
 >
-> 目标入口：HR `/app/screening`（页面名称固定为“AI 初筛中心”），正式 API `/api/v2/*`
+> 目标入口：HR `/app/screening` 处理初筛，`/app/candidates` 推进已通过 Application，正式 API `/api/v2/*`
 
 ## 1. 这一步要解决什么
 
@@ -25,7 +25,7 @@
 → 可追溯时间线与招聘流程统计
 ```
 
-大白话目标是：HR 不再只看到“这个人初筛通过了”，而是能够在同一个 Application 详情中继续安排面试、填写反馈、记录 Offer 和最终结果；列表本身也要直接展示 AI 分数、标签、优点和风险，不必逐条点开才能判断。
+大白话目标是：投递先进入 AI 初筛中心，AI 给证据、HR 作初筛决定；HR 明确通过后，该 Application 离开初筛工作队列并进入候选人业务视图，HR 再从候选人 Application 详情继续安排面试、填写反馈、记录 Offer 和最终结果。两张列表都要让 HR 不点开详情也能看见各自阶段最重要的信息。
 
 阶段 9 仍然坚持：AI 只提供岗位匹配信息和核实方向，不能自动通过、淘汰、发 Offer、录取或确认入职。
 
@@ -52,8 +52,8 @@
 
 1. 阶段 9 从 HR 已通过且仍有效的 Application 开始，完成多轮面试、汇总反馈、Offer、候选人回复、录取、正式入职和结束流程。
 2. 左侧“AI 初筛”改名为“AI 初筛中心”；删除“简历管理”和“初筛报告”两个独立导航入口。
-3. 简历和报告数据不删除；原文件、原文、结构化草稿、当前/历史 AI 报告都进入 Application 统一详情。
-4. AI 初筛中心桌面端改为紧凑数据表，移动端使用信息卡；每条记录直接显示 AI 分数、匹配标签、能力标签、综合评价、主要优点、主要风险、HR 决定和招聘阶段。
+3. 简历和报告数据不删除；原文件、原文、结构化草稿、当前/历史 AI 报告都进入 Application 统一详情。初筛中的详情从 AI 初筛中心打开，HR 已通过后的详情从候选人列表打开。
+4. AI 初筛中心与候选人页面桌面端都使用紧凑数据表，移动端使用信息卡。候选人、岗位、状态、AI 分数/标签、摘要、时间和主操作形成固定扫描顺序；完整证据和高风险操作进入详情，不用巨型卡片铺满列表。
 5. AI 能力标签不额外调用 DeepSeek，而是从已经保存的当前报告、HR 已确认评价点和简历证据中确定性提取。
 6. 只有 `active / screening_passed / passed` 的 Application 可以开始面试；备选必须先由 HR 调整为通过。
 7. 面试使用不限固定数量的轮次结构，不把数据库写死为一面、二面；第一版每轮只有一份汇总反馈。
@@ -63,7 +63,7 @@
 11. “接受 Offer”“已录取、等待入职”和“正式入职”是三个独立节点；接受 Offer 后仍须由 HR 明确确认录取，录取后仍须另行确认实际入职。
 12. 面试、Offer 和最终结果不能直接删除；更正、撤销和重新打开必须保留原状态、原因、操作人和时间。
 13. 阶段 7 的 `hr_decision=passed` 是“曾通过初筛”的历史事实。阶段 9 后续淘汰或退出不能把它改写成 `rejected`。
-14. “流程报告”正式改名为“招聘流程统计”，放在工作台和 AI 初筛中心顶部，不新增左侧菜单。
+14. “流程报告”正式改名为“招聘流程统计”，只放在工作台，不新增左侧菜单，也不把后半程漏斗塞进 AI 初筛中心。
 15. 招聘流程统计只根据 PostgreSQL 真实业务数据计算，不调用 AI，不生成叙事，不提供 Excel 导出。
 16. 第一版不接邮件、短信、日历、电子签约、外部 ATS、候选人进度页或 AI 面试官。
 17. 当前继续使用“本地 HR（未认证）”边界；完整登录、RBAC 和薪资字段授权留到阶段 12。
@@ -218,6 +218,22 @@ Job 在候选人进入阶段 9 后关闭，不自动取消已经存在的面试�
 - Service 必须核对支撑记录存在，前端不能自由指定任意目标阶段；
 - 重新打开只追加历史，不删除面试、Offer 或旧终态。
 
+### 6.6 重新打开的确定规则（2026-09-04 补充确认）
+
+项目负责人于 2026-09-04 确认以下规则，用于消除 9D 实施前发现的状态歧义：
+
+- `reopen-stage9` 必须锁定 Application，并核对结束或错误推进所对应的 StageHistory、InterviewRecord、OfferRecord；同一 Candidate + Job 已存在另一条 active Application 时不得重新打开；
+- `interview_rejected` 重新打开到 `active / interview / passed`；触发结束的 `completed` InterviewRecord 若为 `decision=rejected`，同事务更正为 `pending`、增加 version 并追加审计，之后由 HR 重新选择下一轮、进入 Offer 或结束；
+- `interview_no_show` 重新打开到 `active / interview / passed`，原 `no_show` InterviewRecord 保持不变并保留历史，HR 可以安排下一轮；
+- `offer_declined / offer_withdrawn / offer_expired` 重新打开到 `active / offer / passed`；原终态 Offer 保持不变，因此活动 Offer 部分唯一索引释放后允许用下一个 `version_number` 创建新 Offer；
+- `candidate_withdrew / company_canceled` 重新打开时，必须从对应终结 StageHistory 的 `from_recruitment_stage` 恢复结束前的原阶段，不一律回到 Offer；原 Interview/Offer 保持当时状态。若恢复后已有 `draft / sent / accepted` Offer，则不允许创建新 Offer；只有不存在活动 Offer 时才允许创建；
+- `active / offer_accepted / passed` 的误接受更正，原子执行 Application 回到 `active / offer / passed`，同一 OfferRecord 从 `accepted` 回到 `sent`、保留 `sent_at`、清空 `responded_at`、增加 version，并在 StageHistory/ActivityLog 中记录原状态、原回复时间、更正原因、操作人和时间；不新建 Offer；
+- 错误“已录取”回到 `active / offer_accepted / passed`，原 accepted Offer 保持不变；
+- 错误“已入职”回到 `active / admitted / passed`，清除 `final_outcome=hired`，原 accepted Offer 保持不变；
+- 所有重新打开都要求 `confirmed=true`、`expected_version`（涉及 Interview/Offer 时）、受控 `stage9_reopened` 原因和非空具体说明；相同业务内容的重复请求幂等，不重复写历史。
+
+这里的 `accepted → sent` 是专用更正，不是普通 Offer 编辑。它保留同一个 `version_number`，通过记录版本和追加审计保存“曾误标接受、后来更正”的事实；不得借此覆盖薪资或绕过 sent 后编辑规则。
+
 ## 7. InterviewRecord 合同
 
 ### 7.1 责任
@@ -257,7 +273,7 @@ InterviewRecord 保存某个 Application 的一轮面试安排和汇总反馈。
 - `scheduled` 可以改期或取消；改期更新同一记录并写旧/新时间审计，不删除旧事实；
 - `completed` 表示面试已发生；`decision` 可以暂时为 `pending`，形成“面试完成、待反馈/待决定”待办；
 - `canceled` 必须填写取消原因，不自动结束 Application；HR 可以另建下一轮或更正；
-- `no_show` 必须填写原因，不自动淘汰；HR 明确选择结束时才写 `interview_no_show`；
+- `no_show` 必须填写原因，不自动淘汰；现有 no-show 请求增加 `end_application: StrictBool = false`，只有 HR 明确传 true 时才在同一事务写 `interview_no_show` 并结束 Application；已经标记 no-show 后也可使用最新 expected_version 再明确结束；
 - `next_round` 不自动创建下一轮，只允许 HR 创建 `round_number+1`；
 - `proceed_offer` 原子把 Application 推进到 `offer`，但不自动发 Offer；
 - `rejected` 和 `candidate_withdrew` 是高风险结束动作，必须确认；
@@ -376,7 +392,7 @@ stage9_reopened
 
 时间线 Service 按 Application 聚合 StageHistory 和受控 ActivityLog，返回统一只读 `RecruitmentTimelineItem`。前端不直接解释任意 JSONB，也不根据按钮点击伪造历史。
 
-## 10. AI 初筛中心信息架构
+## 10. AI 初筛中心与候选人信息架构
 
 ### 10.1 导航收口
 
@@ -394,12 +410,14 @@ AI 初筛中心
 - `/app/resumes` 和 `/app/reports` 使用 `<Navigate replace>` 跳到 `/app/screening`，不返回空白或 404；
 - 独立 `RecruitmentResumeList`、`RecruitmentReportCenter` 页面退出运行入口；
 - 后端 Resume、ScreeningReport 和通用 Report 数据、Model、migration 不因删除前端入口而删除；
-- 候选人详情的“查看初筛报告”改为带 `application_id` 的 `/app/screening` 深链接，并自动打开对应详情；
+- 候选人列表只展示 `hr_decision=passed` 的 Application；通过后的面试、Offer、录取和入职都从该列表的 Application 详情推进；
+- 候选人资料页的“招聘流程”使用带 `application_id` 的 `/app/candidates` 深链接，并自动打开对应 Application；
+- AI 初筛中心默认且固定排除 `hr_decision=passed`；待决策、备选和初筛淘汰继续留在该中心处理或追溯；
 - 阶段 8 公开投递继续与内部录入共用同一 Application 列表，不新增公开投递工作区。
 
 ### 10.2 桌面表格与移动卡片
 
-桌面端每条 Application 至少展示：
+两张列表都采用参考传统 ATS 的横向紧凑表格，先展示判断所需摘要，再通过抽屉提供完整证据。桌面端每条 Application 至少展示：
 
 | 区域 | 内容 |
 | --- | --- |
@@ -410,7 +428,7 @@ AI 初筛中心
 | AI 评价 | 综合说明最多两行，完整内容在详情 |
 | 优点 | 最多 2 条 `strengths` 摘要 |
 | 风险 | 最多 2 条 `gaps/risks_or_conflicts` 摘要 |
-| HR/流程 | HR 初筛决定、当前阶段、最终结果、公开处理异常 |
+| HR/流程 | 初筛中心显示 HR 初筛决定/处理异常；候选人显示当前招聘阶段、生命周期和最终结果 |
 | 时间 | 申请时间和最近业务更新时间 |
 | 操作 | 查看统一详情、当前允许的 HR 动作 |
 
@@ -422,7 +440,7 @@ AI 初筛中心
 - 报告过期：继续显示历史分数和标签，但明显标记“已过期”；
 - 状态读取失败：显示安全错误和重试，不展示伪造数据。
 
-移动端保留相同业务信息，但折叠为卡片；不能通过隐藏 AI 评价、风险或当前阶段换取窄屏通过。
+移动端保留相同业务信息，但折叠为卡片；不能通过隐藏 AI 评价、风险或当前阶段换取窄屏通过。列表不显示完整简历、完整联系方式、会议链接、面试反馈全文或具体薪资。
 
 ### 10.3 AI 匹配标签
 
@@ -465,6 +483,8 @@ GET /api/v2/screening-center/applications
 
 它在后端一次性返回分页摘要，替代当前前端为每条 Application 分别请求 screening 的 N+1 组合。支持：
 
+- `view=screening / candidate / all`；默认 `screening`，候选人页显式请求 `candidate`；
+- `keyword`，只搜索 Application ID、候选人姓名/联系方式、当前职位和岗位名称；
 - `page`，从 1 开始；
 - `page_size`，默认 30，最大 100；
 - `job_id`；
@@ -479,13 +499,13 @@ GET /api/v2/screening-center/applications
 - `applied_from / applied_to`；
 - `sort=applied_desc / updated_desc / score_desc / score_asc`。
 
-摘要响应只包含列表所需的小字段、最多 4 个标签、2 个优点和 2 个风险；不内嵌 raw_text、完整 parsed_snapshot、完整报告、完整联系方式、具体薪资或会议链接。
+`view=screening` 只返回未通过初筛的 Application，`view=candidate` 只返回 `hr_decision=passed` 的 Application；两者都在数据库分页前应用条件，不能在前端过滤当前页造成数量失真。摘要响应只包含列表所需的小字段、最多 4 个标签、2 个优点和 2 个风险；不内嵌 raw_text、完整 parsed_snapshot、完整报告、完整联系方式、具体薪资或会议链接。
 
 后端同时返回基于真实状态计算的 `allowed_actions`，前端用于解释按钮，但 Service 仍必须在写入时重新校验，不能把前端 capability 当授权。
 
 ## 11. Application 统一详情
 
-点击列表行或从候选人详情深链接进入同一个抽屉/详情容器，内容固定为：
+初筛中的 Application 从 AI 初筛中心打开；已通过及后续 Application 从候选人列表或候选人资料页深链接打开。两边复用同一个抽屉/详情容器，内容固定为：
 
 ```text
 概览
@@ -536,7 +556,7 @@ Offer
 
 ### 12.1 定位
 
-“招聘流程统计”是 PostgreSQL 业务统计，不是 AI 初筛报告，也不是 LLM 生成的文字。它在工作台和 AI 初筛中心顶部显示，不增加左侧入口。
+“招聘流程统计”是 PostgreSQL 业务统计，不是 AI 初筛报告，也不是 LLM 生成的文字。它只在工作台显示，不增加左侧入口；AI 初筛中心聚焦待处理申请，候选人列表聚焦已通过后的招聘推进。
 
 新增只读接口：
 
@@ -594,6 +614,7 @@ GET /api/v2/recruitment-statistics
 ```text
 GET  /api/v2/applications/{application_id}/interviews
 POST /api/v2/applications/{application_id}/interviews
+GET  /api/v2/interviews/{interview_id}
 PUT  /api/v2/interviews/{interview_id}/schedule
 POST /api/v2/interviews/{interview_id}/cancel
 POST /api/v2/interviews/{interview_id}/no-show
@@ -601,8 +622,9 @@ POST /api/v2/interviews/{interview_id}/feedback
 PUT  /api/v2/interviews/{interview_id}/feedback
 ```
 
+- Application 下的列表使用安全摘要；单条详情按需返回会议链接和安排备注，供详情展示与改期，不能进入候选人或初筛列表；
 - 创建和普通改期使用严格 Schema 与 `expected_version`；
-- cancel/no-show、淘汰、退出和更正请求带受控 reason code、必要说明与 `confirmed`；
+- cancel/no-show、淘汰、退出和更正请求带受控 reason code、必要说明与 `confirmed`；no-show 使用 `end_application` 明确区分“只记录未到场”和“因未到场结束流程”；
 - feedback 首次提交可以 decision=pending；再次修改必须使用 PUT、expected_version、confirmed 和 correction_reason；
 - Service 负责根据 decision 原子更新 Application，API 只映射错误。
 
@@ -733,7 +755,8 @@ Application 和 StageHistory 的现有 stage CHECK 通过新 migration 向前扩
 
 ## 17. 前端交互与安全
 
-- AI 初筛中心不能仅靠颜色表达分数、状态或错误；标签必须有文字；
+- AI 初筛中心和候选人列表不能仅靠颜色表达分数、状态或错误；标签必须有文字；
+- 桌面表格按“候选人 → 岗位 → 状态 → AI 分数 → AI 标签 → 摘要 → 时间 → 操作”排列，表头固定、行高克制、主操作唯一；
 - 表头、筛选、排序、行操作、抽屉和确认弹窗支持键盘与焦点；
 - AI 综合评价、优点和风险使用行数限制加 tooltip/详情，不用 CSS 截断后丢失可访问名称；
 - 具体薪资只在 Offer 区加载，不进入列表 DOM、统计响应或全局搜索；
@@ -768,8 +791,8 @@ Application 和 StageHistory 的现有 stage CHECK 通过新 migration 向前扩
 ## 19. 分层职责
 
 ```text
-React AI 初筛中心
-  列表、筛选、统一详情、表单、确认和统计展示
+React AI 初筛中心 / 候选人
+  初筛队列 / 已通过队列、筛选、统一详情、表单和确认
         ↓
 FastAPI API
   HTTP 合同、依赖注入、稳定错误和确认入口
@@ -838,14 +861,15 @@ PostgreSQL
 
 1. 左侧只有工作台、候选人、岗位管理和 AI 初筛中心。
 2. 旧 `/app/resumes`、`/app/reports` 自动跳转。
-3. 列表无需点开即可看到分数、匹配标签、能力标签、评价、优点、风险、HR 决定和阶段。
-4. 无报告不显示 0 分；过期和旧报告有明确标记。
-5. 内部和公开 Application 都能在统一详情查看简历与报告。
-6. 候选人详情深链接可以定位并打开正确 Application。
-7. 多轮面试、反馈、Offer 和时间线可操作并刷新真实响应。
-8. 具体薪资只在 Offer 详情出现。
-9. 招聘流程统计与 PostgreSQL fixture 一致。
-10. 桌面、平板、手机和键盘无阻塞。
+3. AI 初筛中心不出现 HR 已通过及后续 Application；候选人列表只出现 HR 已通过及后续 Application。
+4. 两张列表无需点开即可看到候选人、岗位、分数、匹配标签、能力标签、评价摘要、决定/阶段和时间。
+5. 无报告不显示 0 分；过期和旧报告有明确标记。
+6. 内部和公开 Application 都能在统一详情查看简历与报告。
+7. 候选人资料页深链接可以回到候选人列表并打开正确 Application。
+8. 多轮面试、反馈、Offer 和时间线从候选人 Application 详情操作并刷新真实响应。
+9. 具体薪资只在 Offer 详情出现。
+10. 招聘流程统计与 PostgreSQL fixture 一致且只在工作台展示。
+11. 桌面、平板、手机和键盘无阻塞。
 
 ### 20.5 DeepSeek 与费用
 
@@ -859,9 +883,9 @@ PostgreSQL
 
 1. **9A：合同与 migration**：Application/StageHistory 扩展、InterviewRecord、OfferRecord、枚举、约束和临时 PostgreSQL 往返；不接前端。
 2. **9B：面试后端**：面试 Schema、Service、API、事务、并发、审计和时间线。
-3. **9C：AI 初筛中心收口**：列表聚合 API、AI 标签、导航精简、桌面表格/移动卡片、简历与报告统一详情和深链接。
+3. **9C：申请视图收口**：列表聚合 API、AI 标签、导航精简、初筛/候选人业务分流、桌面表格/移动卡片、简历与报告统一详情和深链接。
 4. **9D：Offer 与最终结果**：精确薪资、Offer 状态、接受/拒绝/撤回/过期、录取、入职和重新打开。
-5. **9E：招聘流程统计**：cohort 漏斗、耗时、待办、工作台和初筛中心统计展示。
+5. **9E：招聘流程统计**：cohort 漏斗、耗时、待办和工作台统计展示。
 6. **9F：完整验收**：后端回归、migration、真实 PostgreSQL/API、前端测试/build、浏览器和项目负责人验收。
 
 每批先跑直接相关测试，再按影响扩大。任何必须改变状态、薪资、确认、AI 标签、页面收口、API、migration 或统计口径的情况，都必须先更新本文并重新确认。
@@ -876,8 +900,8 @@ PostgreSQL
 4. 接受 Offer、已录取等待入职和正式入职明确分开，并各自需要真实人工动作；
 5. 阶段 9 后续结果不改写阶段 7 HR 初筛决定；
 6. 所有高风险动作、撤销和更正可追溯；
-7. AI 初筛中心完成导航、列表和统一详情收口；
-8. AI 分数、匹配标签、能力标签、优点和风险在列表中真实可见；
+7. AI 初筛中心与候选人页面按 HR 是否通过正确分流，并共享同一 Application 详情能力；
+8. AI 分数、匹配标签、能力标签、评价摘要和风险在两张紧凑列表中真实可见；
 9. 招聘流程统计只根据数据库事实计算；
 10. migration、自动化、真实 PostgreSQL/API、前端构建和浏览器验收通过；
 11. 项目负责人完成最终产品验收。
@@ -898,7 +922,7 @@ PostgreSQL
 
 阶段完成后可以如实描述：
 
-> 在 Application 主链上设计并实现多轮面试、Offer 与录取状态机，通过 PostgreSQL CHECK/部分唯一索引、乐观并发、行锁、追加审计和可恢复更正确保高风险招聘状态一致；同时将简历、AI 报告、面试、Offer 和流程统计收口到统一 AI 初筛中心，并从既有可解释报告中确定性提取可追溯能力标签。
+> 在 Application 主链上设计并实现多轮面试、Offer 与录取状态机，通过 PostgreSQL CHECK/部分唯一索引、乐观并发、行锁、追加审计和可恢复更正确保高风险招聘状态一致；同时按 HR 初筛结果分离待处理申请与正式候选人视图，复用统一 Application 详情，并从既有可解释报告中确定性提取可追溯能力标签。
 
 常见面试追问包括：
 

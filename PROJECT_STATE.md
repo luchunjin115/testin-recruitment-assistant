@@ -1,13 +1,14 @@
 # 项目当前状态
 
-> 最新更新：2026-09-03
+> 最新更新：2026-09-05
 >
 > 本文件只记录当前结论、风险和下一步；详细过程由 Git 历史恢复。
 
 ## 当前结论
 
 - 阶段 4—8 已完成。阶段 8 的 8A—8F、真实模型最小链路和项目负责人浏览器检查均已完成；项目负责人于 2026-09-02 明确确认阶段 8 最终验收通过并关闭。
-- 阶段 9 专项设计已由项目负责人确认；9A“合同与 migration”、9B“面试后端”和 9C“AI 初筛中心收口”已完成，9D—9F 尚未开始。
+- 阶段 9 的 9A—9F 已全部完成；产品流纠偏、自动化回归和浏览器复查均已完成，项目负责人于 2026-09-05 明确确认最终验收通过并关闭阶段 9。
+- 项目负责人于 2026-09-05 确认当前秋招版本暂不开发阶段 10 首页综合 Agent 和阶段 11 RAG；两项保留为长期可选方向，不属于当前交付范围，也不作为阶段 9 完成条件。
 - 阶段 7 已于 2026-09-01 通过项目负责人验收并关闭；功能链路已经完成，目前不是“等待继续开发才能交付”的状态。
 - 阶段 7 当前生产合同：评价计划 `deepseek-v4-pro` / Prompt v4 / Service v5 / Schema 5.0；初筛报告 `deepseek-v4-pro` / 主 Prompt v10 / Repair Prompt v2 / Service v11 / Schema 5.0。
 - `ScreeningRun` 最多保留 3 个 API attempts；当前 Alembic head 为 `b9e2f4a6c801`。
@@ -83,15 +84,27 @@ HR 维护完整 JD
 - 开发 PostgreSQL 已安全前向升级到 `b9e2f4a6c801 (head)`，`alembic check` 无漂移；原有 Application、StageHistory、ScreeningReport 等行数未变，新增 InterviewRecord 和 OfferRecord 表均为 0 行。
 - 9B 已提供面试安排、改期、取消、未到场、首次反馈、反馈更正和统一安全时间线 API；Application/Interview 行锁、expected_version、幂等、StageHistory/ActivityLog 同事务和稳定错误均已落地。
 - 9B 直接测试、真实 PostgreSQL/API 和多会话并发通过；完整后端回归为 `1412 passed, 502 subtests passed`。测试虚构数据已回滚或精确清理，开发库 InterviewRecord、OfferRecord、ActivityLog 均为 0 行，原 Application 状态和原有行数未变。
-- 9C 已新增单一分页聚合 API、Schema 5 确定性能力标签、四项主导航、旧简历/报告路由 replace 跳转、桌面证据台账/移动卡片、候选人 Application 深链和简历/报告/面试/Offer 边界/时间线统一详情；既有录入、HR 决策、批量重评和公开投递处理能力保留。
+- 9C 的分页聚合 API 在 9F 增加 `view=screening|candidate|all` 业务视图：AI 初筛中心只列 `hr_decision != passed` 的待处理/备选/淘汰投递；HR 明确通过后的 Application 进入候选人页，并在统一详情继续面试、Offer、录取和入职。Candidate 身份记录可因去重先存在，但不等于已经进入候选人业务工作台。
 - 9C 完整后端回归为 `1420 passed, 502 subtests passed`，前端 28 个测试文件和 production build 全部通过；开发 PostgreSQL 真实聚合 API 返回 200，Alembic 仍为 `b9e2f4a6c801 (head)` 且无漂移，原有 1 条 Application 及相关数据数量和状态未变。
 - 9C 没有 migration、DeepSeek 调用、模型费用、新 Worker 或浏览器产品验收。当前主要未验风险是真实浏览器中的高密度列表/移动端手感，以及大数据量查询计划和生产级认证权限。
+- 9D 开始时发现刚拉取代码后的开发 PostgreSQL 仍停在 `e7f9a1b3c545`；经项目负责人确认后只执行仓库既有 migration 到 `b9e2f4a6c801 (head)`。迁移和最终复核前后，Candidate 4、Job 2、Resume 5、Application 2、StageHistory 2、ScreeningRun 4 等原数据数量及两条 Application 状态保持不变。
+- 9D 已完成 Offer 草稿/编辑/发送/接受/拒绝/撤回/过期、录取/入职、候选人退出、公司取消和受控重新打开；accepted 更正使用同一 Offer `accepted → sent`，终态 Offer 重开后允许创建递增版本的新 Offer，阶段 9 不改写 `hr_decision=passed`。
+- 9D 的 Application/Offer/Interview 行锁、expected_version、重复请求幂等、部分唯一索引、单事务历史/审计和回滚已通过真实 PostgreSQL/API 与双会话并发测试。薪资保持 Decimal/NUMERIC，只在单 Application Offer 详情按需返回；列表、时间线、错误和 ActivityLog 未返回金额明文。
+- 9D 完整后端回归为 `1439 passed, 525 subtests passed`，前端全部 `*.test.mjs` 文件和 production build 通过；Alembic 最终为 `b9e2f4a6c801 (head)` 且无漂移，测试数据已回滚或精确清理，InterviewRecord、OfferRecord、ActivityLog 最终均为 0。
+- 9D 未做真实浏览器产品验收、生产认证/RBAC、字段级薪资权限、大数据量压测或生产日志隐私评审；没有调用 DeepSeek，没有新增 migration、Worker 或 9E 统计。
+- 9E 已新增只读 `GET /api/v2/recruitment-statistics`：按 `Application.applied_at` 固定 cohort，用持久化历史计算 8 步漏斗、上一环节转化率、7 段耗时/样本数，并返回不受日期范围影响但尊重岗位筛选的 7 类实时待办；统计不返回 PII/薪资、不调用 AI、不写库。
+- 9E 统计能力和口径保持不变；9F 产品流纠偏后，统计面板只保留在仪表盘，不再占用 AI 初筛中心。9D 状态操作后会刷新 Application 概览、Offer、时间线及候选人列表。
+- 9E 最终 Alembic 仍为 `b9e2f4a6c801 (head)` 且无漂移；开发库 Candidate 4、Job 2、Resume 5、Application 2、StageHistory 2、ScreeningRun 4 等原数据数量和两条 Application 状态未变，面试、Offer、ActivityLog 等阶段 9 业务表仍为 0。
+- 9F 已用全虚构页面数据实际检查 1440px 桌面高密度表格和 1024px 响应式卡片：初筛中心无统计面板、候选人表格能同屏显示主要业务信息，且窄屏没有横向溢出。检查中发现统一详情首次读取会触发父列表刷新并形成请求循环，现已改为“普通读取不通知父级、状态变化才通知”，前端 29 个测试文件和 production build 均已通过；项目负责人于 2026-09-05 完成复查并确认当前产品流和交互可验收。
+- 9F 后端完整回归为 `1445 passed, 2 warnings, 525 subtests passed`；前端 29 个测试文件和 production build 通过。当前 Alembic 为 `b9e2f4a6c801 (head)` 且无漂移。本轮只读复核开发库为 Candidate 4、Job 2、Resume 4、Application 2、StageHistory 2、ScreeningRun 4，其余报告及阶段 8/9 业务表为 0；两条 Application 状态未变。该 Resume 数量与 9D/9E 当时记录的 5 不一致，本轮未修改、补造或删除开发数据。
+- 9F 尚未完成生产认证/RBAC、字段级薪资权限、大数据量查询计划/压力测试、生产日志隐私评审和多浏览器验证。
 
 ## 唯一下一步
 
-1. 保持阶段 8 已关闭结论和阶段 9 已确认设计不被后续工作改写。
-2. 下一批只进入 9D“Offer 与最终结果”；9E—9F 继续按已确认设计顺序实施。
+1. 保持阶段 8、阶段 9 的已关闭结论、现行业务合同和验收证据不被后续工作改写。
+2. 阶段 10 首页 Agent 和阶段 11 RAG 已暂缓，不进入设计或实现；当前没有活动开发阶段。
+3. 阶段 12 的登录/RBAC、审计、部署和交付是否继续，后续单独评审并确认，不因本次路线调整自动启动。
 
 ## 新对话恢复方式
 
-先读 `CLAUDE.md`、本文件和 `docs/DOCUMENT_INDEX.md`；继续阶段 9 时完整阅读阶段 9 当前专项设计，并按涉及范围读取阶段 4—8 当前合同和实际代码；不默认阅读 Git 历史中的中间实验材料。
+先读 `CLAUDE.md`、本文件和 `docs/DOCUMENT_INDEX.md`；若修改已关闭阶段 9，完整阅读阶段 9 当前专项设计并按涉及范围读取阶段 4—8 当前合同和实际代码；若讨论后续阶段，读取现行路线图和总体架构；不默认阅读 Git 历史中的中间实验材料。

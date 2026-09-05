@@ -150,6 +150,13 @@ class InterviewApiPostgresTest(IsolatedAsyncioTestCase):
         self.assertEqual(response.status_code, 201)
         interview_id = response.json()["id"]
 
+        response = await self.client.get(f"/api/v2/interviews/{interview_id}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["meeting_link"],
+            "https://meet.example.test/api-round-1",
+        )
+
         response = await self.client.put(
             f"/api/v2/interviews/{interview_id}/schedule",
             json={
@@ -181,6 +188,7 @@ class InterviewApiPostgresTest(IsolatedAsyncioTestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()), 1)
+        self.assertNotIn("meeting_link", response.json()[0])
 
         response = await self.client.get(
             f"/api/v2/applications/{self.application_id}/timeline"

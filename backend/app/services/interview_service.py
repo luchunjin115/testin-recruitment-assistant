@@ -97,6 +97,16 @@ _FEEDBACK_REASON_BY_DECISION = {
 
 
 class InterviewService:
+    async def get_interview(
+        self,
+        db: AsyncSession,
+        interview_id: int,
+    ) -> InterviewRecord:
+        interview = await db.get(InterviewRecord, interview_id)
+        if interview is None:
+            raise InterviewNotFoundError("面试记录不存在")
+        return interview
+
     async def list_interviews(
         self,
         db: AsyncSession,
@@ -260,6 +270,7 @@ class InterviewService:
             reason_code=data.reason_code.value,
             reason_detail=data.reason_detail,
             confirmed=data.confirmed,
+            end_application=data.end_application,
         )
 
     async def submit_feedback(
@@ -418,6 +429,7 @@ class InterviewService:
         reason_code: str,
         reason_detail: str,
         confirmed: bool,
+        end_application: bool = False,
     ) -> InterviewRecord:
         if not confirmed:
             raise HRActionConfirmationRequiredError("该面试动作必须二次确认")
@@ -428,16 +440,64 @@ class InterviewService:
                 db, interview_id
             )
             if interview.status == target_status:
-                if await self._latest_activity_matches(
+                repeated = await self._latest_activity_matches(
                     db,
                     interview,
                     reason_code=reason_code,
                     reason_detail=reason_detail,
                     expected_version=expected_version,
+                    expected_end_application=(
+                        end_application if target_status == "no_show" else None
+                    ),
+                )
+                if (
+                    target_status == "no_show"
+                    and end_application
+                    and application.lifecycle_status == "active"
+                ):
+                    self._require_interview_stage(application)
+                    self._require_version(interview, expected_version)
+                    history = await self._transition_application(
+                        db,
+                        application,
+                        interview=interview,
+                        target=_ApplicationState(
+                            "ended", "rejected", "passed", "interview_no_show"
+                        ),
+                        reason_code=reason_code,
+                        reason_detail=reason_detail,
+                    )
+                    await self._add_activity(
+                        db,
+                        interview=interview,
+                        reason_code=reason_code,
+                        reason_detail=reason_detail,
+                        history=history,
+                        changes={
+                            "from_status": "no_show",
+                            "to_status": "no_show",
+                            "from_decision": "pending",
+                            "to_decision": "pending",
+                            "from_version": interview.version,
+                            "to_version": interview.version,
+                            "end_application": True,
+                        },
+                    )
+                    await db.commit()
+                    await db.refresh(interview)
+                    return interview
+                if repeated and (
+                    not end_application
+                    or (
+                        application.lifecycle_status == "ended"
+                        and application.final_outcome == "interview_no_show"
+                    )
                 ):
                     await db.commit()
                     return interview
             self._require_active_pipeline(application)
+            if target_status == "no_show" and end_application:
+                self._require_interview_stage(application)
             self._require_version(interview, expected_version)
             if interview.status != "scheduled":
                 raise InterviewTransitionInvalidError(
@@ -447,11 +507,24 @@ class InterviewService:
             from_version = interview.version
             interview.status = target_status
             interview.version += 1
+            history: StageHistory | None = None
+            if target_status == "no_show" and end_application:
+                history = await self._transition_application(
+                    db,
+                    application,
+                    interview=interview,
+                    target=_ApplicationState(
+                        "ended", "rejected", "passed", "interview_no_show"
+                    ),
+                    reason_code=reason_code,
+                    reason_detail=reason_detail,
+                )
             await self._add_activity(
                 db,
                 interview=interview,
                 reason_code=reason_code,
                 reason_detail=reason_detail,
+                history=history,
                 changes={
                     "from_status": "scheduled",
                     "to_status": target_status,
@@ -459,6 +532,7 @@ class InterviewService:
                     "to_decision": "pending",
                     "from_version": from_version,
                     "to_version": interview.version,
+                    "end_application": end_application,
                 },
             )
             await db.commit()
@@ -506,6 +580,17 @@ class InterviewService:
     def _require_active_pipeline(application: Application) -> None:
         if application.lifecycle_status != "active":
             raise ApplicationPipelineEndedError("Application 流程已结束或作废")
+
+    @staticmethod
+    def _require_interview_stage(application: Application) -> None:
+        if (
+            application.recruitment_stage != "interview"
+            or application.hr_decision != "passed"
+            or application.final_outcome is not None
+        ):
+            raise InterviewTransitionInvalidError(
+                "当前 Application 状态不允许因未到场结束流程"
+            )
 
     @staticmethod
     def _require_version(interview: InterviewRecord, expected_version: int) -> None:
@@ -658,6 +743,7 @@ class InterviewService:
         reason_code: str,
         reason_detail: str | None,
         expected_version: int,
+        expected_end_application: bool | None = None,
     ) -> bool:
         activity = await db.scalar(
             select(ActivityLog)
@@ -672,12 +758,17 @@ class InterviewService:
         if activity is None or not isinstance(activity.detail, dict):
             return False
         detail = activity.detail
-        return (
+        matches = (
             detail.get("reason_code") == reason_code
             and detail.get("reason_detail") == reason_detail
             and expected_version
             in {detail.get("from_version"), detail.get("to_version")}
         )
+        if expected_end_application is not None:
+            matches = matches and (
+                detail.get("end_application") is expected_end_application
+            )
+        return matches
 
     async def _is_repeated_feedback(
         self,

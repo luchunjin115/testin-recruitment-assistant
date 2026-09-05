@@ -75,13 +75,13 @@ try {
     'utf8',
   );
   for (const text of [
-    '录入待审核申请',
+    '录入待筛申请',
     'uploadRecruitmentResume',
     'extractRecruitmentResumeText',
     'intakeStage7Application',
     'existingApplicationReused',
-    '已进入 HR 工作队列',
-    '保存到工作队列',
+    '已进入初筛队列',
+    '保存到初筛队列',
   ]) {
     assert.ok(pageSource.includes(text), `录入新申请页面缺少交互边界：${text}`);
   }

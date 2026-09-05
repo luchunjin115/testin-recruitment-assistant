@@ -13,9 +13,11 @@ from .api import health
 from .api import interviews
 from .api import jobs
 from .api import job_evaluation_plans
+from .api import offers
 from .api import project_experiences
 from .api import public
 from .api import public_application_workbench
+from .api import recruitment_statistics
 from .api import reports
 from .api import resumes
 from .api import screening
@@ -108,6 +110,7 @@ app.add_middleware(
 jobs.install_job_exception_handlers(app)
 applications.install_application_exception_handlers(app)
 interviews.install_interview_exception_handlers(app)
+offers.install_offer_exception_handlers(app)
 screening.install_screening_exception_handlers(app)
 public.install_public_exception_handlers(app)
 
@@ -123,6 +126,7 @@ app.include_router(health.router, prefix="/api")
 app.include_router(activity_logs.router, prefix="/api/v2")
 app.include_router(applications.router, prefix="/api/v2")
 app.include_router(interviews.router, prefix="/api/v2")
+app.include_router(offers.router, prefix="/api/v2")
 app.include_router(candidates.router, prefix="/api/v2")
 app.include_router(education.router, prefix="/api/v2")
 app.include_router(jobs.router, prefix="/api/v2")
@@ -130,6 +134,7 @@ app.include_router(job_evaluation_plans.router, prefix="/api/v2")
 app.include_router(project_experiences.router, prefix="/api/v2")
 app.include_router(public.router, prefix="/api/v2")
 app.include_router(public_application_workbench.router, prefix="/api/v2")
+app.include_router(recruitment_statistics.router, prefix="/api/v2")
 app.include_router(reports.router, prefix="/api/v2")
 app.include_router(resumes.router, prefix="/api/v2")
 app.include_router(screening.router, prefix="/api/v2")

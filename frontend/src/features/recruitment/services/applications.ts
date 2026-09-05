@@ -29,6 +29,7 @@ export const mapStage7Application = (
   lifecycleStatus: value.lifecycle_status,
   recruitmentStage: value.recruitment_stage,
   hrDecision: value.hr_decision,
+  finalOutcome: value.final_outcome,
   appliedAt: value.applied_at,
   createdAt: value.created_at,
   updatedAt: value.updated_at,

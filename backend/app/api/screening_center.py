@@ -19,6 +19,7 @@ from app.schemas.screening_center import (
     ScreeningCenterDisplayLabel,
     ScreeningCenterProcessingPool,
     ScreeningCenterSort,
+    ScreeningCenterView,
 )
 from app.services.screening_center_service import screening_center_service
 
@@ -30,6 +31,8 @@ router = APIRouter(prefix="/screening-center", tags=["screening-center"])
 async def list_screening_center_applications(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=30, ge=1, le=100),
+    view: ScreeningCenterView = ScreeningCenterView.SCREENING,
+    keyword: str | None = Query(default=None, max_length=100),
     application_id: int | None = Query(default=None, ge=1),
     job_id: int | None = Query(default=None, ge=1),
     source: ApplicationSource | None = None,
@@ -62,6 +65,8 @@ async def list_screening_center_applications(
             db,
             page=page,
             page_size=page_size,
+            view=view,
+            keyword=keyword,
             application_id=application_id,
             job_id=job_id,
             source=source,

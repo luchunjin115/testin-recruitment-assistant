@@ -167,6 +167,16 @@ class InterviewApiTest(TestCase):
         self.assertNotIn("schedule_note", response.json()[0])
         list_mock.assert_awaited_once_with(self.db, 1)
 
+        with patch.object(
+            interview_service,
+            "get_interview",
+            AsyncMock(return_value=make_interview()),
+        ) as detail_mock:
+            response = self.client.get("/interviews/11")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["meeting_link"], "https://meet.example.test/round-1")
+        detail_mock.assert_awaited_once_with(self.db, 11)
+
         item = RecruitmentTimelineItem(
             source="activity_log",
             source_id=2,
@@ -292,6 +302,7 @@ class InterviewApiTest(TestCase):
         expected = {
             ("GET", "/applications/{application_id}/interviews"),
             ("POST", "/applications/{application_id}/interviews"),
+            ("GET", "/interviews/{interview_id}"),
             ("PUT", "/interviews/{interview_id}/schedule"),
             ("POST", "/interviews/{interview_id}/cancel"),
             ("POST", "/interviews/{interview_id}/no-show"),

@@ -1,7 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  CalendarOutlined,
-  ClockCircleOutlined,
   InboxOutlined,
   ReloadOutlined,
   RobotOutlined,
@@ -12,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import { Alert, Avatar, Button, Empty, Skeleton } from 'antd';
 import { Link } from 'react-router-dom';
+import RecruitmentStatisticsPanel from './RecruitmentStatisticsPanel';
 import { DashboardSnapshot, getRecruitmentDashboardSnapshot } from './services/dashboard';
 
 type LoadState =
@@ -81,7 +80,6 @@ const RecruitmentDashboard: React.FC = () => {
     { label: '开放岗位', value: data.openJobs, note: '来自新版岗位表', icon: <SolutionOutlined />, tone: 'blue' },
     { label: '候选人', value: data.candidateCount, note: 'PostgreSQL 真实记录', icon: <TeamOutlined />, tone: 'green' },
     { label: '待 HR 决策', value: data.pendingReview, note: '有效且尚未决定的 Application', icon: <InboxOutlined />, tone: 'orange' },
-    { label: '待跟进', value: '—', note: '新版跟进规则待接入', icon: <ClockCircleOutlined />, tone: 'red' },
   ];
 
   return (
@@ -101,6 +99,8 @@ const RecruitmentDashboard: React.FC = () => {
           <Button disabled icon={<UploadOutlined />} type="primary">上传简历 · 阶段 4</Button>
         </div>
       </section>
+
+      <RecruitmentStatisticsPanel />
 
       <section aria-label="新版招聘统计" className="recruitment-stat-grid">
         {stats.map(stat => (
@@ -156,23 +156,6 @@ const RecruitmentDashboard: React.FC = () => {
         </article>
 
         <aside className="recruitment-right-column">
-          <article className="recruitment-panel recruitment-task-panel">
-            <div className="recruitment-panel-header">
-              <div><h3>今日待办</h3><p>新版待办模型尚未接入</p></div>
-              <Button aria-label="待办日历尚未开放" className="recruitment-icon-button is-small" disabled icon={<CalendarOutlined />} />
-            </div>
-            <Empty
-              className="recruitment-panel-empty is-compact recruitment-dashboard-task-empty"
-              description={
-                <div className="recruitment-empty-copy">
-                  <strong>暂无可用的待办数据</strong>
-                  <span>跟进规则和任务模型将在后续阶段接入。</span>
-                </div>
-              }
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-            />
-          </article>
-
           <article className="recruitment-ai-card">
             <span className="recruitment-ai-icon"><RobotOutlined /></span>
             <div>

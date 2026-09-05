@@ -83,7 +83,7 @@ try {
   );
   for (const text of [
     'passStage7Application', 'backupStage7Application', 'rejectStage7Application',
-    'undoStage7ApplicationRejection', 'HR 决策已保存，并写入阶段历史',
+    'undoStage7ApplicationRejection', 'HR 初筛决定已保存',
   ]) assert.ok(pageSource.includes(text), `HR 决策页面缺少交互边界：${text}`);
   console.log('STAGE7_HR_DECISION_UI_TEST_OK');
 } finally {

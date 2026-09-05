@@ -27,6 +27,12 @@ class ScreeningCenterSort(str, Enum):
     SCORE_ASC = "score_asc"
 
 
+class ScreeningCenterView(str, Enum):
+    SCREENING = "screening"
+    CANDIDATE = "candidate"
+    ALL = "all"
+
+
 class ScreeningCenterProcessingPool(str, Enum):
     ALL = "all"
     INTERNAL = "internal"
@@ -64,6 +70,18 @@ class ScreeningCenterAllowedAction(str, Enum):
     REJECT = "reject"
     UNDO_REJECTION = "undo_rejection"
     SCHEDULE_INTERVIEW = "schedule_interview"
+    CREATE_OFFER = "create_offer"
+    EDIT_OFFER = "edit_offer"
+    SEND_OFFER = "send_offer"
+    ACCEPT_OFFER = "accept_offer"
+    DECLINE_OFFER = "decline_offer"
+    WITHDRAW_OFFER = "withdraw_offer"
+    EXPIRE_OFFER = "expire_offer"
+    CONFIRM_ADMISSION = "confirm_admission"
+    CONFIRM_HIRE = "confirm_hire"
+    WITHDRAW_APPLICATION = "withdraw_application"
+    CANCEL_PROCESS = "cancel_process"
+    REOPEN_STAGE9 = "reopen_stage9"
 
 
 class ScreeningAbilityTag(BaseModel):
@@ -84,7 +102,10 @@ class ScreeningCenterApplicationSummary(BaseModel):
     resume_id: StrictInt = Field(ge=1)
     candidate_name: str = Field(min_length=1, max_length=100)
     masked_phone: str | None = Field(default=None, max_length=20)
+    current_company: str | None = Field(default=None, max_length=200)
     current_title: str | None = Field(default=None, max_length=200)
+    work_years: StrictInt | None = Field(default=None, ge=0)
+    education_level: str | None = Field(default=None, max_length=50)
     job_title: str = Field(min_length=1, max_length=200)
     job_status: JobStatus
     source: ApplicationSource

@@ -24,11 +24,13 @@ from app.schemas.interview import (
     InterviewScheduleCreate,
     InterviewScheduleUpdate,
 )
+from app.schemas.offer import Stage9ReopenRequest
 from app.services.interview_service import (
     ApplicationNotReadyForInterviewError,
     InterviewService,
     InterviewVersionConflictError,
 )
+from app.services.offer_service import OfferService
 from app.services.recruitment_timeline_service import RecruitmentTimelineService
 
 
@@ -329,6 +331,46 @@ class InterviewServicePostgresTest(IsolatedAsyncioTestCase):
         self.assertEqual(self.application.recruitment_stage, "interview")
         self.assertEqual(self.application.hr_decision, "passed")
         self.assertEqual(self.application.final_outcome, "candidate_withdrew")
+
+    async def test_no_show_can_explicitly_end_and_reopen_without_rewriting_history(self) -> None:
+        interview = await self.service.schedule_interview(
+            self.db, self.application_id, self.schedule()
+        )
+        request = InterviewNoShowRequest(
+            expected_version=1,
+            reason_code="interview_no_show",
+            reason_detail="HR 核实候选人未到场并明确结束",
+            confirmed=True,
+            end_application=True,
+        )
+        interview = await self.service.mark_no_show(self.db, interview.id, request)
+        await self.db.refresh(self.application)
+        self.assertEqual(interview.status, "no_show")
+        self.assertEqual(self.application.lifecycle_status, "ended")
+        self.assertEqual(self.application.recruitment_stage, "rejected")
+        self.assertEqual(self.application.hr_decision, "passed")
+        self.assertEqual(self.application.final_outcome, "interview_no_show")
+
+        before_retry = await counts(self.db)
+        repeated = await self.service.mark_no_show(self.db, interview.id, request)
+        self.assertEqual(repeated.version, interview.version)
+        self.assertEqual(await counts(self.db), before_retry)
+
+        reopened = await OfferService().reopen_stage9(
+            self.db,
+            self.application_id,
+            Stage9ReopenRequest(
+                expected_version=interview.version,
+                reason_code="stage9_reopened",
+                reason_detail="更正未到场结束结果",
+                confirmed=True,
+            ),
+        )
+        await self.db.refresh(interview)
+        self.assertEqual(reopened.lifecycle_status, "active")
+        self.assertEqual(reopened.recruitment_stage, "interview")
+        self.assertIsNone(reopened.final_outcome)
+        self.assertEqual(interview.status, "no_show")
 
     async def test_backup_application_and_stale_version_are_rejected(self) -> None:
         self.application.recruitment_stage = "backup"

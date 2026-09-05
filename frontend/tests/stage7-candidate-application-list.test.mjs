@@ -61,8 +61,10 @@ try {
     new URL('../src/features/recruitment/RecruitmentCandidateList.tsx', import.meta.url), 'utf8',
   );
   for (const text of [
-    'HR 已通过 Application → 进入候选人业务视图', 'key={item.applicationId}',
-    '同一人通过多个岗位时分行展示', '目前没有 HR 已通过的 Application',
+    'HR 初筛通过 → 面试 → Offer → 入职',
+    '每一行代表候选人对一个岗位的招聘进程',
+    '候选人列表', '当前没有符合条件的已通过候选人',
+    "view: 'candidate'", 'mode="candidate"', 'workspace="candidate"',
   ]) assert.ok(pageSource.includes(text), `候选人 Application 视图缺少边界：${text}`);
   console.log('STAGE7_CANDIDATE_APPLICATION_LIST_TEST_OK');
 } finally {

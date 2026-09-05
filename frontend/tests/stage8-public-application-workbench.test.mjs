@@ -142,7 +142,7 @@ try {
   ]);
   for (const text of [
     '全部来源', '公开投递 · 正常', '公开投递 · 需人工处理',
-    '查看处理与 AI 报告', 'getPublicApplicationSubmission',
+    'getPublicApplicationSubmission',
   ]) assert.ok(centerSource.includes(text), `统一初筛中心缺少：${text}`);
   assert.ok(drawerSource.includes('PublicApplicationProcessingPanel'));
   assert.ok(screeningServiceSource.includes('listPublicApplicationSubmissions'));

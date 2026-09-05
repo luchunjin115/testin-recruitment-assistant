@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(path, import.meta.url), 'utf8');
-const [plan, drawer, report, center, jobs, styles] = await Promise.all([
+const [plan, drawer, report, center, table, jobs, styles] = await Promise.all([
   read('../src/features/recruitment/JobEvaluationPlanDrawer.tsx'),
   read('../src/features/recruitment/ApplicationScreeningDrawer.tsx'),
   read('../src/features/recruitment/ScreeningReportView.tsx'),
   read('../src/features/recruitment/RecruitmentScreeningCenter.tsx'),
+  read('../src/features/recruitment/ApplicationEvidenceTable.tsx'),
   read('../src/features/recruitment/RecruitmentJobList.tsx'),
   read('../src/features/recruitment/styles/screening.css'),
 ]);
@@ -42,15 +43,16 @@ assert.equal(report.includes('experiencePeriodFactKeys.map'), false, '页面不�
 
 for (const text of [
   '批量重新评估', 'selectedApplicationIds.length', 'selectedItems[0].jobId !== item.jobId',
-  "item.allowedActions.includes('reassess_screening')", '查看处理与 AI 报告', 'AI 解释匹配依据，HR 作出最终决定',
+  'AI 给出证据', 'HR 明确决定',
   'recruitment-page-heading', 'recruitment-screening-workspace', 'recruitment-screening-empty',
 ]) assert.ok(center.includes(text), `初筛中心缺少：${text}`);
+assert.ok(table.includes("item.allowedActions.includes('reassess_screening')"), '列表必须由后端 allowed_actions 决定能否选中重评');
 
 for (const forbidden of [
   'dangerouslySetInnerHTML', 'raw_text', 'rawResponse', 'apiKey', 'screeningResult',
   'evidenceCoverage', 'unknown', 'weightedScore',
 ]) {
-  assert.equal(`${plan}${drawer}${report}${center}`.includes(forbidden), false, `页面恢复或泄露了禁止内容：${forbidden}`);
+  assert.equal(`${plan}${drawer}${report}${center}${table}`.includes(forbidden), false, `页面恢复或泄露了禁止内容：${forbidden}`);
 }
 
 for (const internalAudit of ['free_text_coverage', 'freeTextCoverage', 'source_units', 'sourceUnits']) {

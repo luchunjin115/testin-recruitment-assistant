@@ -33,7 +33,7 @@ class ScreeningCenterApiTest(TestCase):
         response = self.client.get(
             "/screening-center/applications?page=2&job_id=7&source=public_apply"
             "&stage=interview&lifecycle=active&processing_pool=exception"
-            "&score_min=60&sort=score_desc"
+            "&score_min=60&sort=score_desc&view=candidate&keyword=Application%207"
         )
         assert response.status_code == 200
         assert response.json()["total_pages"] == 2
@@ -41,6 +41,8 @@ class ScreeningCenterApiTest(TestCase):
         assert kwargs["page"] == 2
         assert kwargs["job_id"] == 7
         assert kwargs["source"].value == "public_apply"
+        assert kwargs["view"].value == "candidate"
+        assert kwargs["keyword"] == "Application 7"
         assert kwargs["recruitment_stage"].value == "interview"
         assert kwargs["processing_pool"].value == "exception"
 
@@ -50,6 +52,9 @@ class ScreeningCenterApiTest(TestCase):
         )
         assert response.status_code == 422
         assert response.json()["detail"]["code"] == "SCREENING_CENTER_SCORE_RANGE_INVALID"
+
+        response = self.client.get("/screening-center/applications?view=unknown")
+        assert response.status_code == 422
 
     @patch("app.api.screening_center.screening_center_service.list_applications", new_callable=AsyncMock)
     def test_internal_failure_is_safe(self, mocked: AsyncMock) -> None:

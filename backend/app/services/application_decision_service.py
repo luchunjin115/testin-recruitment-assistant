@@ -347,6 +347,15 @@ class ApplicationDecisionService:
     ) -> None:
         if application.lifecycle_status != "active":
             raise InvalidApplicationTransitionError("只有有效申请可以执行 HR 决策")
+        if application.recruitment_stage not in {
+            "applied",
+            "hr_review",
+            "screening_passed",
+            "backup",
+        }:
+            raise InvalidApplicationTransitionError(
+                "阶段 9 流程开始后不能改写阶段 7 HR 决策"
+            )
         if application.hr_decision not in allowed_decisions:
             raise InvalidApplicationTransitionError("当前 HR 决策不允许执行该操作")
 

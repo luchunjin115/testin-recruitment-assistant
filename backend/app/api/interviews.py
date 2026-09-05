@@ -190,6 +190,20 @@ async def schedule_interview(
         raise _map_interview_error(exc) from exc
 
 
+@router.get(
+    "/interviews/{interview_id}",
+    response_model=InterviewRecordRead,
+)
+async def get_interview(
+    interview_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> InterviewRecordRead:
+    try:
+        return await interview_service.get_interview(db, interview_id)
+    except Exception as exc:
+        raise _map_interview_error(exc) from exc
+
+
 @router.put(
     "/interviews/{interview_id}/schedule",
     response_model=InterviewRecordRead,

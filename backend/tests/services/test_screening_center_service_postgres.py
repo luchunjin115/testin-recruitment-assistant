@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from decimal import Decimal
 from unittest import IsolatedAsyncioTestCase
 
 from sqlalchemy import event, func, null, select
@@ -10,14 +11,15 @@ from app.models.application import Application
 from app.models.candidate import Candidate
 from app.models.job import Job
 from app.models.job_evaluation_plan import JobEvaluationPlan
+from app.models.offer_record import OfferRecord
 from app.models.resume import Resume
 from app.models.screening_report import ScreeningReport
-from app.schemas.screening_center import ScreeningCenterSort
+from app.schemas.screening_center import ScreeningCenterSort, ScreeningCenterView
 from app.services.screening_center_service import ScreeningCenterService
 
 
 NOW = datetime(2026, 9, 3, 6, 0, tzinfo=timezone.utc)
-MODELS = (Job, Candidate, Resume, Application, JobEvaluationPlan, ScreeningReport)
+MODELS = (Job, Candidate, Resume, Application, JobEvaluationPlan, ScreeningReport, OfferRecord)
 
 
 async def counts(db: AsyncSession) -> dict[str, int]:
@@ -46,7 +48,7 @@ class ScreeningCenterServicePostgresTest(IsolatedAsyncioTestCase):
 
     async def test_paginated_query_returns_small_evidence_summary_in_two_statements(self) -> None:
         job = Job(title="9C 虚构聚合岗位", status="open")
-        candidate = Candidate(name="9C 虚构候选人", phone="13800001234", current_title="后端工程师")
+        candidate = Candidate(name="9C 虚构候选人", phone="13800001234", current_company="虚构公司", current_title="后端工程师", work_years=3, education_level="本科")
         self.db.add_all([job, candidate])
         await self.db.flush()
         resume = Resume(candidate_id=candidate.id, job_id=job.id, filename="9c-fictional.txt", file_path="tests/9c-fictional.txt", file_type="text/plain", file_size=20, raw_text="不应出现在聚合响应", parse_status="parsed")
@@ -80,7 +82,63 @@ class ScreeningCenterServicePostgresTest(IsolatedAsyncioTestCase):
         self.assertEqual(page.total, 1)
         item = page.items[0]
         self.assertEqual(item.masked_phone, "138****1234")
+        self.assertEqual(item.current_company, "虚构公司")
+        self.assertEqual(item.work_years, 3)
+        self.assertEqual(item.education_level, "本科")
         self.assertEqual(item.score, 88)
         self.assertEqual(item.ability_tags[0].label, "Python API")
         self.assertNotIn("raw_text", item.model_dump())
         self.assertNotIn("v5_report", item.model_dump())
+
+        application.hr_decision = "passed"
+        application.recruitment_stage = "screening_passed"
+        await self.db.commit()
+        screening_page = await ScreeningCenterService().list_applications(
+            self.db, job_id=job.id, view=ScreeningCenterView.SCREENING
+        )
+        self.assertEqual(screening_page.total, 0)
+        candidate_page = await ScreeningCenterService().list_applications(
+            self.db,
+            job_id=job.id,
+            view=ScreeningCenterView.CANDIDATE,
+            keyword="9C 虚构候选人",
+        )
+        self.assertEqual(candidate_page.total, 1)
+        no_match_page = await ScreeningCenterService().list_applications(
+            self.db,
+            view=ScreeningCenterView.CANDIDATE,
+            keyword="不存在的候选人",
+        )
+        self.assertEqual(no_match_page.total, 0)
+
+        application.recruitment_stage = "offer"
+        offer = OfferRecord(
+            application_id=application.id,
+            version_number=1,
+            status="draft",
+            position_title="9D 虚构岗位快照",
+            currency="CNY",
+            salary_period="monthly",
+            base_salary_amount=Decimal("18888.80"),
+            salary_months=Decimal("13.0"),
+            valid_until=date(2026, 10, 1),
+            expected_start_date=date(2026, 10, 15),
+            version=1,
+        )
+        self.db.add(offer)
+        await self.db.commit()
+        page = await ScreeningCenterService().list_applications(
+            self.db,
+            job_id=job.id,
+            sort=ScreeningCenterSort.SCORE_DESC,
+            view=ScreeningCenterView.CANDIDATE,
+        )
+        item = page.items[0]
+        self.assertIn("edit_offer", item.allowed_actions)
+        self.assertIn("send_offer", item.allowed_actions)
+        self.assertNotIn("pass", item.allowed_actions)
+        self.assertNotIn("backup", item.allowed_actions)
+        self.assertNotIn("reject", item.allowed_actions)
+        serialized = repr(item.model_dump())
+        self.assertNotIn("salary", serialized.lower())
+        self.assertNotIn("18888.80", serialized)

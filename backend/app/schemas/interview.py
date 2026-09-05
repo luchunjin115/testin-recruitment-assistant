@@ -144,6 +144,7 @@ class InterviewNoShowRequest(BaseModel):
     reason_code: InterviewNoShowReasonCode
     reason_detail: RequiredReasonDetail
     confirmed: StrictBool
+    end_application: StrictBool = False
 
     model_config = ConfigDict(extra="forbid")
 

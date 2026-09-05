@@ -48,10 +48,32 @@ from app.schemas.project_experience import (
     ProjectExperienceUpdate,
 )
 from app.schemas.offer import (
+    AdmissionReasonCode,
+    CandidateWithdrawReasonCode,
+    CandidateWithdrawRequest,
+    CompanyCancelReasonCode,
+    CompanyCancelRequest,
+    ConfirmAdmissionRequest,
+    ConfirmHireRequest,
+    HireReasonCode,
+    OfferAcceptReasonCode,
+    OfferAcceptRequest,
+    OfferDeclineReasonCode,
+    OfferDeclineRequest,
+    OfferDraftCreateRequest,
+    OfferExpireReasonCode,
+    OfferExpireRequest,
     OfferRecordCreate,
     OfferRecordRead,
+    OfferSendReasonCode,
+    OfferSendRequest,
     OfferStatus,
+    OfferUpdateRequest,
+    OfferWithdrawReasonCode,
+    OfferWithdrawRequest,
     SalaryPeriod,
+    Stage9ReopenReasonCode,
+    Stage9ReopenRequest,
 )
 from app.schemas.public_application import (
     ApplicationProcessingRunCreate,
@@ -82,6 +104,15 @@ from app.schemas.report import ReportCreate, ReportRead, ReportUpdate
 from app.schemas.recruitment_timeline import (
     RecruitmentTimelineItem,
     RecruitmentTimelineSource,
+)
+from app.schemas.recruitment_statistics import (
+    RecruitmentDurationKey,
+    RecruitmentDurationMetric,
+    RecruitmentFunnelKey,
+    RecruitmentFunnelStep,
+    RecruitmentStatisticsCohort,
+    RecruitmentStatisticsRead,
+    RecruitmentTodoSnapshot,
 )
 from app.schemas.resume import ResumeCreate, ResumeRead, ResumeUpdate
 from app.schemas.resume_parse import (

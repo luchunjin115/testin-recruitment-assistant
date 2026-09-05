@@ -51,14 +51,16 @@ try {
     job_id: 2, recruitment_stage: 'hr_review', hr_decision: 'pending', lifecycle_status: 'active',
   });
 
-  const pageSource = await readFile(
-    new URL('../src/features/recruitment/RecruitmentScreeningCenter.tsx', import.meta.url), 'utf8',
-  );
+  const [pageSource, tableSource] = await Promise.all([
+    readFile(new URL('../src/features/recruitment/RecruitmentScreeningCenter.tsx', import.meta.url), 'utf8'),
+    readFile(new URL('../src/features/recruitment/ApplicationEvidenceTable.tsx', import.meta.url), 'utf8'),
+  ]);
   for (const text of [
-    'AI 初筛中心', '录入待审核申请', 'AI 解释匹配依据，HR 作出最终决定',
-    '申请证据队列', '目前没有符合筛选条件的申请',
-    '查看处理与 AI 报告', '批量重新评估', "status: 'loading'", "status: 'error'",
+    'AI 初筛中心', '录入待筛申请', 'AI 给出证据', 'HR 明确决定',
+    '初筛申请列表', '当前没有符合条件的初筛申请',
+    '批量重新评估', "status: 'loading'", "status: 'error'", "view: 'screening'",
   ]) assert.ok(pageSource.includes(text), `申请工作台缺少页面状态：${text}`);
+  assert.ok(tableSource.includes('>详情</Button>'), '列表必须能打开单个申请详情');
   for (const technicalCopy of ['hr_decision', 'recruitment_stage', 'lifecycle_status', '尚未接入登录/RBAC']) {
     assert.equal(pageSource.includes(technicalCopy), false, `主工作区不应展示开发字段：${technicalCopy}`);
   }

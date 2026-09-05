@@ -5,7 +5,12 @@ export type Stage7RecruitmentStage =
   | 'hr_review'
   | 'screening_passed'
   | 'backup'
-  | 'rejected';
+  | 'rejected'
+  | 'interview'
+  | 'offer'
+  | 'offer_accepted'
+  | 'admitted'
+  | 'hired';
 export type Stage7HRDecision = 'pending' | 'passed' | 'backup' | 'rejected';
 
 export type Stage7ApplicationApiResponse = {
@@ -17,6 +22,7 @@ export type Stage7ApplicationApiResponse = {
   lifecycle_status: Stage7ApplicationLifecycleStatus;
   recruitment_stage: Stage7RecruitmentStage;
   hr_decision: Stage7HRDecision;
+  final_outcome: string | null;
   applied_at: string;
   created_at: string;
   updated_at: string;
@@ -31,6 +37,7 @@ export type Stage7Application = {
   lifecycleStatus: Stage7ApplicationLifecycleStatus;
   recruitmentStage: Stage7RecruitmentStage;
   hrDecision: Stage7HRDecision;
+  finalOutcome: string | null;
   appliedAt: string;
   createdAt: string;
   updatedAt: string;

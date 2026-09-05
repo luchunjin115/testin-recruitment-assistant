@@ -39,6 +39,10 @@
   border-radius: 12px;
 }
 
+.recruitment-welcome + .recruitment-statistics-panel {
+  margin-top: 16px;
+}
+
 .recruitment-dashboard-table-columns {
   grid-template-columns: 1.1fr 1.15fr 0.72fr 0.72fr 0.68fr;
 }

@@ -10,6 +10,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    StrictBool,
     StrictInt,
     StringConstraints,
     field_validator,
@@ -17,6 +18,7 @@ from pydantic import (
 )
 
 from app.schemas.application import PositiveId
+from app.schemas.stage_history import RequiredReasonDetail
 
 
 class OfferStatus(str, Enum):
@@ -31,6 +33,46 @@ class OfferStatus(str, Enum):
 class SalaryPeriod(str, Enum):
     MONTHLY = "monthly"
     ANNUAL = "annual"
+
+
+class OfferSendReasonCode(str, Enum):
+    SENT = "offer_sent"
+
+
+class OfferAcceptReasonCode(str, Enum):
+    ACCEPTED = "offer_accepted"
+
+
+class OfferDeclineReasonCode(str, Enum):
+    DECLINED = "offer_declined"
+
+
+class OfferWithdrawReasonCode(str, Enum):
+    WITHDRAWN = "offer_withdrawn"
+
+
+class OfferExpireReasonCode(str, Enum):
+    EXPIRED = "offer_expired"
+
+
+class AdmissionReasonCode(str, Enum):
+    ADMITTED = "application_admitted"
+
+
+class HireReasonCode(str, Enum):
+    HIRED = "application_hired"
+
+
+class CandidateWithdrawReasonCode(str, Enum):
+    WITHDREW = "candidate_withdrew"
+
+
+class CompanyCancelReasonCode(str, Enum):
+    CANCELED = "company_canceled"
+
+
+class Stage9ReopenReasonCode(str, Enum):
+    REOPENED = "stage9_reopened"
 
 
 PositionTitle = Annotated[
@@ -54,12 +96,10 @@ OptionalOfferNote = Annotated[
     str,
     StringConstraints(strip_whitespace=True, strict=True, min_length=1, max_length=2_000),
 ]
+ExpectedVersion = Annotated[StrictInt, Field(ge=1)]
 
 
-class OfferRecordCreate(BaseModel):
-    application_id: PositiveId
-    version_number: Annotated[StrictInt, Field(ge=1)]
-    status: OfferStatus = OfferStatus.DRAFT
+class OfferDetails(BaseModel):
     position_title: PositionTitle
     currency: CurrencyCode
     salary_period: SalaryPeriod
@@ -80,10 +120,6 @@ class OfferRecordCreate(BaseModel):
     valid_until: date
     expected_start_date: date
     note: OptionalOfferNote | None = None
-    sent_at: AwareDatetime | None = None
-    responded_at: AwareDatetime | None = None
-    closed_at: AwareDatetime | None = None
-    version: Annotated[StrictInt, Field(ge=1)] = 1
 
     model_config = ConfigDict(extra="forbid")
 
@@ -95,14 +131,37 @@ class OfferRecordCreate(BaseModel):
         return value
 
     @model_validator(mode="after")
-    def validate_compensation_and_status(self) -> OfferRecordCreate:
+    def validate_compensation_and_dates(self) -> OfferDetails:
         if self.salary_period is SalaryPeriod.MONTHLY and self.salary_months is None:
             raise ValueError("月薪制必须填写 salary_months")
         if self.salary_period is SalaryPeriod.ANNUAL and self.salary_months is not None:
             raise ValueError("年薪制不能填写 salary_months")
         if self.expected_start_date < self.valid_until:
             raise ValueError("预计入职日期不能早于 Offer 有效截止日期")
+        return self
 
+
+class OfferDraftCreateRequest(OfferDetails):
+    pass
+
+
+class OfferUpdateRequest(OfferDetails):
+    expected_version: ExpectedVersion
+    confirmed: StrictBool = False
+    correction_reason: RequiredReasonDetail | None = None
+
+
+class OfferRecordCreate(OfferDetails):
+    application_id: PositiveId
+    version_number: ExpectedVersion
+    status: OfferStatus = OfferStatus.DRAFT
+    sent_at: AwareDatetime | None = None
+    responded_at: AwareDatetime | None = None
+    closed_at: AwareDatetime | None = None
+    version: ExpectedVersion = 1
+
+    @model_validator(mode="after")
+    def validate_status_timestamps(self) -> OfferRecordCreate:
         if self.status is OfferStatus.DRAFT:
             if any((self.sent_at, self.responded_at, self.closed_at)):
                 raise ValueError("Offer 草稿不能包含发送、回复或关闭时间")
@@ -131,9 +190,105 @@ class OfferRecordRead(OfferRecordCreate):
     model_config = ConfigDict(from_attributes=True, extra="forbid")
 
 
+class OfferSendRequest(BaseModel):
+    expected_version: ExpectedVersion
+    reason_code: OfferSendReasonCode
+    reason_detail: RequiredReasonDetail
+    confirmed: StrictBool
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class _ConfirmedOfferActionRequest(BaseModel):
+    expected_version: ExpectedVersion
+    reason_detail: RequiredReasonDetail
+    confirmed: StrictBool
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class OfferAcceptRequest(_ConfirmedOfferActionRequest):
+    reason_code: OfferAcceptReasonCode
+
+
+class OfferDeclineRequest(_ConfirmedOfferActionRequest):
+    reason_code: OfferDeclineReasonCode
+
+
+class OfferWithdrawRequest(_ConfirmedOfferActionRequest):
+    reason_code: OfferWithdrawReasonCode
+
+
+class OfferExpireRequest(_ConfirmedOfferActionRequest):
+    reason_code: OfferExpireReasonCode
+
+
+class _ConfirmedApplicationOfferActionRequest(BaseModel):
+    expected_version: ExpectedVersion
+    reason_detail: RequiredReasonDetail
+    confirmed: StrictBool
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class ConfirmAdmissionRequest(_ConfirmedApplicationOfferActionRequest):
+    reason_code: AdmissionReasonCode
+
+
+class ConfirmHireRequest(_ConfirmedApplicationOfferActionRequest):
+    reason_code: HireReasonCode
+
+
+class _ConfirmedApplicationEndRequest(BaseModel):
+    expected_version: ExpectedVersion | None = None
+    reason_detail: RequiredReasonDetail
+    confirmed: StrictBool
+
+    model_config = ConfigDict(extra="forbid")
+
+
+class CandidateWithdrawRequest(_ConfirmedApplicationEndRequest):
+    reason_code: CandidateWithdrawReasonCode
+
+
+class CompanyCancelRequest(_ConfirmedApplicationEndRequest):
+    reason_code: CompanyCancelReasonCode
+
+
+class Stage9ReopenRequest(BaseModel):
+    expected_version: ExpectedVersion | None = None
+    reason_code: Stage9ReopenReasonCode
+    reason_detail: RequiredReasonDetail
+    confirmed: StrictBool
+
+    model_config = ConfigDict(extra="forbid")
+
+
 __all__ = [
+    "AdmissionReasonCode",
+    "CandidateWithdrawReasonCode",
+    "CandidateWithdrawRequest",
+    "CompanyCancelReasonCode",
+    "CompanyCancelRequest",
+    "ConfirmAdmissionRequest",
+    "ConfirmHireRequest",
+    "HireReasonCode",
+    "OfferAcceptReasonCode",
+    "OfferAcceptRequest",
+    "OfferDeclineReasonCode",
+    "OfferDeclineRequest",
+    "OfferDraftCreateRequest",
+    "OfferExpireReasonCode",
+    "OfferExpireRequest",
     "OfferRecordCreate",
     "OfferRecordRead",
+    "OfferSendReasonCode",
+    "OfferSendRequest",
     "OfferStatus",
+    "OfferUpdateRequest",
+    "OfferWithdrawReasonCode",
+    "OfferWithdrawRequest",
     "SalaryPeriod",
+    "Stage9ReopenReasonCode",
+    "Stage9ReopenRequest",
 ]

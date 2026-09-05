@@ -283,14 +283,13 @@ const RecruitmentCandidateDetail: React.FC = () => {
             <p className="recruitment-detail-summary">{data.aiSummary || '尚未生成 AI 摘要；当前不展示模拟结论。'}</p>
           </article>
           <article className="recruitment-detail-card recruitment-detail-future-card">
-            <div className="recruitment-detail-card-header"><div><MailOutlined /><h3>筛选与报告</h3></div></div>
-            <p>历史初筛结果和已保存报告可在对应的只读中心查看；本页不运行筛选或生成报告。</p>
+            <div className="recruitment-detail-card-header"><div><MailOutlined /><h3>招聘 Application</h3></div></div>
+            <p>从候选人列表打开对应岗位 Application，可查看 AI 证据并继续面试、Offer、录取和入职流程。</p>
             <div className="recruitment-detail-related-links">
               <Button onClick={() => navigate(Number.isInteger(applicationId) && applicationId > 0
-                ? `/app/screening?application_id=${applicationId}`
-                : '/app/screening')} size="small">查看初筛报告</Button>
+                ? `/app/candidates?application_id=${applicationId}`
+                : '/app/candidates')} size="small">打开招聘流程</Button>
             </div>
-            <Button disabled>招聘流程操作 · 后续</Button>
           </article>
         </aside>
       </section>

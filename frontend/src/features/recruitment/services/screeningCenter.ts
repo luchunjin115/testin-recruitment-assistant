@@ -7,9 +7,10 @@ export type ScreeningCenterStage = 'applied' | 'hr_review' | 'screening_passed' 
 export type ScreeningCenterDecision = 'pending' | 'passed' | 'backup' | 'rejected';
 export type ScreeningCenterFinalOutcome = 'screening_rejected' | 'interview_rejected' | 'interview_no_show' | 'offer_declined' | 'offer_withdrawn' | 'offer_expired' | 'candidate_withdrew' | 'company_canceled' | 'hired';
 export type ScreeningCenterReportStatus = 'not_started' | 'waiting_resume' | 'waiting_plan' | 'queued' | 'running' | 'ready' | 'failed' | 'paused' | 'outdated' | 'old_report_retained';
-export type ScreeningCenterAllowedAction = 'view_detail' | 'start_screening' | 'reassess_screening' | 'pass' | 'backup' | 'reject' | 'undo_rejection' | 'schedule_interview';
+export type ScreeningCenterAllowedAction = 'view_detail' | 'start_screening' | 'reassess_screening' | 'pass' | 'backup' | 'reject' | 'undo_rejection' | 'schedule_interview' | 'create_offer' | 'edit_offer' | 'send_offer' | 'accept_offer' | 'decline_offer' | 'withdraw_offer' | 'expire_offer' | 'confirm_admission' | 'confirm_hire' | 'withdraw_application' | 'cancel_process' | 'reopen_stage9';
 export type ScreeningCenterSort = 'applied_desc' | 'updated_desc' | 'score_desc' | 'score_asc';
 export type ScreeningCenterProcessingPool = 'all' | 'internal' | 'normal' | 'exception';
+export type ScreeningCenterView = 'screening' | 'candidate' | 'all';
 
 type AbilityTagResponse = {
   criterion_id: string;
@@ -27,7 +28,10 @@ type ScreeningCenterItemResponse = {
   resume_id: number;
   candidate_name: string;
   masked_phone: string | null;
+  current_company: string | null;
   current_title: string | null;
+  work_years: number | null;
+  education_level: string | null;
   job_title: string;
   job_status: 'draft' | 'open' | 'closed';
   source: ScreeningCenterSource;
@@ -82,7 +86,10 @@ export type ScreeningCenterItem = {
   resumeId: number;
   candidateName: string;
   maskedPhone: string | null;
+  currentCompany: string | null;
   currentTitle: string | null;
+  workYears: number | null;
+  educationLevel: string | null;
   jobTitle: string;
   jobStatus: 'draft' | 'open' | 'closed';
   source: ScreeningCenterSource;
@@ -124,6 +131,8 @@ export type ScreeningCenterPage = {
 export type ScreeningCenterFilters = {
   page?: number;
   pageSize?: number;
+  view?: ScreeningCenterView;
+  keyword?: string;
   applicationId?: number;
   jobId?: number;
   source?: ScreeningCenterSource;
@@ -148,7 +157,10 @@ const mapItem = (value: ScreeningCenterItemResponse): ScreeningCenterItem => ({
   resumeId: value.resume_id,
   candidateName: value.candidate_name,
   maskedPhone: value.masked_phone,
+  currentCompany: value.current_company,
   currentTitle: value.current_title,
+  workYears: value.work_years,
+  educationLevel: value.education_level,
   jobTitle: value.job_title,
   jobStatus: value.job_status,
   source: value.source,
@@ -193,6 +205,8 @@ export const listScreeningCenterApplications = async (
     params: {
       page: filters.page,
       page_size: filters.pageSize,
+      view: filters.view,
+      keyword: filters.keyword,
       application_id: filters.applicationId,
       job_id: filters.jobId,
       source: filters.source,

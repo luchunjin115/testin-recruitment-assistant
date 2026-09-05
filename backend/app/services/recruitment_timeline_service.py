@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.activity_log import ActivityLog
 from app.models.application import Application
 from app.models.interview_record import InterviewRecord
+from app.models.offer_record import OfferRecord
 from app.models.stage_history import StageHistory
 from app.schemas.recruitment_timeline import RecruitmentTimelineItem
 from app.services.interview_service import ApplicationNotFoundError
@@ -24,6 +25,23 @@ _CONTROLLED_INTERVIEW_ACTIONS = {
     "interview_rejected",
     "candidate_withdrew",
     "stage9_correction",
+}
+_CONTROLLED_OFFER_ACTIONS = {
+    "offer_created",
+    "offer_updated",
+    "offer_sent",
+    "offer_accepted",
+    "offer_declined",
+    "offer_withdrawn",
+    "offer_expired",
+    "stage9_correction",
+}
+_CONTROLLED_APPLICATION_ACTIONS = {
+    "application_admitted",
+    "application_hired",
+    "candidate_withdrew",
+    "company_canceled",
+    "stage9_reopened",
 }
 
 
@@ -52,16 +70,44 @@ class RecruitmentTimelineService:
                 )
             ).all()
         )
+        offer_ids = list(
+            (
+                await db.scalars(
+                    select(OfferRecord.id).where(
+                        OfferRecord.application_id == application_id
+                    )
+                )
+            ).all()
+        )
 
         activities: list[ActivityLog] = []
+        activity_conditions = [
+            and_(
+                ActivityLog.target_type == "application",
+                ActivityLog.target_id == application_id,
+                ActivityLog.action.in_(_CONTROLLED_APPLICATION_ACTIONS),
+            )
+        ]
         if interview_ids:
-            activities_result = await db.scalars(
-                select(ActivityLog)
-                .where(
+            activity_conditions.append(
+                and_(
                     ActivityLog.target_type == "interview",
                     ActivityLog.target_id.in_(interview_ids),
                     ActivityLog.action.in_(_CONTROLLED_INTERVIEW_ACTIONS),
                 )
+            )
+        if offer_ids:
+            activity_conditions.append(
+                and_(
+                    ActivityLog.target_type == "offer",
+                    ActivityLog.target_id.in_(offer_ids),
+                    ActivityLog.action.in_(_CONTROLLED_OFFER_ACTIONS),
+                )
+            )
+        if activity_conditions:
+            activities_result = await db.scalars(
+                select(ActivityLog)
+                .where(or_(*activity_conditions))
                 .order_by(ActivityLog.created_at, ActivityLog.id)
             )
             activities = list(activities_result.all())
@@ -99,7 +145,12 @@ class RecruitmentTimelineService:
             from_final_outcome=history.from_final_outcome,
             to_final_outcome=history.to_final_outcome,
             reason_code=history.reason_code,
-            reason_detail=history.reason_detail,
+            # Offer-linked free text may accidentally contain compensation details.
+            # The immutable history keeps the audit reason, but the ordinary timeline
+            # exposes only the controlled reason code and state transition.
+            reason_detail=(
+                None if history.offer_record_id is not None else history.reason_detail
+            ),
             actor_type=history.actor_type,
             actor_label=history.actor_label,
             occurred_at=history.created_at,
@@ -121,14 +172,26 @@ class RecruitmentTimelineService:
         reason_code = detail.get("reason_code")
         actor_label = detail.get("actor_label")
         interview_record_id = detail.get("interview_record_id")
+        offer_record_id = detail.get("offer_record_id")
         if (
             not isinstance(reason_code, str)
             or not isinstance(actor_label, str)
-            or not isinstance(interview_record_id, int)
         ):
+            return None
+        if interview_record_id is not None and not isinstance(
+            interview_record_id, int
+        ):
+            return None
+        if offer_record_id is not None and not isinstance(offer_record_id, int):
+            return None
+        if activity.target_type == "interview" and interview_record_id is None:
+            return None
+        if activity.target_type == "offer" and offer_record_id is None:
             return None
         reason_detail = detail.get("reason_detail")
         if not isinstance(reason_detail, str):
+            reason_detail = None
+        if activity.target_type == "offer" or offer_record_id is not None:
             reason_detail = None
 
         return RecruitmentTimelineItem(
@@ -137,17 +200,36 @@ class RecruitmentTimelineService:
             event_type=activity.action,
             application_id=application_id,
             interview_record_id=interview_record_id,
+            offer_record_id=offer_record_id,
             from_interview_status=RecruitmentTimelineService._string_or_none(
                 detail.get("from_status")
+                if activity.target_type == "interview"
+                else None
             ),
             to_interview_status=RecruitmentTimelineService._string_or_none(
                 detail.get("to_status")
+                if activity.target_type == "interview"
+                else None
             ),
             from_interview_decision=RecruitmentTimelineService._string_or_none(
                 detail.get("from_decision")
+                if activity.target_type == "interview"
+                else None
             ),
             to_interview_decision=RecruitmentTimelineService._string_or_none(
                 detail.get("to_decision")
+                if activity.target_type == "interview"
+                else None
+            ),
+            from_offer_status=RecruitmentTimelineService._string_or_none(
+                detail.get("from_offer_status", detail.get("from_status"))
+                if activity.target_type == "offer"
+                else detail.get("from_offer_status")
+            ),
+            to_offer_status=RecruitmentTimelineService._string_or_none(
+                detail.get("to_offer_status", detail.get("to_status"))
+                if activity.target_type == "offer"
+                else detail.get("to_offer_status")
             ),
             from_scheduled_start_at=RecruitmentTimelineService._datetime_or_none(
                 detail.get("from_scheduled_start_at")

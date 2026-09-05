@@ -13,6 +13,7 @@ from app.models.application import Application
 from app.models.application_processing_run import ApplicationProcessingRun
 from app.models.candidate import Candidate
 from app.models.job import Job
+from app.models.offer_record import OfferRecord
 from app.models.public_application_submission import PublicApplicationSubmission
 from app.models.resume import Resume
 from app.models.screening_report import ScreeningReport
@@ -34,6 +35,7 @@ from app.schemas.screening_center import (
     ScreeningCenterProcessingPool,
     ScreeningCenterReportStatus,
     ScreeningCenterSort,
+    ScreeningCenterView,
 )
 from app.schemas.screening_evaluation import ScreeningEvaluationV5ReportPayload
 
@@ -141,6 +143,8 @@ class ScreeningCenterService:
         *,
         page: int = 1,
         page_size: int = 30,
+        view: ScreeningCenterView = ScreeningCenterView.SCREENING,
+        keyword: str | None = None,
         application_id: int | None = None,
         job_id: int | None = None,
         source: ApplicationSource | None = None,
@@ -159,6 +163,7 @@ class ScreeningCenterService:
     ) -> ScreeningCenterApplicationPage:
         screening_run_alias = aliased(ScreeningRun)
         processing_run_alias = aliased(ApplicationProcessingRun)
+        offer_alias = aliased(OfferRecord)
         latest_screening_run_id = (
             select(ScreeningRun.id)
             .where(ScreeningRun.application_id == Application.id)
@@ -175,6 +180,14 @@ class ScreeningCenterService:
             .correlate(Application)
             .scalar_subquery()
         )
+        latest_offer_id = (
+            select(OfferRecord.id)
+            .where(OfferRecord.application_id == Application.id)
+            .order_by(OfferRecord.version_number.desc(), OfferRecord.id.desc())
+            .limit(1)
+            .correlate(Application)
+            .scalar_subquery()
+        )
         from_clause = (
             Application.__table__
             .join(Candidate.__table__, Candidate.id == Application.candidate_id)
@@ -187,8 +200,32 @@ class ScreeningCenterService:
             .outerjoin(screening_run_alias, screening_run_alias.id == latest_screening_run_id)
             .outerjoin(PublicApplicationSubmission.__table__, PublicApplicationSubmission.application_id == Application.id)
             .outerjoin(processing_run_alias, processing_run_alias.id == latest_processing_run_id)
+            .outerjoin(offer_alias, offer_alias.id == latest_offer_id)
         )
         conditions = []
+        if view is ScreeningCenterView.SCREENING:
+            conditions.append(Application.hr_decision != "passed")
+        elif view is ScreeningCenterView.CANDIDATE:
+            conditions.append(Application.hr_decision == "passed")
+        normalized_keyword = keyword.strip() if keyword else ""
+        if normalized_keyword:
+            escaped_keyword = (
+                normalized_keyword.replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_")
+            )
+            pattern = f"%{escaped_keyword}%"
+            keyword_conditions = [
+                Candidate.name.ilike(pattern, escape="\\"),
+                Candidate.phone.ilike(pattern, escape="\\"),
+                Candidate.email.ilike(pattern, escape="\\"),
+                Candidate.current_company.ilike(pattern, escape="\\"),
+                Candidate.current_title.ilike(pattern, escape="\\"),
+                Job.title.ilike(pattern, escape="\\"),
+            ]
+            if normalized_keyword.isdigit():
+                keyword_conditions.append(Application.id == int(normalized_keyword))
+            conditions.append(or_(*keyword_conditions))
         if application_id is not None:
             conditions.append(Application.id == application_id)
         if job_id is not None:
@@ -247,6 +284,10 @@ class ScreeningCenterService:
             screening_run_alias,
             PublicApplicationSubmission,
             processing_run_alias,
+            offer_alias.id,
+            offer_alias.status,
+            offer_alias.version,
+            offer_alias.updated_at,
         ).select_from(from_clause).where(*conditions)
         if sort is ScreeningCenterSort.UPDATED_DESC:
             updated = func.greatest(
@@ -257,6 +298,7 @@ class ScreeningCenterService:
                 screening_run_alias.updated_at,
                 PublicApplicationSubmission.updated_at,
                 processing_run_alias.updated_at,
+                offer_alias.updated_at,
             )
             statement = statement.order_by(updated.desc().nullslast(), Application.id.desc())
         elif sort is ScreeningCenterSort.SCORE_DESC:
@@ -287,6 +329,10 @@ class ScreeningCenterService:
         screening_run: ScreeningRun | None,
         submission: PublicApplicationSubmission | None,
         processing_run: ApplicationProcessingRun | None,
+        latest_offer_id: int | None = None,
+        latest_offer_status: str | None = None,
+        latest_offer_version: int | None = None,
+        latest_offer_updated_at: datetime | None = None,
     ) -> ScreeningCenterApplicationSummary:
         report_status = cls._report_status(report, screening_run)
         processing_pool = cls._processing_pool(submission, processing_run)
@@ -298,6 +344,7 @@ class ScreeningCenterService:
                 screening_run.updated_at if screening_run else None,
                 submission.updated_at if submission else None,
                 processing_run.updated_at if processing_run else None,
+                latest_offer_updated_at,
             )
             if value is not None
         )
@@ -316,7 +363,10 @@ class ScreeningCenterService:
             resume_id=resume.id,
             candidate_name=candidate.name,
             masked_phone=_masked_phone(candidate.phone),
+            current_company=candidate.current_company,
             current_title=candidate.current_title,
+            work_years=candidate.work_years,
+            education_level=candidate.education_level,
             job_title=job.title,
             job_status=job.status,
             source=application.source,
@@ -344,7 +394,13 @@ class ScreeningCenterService:
             gaps_or_risks=[value for value in (_clean_excerpt(item, limit=240) for item in gaps) if value],
             applied_at=application.applied_at,
             business_updated_at=max(business_times),
-            allowed_actions=cls._allowed_actions(application, job, report, screening_run),
+            allowed_actions=cls._allowed_actions(
+                application,
+                job,
+                report,
+                screening_run,
+                latest_offer_status=latest_offer_status,
+            ),
         )
 
     @staticmethod
@@ -383,6 +439,8 @@ class ScreeningCenterService:
         job: Job,
         report: ScreeningReport | None,
         run: ScreeningRun | None,
+        *,
+        latest_offer_status: str | None = None,
     ) -> list[ScreeningCenterAllowedAction]:
         actions = [ScreeningCenterAllowedAction.VIEW_DETAIL]
         active_run = run is not None and run.status in _ACTIVE_SCREENING_STATUSES
@@ -392,7 +450,13 @@ class ScreeningCenterService:
                 if report is not None
                 else ScreeningCenterAllowedAction.START_SCREENING
             )
-        if application.lifecycle_status == "active":
+        stage7_decision_allowed = application.recruitment_stage in {
+            "applied",
+            "hr_review",
+            "screening_passed",
+            "backup",
+        }
+        if application.lifecycle_status == "active" and stage7_decision_allowed:
             if application.hr_decision in {"pending", "backup"}:
                 actions.append(ScreeningCenterAllowedAction.PASS)
             if application.hr_decision in {"pending", "passed"}:
@@ -401,6 +465,52 @@ class ScreeningCenterService:
                 actions.append(ScreeningCenterAllowedAction.REJECT)
             if application.hr_decision == "passed" and application.recruitment_stage == "screening_passed":
                 actions.append(ScreeningCenterAllowedAction.SCHEDULE_INTERVIEW)
+        if (
+            application.lifecycle_status == "active"
+            and application.hr_decision == "passed"
+            and application.recruitment_stage
+            in {"screening_passed", "interview", "offer", "offer_accepted", "admitted"}
+        ):
+            actions.extend(
+                [
+                    ScreeningCenterAllowedAction.WITHDRAW_APPLICATION,
+                    ScreeningCenterAllowedAction.CANCEL_PROCESS,
+                ]
+            )
+        if application.lifecycle_status == "active" and application.recruitment_stage == "offer":
+            if latest_offer_status not in {"draft", "sent", "accepted"}:
+                actions.append(ScreeningCenterAllowedAction.CREATE_OFFER)
+            elif latest_offer_status == "draft":
+                actions.extend(
+                    [
+                        ScreeningCenterAllowedAction.EDIT_OFFER,
+                        ScreeningCenterAllowedAction.SEND_OFFER,
+                    ]
+                )
+            elif latest_offer_status == "sent":
+                actions.extend(
+                    [
+                        ScreeningCenterAllowedAction.EDIT_OFFER,
+                        ScreeningCenterAllowedAction.ACCEPT_OFFER,
+                        ScreeningCenterAllowedAction.DECLINE_OFFER,
+                        ScreeningCenterAllowedAction.WITHDRAW_OFFER,
+                        ScreeningCenterAllowedAction.EXPIRE_OFFER,
+                    ]
+                )
+        if application.lifecycle_status == "active" and application.recruitment_stage == "offer_accepted":
+            actions.extend(
+                [
+                    ScreeningCenterAllowedAction.CONFIRM_ADMISSION,
+                    ScreeningCenterAllowedAction.REOPEN_STAGE9,
+                ]
+            )
+        if application.lifecycle_status == "active" and application.recruitment_stage == "admitted":
+            actions.extend(
+                [
+                    ScreeningCenterAllowedAction.CONFIRM_HIRE,
+                    ScreeningCenterAllowedAction.REOPEN_STAGE9,
+                ]
+            )
         elif (
             application.lifecycle_status == "ended"
             and application.recruitment_stage == "rejected"
@@ -408,6 +518,22 @@ class ScreeningCenterService:
             and application.final_outcome == "screening_rejected"
         ):
             actions.append(ScreeningCenterAllowedAction.UNDO_REJECTION)
+        elif (
+            application.lifecycle_status == "ended"
+            and application.hr_decision == "passed"
+            and application.final_outcome
+            in {
+                "interview_rejected",
+                "interview_no_show",
+                "offer_declined",
+                "offer_withdrawn",
+                "offer_expired",
+                "candidate_withdrew",
+                "company_canceled",
+                "hired",
+            }
+        ):
+            actions.append(ScreeningCenterAllowedAction.REOPEN_STAGE9)
         return actions
 
 
