@@ -1,6 +1,6 @@
 # 阶段 5 完整开发方案与换电脑交接手册
 
-> 项目：AI 招聘助手（`testin-recruitment-assistant`）  
+> 项目：HR智聘 — AI 招聘全流程平台（`testin-recruitment-assistant`）
 > 日期：2026-08-12  
 > 当前分支：`1lcj`  
 > 当前进度：✅ 阶段 5 已于 2026-08-14 按当前 MVP 范围完成并通过用户人工验收；本文转为历史实现与回归排查资料

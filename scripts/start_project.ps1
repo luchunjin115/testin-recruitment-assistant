@@ -282,7 +282,7 @@ if (Test-ListeningPort -Port 8000) {
 else {
     $escapedPythonCommand = $pythonCommand.Replace("'", "''")
     Start-DevelopmentWindow `
-        -Title "AI Recruitment Assistant - Backend" `
+        -Title "HR智聘 - Backend" `
         -WorkingDirectory $backendDir `
         -Command "& '$escapedPythonCommand' -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
 }
@@ -292,7 +292,7 @@ if (Test-ListeningPort -Port 5173) {
 }
 else {
     Start-DevelopmentWindow `
-        -Title "AI Recruitment Assistant - Frontend" `
+        -Title "HR智聘 - Frontend" `
         -WorkingDirectory $frontendDir `
         -Command "npm.cmd run dev -- --host 127.0.0.1"
 }

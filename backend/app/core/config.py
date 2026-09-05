@@ -19,7 +19,7 @@ def _resolve_path(value: str) -> str:
 
 
 class Settings(BaseSettings):
-    APP_NAME: str = "HR Agent Recruitment Platform"
+    APP_NAME: str = "HR智聘 - AI 招聘全流程平台"
     APP_ENV: str = "development"
 
     BACKEND_HOST: str = "0.0.0.0"

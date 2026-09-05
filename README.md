@@ -1,4 +1,4 @@
-# HR Agent 招聘提效平台
+# HR智聘 — AI 招聘全流程平台
 
 一个面向公司内部 HR 团队的 AI 招聘全流程工作台。项目使用 React、FastAPI、PostgreSQL 和 DeepSeek，打通岗位创建、候选人投递、简历处理、AI 初筛、HR 决策、面试、Offer、录取和入职，并通过严格 Schema、持久化 Worker、事务、幂等和审计保护业务事实。
 

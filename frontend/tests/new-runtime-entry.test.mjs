@@ -18,6 +18,18 @@ const startupSource = await readFile(
   new URL('../../scripts/start_project.ps1', import.meta.url),
   'utf8',
 );
+const indexSource = await readFile(
+  new URL('../index.html', import.meta.url),
+  'utf8',
+);
+const layoutSource = await readFile(
+  new URL('../src/features/recruitment/RecruitmentLayout.tsx', import.meta.url),
+  'utf8',
+);
+const publicApplicationSource = await readFile(
+  new URL('../src/features/recruitment/RecruitmentApplicationForm.tsx', import.meta.url),
+  'utf8',
+);
 
 const retiredFrontendFiles = [
   '../src/api/index.ts',
@@ -98,5 +110,16 @@ assert.equal(
   false,
   '一键启动脚本不应重新打开施工期地址',
 );
+assert.ok(
+  indexSource.includes('<title>HR智聘｜AI 招聘全流程平台</title>'),
+  '浏览器标签必须使用当前正式产品名称',
+);
+assert.equal(indexSource.includes('Testin云测招聘助手'), false, '浏览器标签不得恢复旧品牌');
+for (const source of [layoutSource, publicApplicationSource]) {
+  assert.ok(source.includes('<strong>HR智聘</strong>'), '内部工作台和公开投递必须使用统一短品牌');
+  assert.equal(source.includes('HR Agent'), false, '当前页面不得恢复未实现的 Agent 品牌');
+}
+assert.ok(startupSource.includes('HR智聘 - Backend'));
+assert.ok(startupSource.includes('HR智聘 - Frontend'));
 
 console.log('NEW_RUNTIME_ENTRY_TEST_OK');

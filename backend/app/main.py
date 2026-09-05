@@ -96,7 +96,7 @@ settings = get_settings()
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="基于 PostgreSQL 与 DeepSeek 的 AI 招聘提效平台",
+    description="HR智聘：基于 PostgreSQL 与 DeepSeek 的 AI 招聘全流程平台",
     version="2.0.0",
     lifespan=lifespan,
 )

@@ -235,10 +235,10 @@ const RecruitmentApplicationForm: React.FC = () => {
   const renderShell = (content: React.ReactNode) => (
     <div className="recruitment-apply-page">
       <header className="recruitment-apply-header">
-        <Link className="recruitment-apply-brand" to="/apply" aria-label="HR Agent 候选人投递首页">
+        <Link className="recruitment-apply-brand" to="/apply" aria-label="HR智聘候选人投递首页">
           <span className="recruitment-apply-brand-mark">HR</span>
           <span>
-            <strong>HR Agent</strong>
+            <strong>HR智聘</strong>
             <small>候选人投递</small>
           </span>
         </Link>

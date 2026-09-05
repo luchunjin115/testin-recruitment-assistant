@@ -59,8 +59,8 @@ const Brand: React.FC = () => (
   <div className="recruitment-brand">
     <span className="recruitment-brand-mark">H</span>
     <div>
-      <strong>HR Agent</strong>
-      <span>智能招聘工作台</span>
+      <strong>HR智聘</strong>
+      <span>AI 招聘全流程平台</span>
     </div>
   </div>
 );
