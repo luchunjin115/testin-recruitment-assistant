@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "公开投递到 AI 初筛的端到端时序",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [1420, 640],
+    "views": [
+      {
+        "id": "acceptance",
+        "label": "可靠受理",
+        "focus": ["candidate", "react-apply", "public-api", "redis", "private-storage", "postgresql"],
+        "note": "先完成校验、文件与数据库一致性，再返回 202 投递凭证。"
+      },
+      {
+        "id": "async-processing",
+        "label": "异步处理",
+        "focus": ["postgresql", "background-workers", "private-storage", "deepseek"],
+        "note": "后台 Worker 从 PostgreSQL 领取任务，执行提取、结构化与初筛。"
+      },
+      {
+        "id": "failure-safety",
+        "label": "失败保护",
+        "focus": ["public-api", "private-storage", "postgresql", "background-workers"],
+        "note": "补偿清理、租约恢复和成功步骤复用共同保护已接受的投递事实。"
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "candidate",
+      "type": "external",
+      "label": "候选人"
+    },
+    {
+      "id": "react-apply",
+      "type": "frontend",
+      "label": "React /apply"
+    },
+    {
+      "id": "public-api",
+      "type": "backend",
+      "label": "Public API"
+    },
+    {
+      "id": "redis",
+      "type": "database",
+      "label": "Redis"
+    },
+    {
+      "id": "private-storage",
+      "type": "database",
+      "label": "私有文件存储"
+    },
+    {
+      "id": "postgresql",
+      "type": "database",
+      "label": "PostgreSQL"
+    },
+    {
+      "id": "background-workers",
+      "type": "backend",
+      "label": "后台 Workers"
+    },
+    {
+      "id": "deepseek",
+      "type": "external",
+      "label": "DeepSeek API"
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 420,
+      "label": "同步受理：成功只代表投递事实与原文件可靠保存"
+    },
+    {
+      "from": 430,
+      "to": 570,
+      "label": "异步处理：Worker 推进固定步骤并持久化结果"
+    }
+  ],
+  "messages": [
+    {
+      "id": "fill-form",
+      "from": "candidate",
+      "to": "react-apply",
+      "y": 170,
+      "label": "填写资料并选择简历"
+    },
+    {
+      "id": "submit-application",
+      "from": "react-apply",
+      "to": "public-api",
+      "y": 200,
+      "label": "POST /api/v2/public/applications (multipart)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "check-rate-limit",
+      "from": "public-api",
+      "to": "redis",
+      "y": 230,
+      "label": "检查 IP / 联系方式摘要限流",
+      "variant": "security"
+    },
+    {
+      "id": "rate-limit-allowed",
+      "from": "redis",
+      "to": "public-api",
+      "y": 260,
+      "label": "校验文件，写临时区并计算 SHA-256",
+      "variant": "security"
+    },
+    {
+      "id": "lock-and-resolve",
+      "from": "public-api",
+      "to": "postgresql",
+      "y": 290,
+      "label": "锁定幂等键、联系方式与开放 Job",
+      "variant": "emphasis"
+    },
+    {
+      "id": "persist-intake",
+      "from": "public-api",
+      "to": "postgresql",
+      "y": 320,
+      "label": "写 Candidate / Resume / Application / Submission / queued Run",
+      "variant": "emphasis"
+    },
+    {
+      "id": "promote-file",
+      "from": "public-api",
+      "to": "private-storage",
+      "y": 350,
+      "label": "提升到不可预测的正式私有路径"
+    },
+    {
+      "id": "commit-intake",
+      "from": "public-api",
+      "to": "postgresql",
+      "y": 380,
+      "label": "提交 PostgreSQL 事务",
+      "variant": "emphasis"
+    },
+    {
+      "id": "accepted-response",
+      "from": "public-api",
+      "to": "react-apply",
+      "y": 410,
+      "label": "202 + 不透明 submission_reference",
+      "variant": "return"
+    },
+    {
+      "id": "claim-run",
+      "from": "background-workers",
+      "to": "postgresql",
+      "y": 440,
+      "label": "FOR UPDATE SKIP LOCKED + 租约",
+      "variant": "emphasis"
+    },
+    {
+      "id": "read-resume",
+      "from": "background-workers",
+      "to": "private-storage",
+      "y": 470,
+      "label": "读取文件并提取 raw_text"
+    },
+    {
+      "id": "structure-resume",
+      "from": "background-workers",
+      "to": "deepseek",
+      "y": 500,
+      "label": "先结构化，再独立执行初筛"
+    },
+    {
+      "id": "structured-draft",
+      "from": "deepseek",
+      "to": "background-workers",
+      "y": 530,
+      "label": "合法草稿与初筛报告",
+      "variant": "return"
+    },
+    {
+      "id": "persist-result",
+      "from": "background-workers",
+      "to": "postgresql",
+      "y": 556,
+      "label": "校验并保存报告与终态",
+      "variant": "emphasis"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "react-apply",
+      "from": 195,
+      "to": 415,
+      "type": "frontend"
+    },
+    {
+      "participant": "public-api",
+      "from": 200,
+      "to": 415,
+      "type": "backend"
+    },
+    {
+      "participant": "redis",
+      "from": 225,
+      "to": 245,
+      "type": "database"
+    },
+    {
+      "participant": "private-storage",
+      "from": 255,
+      "to": 355,
+      "type": "database"
+    },
+    {
+      "participant": "postgresql",
+      "from": 285,
+      "to": 385,
+      "type": "database"
+    },
+    {
+      "participant": "background-workers",
+      "from": 435,
+      "to": 560,
+      "type": "backend"
+    },
+    {
+      "participant": "deepseek",
+      "from": 495,
+      "to": 535,
+      "type": "external"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "202 的准确语义",
+      "items": [
+        "投递事实、原文件和初始任务已经可靠接受",
+        "不表示简历解析、AI 初筛或 HR 审核已经完成"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "一致性与幂等",
+      "items": [
+        "临时文件 + 数据库事务 + 补偿清理解决跨存储一致性",
+        "幂等摘要、advisory lock 与唯一约束阻止重复业务结果"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "异步可靠性",
+      "items": [
+        "持久任务、SKIP LOCKED 与租约支持并发领取和崩溃恢复",
+        "失败保留投递、原文件和已完成步骤，人工重试创建新 Run"
+      ]
+    }
+  ]
+}
