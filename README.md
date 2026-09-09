@@ -245,24 +245,11 @@ frontend/
   src/features/recruitment/  # 当前招聘工作台
   tests/                     # 前端合同测试
 
-docs/
-  DOCUMENT_INDEX.md          # 文档导航入口
-  planning/                  # 路线与实施顺序
-  architecture/              # 总体架构
-  stages/                    # 阶段设计、实施和验收证据
-  archive/                   # 只用于历史追溯
+portfolio_demo/
+  generate_dataset.py       # 确定性虚构演示数据生成器
+  validate_dataset.py       # 离线合同与统计校验
+  import_dataset.py         # 受确认保护的本地 PostgreSQL 导入器
 ```
-
-## 权威文档
-
-- [项目当前状态](PROJECT_STATE.md)
-- [文档索引](docs/DOCUMENT_INDEX.md)
-- [总体架构](docs/architecture/2026-07-15-hr-agent-platform-design.md)
-- [实施计划](docs/planning/implementation-plan.md)
-- [阶段 7 AI 初筛入口](docs/stages/stage7/README.md)
-- [阶段 8 公开投递与异步处理设计](docs/stages/stage8/2026-09-02-stage8-public-application-async-processing-design.md)
-- [阶段 9 面试、Offer 与录取设计](docs/stages/stage9/2026-09-02-stage9-interview-offer-hiring-pipeline-design.md)
-- [阶段 9 实施与最终验收](docs/stages/stage9/2026-09-02-stage9-implementation-record.md)
 
 ## 停止服务
 

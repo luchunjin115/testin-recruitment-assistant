@@ -18,23 +18,6 @@
   letter-spacing: -0.5px;
 }
 
-.recruitment-welcome-actions {
-  display: flex;
-  flex-shrink: 0;
-  gap: 10px;
-}
-
-.recruitment-welcome-actions .ant-btn {
-  height: 38px;
-  border-radius: 8px;
-  box-shadow: none;
-  font-size: 12px;
-}
-
-.recruitment-welcome-actions .ant-btn-primary {
-  background: var(--recruitment-primary);
-}
-
 .recruitment-dashboard-alert {
   border-radius: 12px;
 }
@@ -179,16 +162,5 @@
   .recruitment-welcome {
     align-items: flex-start;
     flex-direction: column;
-  }
-}
-
-@media (max-width: 560px) {
-
-  .recruitment-welcome-actions {
-    width: 100%;
-  }
-
-  .recruitment-welcome-actions .ant-btn {
-    flex: 1;
   }
 }

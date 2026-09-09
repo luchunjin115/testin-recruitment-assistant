@@ -88,6 +88,9 @@ try {
     assert.ok(panel.includes(text), `漏斗缺少：${text}`);
   }
   assert.ok(dashboard.includes('<RecruitmentStatisticsPanel />'));
+  for (const removedAction of ['新增候选人 · 后续', '上传简历 · 阶段 4', 'recruitment-welcome-actions']) {
+    assert.equal(dashboard.includes(removedAction), false, `工作台顶部不应保留占位入口：${removedAction}`);
+  }
   assert.equal(center.includes('<RecruitmentStatisticsPanel'), false, '招聘全流程统计只放在仪表盘，不挤占初筛工作台');
   assert.match(styles, /@media \(max-width: 560px\)[\s\S]*?grid-template-columns: 1fr/);
   assert.equal(panel.toLowerCase().includes('salary'), false);

@@ -5,8 +5,6 @@ import {
   RobotOutlined,
   SolutionOutlined,
   TeamOutlined,
-  UploadOutlined,
-  UserAddOutlined,
 } from '@ant-design/icons';
 import { Alert, Avatar, Button, Empty, Skeleton } from 'antd';
 import { Link } from 'react-router-dom';
@@ -93,10 +91,6 @@ const RecruitmentDashboard: React.FC = () => {
               ? '新版候选人库暂无记录；页面不会填充演示数据。'
               : `${data.pendingReview} 份 Application 等待 HR 决策。`}
           </p>
-        </div>
-        <div className="recruitment-welcome-actions">
-          <Button disabled icon={<UserAddOutlined />}>新增候选人 · 后续</Button>
-          <Button disabled icon={<UploadOutlined />} type="primary">上传简历 · 阶段 4</Button>
         </div>
       </section>
 

@@ -40,6 +40,7 @@ for (const text of [
 
 assert.equal(report.includes('JSON.stringify(report'), false, '页面不得展示内部时间事实 JSON');
 assert.equal(report.includes('experiencePeriodFactKeys.map'), false, '页面不得展示内部时间事实 key');
+assert.equal(report.includes('finding.criterionIds.map'), false, '优势、差距、风险和缺失信息卡片下方不应展示内部 criterion ID');
 
 for (const text of [
   '批量重新评估', 'selectedApplicationIds.length', 'selectedItems[0].jobId !== item.jobId',

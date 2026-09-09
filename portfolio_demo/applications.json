@@ -1,0 +1,4301 @@
+{
+  "dataset_version": "portfolio-demo-v1",
+  "dataset_as_of": "2026-09-09T12:00:00+08:00",
+  "fictional_data_only": true,
+  "automatic_database_write": false,
+  "real_model_outputs_included": false,
+  "applications": [
+    {
+      "demo_application_id": "APP-001",
+      "demo_candidate_id": "CAND-001",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "hr_direct",
+      "applied_at": "2026-05-01T10:00:00+08:00",
+      "scenario": "hired",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "hired",
+      "hr_decision": "passed",
+      "final_outcome": "hired",
+      "processing_run": null,
+      "screening_plan": "not_required_for_hr_direct",
+      "timeline": [
+        {
+          "at": "2026-05-01T10:00:00+08:00",
+          "event": "hr_direct_entry",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-03T11:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-04T14:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-05T14:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-05-06T02:00:00+08:00",
+          "event": "offer_sent",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-05-08T02:00:00+08:00",
+          "event": "offer_accepted",
+          "to_recruitment_stage": "offer_accepted",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-09T02:00:00+08:00",
+          "event": "application_admitted",
+          "to_recruitment_stage": "admitted",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-16T02:00:00+08:00",
+          "event": "application_hired",
+          "to_recruitment_stage": "hired",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-001-01",
+          "round_number": 1,
+          "interview_type": "phone",
+          "status": "completed",
+          "scheduled_start_at": "2026-05-04T12:00:00+08:00",
+          "duration_minutes": 60,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "赵宁",
+            "何川"
+          ],
+          "location": null,
+          "meeting_link": null,
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-05-04T14:00:00+08:00",
+          "created_at": "2026-05-03T11:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-001-01",
+          "version_number": 1,
+          "status": "accepted",
+          "position_title": "AI 应用工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "27000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-05-15",
+          "expected_start_date": "2026-06-04",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-05-05T14:00:00+08:00",
+          "sent_at": "2026-05-06T02:00:00+08:00",
+          "responded_at": "2026-05-08T02:00:00+08:00",
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-002",
+      "demo_candidate_id": "CAND-015",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-02T11:00:00+08:00",
+      "scenario": "processing_failed",
+      "lifecycle_status": "active",
+      "recruitment_stage": "applied",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "failed",
+        "current_step": "extract_text",
+        "attempt_count": 2,
+        "started_at": "2026-05-02T11:02:00+08:00",
+        "completed_at": "2026-05-02T11:08:00+08:00",
+        "error_code": "RESUME_TEXT_EXTRACTION_FAILED",
+        "error_message": "无法从演示文件中提取可用文本，请核对文件后人工重试。"
+      },
+      "screening_plan": "pending_or_failed",
+      "timeline": [
+        {
+          "at": "2026-05-02T11:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-003",
+      "demo_candidate_id": "CAND-027",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": true,
+      "source": "hr_direct",
+      "applied_at": "2026-05-03T12:00:00+08:00",
+      "scenario": "offer_accepted",
+      "lifecycle_status": "active",
+      "recruitment_stage": "offer_accepted",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "not_required_for_hr_direct",
+      "timeline": [
+        {
+          "at": "2026-05-03T12:00:00+08:00",
+          "event": "hr_direct_entry",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-05T15:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-06T20:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-07T20:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-05-08T08:00:00+08:00",
+          "event": "offer_sent",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-05-10T08:00:00+08:00",
+          "event": "offer_accepted",
+          "to_recruitment_stage": "offer_accepted",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-003-01",
+          "round_number": 1,
+          "interview_type": "video",
+          "status": "completed",
+          "scheduled_start_at": "2026-05-06T18:00:00+08:00",
+          "duration_minutes": 45,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "陈舟"
+          ],
+          "location": null,
+          "meeting_link": "https://meeting.portfolio.example/demo-room",
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-05-06T20:00:00+08:00",
+          "created_at": "2026-05-05T15:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-003-01",
+          "version_number": 1,
+          "status": "accepted",
+          "position_title": "测试开发工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "24000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-05-17",
+          "expected_start_date": "2026-06-06",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-05-07T20:00:00+08:00",
+          "sent_at": "2026-05-08T08:00:00+08:00",
+          "responded_at": "2026-05-10T08:00:00+08:00",
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-004",
+      "demo_candidate_id": "CAND-039",
+      "demo_job_id": "JOB-FE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-04T13:00:00+08:00",
+      "scenario": "rejected",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "rejected",
+      "hr_decision": "rejected",
+      "final_outcome": "screening_rejected",
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-04T13:02:00+08:00",
+        "completed_at": "2026-05-05T01:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-04T13:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-05T01:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-05T13:00:00+08:00",
+          "event": "required_experience_missing",
+          "to_recruitment_stage": "rejected",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-005",
+      "demo_candidate_id": "CAND-050",
+      "demo_job_id": "JOB-DA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-05T14:00:00+08:00",
+      "scenario": "processing_paused",
+      "lifecycle_status": "active",
+      "recruitment_stage": "applied",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "paused",
+        "current_step": "extract_text",
+        "attempt_count": 1,
+        "waiting_reason": "job_closed"
+      },
+      "screening_plan": "pending_or_failed",
+      "timeline": [
+        {
+          "at": "2026-05-05T14:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-006",
+      "demo_candidate_id": "CAND-002",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "hr_direct",
+      "applied_at": "2026-05-06T15:00:00+08:00",
+      "scenario": "passed_no_interview",
+      "lifecycle_status": "active",
+      "recruitment_stage": "screening_passed",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "not_required_for_hr_direct",
+      "timeline": [
+        {
+          "at": "2026-05-06T15:00:00+08:00",
+          "event": "hr_direct_entry",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-007",
+      "demo_candidate_id": "CAND-016",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-07T09:00:00+08:00",
+      "scenario": "screening_ready_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "hr_review",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-07T09:02:00+08:00",
+        "completed_at": "2026-05-07T21:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-07T09:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-07T17:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-07T21:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-008",
+      "demo_candidate_id": "CAND-028",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": true,
+      "source": "hr_direct",
+      "applied_at": "2026-05-08T10:00:00+08:00",
+      "scenario": "scheduled_interview",
+      "lifecycle_status": "active",
+      "recruitment_stage": "interview",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "not_required_for_hr_direct",
+      "timeline": [
+        {
+          "at": "2026-05-08T10:00:00+08:00",
+          "event": "hr_direct_entry",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-10T13:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-008-01",
+          "round_number": 1,
+          "interview_type": "onsite",
+          "status": "scheduled",
+          "scheduled_start_at": "2026-09-11T14:00:00+08:00",
+          "duration_minutes": 75,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "王澄"
+          ],
+          "location": "星港创新中心 A 座",
+          "meeting_link": null,
+          "decision": "pending",
+          "feedback_summary": null,
+          "strengths": [],
+          "concerns": [],
+          "follow_up_questions": [],
+          "feedback_submitted_by_label": null,
+          "feedback_submitted_at": null,
+          "created_at": "2026-05-10T13:00:00+08:00"
+        }
+      ],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-009",
+      "demo_candidate_id": "CAND-040",
+      "demo_job_id": "JOB-FE",
+      "is_primary_application": true,
+      "source": "hr_direct",
+      "applied_at": "2026-05-09T11:00:00+08:00",
+      "scenario": "next_round_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "interview",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "not_required_for_hr_direct",
+      "timeline": [
+        {
+          "at": "2026-05-09T11:00:00+08:00",
+          "event": "hr_direct_entry",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-11T15:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-12T18:00:00+08:00",
+          "event": "interview_next_round",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-009-01",
+          "round_number": 1,
+          "interview_type": "video",
+          "status": "completed",
+          "scheduled_start_at": "2026-05-12T16:00:00+08:00",
+          "duration_minutes": 45,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "陈舟"
+          ],
+          "location": null,
+          "meeting_link": "https://meeting.portfolio.example/demo-room",
+          "decision": "next_round",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [
+            "复杂场景经验仍需补充"
+          ],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-05-12T18:00:00+08:00",
+          "created_at": "2026-05-11T15:00:00+08:00"
+        }
+      ],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-010",
+      "demo_candidate_id": "CAND-051",
+      "demo_job_id": "JOB-DA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-10T12:00:00+08:00",
+      "scenario": "processing_paused",
+      "lifecycle_status": "active",
+      "recruitment_stage": "applied",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "paused",
+        "current_step": "extract_text",
+        "attempt_count": 1,
+        "waiting_reason": "job_closed"
+      },
+      "screening_plan": "pending_or_failed",
+      "timeline": [
+        {
+          "at": "2026-05-10T12:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-011",
+      "demo_candidate_id": "CAND-003",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "hr_direct",
+      "applied_at": "2026-05-11T13:00:00+08:00",
+      "scenario": "offer_sent",
+      "lifecycle_status": "active",
+      "recruitment_stage": "offer",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "not_required_for_hr_direct",
+      "timeline": [
+        {
+          "at": "2026-05-11T13:00:00+08:00",
+          "event": "hr_direct_entry",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-13T14:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-14T19:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-15T19:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-05-16T07:00:00+08:00",
+          "event": "offer_sent",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-011-01",
+          "round_number": 1,
+          "interview_type": "onsite",
+          "status": "completed",
+          "scheduled_start_at": "2026-05-14T17:00:00+08:00",
+          "duration_minutes": 75,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "王澄"
+          ],
+          "location": "星港创新中心 A 座",
+          "meeting_link": null,
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-05-14T19:00:00+08:00",
+          "created_at": "2026-05-13T14:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-011-01",
+          "version_number": 1,
+          "status": "sent",
+          "position_title": "AI 应用工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "29000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-05-25",
+          "expected_start_date": "2026-06-14",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-05-15T19:00:00+08:00",
+          "sent_at": "2026-05-16T07:00:00+08:00",
+          "responded_at": null,
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-012",
+      "demo_candidate_id": "CAND-017",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": true,
+      "source": "hr_direct",
+      "applied_at": "2026-05-12T14:00:00+08:00",
+      "scenario": "passed_no_interview",
+      "lifecycle_status": "active",
+      "recruitment_stage": "screening_passed",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "not_required_for_hr_direct",
+      "timeline": [
+        {
+          "at": "2026-05-12T14:00:00+08:00",
+          "event": "hr_direct_entry",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-013",
+      "demo_candidate_id": "CAND-029",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-13T15:00:00+08:00",
+      "scenario": "screening_ready_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "hr_review",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-13T15:02:00+08:00",
+        "completed_at": "2026-05-14T03:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-13T15:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-13T23:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-14T03:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-014",
+      "demo_candidate_id": "CAND-041",
+      "demo_job_id": "JOB-FE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-14T09:00:00+08:00",
+      "scenario": "backup",
+      "lifecycle_status": "active",
+      "recruitment_stage": "backup",
+      "hr_decision": "backup",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-14T09:02:00+08:00",
+        "completed_at": "2026-05-14T21:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-14T09:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-14T21:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-15T09:00:00+08:00",
+          "event": "minor_capability_gap",
+          "to_recruitment_stage": "backup",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-015",
+      "demo_candidate_id": "CAND-052",
+      "demo_job_id": "JOB-DA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-15T10:00:00+08:00",
+      "scenario": "processing_paused",
+      "lifecycle_status": "active",
+      "recruitment_stage": "applied",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "paused",
+        "current_step": "extract_text",
+        "attempt_count": 1,
+        "waiting_reason": "job_closed"
+      },
+      "screening_plan": "pending_or_failed",
+      "timeline": [
+        {
+          "at": "2026-05-15T10:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-016",
+      "demo_candidate_id": "CAND-004",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-16T11:00:00+08:00",
+      "scenario": "backup",
+      "lifecycle_status": "active",
+      "recruitment_stage": "backup",
+      "hr_decision": "backup",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-16T11:02:00+08:00",
+        "completed_at": "2026-05-16T23:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-16T11:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-16T23:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-17T11:00:00+08:00",
+          "event": "minor_capability_gap",
+          "to_recruitment_stage": "backup",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-017",
+      "demo_candidate_id": "CAND-018",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": true,
+      "source": "hr_direct",
+      "applied_at": "2026-05-17T12:00:00+08:00",
+      "scenario": "hired",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "hired",
+      "hr_decision": "passed",
+      "final_outcome": "hired",
+      "processing_run": null,
+      "screening_plan": "not_required_for_hr_direct",
+      "timeline": [
+        {
+          "at": "2026-05-17T12:00:00+08:00",
+          "event": "hr_direct_entry",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-19T14:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-20T17:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-21T17:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-05-22T05:00:00+08:00",
+          "event": "offer_sent",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-05-24T05:00:00+08:00",
+          "event": "offer_accepted",
+          "to_recruitment_stage": "offer_accepted",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-25T05:00:00+08:00",
+          "event": "application_admitted",
+          "to_recruitment_stage": "admitted",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-01T05:00:00+08:00",
+          "event": "application_hired",
+          "to_recruitment_stage": "hired",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-017-01",
+          "round_number": 1,
+          "interview_type": "onsite",
+          "status": "completed",
+          "scheduled_start_at": "2026-05-20T15:00:00+08:00",
+          "duration_minutes": 75,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "王澄"
+          ],
+          "location": "星港创新中心 A 座",
+          "meeting_link": null,
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-05-20T17:00:00+08:00",
+          "created_at": "2026-05-19T14:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-017-01",
+          "version_number": 1,
+          "status": "accepted",
+          "position_title": "Python 后端工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "25000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-05-31",
+          "expected_start_date": "2026-06-20",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-05-21T17:00:00+08:00",
+          "sent_at": "2026-05-22T05:00:00+08:00",
+          "responded_at": "2026-05-24T05:00:00+08:00",
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-018",
+      "demo_candidate_id": "CAND-030",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-18T13:00:00+08:00",
+      "scenario": "completed_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "interview",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-18T13:02:00+08:00",
+        "completed_at": "2026-05-19T01:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-18T13:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-19T01:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-19T12:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-21T15:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-22T19:00:00+08:00",
+          "event": "interview_round_completed",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-018-01",
+          "round_number": 1,
+          "interview_type": "video",
+          "status": "completed",
+          "scheduled_start_at": "2026-05-22T17:00:00+08:00",
+          "duration_minutes": 45,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "陈舟"
+          ],
+          "location": null,
+          "meeting_link": "https://meeting.portfolio.example/demo-room",
+          "decision": "pending",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [
+            "复杂场景经验仍需补充"
+          ],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-05-22T19:00:00+08:00",
+          "created_at": "2026-05-21T15:00:00+08:00"
+        }
+      ],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-019",
+      "demo_candidate_id": "CAND-042",
+      "demo_job_id": "JOB-FE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-19T14:00:00+08:00",
+      "scenario": "next_round_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "interview",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-19T14:02:00+08:00",
+        "completed_at": "2026-05-20T02:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-19T14:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-20T02:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-20T14:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-22T18:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-23T23:00:00+08:00",
+          "event": "interview_next_round",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-019-01",
+          "round_number": 1,
+          "interview_type": "phone",
+          "status": "completed",
+          "scheduled_start_at": "2026-05-23T21:00:00+08:00",
+          "duration_minutes": 60,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "赵宁",
+            "何川"
+          ],
+          "location": null,
+          "meeting_link": null,
+          "decision": "next_round",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [
+            "复杂场景经验仍需补充"
+          ],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-05-23T23:00:00+08:00",
+          "created_at": "2026-05-22T18:00:00+08:00"
+        }
+      ],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-020",
+      "demo_candidate_id": "CAND-053",
+      "demo_job_id": "JOB-DA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-20T15:00:00+08:00",
+      "scenario": "processing_paused",
+      "lifecycle_status": "active",
+      "recruitment_stage": "applied",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "paused",
+        "current_step": "extract_text",
+        "attempt_count": 1,
+        "waiting_reason": "job_closed"
+      },
+      "screening_plan": "pending_or_failed",
+      "timeline": [
+        {
+          "at": "2026-05-20T15:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-021",
+      "demo_candidate_id": "CAND-005",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-21T09:00:00+08:00",
+      "scenario": "scheduled_interview",
+      "lifecycle_status": "active",
+      "recruitment_stage": "interview",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-21T09:02:00+08:00",
+        "completed_at": "2026-05-21T21:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-21T09:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-21T21:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-22T11:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-24T12:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-021-01",
+          "round_number": 1,
+          "interview_type": "video",
+          "status": "scheduled",
+          "scheduled_start_at": "2026-09-12T12:00:00+08:00",
+          "duration_minutes": 45,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "陈舟"
+          ],
+          "location": null,
+          "meeting_link": "https://meeting.portfolio.example/demo-room",
+          "decision": "pending",
+          "feedback_summary": null,
+          "strengths": [],
+          "concerns": [],
+          "follow_up_questions": [],
+          "feedback_submitted_by_label": null,
+          "feedback_submitted_at": null,
+          "created_at": "2026-05-24T12:00:00+08:00"
+        }
+      ],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-022",
+      "demo_candidate_id": "CAND-019",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-22T10:00:00+08:00",
+      "scenario": "passed_no_interview",
+      "lifecycle_status": "active",
+      "recruitment_stage": "screening_passed",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded_with_warnings",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-22T10:02:00+08:00",
+        "completed_at": "2026-05-22T22:05:00+08:00",
+        "warning_codes": [
+          "RESUME_STRUCTURE_FAILED"
+        ]
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-22T10:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-22T22:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-23T13:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-023",
+      "demo_candidate_id": "CAND-031",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-23T11:00:00+08:00",
+      "scenario": "screening_ready_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "hr_review",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-23T11:02:00+08:00",
+        "completed_at": "2026-05-23T23:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-23T11:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-23T19:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-23T23:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-024",
+      "demo_candidate_id": "CAND-043",
+      "demo_job_id": "JOB-FE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-24T12:00:00+08:00",
+      "scenario": "offer_sent",
+      "lifecycle_status": "active",
+      "recruitment_stage": "offer",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-24T12:02:00+08:00",
+        "completed_at": "2026-05-25T00:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-24T12:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-25T00:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-25T17:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-27T21:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-28T23:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-29T23:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-05-30T11:00:00+08:00",
+          "event": "offer_sent",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-024-01",
+          "round_number": 1,
+          "interview_type": "video",
+          "status": "completed",
+          "scheduled_start_at": "2026-05-28T21:00:00+08:00",
+          "duration_minutes": 45,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "陈舟"
+          ],
+          "location": null,
+          "meeting_link": "https://meeting.portfolio.example/demo-room",
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-05-28T23:00:00+08:00",
+          "created_at": "2026-05-27T21:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-024-01",
+          "version_number": 1,
+          "status": "sent",
+          "position_title": "前端工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "23000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-06-08",
+          "expected_start_date": "2026-06-28",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-05-29T23:00:00+08:00",
+          "sent_at": "2026-05-30T11:00:00+08:00",
+          "responded_at": null,
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-025",
+      "demo_candidate_id": "CAND-054",
+      "demo_job_id": "JOB-DA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-25T13:00:00+08:00",
+      "scenario": "screening_ready_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "hr_review",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-25T13:02:00+08:00",
+        "completed_at": "2026-05-26T01:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-25T13:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-25T21:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-26T01:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-026",
+      "demo_candidate_id": "CAND-006",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-26T14:00:00+08:00",
+      "scenario": "scheduled_interview",
+      "lifecycle_status": "active",
+      "recruitment_stage": "interview",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-26T14:02:00+08:00",
+        "completed_at": "2026-05-27T02:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-26T14:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-27T02:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-27T08:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-29T09:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-026-01",
+          "round_number": 1,
+          "interview_type": "onsite",
+          "status": "scheduled",
+          "scheduled_start_at": "2026-09-13T14:00:00+08:00",
+          "duration_minutes": 75,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "王澄"
+          ],
+          "location": "星港创新中心 A 座",
+          "meeting_link": null,
+          "decision": "pending",
+          "feedback_summary": null,
+          "strengths": [],
+          "concerns": [],
+          "follow_up_questions": [],
+          "feedback_submitted_by_label": null,
+          "feedback_submitted_at": null,
+          "created_at": "2026-05-29T09:00:00+08:00"
+        }
+      ],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-027",
+      "demo_candidate_id": "CAND-020",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-27T15:00:00+08:00",
+      "scenario": "backup",
+      "lifecycle_status": "active",
+      "recruitment_stage": "backup",
+      "hr_decision": "backup",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-27T15:02:00+08:00",
+        "completed_at": "2026-05-28T03:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-27T15:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-28T03:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-28T15:00:00+08:00",
+          "event": "minor_capability_gap",
+          "to_recruitment_stage": "backup",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-028",
+      "demo_candidate_id": "CAND-032",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-28T09:00:00+08:00",
+      "scenario": "offer_draft",
+      "lifecycle_status": "active",
+      "recruitment_stage": "offer",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-28T09:02:00+08:00",
+        "completed_at": "2026-05-28T21:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-28T09:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-28T21:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-29T05:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-31T08:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-01T10:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-02T10:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-028-01",
+          "round_number": 1,
+          "interview_type": "phone",
+          "status": "completed",
+          "scheduled_start_at": "2026-06-01T08:00:00+08:00",
+          "duration_minutes": 60,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "赵宁",
+            "何川"
+          ],
+          "location": null,
+          "meeting_link": null,
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-06-01T10:00:00+08:00",
+          "created_at": "2026-05-31T08:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-028-01",
+          "version_number": 1,
+          "status": "draft",
+          "position_title": "测试开发工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "21000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-06-12",
+          "expected_start_date": "2026-07-02",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-06-02T10:00:00+08:00",
+          "sent_at": null,
+          "responded_at": null,
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-029",
+      "demo_candidate_id": "CAND-044",
+      "demo_job_id": "JOB-FE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-29T10:00:00+08:00",
+      "scenario": "rejected",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "rejected",
+      "hr_decision": "rejected",
+      "final_outcome": "screening_rejected",
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-29T10:02:00+08:00",
+        "completed_at": "2026-05-29T22:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-29T10:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-29T22:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-05-30T10:00:00+08:00",
+          "event": "required_experience_missing",
+          "to_recruitment_stage": "rejected",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-030",
+      "demo_candidate_id": "CAND-055",
+      "demo_job_id": "JOB-DA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-30T11:00:00+08:00",
+      "scenario": "processing_failed",
+      "lifecycle_status": "active",
+      "recruitment_stage": "applied",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "failed",
+        "current_step": "extract_text",
+        "attempt_count": 2,
+        "started_at": "2026-05-30T11:02:00+08:00",
+        "completed_at": "2026-05-30T11:08:00+08:00",
+        "error_code": "RESUME_TEXT_EXTRACTION_FAILED",
+        "error_message": "无法从演示文件中提取可用文本，请核对文件后人工重试。"
+      },
+      "screening_plan": "pending_or_failed",
+      "timeline": [
+        {
+          "at": "2026-05-30T11:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-031",
+      "demo_candidate_id": "CAND-007",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-05-31T12:00:00+08:00",
+      "scenario": "backup",
+      "lifecycle_status": "active",
+      "recruitment_stage": "backup",
+      "hr_decision": "backup",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-05-31T12:02:00+08:00",
+        "completed_at": "2026-06-01T00:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-05-31T12:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-01T00:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-01T12:00:00+08:00",
+          "event": "minor_capability_gap",
+          "to_recruitment_stage": "backup",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-032",
+      "demo_candidate_id": "CAND-021",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-01T13:00:00+08:00",
+      "scenario": "screening_ready_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "hr_review",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-01T13:02:00+08:00",
+        "completed_at": "2026-06-02T01:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-01T13:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-01T21:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-02T01:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-033",
+      "demo_candidate_id": "CAND-033",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-02T14:00:00+08:00",
+      "scenario": "backup",
+      "lifecycle_status": "active",
+      "recruitment_stage": "backup",
+      "hr_decision": "backup",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded_with_warnings",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-02T14:02:00+08:00",
+        "completed_at": "2026-06-03T02:05:00+08:00",
+        "warning_codes": [
+          "RESUME_STRUCTURE_FAILED"
+        ]
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-02T14:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-03T02:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-03T14:00:00+08:00",
+          "event": "minor_capability_gap",
+          "to_recruitment_stage": "backup",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-034",
+      "demo_candidate_id": "CAND-045",
+      "demo_job_id": "JOB-FE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-03T15:00:00+08:00",
+      "scenario": "backup",
+      "lifecycle_status": "active",
+      "recruitment_stage": "backup",
+      "hr_decision": "backup",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-03T15:02:00+08:00",
+        "completed_at": "2026-06-04T03:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-03T15:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-04T03:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-04T15:00:00+08:00",
+          "event": "minor_capability_gap",
+          "to_recruitment_stage": "backup",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-035",
+      "demo_candidate_id": "CAND-056",
+      "demo_job_id": "JOB-DA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-04T09:00:00+08:00",
+      "scenario": "rejected",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "rejected",
+      "hr_decision": "rejected",
+      "final_outcome": "screening_rejected",
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-04T09:02:00+08:00",
+        "completed_at": "2026-06-04T21:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-04T09:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-04T21:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-05T09:00:00+08:00",
+          "event": "required_experience_missing",
+          "to_recruitment_stage": "rejected",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-036",
+      "demo_candidate_id": "CAND-008",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-05T10:00:00+08:00",
+      "scenario": "processing_failed",
+      "lifecycle_status": "active",
+      "recruitment_stage": "applied",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "failed",
+        "current_step": "extract_text",
+        "attempt_count": 2,
+        "started_at": "2026-06-05T10:02:00+08:00",
+        "completed_at": "2026-06-05T10:08:00+08:00",
+        "error_code": "RESUME_TEXT_EXTRACTION_FAILED",
+        "error_message": "无法从演示文件中提取可用文本，请核对文件后人工重试。"
+      },
+      "screening_plan": "pending_or_failed",
+      "timeline": [
+        {
+          "at": "2026-06-05T10:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-037",
+      "demo_candidate_id": "CAND-022",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-06T11:00:00+08:00",
+      "scenario": "interview_rejected",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "rejected",
+      "hr_decision": "passed",
+      "final_outcome": "interview_rejected",
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-06T11:02:00+08:00",
+        "completed_at": "2026-06-06T23:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-06T11:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-06T23:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-07T16:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-09T18:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-10T21:00:00+08:00",
+          "event": "interview_rejected",
+          "to_recruitment_stage": "rejected",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-037-01",
+          "round_number": 1,
+          "interview_type": "phone",
+          "status": "completed",
+          "scheduled_start_at": "2026-06-10T19:00:00+08:00",
+          "duration_minutes": 60,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "赵宁",
+            "何川"
+          ],
+          "location": null,
+          "meeting_link": null,
+          "decision": "rejected",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-06-10T21:00:00+08:00",
+          "created_at": "2026-06-09T18:00:00+08:00"
+        }
+      ],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-038",
+      "demo_candidate_id": "CAND-034",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-07T12:00:00+08:00",
+      "scenario": "candidate_withdrew",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "interview",
+      "hr_decision": "passed",
+      "final_outcome": "candidate_withdrew",
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-07T12:02:00+08:00",
+        "completed_at": "2026-06-08T00:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-07T12:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-08T00:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-08T18:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-10T21:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-12T01:00:00+08:00",
+          "event": "candidate_withdrew",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-038-01",
+          "round_number": 1,
+          "interview_type": "onsite",
+          "status": "completed",
+          "scheduled_start_at": "2026-06-11T23:00:00+08:00",
+          "duration_minutes": 75,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "王澄"
+          ],
+          "location": "星港创新中心 A 座",
+          "meeting_link": null,
+          "decision": "candidate_withdrew",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-06-12T01:00:00+08:00",
+          "created_at": "2026-06-10T21:00:00+08:00"
+        }
+      ],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-039",
+      "demo_candidate_id": "CAND-046",
+      "demo_job_id": "JOB-FE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-08T13:00:00+08:00",
+      "scenario": "rejected",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "rejected",
+      "hr_decision": "rejected",
+      "final_outcome": "screening_rejected",
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-08T13:02:00+08:00",
+        "completed_at": "2026-06-09T01:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-08T13:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-09T01:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-09T13:00:00+08:00",
+          "event": "required_experience_missing",
+          "to_recruitment_stage": "rejected",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-040",
+      "demo_candidate_id": "CAND-057",
+      "demo_job_id": "JOB-DA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-09T14:00:00+08:00",
+      "scenario": "rejected",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "rejected",
+      "hr_decision": "rejected",
+      "final_outcome": "screening_rejected",
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-09T14:02:00+08:00",
+        "completed_at": "2026-06-10T02:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-09T14:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-10T02:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-10T14:00:00+08:00",
+          "event": "required_experience_missing",
+          "to_recruitment_stage": "rejected",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-041",
+      "demo_candidate_id": "CAND-009",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-10T15:00:00+08:00",
+      "scenario": "hired",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "hired",
+      "hr_decision": "passed",
+      "final_outcome": "hired",
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-10T15:02:00+08:00",
+        "completed_at": "2026-06-11T03:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-10T15:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-11T03:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-11T11:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-13T12:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-14T15:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-15T15:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-06-16T03:00:00+08:00",
+          "event": "offer_sent",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-06-18T03:00:00+08:00",
+          "event": "offer_accepted",
+          "to_recruitment_stage": "offer_accepted",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-19T03:00:00+08:00",
+          "event": "application_admitted",
+          "to_recruitment_stage": "admitted",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-26T03:00:00+08:00",
+          "event": "application_hired",
+          "to_recruitment_stage": "hired",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-041-01",
+          "round_number": 1,
+          "interview_type": "onsite",
+          "status": "completed",
+          "scheduled_start_at": "2026-06-14T13:00:00+08:00",
+          "duration_minutes": 75,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "王澄"
+          ],
+          "location": "星港创新中心 A 座",
+          "meeting_link": null,
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-06-14T15:00:00+08:00",
+          "created_at": "2026-06-13T12:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-041-01",
+          "version_number": 1,
+          "status": "accepted",
+          "position_title": "AI 应用工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "27000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-06-25",
+          "expected_start_date": "2026-07-15",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-06-15T15:00:00+08:00",
+          "sent_at": "2026-06-16T03:00:00+08:00",
+          "responded_at": "2026-06-18T03:00:00+08:00",
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-042",
+      "demo_candidate_id": "CAND-023",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-11T09:00:00+08:00",
+      "scenario": "admitted",
+      "lifecycle_status": "active",
+      "recruitment_stage": "admitted",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-11T09:02:00+08:00",
+        "completed_at": "2026-06-11T21:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-11T09:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-11T21:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-12T06:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-14T08:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-15T12:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-16T12:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-06-17T00:00:00+08:00",
+          "event": "offer_sent",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-06-19T00:00:00+08:00",
+          "event": "offer_accepted",
+          "to_recruitment_stage": "offer_accepted",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-20T00:00:00+08:00",
+          "event": "application_admitted",
+          "to_recruitment_stage": "admitted",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-042-01",
+          "round_number": 1,
+          "interview_type": "video",
+          "status": "completed",
+          "scheduled_start_at": "2026-06-15T10:00:00+08:00",
+          "duration_minutes": 45,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "陈舟"
+          ],
+          "location": null,
+          "meeting_link": "https://meeting.portfolio.example/demo-room",
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-06-15T12:00:00+08:00",
+          "created_at": "2026-06-14T08:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-042-01",
+          "version_number": 1,
+          "status": "accepted",
+          "position_title": "Python 后端工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "26000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-06-26",
+          "expected_start_date": "2026-07-16",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-06-16T12:00:00+08:00",
+          "sent_at": "2026-06-17T00:00:00+08:00",
+          "responded_at": "2026-06-19T00:00:00+08:00",
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-043",
+      "demo_candidate_id": "CAND-035",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-12T10:00:00+08:00",
+      "scenario": "offer_draft",
+      "lifecycle_status": "active",
+      "recruitment_stage": "offer",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-12T10:02:00+08:00",
+        "completed_at": "2026-06-12T22:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-12T10:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-12T22:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-13T08:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-15T11:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-16T16:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-17T16:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-043-01",
+          "round_number": 1,
+          "interview_type": "phone",
+          "status": "completed",
+          "scheduled_start_at": "2026-06-16T14:00:00+08:00",
+          "duration_minutes": 60,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "赵宁",
+            "何川"
+          ],
+          "location": null,
+          "meeting_link": null,
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-06-16T16:00:00+08:00",
+          "created_at": "2026-06-15T11:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-043-01",
+          "version_number": 1,
+          "status": "draft",
+          "position_title": "测试开发工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "24000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-06-27",
+          "expected_start_date": "2026-07-17",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-06-17T16:00:00+08:00",
+          "sent_at": null,
+          "responded_at": null,
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-044",
+      "demo_candidate_id": "CAND-047",
+      "demo_job_id": "JOB-FE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-13T11:00:00+08:00",
+      "scenario": "screening_ready_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "hr_review",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded_with_warnings",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-13T11:02:00+08:00",
+        "completed_at": "2026-06-13T23:05:00+08:00",
+        "warning_codes": [
+          "RESUME_STRUCTURE_FAILED"
+        ]
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-13T11:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-13T19:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-13T23:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-045",
+      "demo_candidate_id": "CAND-058",
+      "demo_job_id": "JOB-DA",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-14T12:00:00+08:00",
+      "scenario": "next_round_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "interview",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-14T12:02:00+08:00",
+        "completed_at": "2026-06-15T00:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-14T12:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-15T00:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-15T12:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-17T12:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-18T15:00:00+08:00",
+          "event": "interview_next_round",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-045-01",
+          "round_number": 1,
+          "interview_type": "video",
+          "status": "completed",
+          "scheduled_start_at": "2026-06-18T13:00:00+08:00",
+          "duration_minutes": 45,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "陈舟"
+          ],
+          "location": null,
+          "meeting_link": "https://meeting.portfolio.example/demo-room",
+          "decision": "next_round",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [
+            "复杂场景经验仍需补充"
+          ],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-06-18T15:00:00+08:00",
+          "created_at": "2026-06-17T12:00:00+08:00"
+        }
+      ],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-046",
+      "demo_candidate_id": "CAND-010",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-15T13:00:00+08:00",
+      "scenario": "interview_rejected",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "rejected",
+      "hr_decision": "passed",
+      "final_outcome": "interview_rejected",
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-15T13:02:00+08:00",
+        "completed_at": "2026-06-16T01:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-15T13:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-16T01:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-16T14:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-18T15:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-19T19:00:00+08:00",
+          "event": "interview_rejected",
+          "to_recruitment_stage": "rejected",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-046-01",
+          "round_number": 1,
+          "interview_type": "phone",
+          "status": "completed",
+          "scheduled_start_at": "2026-06-19T17:00:00+08:00",
+          "duration_minutes": 60,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "赵宁",
+            "何川"
+          ],
+          "location": null,
+          "meeting_link": null,
+          "decision": "rejected",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-06-19T19:00:00+08:00",
+          "created_at": "2026-06-18T15:00:00+08:00"
+        }
+      ],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-047",
+      "demo_candidate_id": "CAND-024",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": true,
+      "source": "public_apply",
+      "applied_at": "2026-06-16T14:00:00+08:00",
+      "scenario": "admitted",
+      "lifecycle_status": "active",
+      "recruitment_stage": "admitted",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "succeeded",
+        "current_step": "completed",
+        "attempt_count": 1,
+        "started_at": "2026-06-16T14:02:00+08:00",
+        "completed_at": "2026-06-17T02:05:00+08:00",
+        "warning_codes": []
+      },
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-16T14:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-17T02:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-17T16:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-19T18:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-20T23:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-21T23:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-06-22T11:00:00+08:00",
+          "event": "offer_sent",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-06-24T11:00:00+08:00",
+          "event": "offer_accepted",
+          "to_recruitment_stage": "offer_accepted",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-25T11:00:00+08:00",
+          "event": "application_admitted",
+          "to_recruitment_stage": "admitted",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-047-01",
+          "round_number": 1,
+          "interview_type": "onsite",
+          "status": "completed",
+          "scheduled_start_at": "2026-06-20T21:00:00+08:00",
+          "duration_minutes": 75,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "王澄"
+          ],
+          "location": "星港创新中心 A 座",
+          "meeting_link": null,
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-06-20T23:00:00+08:00",
+          "created_at": "2026-06-19T18:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-047-01",
+          "version_number": 1,
+          "status": "accepted",
+          "position_title": "Python 后端工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "27000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-07-01",
+          "expected_start_date": "2026-07-21",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-06-21T23:00:00+08:00",
+          "sent_at": "2026-06-22T11:00:00+08:00",
+          "responded_at": "2026-06-24T11:00:00+08:00",
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-048",
+      "demo_candidate_id": "CAND-036",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-17T15:00:00+08:00",
+      "scenario": "screening_ready_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "hr_review",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-17T15:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-17T23:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-18T03:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-049",
+      "demo_candidate_id": "CAND-048",
+      "demo_job_id": "JOB-FE",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-18T09:00:00+08:00",
+      "scenario": "backup",
+      "lifecycle_status": "active",
+      "recruitment_stage": "backup",
+      "hr_decision": "backup",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-18T09:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-18T21:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-19T09:00:00+08:00",
+          "event": "minor_capability_gap",
+          "to_recruitment_stage": "backup",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-050",
+      "demo_candidate_id": "CAND-059",
+      "demo_job_id": "JOB-DA",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-19T10:00:00+08:00",
+      "scenario": "rejected",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "rejected",
+      "hr_decision": "rejected",
+      "final_outcome": "screening_rejected",
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-19T10:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-19T22:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-20T10:00:00+08:00",
+          "event": "required_experience_missing",
+          "to_recruitment_stage": "rejected",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-051",
+      "demo_candidate_id": "CAND-011",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-20T11:00:00+08:00",
+      "scenario": "offer_accepted",
+      "lifecycle_status": "active",
+      "recruitment_stage": "offer_accepted",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-20T11:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-20T23:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-21T17:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-23T18:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-24T23:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-25T23:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-06-26T11:00:00+08:00",
+          "event": "offer_sent",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-06-28T11:00:00+08:00",
+          "event": "offer_accepted",
+          "to_recruitment_stage": "offer_accepted",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-051-01",
+          "round_number": 1,
+          "interview_type": "video",
+          "status": "completed",
+          "scheduled_start_at": "2026-06-24T21:00:00+08:00",
+          "duration_minutes": 45,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "陈舟"
+          ],
+          "location": null,
+          "meeting_link": "https://meeting.portfolio.example/demo-room",
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-06-24T23:00:00+08:00",
+          "created_at": "2026-06-23T18:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-051-01",
+          "version_number": 1,
+          "status": "accepted",
+          "position_title": "AI 应用工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "29000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-07-05",
+          "expected_start_date": "2026-07-25",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-06-25T23:00:00+08:00",
+          "sent_at": "2026-06-26T11:00:00+08:00",
+          "responded_at": "2026-06-28T11:00:00+08:00",
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-052",
+      "demo_candidate_id": "CAND-025",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-21T12:00:00+08:00",
+      "scenario": "offer_draft",
+      "lifecycle_status": "active",
+      "recruitment_stage": "offer",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-21T12:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-22T00:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-22T06:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-24T08:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-25T10:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-26T10:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-052-01",
+          "round_number": 1,
+          "interview_type": "phone",
+          "status": "completed",
+          "scheduled_start_at": "2026-06-25T08:00:00+08:00",
+          "duration_minutes": 60,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "赵宁",
+            "何川"
+          ],
+          "location": null,
+          "meeting_link": null,
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-06-25T10:00:00+08:00",
+          "created_at": "2026-06-24T08:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-052-01",
+          "version_number": 1,
+          "status": "draft",
+          "position_title": "Python 后端工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "24000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-07-06",
+          "expected_start_date": "2026-07-26",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-06-26T10:00:00+08:00",
+          "sent_at": null,
+          "responded_at": null,
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-053",
+      "demo_candidate_id": "CAND-037",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-22T13:00:00+08:00",
+      "scenario": "screening_ready_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "hr_review",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-22T13:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-22T21:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-23T01:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-054",
+      "demo_candidate_id": "CAND-049",
+      "demo_job_id": "JOB-FE",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-23T14:00:00+08:00",
+      "scenario": "rejected",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "rejected",
+      "hr_decision": "rejected",
+      "final_outcome": "screening_rejected",
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-23T14:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-24T02:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-24T14:00:00+08:00",
+          "event": "required_experience_missing",
+          "to_recruitment_stage": "rejected",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-055",
+      "demo_candidate_id": "CAND-060",
+      "demo_job_id": "JOB-DA",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-24T15:00:00+08:00",
+      "scenario": "rejected",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "rejected",
+      "hr_decision": "rejected",
+      "final_outcome": "screening_rejected",
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-24T15:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-25T03:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-25T15:00:00+08:00",
+          "event": "required_experience_missing",
+          "to_recruitment_stage": "rejected",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-056",
+      "demo_candidate_id": "CAND-012",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-25T09:00:00+08:00",
+      "scenario": "offer_sent",
+      "lifecycle_status": "active",
+      "recruitment_stage": "offer",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-25T09:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-25T21:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-26T07:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-28T08:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-29T10:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-30T10:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-06-30T22:00:00+08:00",
+          "event": "offer_sent",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-056-01",
+          "round_number": 1,
+          "interview_type": "onsite",
+          "status": "completed",
+          "scheduled_start_at": "2026-06-29T08:00:00+08:00",
+          "duration_minutes": 75,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "王澄"
+          ],
+          "location": "星港创新中心 A 座",
+          "meeting_link": null,
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-06-29T10:00:00+08:00",
+          "created_at": "2026-06-28T08:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-056-01",
+          "version_number": 1,
+          "status": "sent",
+          "position_title": "AI 应用工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "26000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-07-10",
+          "expected_start_date": "2026-07-30",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-06-30T10:00:00+08:00",
+          "sent_at": "2026-06-30T22:00:00+08:00",
+          "responded_at": null,
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-057",
+      "demo_candidate_id": "CAND-026",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-26T10:00:00+08:00",
+      "scenario": "passed_no_interview",
+      "lifecycle_status": "active",
+      "recruitment_stage": "screening_passed",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-26T10:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-26T22:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-27T09:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-058",
+      "demo_candidate_id": "CAND-038",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-27T11:00:00+08:00",
+      "scenario": "offer_declined",
+      "lifecycle_status": "ended",
+      "recruitment_stage": "offer",
+      "hr_decision": "passed",
+      "final_outcome": "offer_declined",
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-27T11:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-27T23:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-28T11:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-30T14:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-01T18:00:00+08:00",
+          "event": "interview_proceed_offer",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-02T18:00:00+08:00",
+          "event": "offer_created",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-07-03T06:00:00+08:00",
+          "event": "offer_sent",
+          "to_recruitment_stage": "offer",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        },
+        {
+          "at": "2026-07-05T06:00:00+08:00",
+          "event": "offer_declined",
+          "to_recruitment_stage": "offer",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-058-01",
+          "round_number": 1,
+          "interview_type": "phone",
+          "status": "completed",
+          "scheduled_start_at": "2026-07-01T16:00:00+08:00",
+          "duration_minutes": 60,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "赵宁",
+            "何川"
+          ],
+          "location": null,
+          "meeting_link": null,
+          "decision": "proceed_offer",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-07-01T18:00:00+08:00",
+          "created_at": "2026-06-30T14:00:00+08:00"
+        }
+      ],
+      "offers": [
+        {
+          "demo_offer_id": "OFF-058-01",
+          "version_number": 1,
+          "status": "declined",
+          "position_title": "测试开发工程师",
+          "currency": "CNY",
+          "salary_period": "monthly",
+          "base_salary_amount": "23000.00",
+          "salary_months": "13.0",
+          "bonus_note": "年度绩效奖金按公司虚构演示政策执行",
+          "benefits_note": "五险一金、年度体检与学习预算；全部为作品集虚构信息",
+          "valid_until": "2026-07-12",
+          "expected_start_date": "2026-08-01",
+          "note": "作品集演示专用虚构 Offer，不构成真实承诺。",
+          "created_at": "2026-07-02T18:00:00+08:00",
+          "sent_at": "2026-07-03T06:00:00+08:00",
+          "responded_at": "2026-07-05T06:00:00+08:00",
+          "closed_at": null
+        }
+      ]
+    },
+    {
+      "demo_application_id": "APP-059",
+      "demo_candidate_id": "CAND-013",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-28T12:00:00+08:00",
+      "scenario": "scheduled_interview",
+      "lifecycle_status": "active",
+      "recruitment_stage": "interview",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-28T12:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-29T00:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-29T13:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-01T17:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-059-01",
+          "round_number": 1,
+          "interview_type": "onsite",
+          "status": "scheduled",
+          "scheduled_start_at": "2026-09-14T14:00:00+08:00",
+          "duration_minutes": 75,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "王澄"
+          ],
+          "location": "星港创新中心 A 座",
+          "meeting_link": null,
+          "decision": "pending",
+          "feedback_summary": null,
+          "strengths": [],
+          "concerns": [],
+          "follow_up_questions": [],
+          "feedback_submitted_by_label": null,
+          "feedback_submitted_at": null,
+          "created_at": "2026-07-01T17:00:00+08:00"
+        }
+      ],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-060",
+      "demo_candidate_id": "CAND-014",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": true,
+      "source": "hr_screening",
+      "applied_at": "2026-06-29T13:00:00+08:00",
+      "scenario": "backup",
+      "lifecycle_status": "active",
+      "recruitment_stage": "backup",
+      "hr_decision": "backup",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-06-29T13:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-30T01:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-06-30T13:00:00+08:00",
+          "event": "minor_capability_gap",
+          "to_recruitment_stage": "backup",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-061",
+      "demo_candidate_id": "CAND-004",
+      "demo_job_id": "JOB-BE",
+      "is_primary_application": false,
+      "source": "public_apply",
+      "applied_at": "2026-06-30T14:00:00+08:00",
+      "scenario": "processing_failed",
+      "lifecycle_status": "active",
+      "recruitment_stage": "applied",
+      "hr_decision": "pending",
+      "final_outcome": null,
+      "processing_run": {
+        "status": "failed",
+        "current_step": "extract_text",
+        "attempt_count": 2,
+        "started_at": "2026-06-30T14:02:00+08:00",
+        "completed_at": "2026-06-30T14:08:00+08:00",
+        "error_code": "RESUME_TEXT_EXTRACTION_FAILED",
+        "error_message": "无法从演示文件中提取可用文本，请核对文件后人工重试。"
+      },
+      "screening_plan": "pending_or_failed",
+      "timeline": [
+        {
+          "at": "2026-06-30T14:00:00+08:00",
+          "event": "public_application_received",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-062",
+      "demo_candidate_id": "CAND-011",
+      "demo_job_id": "JOB-DA",
+      "is_primary_application": false,
+      "source": "hr_screening",
+      "applied_at": "2026-07-01T15:00:00+08:00",
+      "scenario": "completed_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "interview",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-07-01T15:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-02T03:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-02T19:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-04T21:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-06T01:00:00+08:00",
+          "event": "interview_round_completed",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-062-01",
+          "round_number": 1,
+          "interview_type": "onsite",
+          "status": "completed",
+          "scheduled_start_at": "2026-07-05T23:00:00+08:00",
+          "duration_minutes": 75,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "王澄"
+          ],
+          "location": "星港创新中心 A 座",
+          "meeting_link": null,
+          "decision": "pending",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [
+            "复杂场景经验仍需补充"
+          ],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-07-06T01:00:00+08:00",
+          "created_at": "2026-07-04T21:00:00+08:00"
+        }
+      ],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-063",
+      "demo_candidate_id": "CAND-018",
+      "demo_job_id": "JOB-QA",
+      "is_primary_application": false,
+      "source": "hr_screening",
+      "applied_at": "2026-07-02T09:00:00+08:00",
+      "scenario": "passed_no_interview",
+      "lifecycle_status": "active",
+      "recruitment_stage": "screening_passed",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-07-02T09:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-02T21:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-03T14:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        }
+      ],
+      "interviews": [],
+      "offers": []
+    },
+    {
+      "demo_application_id": "APP-064",
+      "demo_candidate_id": "CAND-044",
+      "demo_job_id": "JOB-AI",
+      "is_primary_application": false,
+      "source": "hr_screening",
+      "applied_at": "2026-07-03T10:00:00+08:00",
+      "scenario": "completed_pending",
+      "lifecycle_status": "active",
+      "recruitment_stage": "interview",
+      "hr_decision": "passed",
+      "final_outcome": null,
+      "processing_run": null,
+      "screening_plan": "generate_through_real_model_when_imported",
+      "timeline": [
+        {
+          "at": "2026-07-03T10:00:00+08:00",
+          "event": "application_created",
+          "to_recruitment_stage": "applied",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-03T22:00:00+08:00",
+          "event": "ai_screening_completed",
+          "to_recruitment_stage": "hr_review",
+          "actor_type": "system",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-04T16:00:00+08:00",
+          "event": "meets_requirements",
+          "to_recruitment_stage": "screening_passed",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-06T20:00:00+08:00",
+          "event": "interview_scheduled",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "stage_history"
+        },
+        {
+          "at": "2026-07-07T22:00:00+08:00",
+          "event": "interview_round_completed",
+          "to_recruitment_stage": "interview",
+          "actor_type": "hr",
+          "record_type": "activity_log"
+        }
+      ],
+      "interviews": [
+        {
+          "demo_interview_id": "INT-064-01",
+          "round_number": 1,
+          "interview_type": "phone",
+          "status": "completed",
+          "scheduled_start_at": "2026-07-07T20:00:00+08:00",
+          "duration_minutes": 60,
+          "timezone": "Asia/Shanghai",
+          "interviewer_names": [
+            "赵宁",
+            "何川"
+          ],
+          "location": null,
+          "meeting_link": null,
+          "decision": "pending",
+          "feedback_summary": "候选人能够说明本人职责和关键取舍；后续决定仅基于岗位相关证据。",
+          "strengths": [
+            "表达结构清晰",
+            "能够结合实例说明实现与验证"
+          ],
+          "concerns": [
+            "复杂场景经验仍需补充"
+          ],
+          "follow_up_questions": [
+            "请进一步说明失败路径和监控方案"
+          ],
+          "feedback_submitted_by_label": "本地 HR（未认证）",
+          "feedback_submitted_at": "2026-07-07T22:00:00+08:00",
+          "created_at": "2026-07-06T20:00:00+08:00"
+        }
+      ],
+      "offers": []
+    }
+  ]
+}

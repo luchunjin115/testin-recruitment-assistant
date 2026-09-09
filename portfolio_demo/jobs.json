@@ -1,0 +1,101 @@
+{
+  "dataset_version": "portfolio-demo-v1",
+  "dataset_as_of": "2026-09-09T12:00:00+08:00",
+  "fictional_data_only": true,
+  "automatic_database_write": false,
+  "real_model_outputs_included": false,
+  "jobs": [
+    {
+      "demo_job_id": "JOB-AI",
+      "desired_status": "open",
+      "post_import_actions": [],
+      "create_payload": {
+        "title": "AI 应用工程师",
+        "department": "智能产品研发部",
+        "location": "深圳",
+        "employment_type": "full_time",
+        "headcount": 3,
+        "job_background": "团队正在建设面向企业内部场景的大模型应用，需要把需求理解、模型调用、业务规则和可观测性组合成稳定产品。该岗位以可交付的 AI 应用为目标，不以训练基础模型为主要职责。",
+        "job_responsibilities": "1. 使用 Python 与 FastAPI 开发大模型应用和业务 API；\n2. 设计 Prompt、结构化输出、检索增强与评估流程；\n3. 接入 PostgreSQL、Redis 等基础设施并处理超时、重试和幂等；\n4. 与产品和前端协作完成需求澄清、上线验证与问题复盘；\n5. 为模型效果、成本和失败路径补充自动化测试与运行记录。",
+        "candidate_requirements": "1. 熟练使用 Python，能独立开发和调试 Web API；\n2. 理解 REST、关系数据库和常见事务问题；\n3. 有 LLM API、Prompt 或 RAG 项目实践，并能说明评估方法；\n4. 能通过日志和最小复现定位模型与工程问题；\n5. 能清楚表达方案边界，不把模型输出直接当作业务事实。",
+        "preferred_qualifications": "有 FastAPI、SQLAlchemy、PostgreSQL、Docker、向量检索、模型评估或 AI 产品落地经验；有可演示项目、技术文档或复盘材料优先。",
+        "public_notes": "请提交可阅读的项目说明，重点描述本人职责、数据流、失败处理、效果验证和已知限制。作品集演示请勿包含真实客户数据。",
+        "status": "open"
+      }
+    },
+    {
+      "demo_job_id": "JOB-BE",
+      "desired_status": "open",
+      "post_import_actions": [],
+      "create_payload": {
+        "title": "Python 后端工程师",
+        "department": "平台研发部",
+        "location": "上海",
+        "employment_type": "full_time",
+        "headcount": 2,
+        "job_background": "平台为多个业务团队提供统一的流程、数据与审计能力，需要持续提升 API 稳定性、事务一致性和开发效率。",
+        "job_responsibilities": "1. 使用 Python 与 FastAPI 维护核心业务服务；\n2. 设计清晰的 API、Schema、Service 和数据库边界；\n3. 使用 PostgreSQL、SQLAlchemy 与 Alembic 完成数据建模和迁移；\n4. 处理并发、幂等、事务回滚和异步任务；\n5. 编写单元、集成和数据库测试并参与代码评审。",
+        "candidate_requirements": "1. 具备扎实的 Python 编程基础；\n2. 熟悉至少一种主流 Web 框架和 REST API；\n3. 理解关系数据库、索引、事务和常见查询优化方法；\n4. 能使用 Git、Docker 和自动化测试工具；\n5. 能独立定位接口、服务和数据库之间的问题。",
+        "preferred_qualifications": "有 FastAPI、SQLAlchemy 2.0、PostgreSQL、Redis、消息队列、异步 Worker 或高并发项目经验优先。",
+        "public_notes": "请在简历中给出具体负责模块、接口规模、性能或稳定性改进证据；课程项目也可以，但需说明本人贡献。",
+        "status": "open"
+      }
+    },
+    {
+      "demo_job_id": "JOB-QA",
+      "desired_status": "open",
+      "post_import_actions": [],
+      "create_payload": {
+        "title": "测试开发工程师",
+        "department": "质量工程部",
+        "location": "杭州",
+        "employment_type": "full_time",
+        "headcount": 2,
+        "job_background": "团队负责 Web、API 与异步业务链路的质量保障，希望通过自动化、风险分析和持续集成提升发布信心。",
+        "job_responsibilities": "1. 设计 Web 与 API 自动化测试；\n2. 使用 Python、Pytest、Playwright 等建设可维护测试工具；\n3. 覆盖事务、并发、幂等、权限和异常恢复场景；\n4. 接入 CI/CD 并分析失败证据；\n5. 与研发共同改进可测试性和缺陷预防机制。",
+        "candidate_requirements": "1. 熟悉测试设计方法并能从业务风险拆解用例；\n2. 能使用 Python 编写测试或辅助工具；\n3. 熟悉接口测试、数据库验证和至少一种 UI 自动化工具；\n4. 理解持续集成和缺陷生命周期；\n5. 能提供清晰、可复现的问题证据。",
+        "preferred_qualifications": "有 Pytest、Playwright、Selenium、Postman、JMeter、Docker、PostgreSQL 或质量平台建设经验优先。",
+        "public_notes": "请描述一项最有代表性的质量改进，包括问题、方案、覆盖范围、结果和没有覆盖的风险。",
+        "status": "open"
+      }
+    },
+    {
+      "demo_job_id": "JOB-FE",
+      "desired_status": "open",
+      "post_import_actions": [],
+      "create_payload": {
+        "title": "前端工程师",
+        "department": "企业产品研发部",
+        "location": "北京",
+        "employment_type": "full_time",
+        "headcount": 2,
+        "job_background": "团队建设面向企业用户的高信息密度工作台，需要兼顾复杂状态、操作安全、响应式布局和长期可维护性。",
+        "job_responsibilities": "1. 使用 React 与 TypeScript 开发企业级工作台；\n2. 设计列表、详情、表单和复杂状态交互；\n3. 与后端协作维护 API 类型与错误处理；\n4. 建设响应式、可访问和可测试的组件；\n5. 参与性能优化、构建发布与前端质量治理。",
+        "candidate_requirements": "1. 熟练掌握 JavaScript、TypeScript、React 与现代 CSS；\n2. 理解组件状态、请求生命周期和常见性能问题；\n3. 能实现复杂表单、表格和响应式布局；\n4. 有前端测试和工程化实践；\n5. 能基于业务目标解释交互取舍。",
+        "preferred_qualifications": "有 Ant Design、Vite、状态管理、ECharts、无障碍、设计系统或 B 端产品经验优先。",
+        "public_notes": "请附上可访问的作品说明或截图，并明确本人完成的组件、交互、性能与测试工作。",
+        "status": "open"
+      }
+    },
+    {
+      "demo_job_id": "JOB-DA",
+      "desired_status": "closed",
+      "post_import_actions": [
+        "close_after_historical_applications_created"
+      ],
+      "create_payload": {
+        "title": "数据分析师",
+        "department": "经营分析部",
+        "location": "成都",
+        "employment_type": "full_time",
+        "headcount": 2,
+        "job_background": "团队通过可信指标和专题分析支持产品与经营决策，需要建立从业务问题、数据口径到结论验证的完整分析链路。",
+        "job_responsibilities": "1. 与业务方定义指标和分析口径；\n2. 使用 SQL 与 Python 完成数据提取、清洗和分析；\n3. 建设可复用报表与监控看板；\n4. 开展漏斗、留存、分群和实验分析；\n5. 记录假设、数据限制和可执行建议。",
+        "candidate_requirements": "1. 熟练使用 SQL，能处理多表关联与窗口函数；\n2. 能使用 Python/Pandas 完成分析；\n3. 理解指标口径、数据质量和基本统计方法；\n4. 能把分析结论转化为业务建议；\n5. 能清楚说明相关性与因果边界。",
+        "preferred_qualifications": "有 Tableau、Power BI、Superset、dbt、A/B 测试、数据仓库或互联网业务分析经验优先。",
+        "public_notes": "该岗位已结束接收新投递，保留历史数据用于作品集展示岗位关闭后仍可追溯既有流程。",
+        "status": "open"
+      }
+    }
+  ]
+}

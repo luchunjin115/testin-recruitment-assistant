@@ -212,7 +212,6 @@ const FindingList: React.FC<{ findings: V5ReportFinding[]; empty: string }> = ({
       {findings.map((finding, index) => (
         <article key={`${index}-${finding.summary}`}>
           <p>{finding.summary}</p>
-          {finding.criterionIds.length > 0 && <div>{finding.criterionIds.map(id => <Tag key={id}>{id}</Tag>)}</div>}
           {finding.evidence.length > 0 && (
             <Collapse ghost items={[{ key: 'evidence', label: `查看 AI 判断依据（${finding.evidence.length}）`, children: <EvidenceList evidence={finding.evidence} /> }]} />
           )}

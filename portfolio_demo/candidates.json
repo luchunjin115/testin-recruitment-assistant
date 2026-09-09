@@ -1,0 +1,4250 @@
+{
+  "dataset_version": "portfolio-demo-v1",
+  "dataset_as_of": "2026-09-09T12:00:00+08:00",
+  "fictional_data_only": true,
+  "automatic_database_write": false,
+  "real_model_outputs_included": false,
+  "candidates": [
+    {
+      "demo_candidate_id": "CAND-001",
+      "name": "林知序",
+      "phone": "+999000000001",
+      "email": "candidate001@portfolio.example",
+      "location": "深圳",
+      "current_company": "星河协作科技",
+      "current_title": "AI 应用工程师",
+      "work_years": 4,
+      "education_level": "本科",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的AI 应用工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "LLM API",
+        "Prompt Engineering",
+        "PostgreSQL",
+        "RAG",
+        "Docker",
+        "PyTorch"
+      ],
+      "education_records": [
+        {
+          "school": "云杉理工大学",
+          "degree": "本科",
+          "major": "人工智能应用工程",
+          "start_date": "2018-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "星河协作科技",
+          "title": "AI 应用工程师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 使用 Python 与 FastAPI 交付 企业知识问答助手 的核心接口，设计请求校验、超时和安全错误映射。\n- 为模型输出增加 JSON Schema 校验与一次受控修复，使结构化成功率由 72% 提升到 89%。\n- 建立 45 条离线样例的回归集，记录模型版本、Prompt 版本、token 与失败类型。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "RAG"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "企业知识问答助手",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "RAG"
+          ],
+          "achievements": "完成 45 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_001.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-002",
+      "name": "周沐辰",
+      "phone": "+999000000002",
+      "email": "candidate002@portfolio.example",
+      "location": "上海",
+      "current_company": "云帆数据",
+      "current_title": "AI 应用工程师",
+      "work_years": 5,
+      "education_level": "本科",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的AI 应用工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "LLM API",
+        "Prompt Engineering",
+        "PostgreSQL",
+        "RAG",
+        "Docker",
+        "向量检索"
+      ],
+      "education_records": [
+        {
+          "school": "江湾科技大学",
+          "degree": "本科",
+          "major": "人工智能应用工程",
+          "start_date": "2017-09",
+          "end_date": "2020-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "云帆数据",
+          "title": "AI 应用工程师",
+          "start_date": "2020-07",
+          "end_date": "至今",
+          "description": "- 使用 Python 与 FastAPI 交付 客服工单总结系统 的核心接口，设计请求校验、超时和安全错误映射。\n- 为模型输出增加 JSON Schema 校验与一次受控修复，使结构化成功率由 73% 提升到 90%。\n- 建立 48 条离线样例的回归集，记录模型版本、Prompt 版本、token 与失败类型。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "RAG"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "客服工单总结系统",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "RAG"
+          ],
+          "achievements": "完成 48 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_002.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-003",
+      "name": "沈清越",
+      "phone": "+999000000003",
+      "email": "candidate003@portfolio.example",
+      "location": "杭州",
+      "current_company": "澄明智能",
+      "current_title": "AI 应用工程师",
+      "work_years": 6,
+      "education_level": "本科",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的AI 应用工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "LLM API",
+        "Prompt Engineering",
+        "PostgreSQL",
+        "RAG",
+        "Docker",
+        "模型评估"
+      ],
+      "education_records": [
+        {
+          "school": "北辰工业大学",
+          "degree": "本科",
+          "major": "人工智能应用工程",
+          "start_date": "2016-09",
+          "end_date": "2019-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "澄明智能",
+          "title": "AI 应用工程师",
+          "start_date": "2019-07",
+          "end_date": "至今",
+          "description": "- 使用 Python 与 FastAPI 交付 合同条款审阅台 的核心接口，设计请求校验、超时和安全错误映射。\n- 为模型输出增加 JSON Schema 校验与一次受控修复，使结构化成功率由 74% 提升到 91%。\n- 建立 51 条离线样例的回归集，记录模型版本、Prompt 版本、token 与失败类型。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "RAG"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "合同条款审阅台",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "RAG"
+          ],
+          "achievements": "完成 51 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_003.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-004",
+      "name": "苏景澄",
+      "phone": "+999000000004",
+      "email": "candidate004@portfolio.example",
+      "location": "北京",
+      "current_company": "北辰软件",
+      "current_title": "AI 应用工程师",
+      "work_years": 4,
+      "education_level": "本科",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的AI 应用工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "LLM API",
+        "Prompt Engineering",
+        "PostgreSQL",
+        "RAG",
+        "Docker",
+        "React"
+      ],
+      "education_records": [
+        {
+          "school": "海岚大学",
+          "degree": "本科",
+          "major": "人工智能应用工程",
+          "start_date": "2018-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "北辰软件",
+          "title": "AI 应用工程师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 使用 Python 与 FastAPI 交付 会议纪要结构化工具 的核心接口，设计请求校验、超时和安全错误映射。\n- 为模型输出增加 JSON Schema 校验与一次受控修复，使结构化成功率由 75% 提升到 92%。\n- 建立 54 条离线样例的回归集，记录模型版本、Prompt 版本、token 与失败类型。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "RAG"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "会议纪要结构化工具",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "RAG"
+          ],
+          "achievements": "完成 54 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_004.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-005",
+      "name": "顾言川",
+      "phone": "+999000000005",
+      "email": "candidate005@portfolio.example",
+      "location": "成都",
+      "current_company": "远岚网络",
+      "current_title": "AI 应用工程师",
+      "work_years": 3,
+      "education_level": "硕士",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握AI 应用工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "LLM API",
+        "Prompt Engineering",
+        "PostgreSQL",
+        "PyTorch",
+        "向量检索"
+      ],
+      "education_records": [
+        {
+          "school": "星港工程学院",
+          "degree": "硕士",
+          "major": "人工智能应用工程",
+          "start_date": "2020-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "远岚网络",
+          "title": "AI 应用工程师",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 使用 Python 与 FastAPI 交付 研发文档检索助手 的核心接口，设计请求校验、超时和安全错误映射。\n- 为模型输出增加 JSON Schema 校验与一次受控修复，使结构化成功率由 76% 提升到 93%。\n- 建立 57 条离线样例的回归集，记录模型版本、Prompt 版本、token 与失败类型。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "PyTorch"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "研发文档检索助手",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "PyTorch"
+          ],
+          "achievements": "完成 57 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_005.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-006",
+      "name": "许星遥",
+      "phone": "+999000000006",
+      "email": "candidate006@portfolio.example",
+      "location": "广州",
+      "current_company": "青禾数科",
+      "current_title": "AI 应用工程师",
+      "work_years": 4,
+      "education_level": "本科",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握AI 应用工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "LLM API",
+        "Prompt Engineering",
+        "PostgreSQL",
+        "PyTorch",
+        "向量检索"
+      ],
+      "education_records": [
+        {
+          "school": "澄湖科技学院",
+          "degree": "本科",
+          "major": "人工智能应用工程",
+          "start_date": "2018-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "青禾数科",
+          "title": "AI 应用工程师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 使用 Python 与 FastAPI 交付 智能表单抽取服务 的核心接口，设计请求校验、超时和安全错误映射。\n- 为模型输出增加 JSON Schema 校验与一次受控修复，使结构化成功率由 77% 提升到 94%。\n- 建立 60 条离线样例的回归集，记录模型版本、Prompt 版本、token 与失败类型。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "PyTorch"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "智能表单抽取服务",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "PyTorch"
+          ],
+          "achievements": "完成 60 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_006.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-007",
+      "name": "程予安",
+      "phone": "+999000000007",
+      "email": "candidate007@portfolio.example",
+      "location": "武汉",
+      "current_company": "拓界智能",
+      "current_title": "AI 应用工程师",
+      "work_years": 2,
+      "education_level": "本科",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握AI 应用工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "LLM API",
+        "Prompt Engineering",
+        "PostgreSQL",
+        "PyTorch",
+        "向量检索"
+      ],
+      "education_records": [
+        {
+          "school": "远川大学",
+          "degree": "本科",
+          "major": "人工智能应用工程",
+          "start_date": "2020-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "拓界智能",
+          "title": "AI 应用工程师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 使用 Python 与 FastAPI 交付 企业知识问答助手 的核心接口，设计请求校验、超时和安全错误映射。\n- 为模型输出增加 JSON Schema 校验与一次受控修复，使结构化成功率由 78% 提升到 95%。\n- 建立 63 条离线样例的回归集，记录模型版本、Prompt 版本、token 与失败类型。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "PyTorch"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "企业知识问答助手",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "PyTorch"
+          ],
+          "achievements": "完成 63 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_007.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-008",
+      "name": "叶闻舟",
+      "phone": "+999000000008",
+      "email": "candidate008@portfolio.example",
+      "location": "南京",
+      "current_company": "流光科技",
+      "current_title": "AI 应用工程师",
+      "work_years": 3,
+      "education_level": "本科",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握AI 应用工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "LLM API",
+        "Prompt Engineering",
+        "PostgreSQL",
+        "PyTorch",
+        "向量检索"
+      ],
+      "education_records": [
+        {
+          "school": "青禾理工学院",
+          "degree": "本科",
+          "major": "人工智能应用工程",
+          "start_date": "2019-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "流光科技",
+          "title": "AI 应用工程师",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 使用 Python 与 FastAPI 交付 客服工单总结系统 的核心接口，设计请求校验、超时和安全错误映射。\n- 为模型输出增加 JSON Schema 校验与一次受控修复，使结构化成功率由 71% 提升到 96%。\n- 建立 66 条离线样例的回归集，记录模型版本、Prompt 版本、token 与失败类型。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "PyTorch"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "客服工单总结系统",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL",
+            "PyTorch"
+          ],
+          "achievements": "完成 66 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_008.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-009",
+      "name": "江若衡",
+      "phone": "+999000000009",
+      "email": "candidate009@portfolio.example",
+      "location": "苏州",
+      "current_company": "栖川信息",
+      "current_title": "Python 工程师",
+      "work_years": 3,
+      "education_level": "本科",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "transition",
+      "profile_summary": "从相邻岗位转向AI 应用工程师，工程基础较好，直接岗位经验需要结合项目细节进一步判断。",
+      "skills": [
+        "PyTorch",
+        "向量检索",
+        "模型评估",
+        "React",
+        "Python",
+        "FastAPI",
+        "LLM API"
+      ],
+      "education_records": [
+        {
+          "school": "云杉理工大学",
+          "degree": "本科",
+          "major": "人工智能应用工程",
+          "start_date": "2019-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "栖川信息",
+          "title": "Python 工程师",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 使用 Python 与 FastAPI 交付 合同条款审阅台 的核心接口，设计请求校验、超时和安全错误映射。\n- 为模型输出增加 JSON Schema 校验与一次受控修复，使结构化成功率由 72% 提升到 88%。\n- 建立 69 条离线样例的回归集，记录模型版本、Prompt 版本、token 与失败类型。",
+          "tech_stack": [
+            "PyTorch",
+            "向量检索",
+            "模型评估",
+            "React",
+            "Python",
+            "FastAPI"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "合同条款审阅台",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "PyTorch",
+            "向量检索",
+            "模型评估",
+            "React",
+            "Python",
+            "FastAPI"
+          ],
+          "achievements": "完成 69 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_009.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-010",
+      "name": "唐以宁",
+      "phone": "+999000000010",
+      "email": "candidate010@portfolio.example",
+      "location": "西安",
+      "current_company": "原点云创",
+      "current_title": "Python 工程师",
+      "work_years": 4,
+      "education_level": "硕士",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "transition",
+      "profile_summary": "从相邻岗位转向AI 应用工程师，工程基础较好，直接岗位经验需要结合项目细节进一步判断。",
+      "skills": [
+        "PyTorch",
+        "向量检索",
+        "模型评估",
+        "React",
+        "Python",
+        "FastAPI",
+        "LLM API"
+      ],
+      "education_records": [
+        {
+          "school": "江湾科技大学",
+          "degree": "硕士",
+          "major": "人工智能应用工程",
+          "start_date": "2019-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "原点云创",
+          "title": "Python 工程师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 使用 Python 与 FastAPI 交付 会议纪要结构化工具 的核心接口，设计请求校验、超时和安全错误映射。\n- 为模型输出增加 JSON Schema 校验与一次受控修复，使结构化成功率由 73% 提升到 89%。\n- 建立 72 条离线样例的回归集，记录模型版本、Prompt 版本、token 与失败类型。",
+          "tech_stack": [
+            "PyTorch",
+            "向量检索",
+            "模型评估",
+            "React",
+            "Python",
+            "FastAPI"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "会议纪要结构化工具",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "PyTorch",
+            "向量检索",
+            "模型评估",
+            "React",
+            "Python",
+            "FastAPI"
+          ],
+          "achievements": "完成 72 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_010.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-011",
+      "name": "宋砚秋",
+      "phone": "+999000000011",
+      "email": "candidate011@portfolio.example",
+      "location": "深圳",
+      "current_company": null,
+      "current_title": "算法应用实习生",
+      "work_years": 0,
+      "education_level": "本科",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "early_career",
+      "profile_summary": "以课程和实习项目为主，对AI 应用工程师方向投入明确，生产环境经验有限。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "LLM API",
+        "Prompt Engineering",
+        "Git",
+        "课程项目"
+      ],
+      "education_records": [
+        {
+          "school": "北辰工业大学",
+          "degree": "本科",
+          "major": "人工智能应用工程",
+          "start_date": "2023-09",
+          "end_date": "2026-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "山海研发",
+          "title": "算法应用实习生",
+          "start_date": "2024-07",
+          "end_date": "2026-06",
+          "description": "- 在课程团队中完成研发文档检索助手，负责需求拆解和核心模块实现。\n- 使用 Python、FastAPI、LLM API 完成可运行原型并编写使用说明。\n- 通过单元测试和演示样例验证主要流程，尚未经历生产环境长期运行。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "Git",
+            "课程项目"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "研发文档检索助手",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "Git",
+            "课程项目"
+          ],
+          "achievements": "完成 75 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_011.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-012",
+      "name": "韩知远",
+      "phone": "+999000000012",
+      "email": "candidate012@portfolio.example",
+      "location": "上海",
+      "current_company": "明澈系统",
+      "current_title": "AI 应用工程师",
+      "work_years": 2,
+      "education_level": "本科",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "evidence_gap",
+      "profile_summary": "简历提到多项AI 应用工程师相关工作，但成果指标和本人职责边界描述不足。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "LLM API",
+        "Prompt Engineering",
+        "PostgreSQL"
+      ],
+      "education_records": [
+        {
+          "school": "海岚大学",
+          "degree": "本科",
+          "major": "人工智能应用工程",
+          "start_date": "2020-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "明澈系统",
+          "title": "AI 应用工程师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 参与智能表单抽取服务的日常需求实现和问题处理。\n- 与团队成员协作完成开发、测试或分析任务。\n- 整理项目文档并跟进上线后的反馈。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "智能表单抽取服务",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "LLM API",
+            "Prompt Engineering",
+            "PostgreSQL"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_012.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-013",
+      "name": "陆明川",
+      "phone": "+999000000013",
+      "email": "candidate013@portfolio.example",
+      "location": "杭州",
+      "current_company": "星河协作科技",
+      "current_title": "Python 工程师",
+      "work_years": 1,
+      "education_level": "本科",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "low",
+      "profile_summary": "当前经历与AI 应用工程师的核心要求重合较少，适合作为低匹配对照样本。",
+      "skills": [
+        "内容运营",
+        "用户访谈",
+        "Excel",
+        "活动策划",
+        "基础 SQL",
+        "Python"
+      ],
+      "education_records": [
+        {
+          "school": "星港工程学院",
+          "degree": "本科",
+          "major": "工商管理",
+          "start_date": "2021-09",
+          "end_date": "2024-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "星河协作科技",
+          "title": "Python 工程师",
+          "start_date": "2024-07",
+          "end_date": "至今",
+          "description": "- 负责日常内容、数据整理与跨团队需求跟进。\n- 使用表格工具维护周报并协调活动执行。\n- 自学 Python 并完成一个入门练习。",
+          "tech_stack": [
+            "内容运营",
+            "用户访谈",
+            "Excel",
+            "活动策划",
+            "基础 SQL",
+            "Python"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "企业知识问答助手",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "内容运营",
+            "用户访谈",
+            "Excel",
+            "活动策划",
+            "基础 SQL",
+            "Python"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_013.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-014",
+      "name": "白予初",
+      "phone": "+999000000014",
+      "email": "candidate014@portfolio.example",
+      "location": "北京",
+      "current_company": "云帆数据",
+      "current_title": "Python 工程师",
+      "work_years": 2,
+      "education_level": "本科",
+      "primary_job_id": "JOB-AI",
+      "target_role": "AI 应用工程师",
+      "fit_level": "low",
+      "profile_summary": "当前经历与AI 应用工程师的核心要求重合较少，适合作为低匹配对照样本。",
+      "skills": [
+        "内容运营",
+        "用户访谈",
+        "Excel",
+        "活动策划",
+        "基础 SQL",
+        "Python"
+      ],
+      "education_records": [
+        {
+          "school": "澄湖科技学院",
+          "degree": "本科",
+          "major": "工业设计",
+          "start_date": "2020-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "云帆数据",
+          "title": "Python 工程师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 负责日常内容、数据整理与跨团队需求跟进。\n- 使用表格工具维护周报并协调活动执行。\n- 自学 Python 并完成一个入门练习。",
+          "tech_stack": [
+            "内容运营",
+            "用户访谈",
+            "Excel",
+            "活动策划",
+            "基础 SQL",
+            "Python"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "客服工单总结系统",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "完成从业务输入、Prompt/检索、模型 Adapter、结构校验到结果展示的端到端链路，并为引用缺失和模型超时设计降级路径。",
+          "tech_stack": [
+            "内容运营",
+            "用户访谈",
+            "Excel",
+            "活动策划",
+            "基础 SQL",
+            "Python"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_014.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-015",
+      "name": "秦书言",
+      "phone": "+999000000015",
+      "email": "candidate015@portfolio.example",
+      "location": "成都",
+      "current_company": "澄明智能",
+      "current_title": "Python 后端工程师",
+      "work_years": 4,
+      "education_level": "硕士",
+      "primary_job_id": "JOB-BE",
+      "target_role": "Python 后端工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的Python 后端工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "SQLAlchemy",
+        "PostgreSQL",
+        "REST API",
+        "Pytest",
+        "Docker",
+        "Alembic"
+      ],
+      "education_records": [
+        {
+          "school": "远川大学",
+          "degree": "硕士",
+          "major": "软件工程",
+          "start_date": "2019-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "澄明智能",
+          "title": "Python 后端工程师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 负责 订单状态服务 的 API 与 Service 分层，维护 27 个业务接口及稳定错误合同。\n- 通过事务边界、唯一约束和幂等键治理重复请求，将重复数据问题降低 94%。\n- 为 PostgreSQL 查询补充索引与执行计划分析，核心列表 P95 从 725ms 降至 255ms。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API",
+            "Pytest"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "订单状态服务",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "设计异步任务的领取、租约、失败重试与恢复流程，并用 PostgreSQL 集成测试验证多 Worker 不重复执行。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API",
+            "Pytest"
+          ],
+          "achievements": "完成 87 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_015.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-016",
+      "name": "温予宁",
+      "phone": "+999000000016",
+      "email": "candidate016@portfolio.example",
+      "location": "广州",
+      "current_company": "北辰软件",
+      "current_title": "Python 后端工程师",
+      "work_years": 5,
+      "education_level": "本科",
+      "primary_job_id": "JOB-BE",
+      "target_role": "Python 后端工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的Python 后端工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "SQLAlchemy",
+        "PostgreSQL",
+        "REST API",
+        "Pytest",
+        "Docker",
+        "异步编程"
+      ],
+      "education_records": [
+        {
+          "school": "青禾理工学院",
+          "degree": "本科",
+          "major": "软件工程",
+          "start_date": "2017-09",
+          "end_date": "2020-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "北辰软件",
+          "title": "Python 后端工程师",
+          "start_date": "2020-07",
+          "end_date": "至今",
+          "description": "- 负责 企业审批平台 的 API 与 Service 分层，维护 28 个业务接口及稳定错误合同。\n- 通过事务边界、唯一约束和幂等键治理重复请求，将重复数据问题降低 95%。\n- 为 PostgreSQL 查询补充索引与执行计划分析，核心列表 P95 从 732ms 降至 258ms。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API",
+            "Pytest"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "企业审批平台",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "设计异步任务的领取、租约、失败重试与恢复流程，并用 PostgreSQL 集成测试验证多 Worker 不重复执行。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API",
+            "Pytest"
+          ],
+          "achievements": "完成 90 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_016.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-017",
+      "name": "乔沐阳",
+      "phone": "+999000000017",
+      "email": "candidate017@portfolio.example",
+      "location": "武汉",
+      "current_company": "远岚网络",
+      "current_title": "Python 后端工程师",
+      "work_years": 6,
+      "education_level": "本科",
+      "primary_job_id": "JOB-BE",
+      "target_role": "Python 后端工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的Python 后端工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "SQLAlchemy",
+        "PostgreSQL",
+        "REST API",
+        "Pytest",
+        "Docker",
+        "Celery"
+      ],
+      "education_records": [
+        {
+          "school": "云杉理工大学",
+          "degree": "本科",
+          "major": "软件工程",
+          "start_date": "2016-09",
+          "end_date": "2019-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "远岚网络",
+          "title": "Python 后端工程师",
+          "start_date": "2019-07",
+          "end_date": "至今",
+          "description": "- 负责 文件处理中心 的 API 与 Service 分层，维护 29 个业务接口及稳定错误合同。\n- 通过事务边界、唯一约束和幂等键治理重复请求，将重复数据问题降低 96%。\n- 为 PostgreSQL 查询补充索引与执行计划分析，核心列表 P95 从 739ms 降至 261ms。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API",
+            "Pytest"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "文件处理中心",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "设计异步任务的领取、租约、失败重试与恢复流程，并用 PostgreSQL 集成测试验证多 Worker 不重复执行。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API",
+            "Pytest"
+          ],
+          "achievements": "完成 93 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_017.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-018",
+      "name": "夏知微",
+      "phone": "+999000000018",
+      "email": "candidate018@portfolio.example",
+      "location": "南京",
+      "current_company": "青禾数科",
+      "current_title": "Python 后端工程师",
+      "work_years": 2,
+      "education_level": "本科",
+      "primary_job_id": "JOB-BE",
+      "target_role": "Python 后端工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握Python 后端工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "SQLAlchemy",
+        "PostgreSQL",
+        "REST API",
+        "Alembic",
+        "异步编程"
+      ],
+      "education_records": [
+        {
+          "school": "江湾科技大学",
+          "degree": "本科",
+          "major": "软件工程",
+          "start_date": "2020-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "青禾数科",
+          "title": "Python 后端工程师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 负责 任务调度服务 的 API 与 Service 分层，维护 30 个业务接口及稳定错误合同。\n- 通过事务边界、唯一约束和幂等键治理重复请求，将重复数据问题降低 88%。\n- 为 PostgreSQL 查询补充索引与执行计划分析，核心列表 P95 从 746ms 降至 264ms。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API",
+            "Alembic"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "任务调度服务",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "设计异步任务的领取、租约、失败重试与恢复流程，并用 PostgreSQL 集成测试验证多 Worker 不重复执行。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API",
+            "Alembic"
+          ],
+          "achievements": "完成 96 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_018.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-019",
+      "name": "谢云舟",
+      "phone": "+999000000019",
+      "email": "candidate019@portfolio.example",
+      "location": "苏州",
+      "current_company": "拓界智能",
+      "current_title": "Python 后端工程师",
+      "work_years": 3,
+      "education_level": "本科",
+      "primary_job_id": "JOB-BE",
+      "target_role": "Python 后端工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握Python 后端工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "SQLAlchemy",
+        "PostgreSQL",
+        "REST API",
+        "Alembic",
+        "异步编程"
+      ],
+      "education_records": [
+        {
+          "school": "北辰工业大学",
+          "degree": "本科",
+          "major": "软件工程",
+          "start_date": "2019-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "拓界智能",
+          "title": "Python 后端工程师",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 负责 审计日志平台 的 API 与 Service 分层，维护 12 个业务接口及稳定错误合同。\n- 通过事务边界、唯一约束和幂等键治理重复请求，将重复数据问题降低 89%。\n- 为 PostgreSQL 查询补充索引与执行计划分析，核心列表 P95 从 753ms 降至 267ms。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API",
+            "Alembic"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "审计日志平台",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "设计异步任务的领取、租约、失败重试与恢复流程，并用 PostgreSQL 集成测试验证多 Worker 不重复执行。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API",
+            "Alembic"
+          ],
+          "achievements": "完成 99 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_019.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-020",
+      "name": "方景行",
+      "phone": "+999000000020",
+      "email": "candidate020@portfolio.example",
+      "location": "西安",
+      "current_company": "流光科技",
+      "current_title": "Python 后端工程师",
+      "work_years": 4,
+      "education_level": "硕士",
+      "primary_job_id": "JOB-BE",
+      "target_role": "Python 后端工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握Python 后端工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "SQLAlchemy",
+        "PostgreSQL",
+        "REST API",
+        "Alembic",
+        "异步编程"
+      ],
+      "education_records": [
+        {
+          "school": "海岚大学",
+          "degree": "硕士",
+          "major": "软件工程",
+          "start_date": "2019-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "流光科技",
+          "title": "Python 后端工程师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 负责 客户资料中台 的 API 与 Service 分层，维护 13 个业务接口及稳定错误合同。\n- 通过事务边界、唯一约束和幂等键治理重复请求，将重复数据问题降低 90%。\n- 为 PostgreSQL 查询补充索引与执行计划分析，核心列表 P95 从 760ms 降至 270ms。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API",
+            "Alembic"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "客户资料中台",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "设计异步任务的领取、租约、失败重试与恢复流程，并用 PostgreSQL 集成测试验证多 Worker 不重复执行。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API",
+            "Alembic"
+          ],
+          "achievements": "完成 102 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_020.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-021",
+      "name": "罗清和",
+      "phone": "+999000000021",
+      "email": "candidate021@portfolio.example",
+      "location": "深圳",
+      "current_company": "栖川信息",
+      "current_title": "平台研发工程师",
+      "work_years": 3,
+      "education_level": "本科",
+      "primary_job_id": "JOB-BE",
+      "target_role": "Python 后端工程师",
+      "fit_level": "transition",
+      "profile_summary": "从相邻岗位转向Python 后端工程师，工程基础较好，直接岗位经验需要结合项目细节进一步判断。",
+      "skills": [
+        "Alembic",
+        "异步编程",
+        "Celery",
+        "Linux",
+        "Python",
+        "FastAPI",
+        "SQLAlchemy"
+      ],
+      "education_records": [
+        {
+          "school": "星港工程学院",
+          "degree": "本科",
+          "major": "软件工程",
+          "start_date": "2019-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "栖川信息",
+          "title": "平台研发工程师",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 负责 订单状态服务 的 API 与 Service 分层，维护 14 个业务接口及稳定错误合同。\n- 通过事务边界、唯一约束和幂等键治理重复请求，将重复数据问题降低 91%。\n- 为 PostgreSQL 查询补充索引与执行计划分析，核心列表 P95 从 767ms 降至 273ms。",
+          "tech_stack": [
+            "Alembic",
+            "异步编程",
+            "Celery",
+            "Linux",
+            "Python",
+            "FastAPI"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "订单状态服务",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "设计异步任务的领取、租约、失败重试与恢复流程，并用 PostgreSQL 集成测试验证多 Worker 不重复执行。",
+          "tech_stack": [
+            "Alembic",
+            "异步编程",
+            "Celery",
+            "Linux",
+            "Python",
+            "FastAPI"
+          ],
+          "achievements": "完成 105 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_021.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-022",
+      "name": "姜若川",
+      "phone": "+999000000022",
+      "email": "candidate022@portfolio.example",
+      "location": "上海",
+      "current_company": "原点云创",
+      "current_title": "平台研发工程师",
+      "work_years": 4,
+      "education_level": "本科",
+      "primary_job_id": "JOB-BE",
+      "target_role": "Python 后端工程师",
+      "fit_level": "transition",
+      "profile_summary": "从相邻岗位转向Python 后端工程师，工程基础较好，直接岗位经验需要结合项目细节进一步判断。",
+      "skills": [
+        "Alembic",
+        "异步编程",
+        "Celery",
+        "Linux",
+        "Python",
+        "FastAPI",
+        "SQLAlchemy"
+      ],
+      "education_records": [
+        {
+          "school": "澄湖科技学院",
+          "degree": "本科",
+          "major": "软件工程",
+          "start_date": "2018-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "原点云创",
+          "title": "平台研发工程师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 负责 企业审批平台 的 API 与 Service 分层，维护 15 个业务接口及稳定错误合同。\n- 通过事务边界、唯一约束和幂等键治理重复请求，将重复数据问题降低 92%。\n- 为 PostgreSQL 查询补充索引与执行计划分析，核心列表 P95 从 774ms 降至 276ms。",
+          "tech_stack": [
+            "Alembic",
+            "异步编程",
+            "Celery",
+            "Linux",
+            "Python",
+            "FastAPI"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "企业审批平台",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "设计异步任务的领取、租约、失败重试与恢复流程，并用 PostgreSQL 集成测试验证多 Worker 不重复执行。",
+          "tech_stack": [
+            "Alembic",
+            "异步编程",
+            "Celery",
+            "Linux",
+            "Python",
+            "FastAPI"
+          ],
+          "achievements": "完成 108 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_022.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-023",
+      "name": "魏安澜",
+      "phone": "+999000000023",
+      "email": "candidate023@portfolio.example",
+      "location": "杭州",
+      "current_company": null,
+      "current_title": "后端开发实习生",
+      "work_years": 0,
+      "education_level": "本科",
+      "primary_job_id": "JOB-BE",
+      "target_role": "Python 后端工程师",
+      "fit_level": "early_career",
+      "profile_summary": "以课程和实习项目为主，对Python 后端工程师方向投入明确，生产环境经验有限。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "SQLAlchemy",
+        "PostgreSQL",
+        "Git",
+        "课程项目"
+      ],
+      "education_records": [
+        {
+          "school": "远川大学",
+          "degree": "本科",
+          "major": "软件工程",
+          "start_date": "2023-09",
+          "end_date": "2026-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "山海研发",
+          "title": "后端开发实习生",
+          "start_date": "2024-07",
+          "end_date": "2026-06",
+          "description": "- 在课程团队中完成文件处理中心，负责需求拆解和核心模块实现。\n- 使用 Python、FastAPI、SQLAlchemy 完成可运行原型并编写使用说明。\n- 通过单元测试和演示样例验证主要流程，尚未经历生产环境长期运行。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "Git",
+            "课程项目"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "文件处理中心",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "设计异步任务的领取、租约、失败重试与恢复流程，并用 PostgreSQL 集成测试验证多 Worker 不重复执行。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "Git",
+            "课程项目"
+          ],
+          "achievements": "完成 111 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_023.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-024",
+      "name": "余星野",
+      "phone": "+999000000024",
+      "email": "candidate024@portfolio.example",
+      "location": "北京",
+      "current_company": "明澈系统",
+      "current_title": "Python 后端工程师",
+      "work_years": 2,
+      "education_level": "本科",
+      "primary_job_id": "JOB-BE",
+      "target_role": "Python 后端工程师",
+      "fit_level": "evidence_gap",
+      "profile_summary": "简历提到多项Python 后端工程师相关工作，但成果指标和本人职责边界描述不足。",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "SQLAlchemy",
+        "PostgreSQL",
+        "REST API"
+      ],
+      "education_records": [
+        {
+          "school": "青禾理工学院",
+          "degree": "本科",
+          "major": "软件工程",
+          "start_date": "2020-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "明澈系统",
+          "title": "Python 后端工程师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 参与任务调度服务的日常需求实现和问题处理。\n- 与团队成员协作完成开发、测试或分析任务。\n- 整理项目文档并跟进上线后的反馈。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "任务调度服务",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "设计异步任务的领取、租约、失败重试与恢复流程，并用 PostgreSQL 集成测试验证多 Worker 不重复执行。",
+          "tech_stack": [
+            "Python",
+            "FastAPI",
+            "SQLAlchemy",
+            "PostgreSQL",
+            "REST API"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_024.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-025",
+      "name": "邵闻溪",
+      "phone": "+999000000025",
+      "email": "candidate025@portfolio.example",
+      "location": "成都",
+      "current_company": "星河协作科技",
+      "current_title": "平台研发工程师",
+      "work_years": 2,
+      "education_level": "硕士",
+      "primary_job_id": "JOB-BE",
+      "target_role": "Python 后端工程师",
+      "fit_level": "low",
+      "profile_summary": "当前经历与Python 后端工程师的核心要求重合较少，适合作为低匹配对照样本。",
+      "skills": [
+        "JavaScript",
+        "平面设计",
+        "用户运营",
+        "Excel",
+        "基础 HTML",
+        "Python"
+      ],
+      "education_records": [
+        {
+          "school": "云杉理工大学",
+          "degree": "硕士",
+          "major": "工商管理",
+          "start_date": "2021-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "星河协作科技",
+          "title": "平台研发工程师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 负责日常内容、数据整理与跨团队需求跟进。\n- 使用表格工具维护周报并协调活动执行。\n- 自学 Python 并完成一个入门练习。",
+          "tech_stack": [
+            "JavaScript",
+            "平面设计",
+            "用户运营",
+            "Excel",
+            "基础 HTML",
+            "Python"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "审计日志平台",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "设计异步任务的领取、租约、失败重试与恢复流程，并用 PostgreSQL 集成测试验证多 Worker 不重复执行。",
+          "tech_stack": [
+            "JavaScript",
+            "平面设计",
+            "用户运营",
+            "Excel",
+            "基础 HTML",
+            "Python"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_025.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-026",
+      "name": "蒋知衡",
+      "phone": "+999000000026",
+      "email": "candidate026@portfolio.example",
+      "location": "广州",
+      "current_company": "云帆数据",
+      "current_title": "平台研发工程师",
+      "work_years": 3,
+      "education_level": "本科",
+      "primary_job_id": "JOB-BE",
+      "target_role": "Python 后端工程师",
+      "fit_level": "low",
+      "profile_summary": "当前经历与Python 后端工程师的核心要求重合较少，适合作为低匹配对照样本。",
+      "skills": [
+        "JavaScript",
+        "平面设计",
+        "用户运营",
+        "Excel",
+        "基础 HTML",
+        "Python"
+      ],
+      "education_records": [
+        {
+          "school": "江湾科技大学",
+          "degree": "本科",
+          "major": "工业设计",
+          "start_date": "2019-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "云帆数据",
+          "title": "平台研发工程师",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 负责日常内容、数据整理与跨团队需求跟进。\n- 使用表格工具维护周报并协调活动执行。\n- 自学 Python 并完成一个入门练习。",
+          "tech_stack": [
+            "JavaScript",
+            "平面设计",
+            "用户运营",
+            "Excel",
+            "基础 HTML",
+            "Python"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "客户资料中台",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "设计异步任务的领取、租约、失败重试与恢复流程，并用 PostgreSQL 集成测试验证多 Worker 不重复执行。",
+          "tech_stack": [
+            "JavaScript",
+            "平面设计",
+            "用户运营",
+            "Excel",
+            "基础 HTML",
+            "Python"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_026.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-027",
+      "name": "杜明远",
+      "phone": "+999000000027",
+      "email": "candidate027@portfolio.example",
+      "location": "武汉",
+      "current_company": "澄明智能",
+      "current_title": "测试开发工程师",
+      "work_years": 4,
+      "education_level": "本科",
+      "primary_job_id": "JOB-QA",
+      "target_role": "测试开发工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的测试开发工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "Python",
+        "Pytest",
+        "Playwright",
+        "API 测试",
+        "PostgreSQL",
+        "CI/CD",
+        "Docker",
+        "Selenium"
+      ],
+      "education_records": [
+        {
+          "school": "北辰工业大学",
+          "degree": "本科",
+          "major": "软件质量工程",
+          "start_date": "2018-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "澄明智能",
+          "title": "测试开发工程师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 围绕 招聘流程回归平台 建立分层测试策略，覆盖正常路径、边界、权限与失败恢复。\n- 使用 Pytest 和 Playwright 沉淀 123 条自动化用例，将人工回归时间缩短 88%。\n- 在 CI 中保存请求、数据库与截图证据，使偶发失败平均定位时间从 809 分钟降到 291 分钟。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL",
+            "CI/CD"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "招聘流程回归平台",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "针对并发提交、事务回滚和异步任务恢复设计可重复测试环境，明确自动化能够证明和不能证明的范围。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL",
+            "CI/CD"
+          ],
+          "achievements": "完成 123 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_027.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-028",
+      "name": "彭清嘉",
+      "phone": "+999000000028",
+      "email": "candidate028@portfolio.example",
+      "location": "南京",
+      "current_company": "北辰软件",
+      "current_title": "测试开发工程师",
+      "work_years": 5,
+      "education_level": "本科",
+      "primary_job_id": "JOB-QA",
+      "target_role": "测试开发工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的测试开发工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "Python",
+        "Pytest",
+        "Playwright",
+        "API 测试",
+        "PostgreSQL",
+        "CI/CD",
+        "Docker",
+        "Postman"
+      ],
+      "education_records": [
+        {
+          "school": "海岚大学",
+          "degree": "本科",
+          "major": "软件质量工程",
+          "start_date": "2017-09",
+          "end_date": "2020-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "北辰软件",
+          "title": "测试开发工程师",
+          "start_date": "2020-07",
+          "end_date": "至今",
+          "description": "- 围绕 接口契约测试套件 建立分层测试策略，覆盖正常路径、边界、权限与失败恢复。\n- 使用 Pytest 和 Playwright 沉淀 126 条自动化用例，将人工回归时间缩短 89%。\n- 在 CI 中保存请求、数据库与截图证据，使偶发失败平均定位时间从 816 分钟降到 294 分钟。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL",
+            "CI/CD"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "接口契约测试套件",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "针对并发提交、事务回滚和异步任务恢复设计可重复测试环境，明确自动化能够证明和不能证明的范围。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL",
+            "CI/CD"
+          ],
+          "achievements": "完成 126 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_028.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-029",
+      "name": "袁以航",
+      "phone": "+999000000029",
+      "email": "candidate029@portfolio.example",
+      "location": "苏州",
+      "current_company": "远岚网络",
+      "current_title": "测试开发工程师",
+      "work_years": 6,
+      "education_level": "本科",
+      "primary_job_id": "JOB-QA",
+      "target_role": "测试开发工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的测试开发工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "Python",
+        "Pytest",
+        "Playwright",
+        "API 测试",
+        "PostgreSQL",
+        "CI/CD",
+        "Docker",
+        "Allure"
+      ],
+      "education_records": [
+        {
+          "school": "星港工程学院",
+          "degree": "本科",
+          "major": "软件质量工程",
+          "start_date": "2016-09",
+          "end_date": "2019-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "远岚网络",
+          "title": "测试开发工程师",
+          "start_date": "2019-07",
+          "end_date": "至今",
+          "description": "- 围绕 移动端自动化框架 建立分层测试策略，覆盖正常路径、边界、权限与失败恢复。\n- 使用 Pytest 和 Playwright 沉淀 129 条自动化用例，将人工回归时间缩短 90%。\n- 在 CI 中保存请求、数据库与截图证据，使偶发失败平均定位时间从 823 分钟降到 297 分钟。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL",
+            "CI/CD"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "移动端自动化框架",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "针对并发提交、事务回滚和异步任务恢复设计可重复测试环境，明确自动化能够证明和不能证明的范围。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL",
+            "CI/CD"
+          ],
+          "achievements": "完成 129 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_029.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-030",
+      "name": "陶予澄",
+      "phone": "+999000000030",
+      "email": "candidate030@portfolio.example",
+      "location": "西安",
+      "current_company": "青禾数科",
+      "current_title": "测试开发工程师",
+      "work_years": 2,
+      "education_level": "硕士",
+      "primary_job_id": "JOB-QA",
+      "target_role": "测试开发工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握测试开发工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "Python",
+        "Pytest",
+        "Playwright",
+        "API 测试",
+        "PostgreSQL",
+        "Selenium",
+        "Postman"
+      ],
+      "education_records": [
+        {
+          "school": "澄湖科技学院",
+          "degree": "硕士",
+          "major": "软件质量工程",
+          "start_date": "2021-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "青禾数科",
+          "title": "测试开发工程师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 围绕 并发一致性测试工具 建立分层测试策略，覆盖正常路径、边界、权限与失败恢复。\n- 使用 Pytest 和 Playwright 沉淀 132 条自动化用例，将人工回归时间缩短 91%。\n- 在 CI 中保存请求、数据库与截图证据，使偶发失败平均定位时间从 830 分钟降到 300 分钟。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL",
+            "Selenium"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "并发一致性测试工具",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "针对并发提交、事务回滚和异步任务恢复设计可重复测试环境，明确自动化能够证明和不能证明的范围。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL",
+            "Selenium"
+          ],
+          "achievements": "完成 132 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_030.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-031",
+      "name": "熊知夏",
+      "phone": "+999000000031",
+      "email": "candidate031@portfolio.example",
+      "location": "深圳",
+      "current_company": "拓界智能",
+      "current_title": "测试开发工程师",
+      "work_years": 3,
+      "education_level": "本科",
+      "primary_job_id": "JOB-QA",
+      "target_role": "测试开发工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握测试开发工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "Python",
+        "Pytest",
+        "Playwright",
+        "API 测试",
+        "PostgreSQL",
+        "Selenium",
+        "Postman"
+      ],
+      "education_records": [
+        {
+          "school": "远川大学",
+          "degree": "本科",
+          "major": "软件质量工程",
+          "start_date": "2019-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "拓界智能",
+          "title": "测试开发工程师",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 围绕 发布质量看板 建立分层测试策略，覆盖正常路径、边界、权限与失败恢复。\n- 使用 Pytest 和 Playwright 沉淀 135 条自动化用例，将人工回归时间缩短 92%。\n- 在 CI 中保存请求、数据库与截图证据，使偶发失败平均定位时间从 837 分钟降到 303 分钟。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL",
+            "Selenium"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "发布质量看板",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "针对并发提交、事务回滚和异步任务恢复设计可重复测试环境，明确自动化能够证明和不能证明的范围。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL",
+            "Selenium"
+          ],
+          "achievements": "完成 135 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_031.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-032",
+      "name": "钟景宁",
+      "phone": "+999000000032",
+      "email": "candidate032@portfolio.example",
+      "location": "上海",
+      "current_company": "流光科技",
+      "current_title": "测试开发工程师",
+      "work_years": 4,
+      "education_level": "本科",
+      "primary_job_id": "JOB-QA",
+      "target_role": "测试开发工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握测试开发工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "Python",
+        "Pytest",
+        "Playwright",
+        "API 测试",
+        "PostgreSQL",
+        "Selenium",
+        "Postman"
+      ],
+      "education_records": [
+        {
+          "school": "青禾理工学院",
+          "degree": "本科",
+          "major": "软件质量工程",
+          "start_date": "2018-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "流光科技",
+          "title": "测试开发工程师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 围绕 性能基线平台 建立分层测试策略，覆盖正常路径、边界、权限与失败恢复。\n- 使用 Pytest 和 Playwright 沉淀 138 条自动化用例，将人工回归时间缩短 93%。\n- 在 CI 中保存请求、数据库与截图证据，使偶发失败平均定位时间从 844 分钟降到 306 分钟。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL",
+            "Selenium"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "性能基线平台",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "针对并发提交、事务回滚和异步任务恢复设计可重复测试环境，明确自动化能够证明和不能证明的范围。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL",
+            "Selenium"
+          ],
+          "achievements": "完成 138 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_032.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-033",
+      "name": "廖书辰",
+      "phone": "+999000000033",
+      "email": "candidate033@portfolio.example",
+      "location": "杭州",
+      "current_company": "栖川信息",
+      "current_title": "质量工程师",
+      "work_years": 3,
+      "education_level": "本科",
+      "primary_job_id": "JOB-QA",
+      "target_role": "测试开发工程师",
+      "fit_level": "transition",
+      "profile_summary": "从相邻岗位转向测试开发工程师，工程基础较好，直接岗位经验需要结合项目细节进一步判断。",
+      "skills": [
+        "Selenium",
+        "Postman",
+        "Allure",
+        "Linux",
+        "Python",
+        "Pytest",
+        "Playwright"
+      ],
+      "education_records": [
+        {
+          "school": "云杉理工大学",
+          "degree": "本科",
+          "major": "软件质量工程",
+          "start_date": "2019-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "栖川信息",
+          "title": "质量工程师",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 围绕 招聘流程回归平台 建立分层测试策略，覆盖正常路径、边界、权限与失败恢复。\n- 使用 Pytest 和 Playwright 沉淀 141 条自动化用例，将人工回归时间缩短 94%。\n- 在 CI 中保存请求、数据库与截图证据，使偶发失败平均定位时间从 851 分钟降到 309 分钟。",
+          "tech_stack": [
+            "Selenium",
+            "Postman",
+            "Allure",
+            "Linux",
+            "Python",
+            "Pytest"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "招聘流程回归平台",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "针对并发提交、事务回滚和异步任务恢复设计可重复测试环境，明确自动化能够证明和不能证明的范围。",
+          "tech_stack": [
+            "Selenium",
+            "Postman",
+            "Allure",
+            "Linux",
+            "Python",
+            "Pytest"
+          ],
+          "achievements": "完成 141 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_033.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-034",
+      "name": "侯清越",
+      "phone": "+999000000034",
+      "email": "candidate034@portfolio.example",
+      "location": "北京",
+      "current_company": "原点云创",
+      "current_title": "质量工程师",
+      "work_years": 4,
+      "education_level": "本科",
+      "primary_job_id": "JOB-QA",
+      "target_role": "测试开发工程师",
+      "fit_level": "transition",
+      "profile_summary": "从相邻岗位转向测试开发工程师，工程基础较好，直接岗位经验需要结合项目细节进一步判断。",
+      "skills": [
+        "Selenium",
+        "Postman",
+        "Allure",
+        "Linux",
+        "Python",
+        "Pytest",
+        "Playwright"
+      ],
+      "education_records": [
+        {
+          "school": "江湾科技大学",
+          "degree": "本科",
+          "major": "软件质量工程",
+          "start_date": "2018-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "原点云创",
+          "title": "质量工程师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 围绕 接口契约测试套件 建立分层测试策略，覆盖正常路径、边界、权限与失败恢复。\n- 使用 Pytest 和 Playwright 沉淀 144 条自动化用例，将人工回归时间缩短 95%。\n- 在 CI 中保存请求、数据库与截图证据，使偶发失败平均定位时间从 858 分钟降到 312 分钟。",
+          "tech_stack": [
+            "Selenium",
+            "Postman",
+            "Allure",
+            "Linux",
+            "Python",
+            "Pytest"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "接口契约测试套件",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "针对并发提交、事务回滚和异步任务恢复设计可重复测试环境，明确自动化能够证明和不能证明的范围。",
+          "tech_stack": [
+            "Selenium",
+            "Postman",
+            "Allure",
+            "Linux",
+            "Python",
+            "Pytest"
+          ],
+          "achievements": "完成 144 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_034.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-035",
+      "name": "郑星河",
+      "phone": "+999000000035",
+      "email": "candidate035@portfolio.example",
+      "location": "成都",
+      "current_company": null,
+      "current_title": "测试实习生",
+      "work_years": 0,
+      "education_level": "硕士",
+      "primary_job_id": "JOB-QA",
+      "target_role": "测试开发工程师",
+      "fit_level": "early_career",
+      "profile_summary": "以课程和实习项目为主，对测试开发工程师方向投入明确，生产环境经验有限。",
+      "skills": [
+        "Python",
+        "Pytest",
+        "Playwright",
+        "API 测试",
+        "Git",
+        "课程项目"
+      ],
+      "education_records": [
+        {
+          "school": "北辰工业大学",
+          "degree": "硕士",
+          "major": "软件质量工程",
+          "start_date": "2024-09",
+          "end_date": "2026-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "山海研发",
+          "title": "测试实习生",
+          "start_date": "2024-07",
+          "end_date": "2026-06",
+          "description": "- 在课程团队中完成移动端自动化框架，负责需求拆解和核心模块实现。\n- 使用 Python、Pytest、Playwright 完成可运行原型并编写使用说明。\n- 通过单元测试和演示样例验证主要流程，尚未经历生产环境长期运行。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "Git",
+            "课程项目"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "移动端自动化框架",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "针对并发提交、事务回滚和异步任务恢复设计可重复测试环境，明确自动化能够证明和不能证明的范围。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "Git",
+            "课程项目"
+          ],
+          "achievements": "完成 147 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_035.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-036",
+      "name": "梁安序",
+      "phone": "+999000000036",
+      "email": "candidate036@portfolio.example",
+      "location": "广州",
+      "current_company": "明澈系统",
+      "current_title": "测试开发工程师",
+      "work_years": 2,
+      "education_level": "本科",
+      "primary_job_id": "JOB-QA",
+      "target_role": "测试开发工程师",
+      "fit_level": "evidence_gap",
+      "profile_summary": "简历提到多项测试开发工程师相关工作，但成果指标和本人职责边界描述不足。",
+      "skills": [
+        "Python",
+        "Pytest",
+        "Playwright",
+        "API 测试",
+        "PostgreSQL"
+      ],
+      "education_records": [
+        {
+          "school": "海岚大学",
+          "degree": "本科",
+          "major": "软件质量工程",
+          "start_date": "2020-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "明澈系统",
+          "title": "测试开发工程师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 参与并发一致性测试工具的日常需求实现和问题处理。\n- 与团队成员协作完成开发、测试或分析任务。\n- 整理项目文档并跟进上线后的反馈。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "并发一致性测试工具",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "针对并发提交、事务回滚和异步任务恢复设计可重复测试环境，明确自动化能够证明和不能证明的范围。",
+          "tech_stack": [
+            "Python",
+            "Pytest",
+            "Playwright",
+            "API 测试",
+            "PostgreSQL"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_036.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-037",
+      "name": "何知行",
+      "phone": "+999000000037",
+      "email": "candidate037@portfolio.example",
+      "location": "武汉",
+      "current_company": "星河协作科技",
+      "current_title": "质量工程师",
+      "work_years": 2,
+      "education_level": "本科",
+      "primary_job_id": "JOB-QA",
+      "target_role": "测试开发工程师",
+      "fit_level": "low",
+      "profile_summary": "当前经历与测试开发工程师的核心要求重合较少，适合作为低匹配对照样本。",
+      "skills": [
+        "市场调研",
+        "内容编辑",
+        "Excel",
+        "客服运营",
+        "基础 SQL",
+        "Python"
+      ],
+      "education_records": [
+        {
+          "school": "星港工程学院",
+          "degree": "本科",
+          "major": "工商管理",
+          "start_date": "2020-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "星河协作科技",
+          "title": "质量工程师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 负责日常内容、数据整理与跨团队需求跟进。\n- 使用表格工具维护周报并协调活动执行。\n- 自学 Python 并完成一个入门练习。",
+          "tech_stack": [
+            "市场调研",
+            "内容编辑",
+            "Excel",
+            "客服运营",
+            "基础 SQL",
+            "Python"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "发布质量看板",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "针对并发提交、事务回滚和异步任务恢复设计可重复测试环境，明确自动化能够证明和不能证明的范围。",
+          "tech_stack": [
+            "市场调研",
+            "内容编辑",
+            "Excel",
+            "客服运营",
+            "基础 SQL",
+            "Python"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_037.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-038",
+      "name": "石予安",
+      "phone": "+999000000038",
+      "email": "candidate038@portfolio.example",
+      "location": "南京",
+      "current_company": "云帆数据",
+      "current_title": "质量工程师",
+      "work_years": 3,
+      "education_level": "本科",
+      "primary_job_id": "JOB-QA",
+      "target_role": "测试开发工程师",
+      "fit_level": "low",
+      "profile_summary": "当前经历与测试开发工程师的核心要求重合较少，适合作为低匹配对照样本。",
+      "skills": [
+        "市场调研",
+        "内容编辑",
+        "Excel",
+        "客服运营",
+        "基础 SQL",
+        "Python"
+      ],
+      "education_records": [
+        {
+          "school": "澄湖科技学院",
+          "degree": "本科",
+          "major": "工业设计",
+          "start_date": "2019-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "云帆数据",
+          "title": "质量工程师",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 负责日常内容、数据整理与跨团队需求跟进。\n- 使用表格工具维护周报并协调活动执行。\n- 自学 Python 并完成一个入门练习。",
+          "tech_stack": [
+            "市场调研",
+            "内容编辑",
+            "Excel",
+            "客服运营",
+            "基础 SQL",
+            "Python"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "性能基线平台",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "针对并发提交、事务回滚和异步任务恢复设计可重复测试环境，明确自动化能够证明和不能证明的范围。",
+          "tech_stack": [
+            "市场调研",
+            "内容编辑",
+            "Excel",
+            "客服运营",
+            "基础 SQL",
+            "Python"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_038.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-039",
+      "name": "高明澈",
+      "phone": "+999000000039",
+      "email": "candidate039@portfolio.example",
+      "location": "苏州",
+      "current_company": "澄明智能",
+      "current_title": "前端工程师",
+      "work_years": 4,
+      "education_level": "本科",
+      "primary_job_id": "JOB-FE",
+      "target_role": "前端工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的前端工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "TypeScript",
+        "React",
+        "Ant Design",
+        "Vite",
+        "CSS",
+        "REST API",
+        "Vitest",
+        "ECharts"
+      ],
+      "education_records": [
+        {
+          "school": "远川大学",
+          "degree": "本科",
+          "major": "计算机科学与交互技术",
+          "start_date": "2018-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "澄明智能",
+          "title": "前端工程师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 使用 React 与 TypeScript 开发 招聘运营工作台，拆分列表、详情和状态操作组件。\n- 统一请求状态与安全错误展示，将重复交互代码减少 91%，并修复详情刷新循环。\n- 完成桌面、平板和手机三档响应式适配，核心页面首屏时间由 893ms 降至 327ms。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS",
+            "REST API"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "招聘运营工作台",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "围绕高信息密度企业工作台设计可访问交互，补充组件测试、请求契约测试和 production build 验证。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS",
+            "REST API"
+          ],
+          "achievements": "完成 159 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_039.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-040",
+      "name": "严若宁",
+      "phone": "+999000000040",
+      "email": "candidate040@portfolio.example",
+      "location": "西安",
+      "current_company": "北辰软件",
+      "current_title": "前端工程师",
+      "work_years": 5,
+      "education_level": "硕士",
+      "primary_job_id": "JOB-FE",
+      "target_role": "前端工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的前端工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "TypeScript",
+        "React",
+        "Ant Design",
+        "Vite",
+        "CSS",
+        "REST API",
+        "Vitest",
+        "Playwright"
+      ],
+      "education_records": [
+        {
+          "school": "青禾理工学院",
+          "degree": "硕士",
+          "major": "计算机科学与交互技术",
+          "start_date": "2018-09",
+          "end_date": "2020-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "北辰软件",
+          "title": "前端工程师",
+          "start_date": "2020-07",
+          "end_date": "至今",
+          "description": "- 使用 React 与 TypeScript 开发 流程统计看板，拆分列表、详情和状态操作组件。\n- 统一请求状态与安全错误展示，将重复交互代码减少 92%，并修复详情刷新循环。\n- 完成桌面、平板和手机三档响应式适配，核心页面首屏时间由 900ms 降至 330ms。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS",
+            "REST API"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "流程统计看板",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "围绕高信息密度企业工作台设计可访问交互，补充组件测试、请求契约测试和 production build 验证。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS",
+            "REST API"
+          ],
+          "achievements": "完成 162 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_040.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-041",
+      "name": "金沐川",
+      "phone": "+999000000041",
+      "email": "candidate041@portfolio.example",
+      "location": "深圳",
+      "current_company": "远岚网络",
+      "current_title": "前端工程师",
+      "work_years": 6,
+      "education_level": "本科",
+      "primary_job_id": "JOB-FE",
+      "target_role": "前端工程师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的前端工程师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "TypeScript",
+        "React",
+        "Ant Design",
+        "Vite",
+        "CSS",
+        "REST API",
+        "Vitest",
+        "可访问性"
+      ],
+      "education_records": [
+        {
+          "school": "云杉理工大学",
+          "degree": "本科",
+          "major": "计算机科学与交互技术",
+          "start_date": "2016-09",
+          "end_date": "2019-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "远岚网络",
+          "title": "前端工程师",
+          "start_date": "2019-07",
+          "end_date": "至今",
+          "description": "- 使用 React 与 TypeScript 开发 客户配置中心，拆分列表、详情和状态操作组件。\n- 统一请求状态与安全错误展示，将重复交互代码减少 93%，并修复详情刷新循环。\n- 完成桌面、平板和手机三档响应式适配，核心页面首屏时间由 907ms 降至 333ms。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS",
+            "REST API"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "客户配置中心",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "围绕高信息密度企业工作台设计可访问交互，补充组件测试、请求契约测试和 production build 验证。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS",
+            "REST API"
+          ],
+          "achievements": "完成 165 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_041.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-042",
+      "name": "毛景初",
+      "phone": "+999000000042",
+      "email": "candidate042@portfolio.example",
+      "location": "上海",
+      "current_company": "青禾数科",
+      "current_title": "前端工程师",
+      "work_years": 2,
+      "education_level": "本科",
+      "primary_job_id": "JOB-FE",
+      "target_role": "前端工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握前端工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "TypeScript",
+        "React",
+        "Ant Design",
+        "Vite",
+        "CSS",
+        "ECharts",
+        "Playwright"
+      ],
+      "education_records": [
+        {
+          "school": "江湾科技大学",
+          "degree": "本科",
+          "major": "计算机科学与交互技术",
+          "start_date": "2020-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "青禾数科",
+          "title": "前端工程师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 使用 React 与 TypeScript 开发 审批任务中心，拆分列表、详情和状态操作组件。\n- 统一请求状态与安全错误展示，将重复交互代码减少 94%，并修复详情刷新循环。\n- 完成桌面、平板和手机三档响应式适配，核心页面首屏时间由 914ms 降至 336ms。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS",
+            "ECharts"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "审批任务中心",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "围绕高信息密度企业工作台设计可访问交互，补充组件测试、请求契约测试和 production build 验证。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS",
+            "ECharts"
+          ],
+          "achievements": "完成 168 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_042.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-043",
+      "name": "范知遥",
+      "phone": "+999000000043",
+      "email": "candidate043@portfolio.example",
+      "location": "杭州",
+      "current_company": "拓界智能",
+      "current_title": "前端工程师",
+      "work_years": 3,
+      "education_level": "本科",
+      "primary_job_id": "JOB-FE",
+      "target_role": "前端工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握前端工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "TypeScript",
+        "React",
+        "Ant Design",
+        "Vite",
+        "CSS",
+        "ECharts",
+        "Playwright"
+      ],
+      "education_records": [
+        {
+          "school": "北辰工业大学",
+          "degree": "本科",
+          "major": "计算机科学与交互技术",
+          "start_date": "2019-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "拓界智能",
+          "title": "前端工程师",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 使用 React 与 TypeScript 开发 设计系统组件库，拆分列表、详情和状态操作组件。\n- 统一请求状态与安全错误展示，将重复交互代码减少 95%，并修复详情刷新循环。\n- 完成桌面、平板和手机三档响应式适配，核心页面首屏时间由 921ms 降至 339ms。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS",
+            "ECharts"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "设计系统组件库",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "围绕高信息密度企业工作台设计可访问交互，补充组件测试、请求契约测试和 production build 验证。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS",
+            "ECharts"
+          ],
+          "achievements": "完成 171 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_043.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-044",
+      "name": "潘清言",
+      "phone": "+999000000044",
+      "email": "candidate044@portfolio.example",
+      "location": "北京",
+      "current_company": "流光科技",
+      "current_title": "前端工程师",
+      "work_years": 4,
+      "education_level": "本科",
+      "primary_job_id": "JOB-FE",
+      "target_role": "前端工程师",
+      "fit_level": "medium",
+      "profile_summary": "掌握前端工程师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "TypeScript",
+        "React",
+        "Ant Design",
+        "Vite",
+        "CSS",
+        "ECharts",
+        "Playwright"
+      ],
+      "education_records": [
+        {
+          "school": "海岚大学",
+          "degree": "本科",
+          "major": "计算机科学与交互技术",
+          "start_date": "2018-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "流光科技",
+          "title": "前端工程师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 使用 React 与 TypeScript 开发 移动端数据门户，拆分列表、详情和状态操作组件。\n- 统一请求状态与安全错误展示，将重复交互代码减少 96%，并修复详情刷新循环。\n- 完成桌面、平板和手机三档响应式适配，核心页面首屏时间由 928ms 降至 342ms。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS",
+            "ECharts"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "移动端数据门户",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "围绕高信息密度企业工作台设计可访问交互，补充组件测试、请求契约测试和 production build 验证。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS",
+            "ECharts"
+          ],
+          "achievements": "完成 174 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_044.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-045",
+      "name": "邱予舟",
+      "phone": "+999000000045",
+      "email": "candidate045@portfolio.example",
+      "location": "成都",
+      "current_company": "栖川信息",
+      "current_title": "Web 开发工程师",
+      "work_years": 3,
+      "education_level": "硕士",
+      "primary_job_id": "JOB-FE",
+      "target_role": "前端工程师",
+      "fit_level": "transition",
+      "profile_summary": "从相邻岗位转向前端工程师，工程基础较好，直接岗位经验需要结合项目细节进一步判断。",
+      "skills": [
+        "ECharts",
+        "Playwright",
+        "可访问性",
+        "性能优化",
+        "TypeScript",
+        "React",
+        "Ant Design"
+      ],
+      "education_records": [
+        {
+          "school": "星港工程学院",
+          "degree": "硕士",
+          "major": "计算机科学与交互技术",
+          "start_date": "2020-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "栖川信息",
+          "title": "Web 开发工程师",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 使用 React 与 TypeScript 开发 招聘运营工作台，拆分列表、详情和状态操作组件。\n- 统一请求状态与安全错误展示，将重复交互代码减少 88%，并修复详情刷新循环。\n- 完成桌面、平板和手机三档响应式适配，核心页面首屏时间由 935ms 降至 345ms。",
+          "tech_stack": [
+            "ECharts",
+            "Playwright",
+            "可访问性",
+            "性能优化",
+            "TypeScript",
+            "React"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "招聘运营工作台",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "围绕高信息密度企业工作台设计可访问交互，补充组件测试、请求契约测试和 production build 验证。",
+          "tech_stack": [
+            "ECharts",
+            "Playwright",
+            "可访问性",
+            "性能优化",
+            "TypeScript",
+            "React"
+          ],
+          "achievements": "完成 177 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_045.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-046",
+      "name": "任星澄",
+      "phone": "+999000000046",
+      "email": "candidate046@portfolio.example",
+      "location": "广州",
+      "current_company": null,
+      "current_title": "前端开发实习生",
+      "work_years": 0,
+      "education_level": "本科",
+      "primary_job_id": "JOB-FE",
+      "target_role": "前端工程师",
+      "fit_level": "early_career",
+      "profile_summary": "以课程和实习项目为主，对前端工程师方向投入明确，生产环境经验有限。",
+      "skills": [
+        "TypeScript",
+        "React",
+        "Ant Design",
+        "Vite",
+        "Git",
+        "课程项目"
+      ],
+      "education_records": [
+        {
+          "school": "澄湖科技学院",
+          "degree": "本科",
+          "major": "计算机科学与交互技术",
+          "start_date": "2023-09",
+          "end_date": "2026-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "原点云创",
+          "title": "前端开发实习生",
+          "start_date": "2024-07",
+          "end_date": "2026-06",
+          "description": "- 在课程团队中完成流程统计看板，负责需求拆解和核心模块实现。\n- 使用 TypeScript、React、Ant Design 完成可运行原型并编写使用说明。\n- 通过单元测试和演示样例验证主要流程，尚未经历生产环境长期运行。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "Git",
+            "课程项目"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "流程统计看板",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "围绕高信息密度企业工作台设计可访问交互，补充组件测试、请求契约测试和 production build 验证。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "Git",
+            "课程项目"
+          ],
+          "achievements": "完成 180 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_046.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-047",
+      "name": "崔明序",
+      "phone": "+999000000047",
+      "email": "candidate047@portfolio.example",
+      "location": "武汉",
+      "current_company": "山海研发",
+      "current_title": "前端工程师",
+      "work_years": 2,
+      "education_level": "本科",
+      "primary_job_id": "JOB-FE",
+      "target_role": "前端工程师",
+      "fit_level": "evidence_gap",
+      "profile_summary": "简历提到多项前端工程师相关工作，但成果指标和本人职责边界描述不足。",
+      "skills": [
+        "TypeScript",
+        "React",
+        "Ant Design",
+        "Vite",
+        "CSS"
+      ],
+      "education_records": [
+        {
+          "school": "远川大学",
+          "degree": "本科",
+          "major": "计算机科学与交互技术",
+          "start_date": "2020-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "山海研发",
+          "title": "前端工程师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 参与客户配置中心的日常需求实现和问题处理。\n- 与团队成员协作完成开发、测试或分析任务。\n- 整理项目文档并跟进上线后的反馈。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "客户配置中心",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "围绕高信息密度企业工作台设计可访问交互，补充组件测试、请求契约测试和 production build 验证。",
+          "tech_stack": [
+            "TypeScript",
+            "React",
+            "Ant Design",
+            "Vite",
+            "CSS"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_047.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-048",
+      "name": "孔若衡",
+      "phone": "+999000000048",
+      "email": "candidate048@portfolio.example",
+      "location": "南京",
+      "current_company": "明澈系统",
+      "current_title": "Web 开发工程师",
+      "work_years": 1,
+      "education_level": "本科",
+      "primary_job_id": "JOB-FE",
+      "target_role": "前端工程师",
+      "fit_level": "low",
+      "profile_summary": "当前经历与前端工程师的核心要求重合较少，适合作为低匹配对照样本。",
+      "skills": [
+        "Python 脚本",
+        "数据录入",
+        "内容运营",
+        "Excel",
+        "基础 HTML",
+        "TypeScript"
+      ],
+      "education_records": [
+        {
+          "school": "青禾理工学院",
+          "degree": "本科",
+          "major": "市场传播",
+          "start_date": "2021-09",
+          "end_date": "2024-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "明澈系统",
+          "title": "Web 开发工程师",
+          "start_date": "2024-07",
+          "end_date": "至今",
+          "description": "- 负责日常内容、数据整理与跨团队需求跟进。\n- 使用表格工具维护周报并协调活动执行。\n- 自学 TypeScript 并完成一个入门练习。",
+          "tech_stack": [
+            "Python 脚本",
+            "数据录入",
+            "内容运营",
+            "Excel",
+            "基础 HTML",
+            "TypeScript"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "审批任务中心",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "围绕高信息密度企业工作台设计可访问交互，补充组件测试、请求契约测试和 production build 验证。",
+          "tech_stack": [
+            "Python 脚本",
+            "数据录入",
+            "内容运营",
+            "Excel",
+            "基础 HTML",
+            "TypeScript"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_048.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-049",
+      "name": "孟知宁",
+      "phone": "+999000000049",
+      "email": "candidate049@portfolio.example",
+      "location": "苏州",
+      "current_company": "星河协作科技",
+      "current_title": "Web 开发工程师",
+      "work_years": 2,
+      "education_level": "本科",
+      "primary_job_id": "JOB-FE",
+      "target_role": "前端工程师",
+      "fit_level": "low",
+      "profile_summary": "当前经历与前端工程师的核心要求重合较少，适合作为低匹配对照样本。",
+      "skills": [
+        "Python 脚本",
+        "数据录入",
+        "内容运营",
+        "Excel",
+        "基础 HTML",
+        "TypeScript"
+      ],
+      "education_records": [
+        {
+          "school": "云杉理工大学",
+          "degree": "本科",
+          "major": "工商管理",
+          "start_date": "2020-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "星河协作科技",
+          "title": "Web 开发工程师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 负责日常内容、数据整理与跨团队需求跟进。\n- 使用表格工具维护周报并协调活动执行。\n- 自学 TypeScript 并完成一个入门练习。",
+          "tech_stack": [
+            "Python 脚本",
+            "数据录入",
+            "内容运营",
+            "Excel",
+            "基础 HTML",
+            "TypeScript"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "设计系统组件库",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "围绕高信息密度企业工作台设计可访问交互，补充组件测试、请求契约测试和 production build 验证。",
+          "tech_stack": [
+            "Python 脚本",
+            "数据录入",
+            "内容运营",
+            "Excel",
+            "基础 HTML",
+            "TypeScript"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_049.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-050",
+      "name": "雷景舟",
+      "phone": "+999000000050",
+      "email": "candidate050@portfolio.example",
+      "location": "西安",
+      "current_company": "云帆数据",
+      "current_title": "数据分析师",
+      "work_years": 4,
+      "education_level": "硕士",
+      "primary_job_id": "JOB-DA",
+      "target_role": "数据分析师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的数据分析师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "SQL",
+        "Python",
+        "Pandas",
+        "数据可视化",
+        "指标体系",
+        "漏斗分析",
+        "Tableau",
+        "Power BI"
+      ],
+      "education_records": [
+        {
+          "school": "江湾科技大学",
+          "degree": "硕士",
+          "major": "数据科学与商业分析",
+          "start_date": "2019-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "云帆数据",
+          "title": "数据分析师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 围绕 招聘转化漏斗 与业务方统一口径，使用 SQL 构建可追溯的分析数据集。\n- 通过 Python/Pandas 完成清洗和分群，识别 192 个关键样本并提出可验证改进假设。\n- 建设自助看板，将周报准备时间缩短 93%，同时标注缺失数据与因果解释边界。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系",
+            "漏斗分析"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "招聘转化漏斗",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "从业务问题出发定义指标、核对数据质量、分析漏斗与分群，并把结论拆成可执行建议和后续验证计划。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系",
+            "漏斗分析"
+          ],
+          "achievements": "完成 192 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_050.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-051",
+      "name": "黎清远",
+      "phone": "+999000000051",
+      "email": "candidate051@portfolio.example",
+      "location": "深圳",
+      "current_company": "澄明智能",
+      "current_title": "数据分析师",
+      "work_years": 5,
+      "education_level": "本科",
+      "primary_job_id": "JOB-DA",
+      "target_role": "数据分析师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的数据分析师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "SQL",
+        "Python",
+        "Pandas",
+        "数据可视化",
+        "指标体系",
+        "漏斗分析",
+        "Tableau",
+        "dbt"
+      ],
+      "education_records": [
+        {
+          "school": "北辰工业大学",
+          "degree": "本科",
+          "major": "数据科学与商业分析",
+          "start_date": "2017-09",
+          "end_date": "2020-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "澄明智能",
+          "title": "数据分析师",
+          "start_date": "2020-07",
+          "end_date": "至今",
+          "description": "- 围绕 用户留存分析 与业务方统一口径，使用 SQL 构建可追溯的分析数据集。\n- 通过 Python/Pandas 完成清洗和分群，识别 195 个关键样本并提出可验证改进假设。\n- 建设自助看板，将周报准备时间缩短 94%，同时标注缺失数据与因果解释边界。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系",
+            "漏斗分析"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "用户留存分析",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "从业务问题出发定义指标、核对数据质量、分析漏斗与分群，并把结论拆成可执行建议和后续验证计划。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系",
+            "漏斗分析"
+          ],
+          "achievements": "完成 195 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_051.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-052",
+      "name": "龙予川",
+      "phone": "+999000000052",
+      "email": "candidate052@portfolio.example",
+      "location": "上海",
+      "current_company": "北辰软件",
+      "current_title": "数据分析师",
+      "work_years": 6,
+      "education_level": "本科",
+      "primary_job_id": "JOB-DA",
+      "target_role": "数据分析师",
+      "fit_level": "high",
+      "profile_summary": "具备较完整的数据分析师交付经验，能够说明业务目标、核心实现、验证证据和剩余风险。",
+      "skills": [
+        "SQL",
+        "Python",
+        "Pandas",
+        "数据可视化",
+        "指标体系",
+        "漏斗分析",
+        "Tableau",
+        "Excel"
+      ],
+      "education_records": [
+        {
+          "school": "海岚大学",
+          "degree": "本科",
+          "major": "数据科学与商业分析",
+          "start_date": "2016-09",
+          "end_date": "2019-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "北辰软件",
+          "title": "数据分析师",
+          "start_date": "2019-07",
+          "end_date": "至今",
+          "description": "- 围绕 经营指标看板 与业务方统一口径，使用 SQL 构建可追溯的分析数据集。\n- 通过 Python/Pandas 完成清洗和分群，识别 198 个关键样本并提出可验证改进假设。\n- 建设自助看板，将周报准备时间缩短 95%，同时标注缺失数据与因果解释边界。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系",
+            "漏斗分析"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "经营指标看板",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "从业务问题出发定义指标、核对数据质量、分析漏斗与分群，并把结论拆成可执行建议和后续验证计划。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系",
+            "漏斗分析"
+          ],
+          "achievements": "完成 198 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_052.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-053",
+      "name": "段星言",
+      "phone": "+999000000053",
+      "email": "candidate053@portfolio.example",
+      "location": "杭州",
+      "current_company": "远岚网络",
+      "current_title": "数据分析师",
+      "work_years": 2,
+      "education_level": "本科",
+      "primary_job_id": "JOB-DA",
+      "target_role": "数据分析师",
+      "fit_level": "medium",
+      "profile_summary": "掌握数据分析师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "SQL",
+        "Python",
+        "Pandas",
+        "数据可视化",
+        "指标体系",
+        "Power BI",
+        "dbt"
+      ],
+      "education_records": [
+        {
+          "school": "星港工程学院",
+          "degree": "本科",
+          "major": "数据科学与商业分析",
+          "start_date": "2020-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "远岚网络",
+          "title": "数据分析师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 围绕 渠道质量分析 与业务方统一口径，使用 SQL 构建可追溯的分析数据集。\n- 通过 Python/Pandas 完成清洗和分群，识别 201 个关键样本并提出可验证改进假设。\n- 建设自助看板，将周报准备时间缩短 96%，同时标注缺失数据与因果解释边界。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系",
+            "Power BI"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "渠道质量分析",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "从业务问题出发定义指标、核对数据质量、分析漏斗与分群，并把结论拆成可执行建议和后续验证计划。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系",
+            "Power BI"
+          ],
+          "achievements": "完成 201 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_053.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-054",
+      "name": "郝明安",
+      "phone": "+999000000054",
+      "email": "candidate054@portfolio.example",
+      "location": "北京",
+      "current_company": "青禾数科",
+      "current_title": "数据分析师",
+      "work_years": 3,
+      "education_level": "本科",
+      "primary_job_id": "JOB-DA",
+      "target_role": "数据分析师",
+      "fit_level": "medium",
+      "profile_summary": "掌握数据分析师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "SQL",
+        "Python",
+        "Pandas",
+        "数据可视化",
+        "指标体系",
+        "Power BI",
+        "dbt"
+      ],
+      "education_records": [
+        {
+          "school": "澄湖科技学院",
+          "degree": "本科",
+          "major": "数据科学与商业分析",
+          "start_date": "2019-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "青禾数科",
+          "title": "数据分析师",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 围绕 实验效果评估 与业务方统一口径，使用 SQL 构建可追溯的分析数据集。\n- 通过 Python/Pandas 完成清洗和分群，识别 204 个关键样本并提出可验证改进假设。\n- 建设自助看板，将周报准备时间缩短 88%，同时标注缺失数据与因果解释边界。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系",
+            "Power BI"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "实验效果评估",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "从业务问题出发定义指标、核对数据质量、分析漏斗与分群，并把结论拆成可执行建议和后续验证计划。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系",
+            "Power BI"
+          ],
+          "achievements": "完成 204 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_054.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-055",
+      "name": "龚若溪",
+      "phone": "+999000000055",
+      "email": "candidate055@portfolio.example",
+      "location": "成都",
+      "current_company": "拓界智能",
+      "current_title": "数据分析师",
+      "work_years": 4,
+      "education_level": "硕士",
+      "primary_job_id": "JOB-DA",
+      "target_role": "数据分析师",
+      "fit_level": "medium",
+      "profile_summary": "掌握数据分析师的主要技能并有可复述项目，但复杂场景和系统性验证仍需在面试中确认。",
+      "skills": [
+        "SQL",
+        "Python",
+        "Pandas",
+        "数据可视化",
+        "指标体系",
+        "Power BI",
+        "dbt"
+      ],
+      "education_records": [
+        {
+          "school": "远川大学",
+          "degree": "硕士",
+          "major": "数据科学与商业分析",
+          "start_date": "2019-09",
+          "end_date": "2021-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "拓界智能",
+          "title": "数据分析师",
+          "start_date": "2021-07",
+          "end_date": "至今",
+          "description": "- 围绕 异常指标监控 与业务方统一口径，使用 SQL 构建可追溯的分析数据集。\n- 通过 Python/Pandas 完成清洗和分群，识别 207 个关键样本并提出可验证改进假设。\n- 建设自助看板，将周报准备时间缩短 89%，同时标注缺失数据与因果解释边界。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系",
+            "Power BI"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "异常指标监控",
+          "role": "核心成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "从业务问题出发定义指标、核对数据质量、分析漏斗与分群，并把结论拆成可执行建议和后续验证计划。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系",
+            "Power BI"
+          ],
+          "achievements": "完成 207 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_055.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-056",
+      "name": "傅知澄",
+      "phone": "+999000000056",
+      "email": "candidate056@portfolio.example",
+      "location": "广州",
+      "current_company": "流光科技",
+      "current_title": "经营分析专员",
+      "work_years": 3,
+      "education_level": "本科",
+      "primary_job_id": "JOB-DA",
+      "target_role": "数据分析师",
+      "fit_level": "transition",
+      "profile_summary": "从相邻岗位转向数据分析师，工程基础较好，直接岗位经验需要结合项目细节进一步判断。",
+      "skills": [
+        "Power BI",
+        "dbt",
+        "Excel",
+        "统计学",
+        "SQL",
+        "Python",
+        "Pandas"
+      ],
+      "education_records": [
+        {
+          "school": "青禾理工学院",
+          "degree": "本科",
+          "major": "数据科学与商业分析",
+          "start_date": "2019-09",
+          "end_date": "2022-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "流光科技",
+          "title": "经营分析专员",
+          "start_date": "2022-07",
+          "end_date": "至今",
+          "description": "- 围绕 招聘转化漏斗 与业务方统一口径，使用 SQL 构建可追溯的分析数据集。\n- 通过 Python/Pandas 完成清洗和分群，识别 210 个关键样本并提出可验证改进假设。\n- 建设自助看板，将周报准备时间缩短 90%，同时标注缺失数据与因果解释边界。",
+          "tech_stack": [
+            "Power BI",
+            "dbt",
+            "Excel",
+            "统计学",
+            "SQL",
+            "Python"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "招聘转化漏斗",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "从业务问题出发定义指标、核对数据质量、分析漏斗与分群，并把结论拆成可执行建议和后续验证计划。",
+          "tech_stack": [
+            "Power BI",
+            "dbt",
+            "Excel",
+            "统计学",
+            "SQL",
+            "Python"
+          ],
+          "achievements": "完成 210 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_056.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-057",
+      "name": "武景和",
+      "phone": "+999000000057",
+      "email": "candidate057@portfolio.example",
+      "location": "武汉",
+      "current_company": null,
+      "current_title": "数据分析实习生",
+      "work_years": 0,
+      "education_level": "本科",
+      "primary_job_id": "JOB-DA",
+      "target_role": "数据分析师",
+      "fit_level": "early_career",
+      "profile_summary": "以课程和实习项目为主，对数据分析师方向投入明确，生产环境经验有限。",
+      "skills": [
+        "SQL",
+        "Python",
+        "Pandas",
+        "数据可视化",
+        "Git",
+        "课程项目"
+      ],
+      "education_records": [
+        {
+          "school": "云杉理工大学",
+          "degree": "本科",
+          "major": "数据科学与商业分析",
+          "start_date": "2023-09",
+          "end_date": "2026-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "栖川信息",
+          "title": "数据分析实习生",
+          "start_date": "2024-07",
+          "end_date": "2026-06",
+          "description": "- 在课程团队中完成用户留存分析，负责需求拆解和核心模块实现。\n- 使用 SQL、Python、Pandas 完成可运行原型并编写使用说明。\n- 通过单元测试和演示样例验证主要流程，尚未经历生产环境长期运行。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "Git",
+            "课程项目"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "用户留存分析",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "从业务问题出发定义指标、核对数据质量、分析漏斗与分群，并把结论拆成可执行建议和后续验证计划。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "Git",
+            "课程项目"
+          ],
+          "achievements": "完成 213 条样例验证并记录限制。"
+        }
+      ],
+      "resume_file": "resumes/candidate_057.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-058",
+      "name": "钱清序",
+      "phone": "+999000000058",
+      "email": "candidate058@portfolio.example",
+      "location": "南京",
+      "current_company": "原点云创",
+      "current_title": "数据分析师",
+      "work_years": 2,
+      "education_level": "本科",
+      "primary_job_id": "JOB-DA",
+      "target_role": "数据分析师",
+      "fit_level": "evidence_gap",
+      "profile_summary": "简历提到多项数据分析师相关工作，但成果指标和本人职责边界描述不足。",
+      "skills": [
+        "SQL",
+        "Python",
+        "Pandas",
+        "数据可视化",
+        "指标体系"
+      ],
+      "education_records": [
+        {
+          "school": "江湾科技大学",
+          "degree": "本科",
+          "major": "数据科学与商业分析",
+          "start_date": "2020-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "原点云创",
+          "title": "数据分析师",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 参与经营指标看板的日常需求实现和问题处理。\n- 与团队成员协作完成开发、测试或分析任务。\n- 整理项目文档并跟进上线后的反馈。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "经营指标看板",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "从业务问题出发定义指标、核对数据质量、分析漏斗与分群，并把结论拆成可执行建议和后续验证计划。",
+          "tech_stack": [
+            "SQL",
+            "Python",
+            "Pandas",
+            "数据可视化",
+            "指标体系"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_058.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-059",
+      "name": "戴予宁",
+      "phone": "+999000000059",
+      "email": "candidate059@portfolio.example",
+      "location": "苏州",
+      "current_company": "山海研发",
+      "current_title": "经营分析专员",
+      "work_years": 1,
+      "education_level": "本科",
+      "primary_job_id": "JOB-DA",
+      "target_role": "数据分析师",
+      "fit_level": "low",
+      "profile_summary": "当前经历与数据分析师的核心要求重合较少，适合作为低匹配对照样本。",
+      "skills": [
+        "行政协调",
+        "内容运营",
+        "基础 Excel",
+        "活动执行",
+        "文案编辑",
+        "SQL"
+      ],
+      "education_records": [
+        {
+          "school": "北辰工业大学",
+          "degree": "本科",
+          "major": "工业设计",
+          "start_date": "2021-09",
+          "end_date": "2024-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "山海研发",
+          "title": "经营分析专员",
+          "start_date": "2024-07",
+          "end_date": "至今",
+          "description": "- 负责日常内容、数据整理与跨团队需求跟进。\n- 使用表格工具维护周报并协调活动执行。\n- 自学 SQL 并完成一个入门练习。",
+          "tech_stack": [
+            "行政协调",
+            "内容运营",
+            "基础 Excel",
+            "活动执行",
+            "文案编辑",
+            "SQL"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "渠道质量分析",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "从业务问题出发定义指标、核对数据质量、分析漏斗与分群，并把结论拆成可执行建议和后续验证计划。",
+          "tech_stack": [
+            "行政协调",
+            "内容运营",
+            "基础 Excel",
+            "活动执行",
+            "文案编辑",
+            "SQL"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_059.txt"
+    },
+    {
+      "demo_candidate_id": "CAND-060",
+      "name": "莫星舟",
+      "phone": "+999000000060",
+      "email": "candidate060@portfolio.example",
+      "location": "西安",
+      "current_company": "明澈系统",
+      "current_title": "经营分析专员",
+      "work_years": 2,
+      "education_level": "硕士",
+      "primary_job_id": "JOB-DA",
+      "target_role": "数据分析师",
+      "fit_level": "low",
+      "profile_summary": "当前经历与数据分析师的核心要求重合较少，适合作为低匹配对照样本。",
+      "skills": [
+        "行政协调",
+        "内容运营",
+        "基础 Excel",
+        "活动执行",
+        "文案编辑",
+        "SQL"
+      ],
+      "education_records": [
+        {
+          "school": "海岚大学",
+          "degree": "硕士",
+          "major": "市场传播",
+          "start_date": "2021-09",
+          "end_date": "2023-06",
+          "is_985": false,
+          "is_211": false
+        }
+      ],
+      "work_experiences": [
+        {
+          "company": "明澈系统",
+          "title": "经营分析专员",
+          "start_date": "2023-07",
+          "end_date": "至今",
+          "description": "- 负责日常内容、数据整理与跨团队需求跟进。\n- 使用表格工具维护周报并协调活动执行。\n- 自学 SQL 并完成一个入门练习。",
+          "tech_stack": [
+            "行政协调",
+            "内容运营",
+            "基础 Excel",
+            "活动执行",
+            "文案编辑",
+            "SQL"
+          ]
+        }
+      ],
+      "project_experiences": [
+        {
+          "project_name": "实验效果评估",
+          "role": "项目成员",
+          "start_date": "2025-03",
+          "end_date": "2025-11",
+          "description": "从业务问题出发定义指标、核对数据质量、分析漏斗与分群，并把结论拆成可执行建议和后续验证计划。",
+          "tech_stack": [
+            "行政协调",
+            "内容运营",
+            "基础 Excel",
+            "活动执行",
+            "文案编辑",
+            "SQL"
+          ],
+          "achievements": "完成基础功能演示，量化结果仍待补充。"
+        }
+      ],
+      "resume_file": "resumes/candidate_060.txt"
+    }
+  ]
+}

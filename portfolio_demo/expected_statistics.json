@@ -1,0 +1,581 @@
+{
+  "dataset_version": "portfolio-demo-v1",
+  "dataset_as_of": "2026-09-09T12:00:00+08:00",
+  "fictional_data_only": true,
+  "automatic_database_write": false,
+  "real_model_outputs_included": false,
+  "candidate_count": 60,
+  "application_count": 64,
+  "source_counts": {
+    "hr_direct": 8,
+    "hr_screening": 16,
+    "public_apply": 40
+  },
+  "scenario_counts": {
+    "admitted": 2,
+    "backup": 8,
+    "candidate_withdrew": 1,
+    "completed_pending": 3,
+    "hired": 3,
+    "interview_rejected": 2,
+    "next_round_pending": 3,
+    "offer_accepted": 2,
+    "offer_declined": 1,
+    "offer_draft": 3,
+    "offer_sent": 3,
+    "passed_no_interview": 5,
+    "processing_failed": 4,
+    "processing_paused": 4,
+    "rejected": 8,
+    "scheduled_interview": 4,
+    "screening_ready_pending": 8
+  },
+  "overall": {
+    "funnel": [
+      {
+        "key": "applications",
+        "count": 64,
+        "conversion_rate": null
+      },
+      {
+        "key": "screening_passed",
+        "count": 32,
+        "conversion_rate": 50.0
+      },
+      {
+        "key": "interview_entered",
+        "count": 27,
+        "conversion_rate": 84.38
+      },
+      {
+        "key": "interview_completed",
+        "count": 23,
+        "conversion_rate": 85.19
+      },
+      {
+        "key": "offer_sent",
+        "count": 11,
+        "conversion_rate": 47.83
+      },
+      {
+        "key": "offer_accepted",
+        "count": 7,
+        "conversion_rate": 63.64
+      },
+      {
+        "key": "admitted",
+        "count": 5,
+        "conversion_rate": 71.43
+      },
+      {
+        "key": "hired",
+        "count": 3,
+        "conversion_rate": 60.0
+      }
+    ],
+    "todos": {
+      "scheduled_interviews": 4,
+      "pending_interview_decisions": 3,
+      "next_round_not_scheduled": 3,
+      "draft_offers": 3,
+      "sent_offers": 3,
+      "accepted_offers": 2,
+      "admitted_applications": 2,
+      "total": 20
+    },
+    "durations": [
+      {
+        "key": "application_to_screening_passed",
+        "average_hours": 18.53,
+        "sample_count": 32
+      },
+      {
+        "key": "screening_passed_to_first_interview",
+        "average_hours": 50.26,
+        "sample_count": 27
+      },
+      {
+        "key": "first_interview_to_last_completed",
+        "average_hours": 27.57,
+        "sample_count": 23
+      },
+      {
+        "key": "offer_entered_to_sent",
+        "average_hours": 36.0,
+        "sample_count": 11
+      },
+      {
+        "key": "offer_sent_to_response",
+        "average_hours": 48.0,
+        "sample_count": 8
+      },
+      {
+        "key": "offer_accepted_to_admitted",
+        "average_hours": 24.0,
+        "sample_count": 5
+      },
+      {
+        "key": "admitted_to_hired",
+        "average_hours": 168.0,
+        "sample_count": 3
+      }
+    ]
+  },
+  "by_job": {
+    "JOB-AI": {
+      "funnel": [
+        {
+          "key": "applications",
+          "count": 15,
+          "conversion_rate": null
+        },
+        {
+          "key": "screening_passed",
+          "count": 11,
+          "conversion_rate": 73.33
+        },
+        {
+          "key": "interview_entered",
+          "count": 10,
+          "conversion_rate": 90.91
+        },
+        {
+          "key": "interview_completed",
+          "count": 7,
+          "conversion_rate": 70.0
+        },
+        {
+          "key": "offer_sent",
+          "count": 5,
+          "conversion_rate": 71.43
+        },
+        {
+          "key": "offer_accepted",
+          "count": 3,
+          "conversion_rate": 60.0
+        },
+        {
+          "key": "admitted",
+          "count": 2,
+          "conversion_rate": 66.67
+        },
+        {
+          "key": "hired",
+          "count": 2,
+          "conversion_rate": 100.0
+        }
+      ],
+      "todos": {
+        "scheduled_interviews": 3,
+        "pending_interview_decisions": 1,
+        "next_round_not_scheduled": 0,
+        "draft_offers": 0,
+        "sent_offers": 2,
+        "accepted_offers": 1,
+        "admitted_applications": 0,
+        "total": 7
+      },
+      "durations": [
+        {
+          "key": "application_to_screening_passed",
+          "average_hours": 17.82,
+          "sample_count": 11
+        },
+        {
+          "key": "screening_passed_to_first_interview",
+          "average_hours": 49.6,
+          "sample_count": 10
+        },
+        {
+          "key": "first_interview_to_last_completed",
+          "average_hours": 27.43,
+          "sample_count": 7
+        },
+        {
+          "key": "offer_entered_to_sent",
+          "average_hours": 36.0,
+          "sample_count": 5
+        },
+        {
+          "key": "offer_sent_to_response",
+          "average_hours": 48.0,
+          "sample_count": 3
+        },
+        {
+          "key": "offer_accepted_to_admitted",
+          "average_hours": 24.0,
+          "sample_count": 2
+        },
+        {
+          "key": "admitted_to_hired",
+          "average_hours": 168.0,
+          "sample_count": 2
+        }
+      ]
+    },
+    "JOB-BE": {
+      "funnel": [
+        {
+          "key": "applications",
+          "count": 13,
+          "conversion_rate": null
+        },
+        {
+          "key": "screening_passed",
+          "count": 8,
+          "conversion_rate": 61.54
+        },
+        {
+          "key": "interview_entered",
+          "count": 5,
+          "conversion_rate": 62.5
+        },
+        {
+          "key": "interview_completed",
+          "count": 5,
+          "conversion_rate": 100.0
+        },
+        {
+          "key": "offer_sent",
+          "count": 3,
+          "conversion_rate": 60.0
+        },
+        {
+          "key": "offer_accepted",
+          "count": 3,
+          "conversion_rate": 100.0
+        },
+        {
+          "key": "admitted",
+          "count": 3,
+          "conversion_rate": 100.0
+        },
+        {
+          "key": "hired",
+          "count": 1,
+          "conversion_rate": 33.33
+        }
+      ],
+      "todos": {
+        "scheduled_interviews": 0,
+        "pending_interview_decisions": 0,
+        "next_round_not_scheduled": 0,
+        "draft_offers": 1,
+        "sent_offers": 0,
+        "accepted_offers": 0,
+        "admitted_applications": 2,
+        "total": 3
+      },
+      "durations": [
+        {
+          "key": "application_to_screening_passed",
+          "average_hours": 18.0,
+          "sample_count": 8
+        },
+        {
+          "key": "screening_passed_to_first_interview",
+          "average_hours": 50.0,
+          "sample_count": 5
+        },
+        {
+          "key": "first_interview_to_last_completed",
+          "average_hours": 27.4,
+          "sample_count": 5
+        },
+        {
+          "key": "offer_entered_to_sent",
+          "average_hours": 36.0,
+          "sample_count": 3
+        },
+        {
+          "key": "offer_sent_to_response",
+          "average_hours": 48.0,
+          "sample_count": 3
+        },
+        {
+          "key": "offer_accepted_to_admitted",
+          "average_hours": 24.0,
+          "sample_count": 3
+        },
+        {
+          "key": "admitted_to_hired",
+          "average_hours": 168.0,
+          "sample_count": 1
+        }
+      ]
+    },
+    "JOB-QA": {
+      "funnel": [
+        {
+          "key": "applications",
+          "count": 13,
+          "conversion_rate": null
+        },
+        {
+          "key": "screening_passed",
+          "count": 8,
+          "conversion_rate": 61.54
+        },
+        {
+          "key": "interview_entered",
+          "count": 7,
+          "conversion_rate": 87.5
+        },
+        {
+          "key": "interview_completed",
+          "count": 6,
+          "conversion_rate": 85.71
+        },
+        {
+          "key": "offer_sent",
+          "count": 2,
+          "conversion_rate": 33.33
+        },
+        {
+          "key": "offer_accepted",
+          "count": 1,
+          "conversion_rate": 50.0
+        },
+        {
+          "key": "admitted",
+          "count": 0,
+          "conversion_rate": 0.0
+        },
+        {
+          "key": "hired",
+          "count": 0,
+          "conversion_rate": null
+        }
+      ],
+      "todos": {
+        "scheduled_interviews": 1,
+        "pending_interview_decisions": 1,
+        "next_round_not_scheduled": 0,
+        "draft_offers": 2,
+        "sent_offers": 0,
+        "accepted_offers": 1,
+        "admitted_applications": 0,
+        "total": 5
+      },
+      "durations": [
+        {
+          "key": "application_to_screening_passed",
+          "average_hours": 18.5,
+          "sample_count": 8
+        },
+        {
+          "key": "screening_passed_to_first_interview",
+          "average_hours": 51.0,
+          "sample_count": 7
+        },
+        {
+          "key": "first_interview_to_last_completed",
+          "average_hours": 28.0,
+          "sample_count": 6
+        },
+        {
+          "key": "offer_entered_to_sent",
+          "average_hours": 36.0,
+          "sample_count": 2
+        },
+        {
+          "key": "offer_sent_to_response",
+          "average_hours": 48.0,
+          "sample_count": 2
+        },
+        {
+          "key": "offer_accepted_to_admitted",
+          "average_hours": null,
+          "sample_count": 0
+        },
+        {
+          "key": "admitted_to_hired",
+          "average_hours": null,
+          "sample_count": 0
+        }
+      ]
+    },
+    "JOB-FE": {
+      "funnel": [
+        {
+          "key": "applications",
+          "count": 11,
+          "conversion_rate": null
+        },
+        {
+          "key": "screening_passed",
+          "count": 3,
+          "conversion_rate": 27.27
+        },
+        {
+          "key": "interview_entered",
+          "count": 3,
+          "conversion_rate": 100.0
+        },
+        {
+          "key": "interview_completed",
+          "count": 3,
+          "conversion_rate": 100.0
+        },
+        {
+          "key": "offer_sent",
+          "count": 1,
+          "conversion_rate": 33.33
+        },
+        {
+          "key": "offer_accepted",
+          "count": 0,
+          "conversion_rate": 0.0
+        },
+        {
+          "key": "admitted",
+          "count": 0,
+          "conversion_rate": null
+        },
+        {
+          "key": "hired",
+          "count": 0,
+          "conversion_rate": null
+        }
+      ],
+      "todos": {
+        "scheduled_interviews": 0,
+        "pending_interview_decisions": 0,
+        "next_round_not_scheduled": 2,
+        "draft_offers": 0,
+        "sent_offers": 1,
+        "accepted_offers": 0,
+        "admitted_applications": 0,
+        "total": 3
+      },
+      "durations": [
+        {
+          "key": "application_to_screening_passed",
+          "average_hours": 17.67,
+          "sample_count": 3
+        },
+        {
+          "key": "screening_passed_to_first_interview",
+          "average_hours": 52.0,
+          "sample_count": 3
+        },
+        {
+          "key": "first_interview_to_last_completed",
+          "average_hours": 27.33,
+          "sample_count": 3
+        },
+        {
+          "key": "offer_entered_to_sent",
+          "average_hours": 36.0,
+          "sample_count": 1
+        },
+        {
+          "key": "offer_sent_to_response",
+          "average_hours": null,
+          "sample_count": 0
+        },
+        {
+          "key": "offer_accepted_to_admitted",
+          "average_hours": null,
+          "sample_count": 0
+        },
+        {
+          "key": "admitted_to_hired",
+          "average_hours": null,
+          "sample_count": 0
+        }
+      ]
+    },
+    "JOB-DA": {
+      "funnel": [
+        {
+          "key": "applications",
+          "count": 12,
+          "conversion_rate": null
+        },
+        {
+          "key": "screening_passed",
+          "count": 2,
+          "conversion_rate": 16.67
+        },
+        {
+          "key": "interview_entered",
+          "count": 2,
+          "conversion_rate": 100.0
+        },
+        {
+          "key": "interview_completed",
+          "count": 2,
+          "conversion_rate": 100.0
+        },
+        {
+          "key": "offer_sent",
+          "count": 0,
+          "conversion_rate": 0.0
+        },
+        {
+          "key": "offer_accepted",
+          "count": 0,
+          "conversion_rate": null
+        },
+        {
+          "key": "admitted",
+          "count": 0,
+          "conversion_rate": null
+        },
+        {
+          "key": "hired",
+          "count": 0,
+          "conversion_rate": null
+        }
+      ],
+      "todos": {
+        "scheduled_interviews": 0,
+        "pending_interview_decisions": 1,
+        "next_round_not_scheduled": 1,
+        "draft_offers": 0,
+        "sent_offers": 0,
+        "accepted_offers": 0,
+        "admitted_applications": 0,
+        "total": 2
+      },
+      "durations": [
+        {
+          "key": "application_to_screening_passed",
+          "average_hours": 26.0,
+          "sample_count": 2
+        },
+        {
+          "key": "screening_passed_to_first_interview",
+          "average_hours": 49.0,
+          "sample_count": 2
+        },
+        {
+          "key": "first_interview_to_last_completed",
+          "average_hours": 27.5,
+          "sample_count": 2
+        },
+        {
+          "key": "offer_entered_to_sent",
+          "average_hours": null,
+          "sample_count": 0
+        },
+        {
+          "key": "offer_sent_to_response",
+          "average_hours": null,
+          "sample_count": 0
+        },
+        {
+          "key": "offer_accepted_to_admitted",
+          "average_hours": null,
+          "sample_count": 0
+        },
+        {
+          "key": "admitted_to_hired",
+          "average_hours": null,
+          "sample_count": 0
+        }
+      ]
+    }
+  }
+}
