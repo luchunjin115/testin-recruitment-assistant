@@ -97,8 +97,8 @@ Chroma 基础设施仍保留在 Docker Compose 中，但当前没有交付 RAG �
 ### 1. 拉取项目
 
 ```powershell
-git clone https://github.com/luchunjin115/testin-recruitment-assistant.git
-Set-Location testin-recruitment-assistant
+git clone https://github.com/luchunjin115/hr-ai-recruitment-platform.git
+Set-Location hr-ai-recruitment-platform
 ```
 
 ### 2. Windows 一键启动
