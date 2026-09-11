@@ -92,7 +92,53 @@ Chroma 基础设施仍保留在 Docker Compose 中，但当前没有交付 RAG �
 - Docker Desktop 与 Docker Compose
 - Git
 
-### 1. 可选：配置真实 AI
+开始前请先启动 Docker Desktop，并确认 Docker Engine 已正常运行。
+
+### 1. 拉取项目
+
+```powershell
+git clone https://github.com/luchunjin115/testin-recruitment-assistant.git
+Set-Location testin-recruitment-assistant
+```
+
+### 2. Windows 一键启动
+
+在项目根目录执行：
+
+```powershell
+launch\start_project.bat
+```
+
+启动器会检查环境、启动 PostgreSQL/Redis/Chroma、安装缺失依赖、执行 Alembic migration，并启动 FastAPI 与 Vite。首次运行需要安装依赖，请等待两个服务窗口完成启动。
+
+只检查环境：
+
+```powershell
+launch\start_project.bat -CheckOnly
+```
+
+启动但不自动打开浏览器：
+
+```powershell
+launch\start_project.bat -NoBrowser
+```
+
+### 3. 导入虚构演示数据（推荐）
+
+新数据库默认没有业务数据。启动基础设施后，另开一个位于项目根目录的 PowerShell，依次执行：
+
+```powershell
+.\.venv\Scripts\python.exe portfolio_demo\validate_dataset.py
+.\.venv\Scripts\python.exe portfolio_demo\import_dataset.py inspect
+.\.venv\Scripts\python.exe portfolio_demo\import_dataset.py dry-run
+.\.venv\Scripts\python.exe portfolio_demo\import_dataset.py apply --confirm portfolio-demo-v1
+```
+
+导入成功后访问 `http://localhost:5173/app/dashboard`。数据包会提供 5 个岗位、60 名虚构候选人和 64 次投递，可直接查看 AI 初筛、面试、Offer、录取和招聘统计页面。
+
+演示数据中的姓名、号码、邮箱、学校、公司、经历、面试反馈和薪资均为虚构内容。导入和查看这些确定性演示结果不需要 DeepSeek Key，也不会调用真实模型。
+
+### 4. 可选：配置真实 AI
 
 如果需要运行真实简历结构化或 AI 初筛，复制环境变量模板：
 
@@ -108,29 +154,7 @@ DEEPSEEK_API_KEY=你的密钥
 
 `.env` 不得提交到 Git。没有有效配置时仍可查看不依赖模型的页面和接口，但不能把模型失败或 Mock 输出当作真实 AI 结果。
 
-### 2. Windows 一键启动
-
-双击：
-
-```text
-launch\start_project.bat
-```
-
-启动器会检查环境、启动 PostgreSQL/Redis/Chroma、安装缺失依赖、执行 Alembic migration，并启动 FastAPI 与 Vite。默认打开岗位管理页。
-
-只检查环境：
-
-```powershell
-launch\start_project.bat -CheckOnly
-```
-
-启动但不自动打开浏览器：
-
-```powershell
-launch\start_project.bat -NoBrowser
-```
-
-### 3. 手动启动
+### 5. 手动启动
 
 首次创建 Python 环境：
 
